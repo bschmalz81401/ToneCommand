@@ -1,0 +1,18 @@
+# virtualenv and caches
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+
+# secrets
+.env
+
+# personal working notes (agent knowledge base) - not part of the release
+kb/
+
+# never commit preset/backup payloads (personal presets, Fractal-Bot
+# backups, Gift of Tone content)
+*.syx
+*.blk
+*.fasBundle
+backups/

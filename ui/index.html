@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FM9 // TONE CONTROL</title>
+<style>
+  :root {
+    --bg: #05080d;
+    --panel: rgba(13, 22, 34, 0.85);
+    --line: #122438;
+    --cyan: #2fe6ff;
+    --cyan-dim: #1a7f96;
+    --amber: #ffb454;
+    --red: #ff5470;
+    --green: #3dffa0;
+    --text: #c9dcea;
+    --muted: #5d7a91;
+    font-size: 15px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "SF Mono", "Menlo", "Cascadia Code", monospace;
+    min-height: 100vh;
+    background-image:
+      radial-gradient(ellipse 80% 50% at 50% -10%, rgba(47, 230, 255, 0.08), transparent),
+      linear-gradient(rgba(47, 230, 255, 0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(47, 230, 255, 0.025) 1px, transparent 1px);
+    background-size: 100% 100%, 44px 44px, 44px 44px;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 28px 20px 60px; }
+
+  header {
+    display: flex; align-items: baseline; gap: 18px; flex-wrap: wrap;
+    border-bottom: 1px solid var(--line); padding-bottom: 14px; margin-bottom: 22px;
+  }
+  h1 {
+    font-size: 1.25rem; letter-spacing: 0.35em; color: var(--cyan);
+    text-shadow: 0 0 18px rgba(47, 230, 255, 0.55); font-weight: 600;
+  }
+  h1 span { color: var(--muted); text-shadow: none; }
+  .status {
+    margin-left: auto; display: flex; gap: 14px; align-items: center;
+    font-size: 0.78rem; letter-spacing: 0.08em;
+  }
+  .pill {
+    padding: 4px 12px; border: 1px solid var(--line); border-radius: 3px;
+    background: rgba(0,0,0,0.35); color: var(--muted); white-space: nowrap;
+  }
+  .pill b { color: var(--text); font-weight: 500; }
+  #link.on { border-color: var(--green); color: var(--green);
+             box-shadow: 0 0 12px rgba(61, 255, 160, 0.25); }
+  #link.off { border-color: var(--red); color: var(--red); }
+  #link .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+               background: currentColor; margin-right: 7px; animation: pulse 2s infinite; }
+  @keyframes pulse { 50% { opacity: 0.25; } }
+
+  .console {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
+    padding: 18px; margin-bottom: 20px; position: relative;
+    box-shadow: 0 0 40px rgba(0,0,0,0.5), inset 0 0 60px rgba(47,230,255,0.03);
+  }
+  .console::before {
+    content: attr(data-label); position: absolute; top: -9px; left: 14px;
+    background: var(--bg); padding: 0 8px; font-size: 0.68rem;
+    letter-spacing: 0.25em; color: var(--cyan-dim);
+  }
+  .promptrow { display: flex; gap: 12px; }
+  .prompt-prefix { color: var(--cyan); align-self: center; user-select: none; }
+  #prompt {
+    flex: 1; background: transparent; border: none; outline: none;
+    color: var(--text); font: inherit; font-size: 1.05rem; caret-color: var(--cyan);
+  }
+  #prompt::placeholder { color: var(--muted); opacity: 0.6; }
+  button {
+    font: inherit; letter-spacing: 0.15em; font-size: 0.8rem; cursor: pointer;
+    background: transparent; color: var(--cyan); border: 1px solid var(--cyan-dim);
+    border-radius: 4px; padding: 9px 20px; transition: all 0.15s;
+  }
+  button:hover:not(:disabled) {
+    background: rgba(47, 230, 255, 0.1); box-shadow: 0 0 16px rgba(47, 230, 255, 0.35);
+  }
+  button:disabled { opacity: 0.35; cursor: default; }
+  button.danger { color: var(--red); border-color: var(--red); }
+  button.confirm { color: var(--green); border-color: var(--green); }
+  button.confirm:hover:not(:disabled) {
+    background: rgba(61, 255, 160, 0.1); box-shadow: 0 0 16px rgba(61, 255, 160, 0.35);
+  }
+
+  .plan-card {
+    border: 1px solid var(--line); border-left: 3px solid var(--amber);
+    border-radius: 4px; padding: 12px 14px; margin: 10px 0;
+    background: rgba(0,0,0,0.3); font-size: 0.88rem;
+    display: flex; justify-content: space-between; gap: 14px; align-items: center;
+  }
+  .plan-card .what { color: var(--text); }
+  .plan-card .why { color: var(--muted); font-size: 0.78rem; margin-top: 4px; }
+  .plan-card .delta { color: var(--amber); white-space: nowrap; }
+  .plan-card.done { border-left-color: var(--green); }
+  .plan-card.fail { border-left-color: var(--red); }
+  .plan-actions { display: flex; gap: 12px; margin-top: 14px; }
+  #plansummary { color: var(--cyan); font-size: 0.9rem; margin-bottom: 4px; }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 800px) { .grid { grid-template-columns: 1fr; } }
+
+  .blocks { display: flex; flex-wrap: wrap; gap: 8px; }
+  .block {
+    border: 1px solid var(--line); border-radius: 4px; padding: 7px 11px;
+    font-size: 0.78rem; color: var(--text); background: rgba(0,0,0,0.3);
+  }
+  .block.byp { color: var(--muted); border-style: dashed; opacity: 0.7; }
+  .block .ch { color: var(--cyan-dim); margin-left: 6px; }
+
+  .knobs { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+  .knob { font-size: 0.78rem; }
+  .knob .k { color: var(--muted); }
+  .knob .v { color: var(--cyan); float: right; }
+  .knob .bar { height: 3px; background: var(--line); border-radius: 2px; margin-top: 5px; }
+  .knob .bar i {
+    display: block; height: 100%; background: var(--cyan); border-radius: 2px;
+    box-shadow: 0 0 8px rgba(47, 230, 255, 0.6); transition: width 0.4s;
+  }
+
+  #log {
+    font-size: 0.75rem; color: var(--muted); max-height: 180px; overflow-y: auto;
+    line-height: 1.7;
+  }
+  #log .t { color: var(--cyan-dim); margin-right: 8px; }
+  #log .ok { color: var(--green); }
+  #log .err { color: var(--red); }
+  .spin { display: inline-block; animation: spin 0.9s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .hint { color: var(--muted); font-size: 0.72rem; margin-top: 10px; letter-spacing: 0.05em; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>FM9 <span>//</span> TONE CONTROL</h1>
+    <div class="status">
+      <span class="pill" id="preset">PRESET <b>...</b></span>
+      <span class="pill" id="scene">SCENE <b>...</b></span>
+      <span class="pill off" id="link"><span class="dot"></span>LINK</span>
+    </div>
+  </header>
+
+  <div class="console" data-label="COMMAND">
+    <div class="promptrow">
+      <span class="prompt-prefix">&gt;</span>
+      <input id="prompt" autocomplete="off" spellcheck="false"
+             placeholder="describe the tone change... e.g. tighten the gate for Drop C and bump presence slightly">
+      <button id="engage">ENGAGE</button>
+    </div>
+    <div class="hint">Changes are proposed first and only sent to the FM9 after you confirm. Edit buffer only, nothing is saved to your presets.</div>
+  </div>
+
+  <div class="console" data-label="PROPOSED CHANGES" id="planbox" style="display:none">
+    <div id="plansummary"></div>
+    <div id="plancards"></div>
+    <div class="plan-actions">
+      <button class="confirm" id="apply">TRANSMIT TO FM9</button>
+      <button class="danger" id="discard">DISCARD</button>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="console" data-label="SIGNAL CHAIN">
+      <div class="blocks" id="blocks"><span class="hint">awaiting link...</span></div>
+    </div>
+    <div class="console" data-label="AMP TELEMETRY">
+      <div class="knobs" id="knobs"><span class="hint">awaiting link...</span></div>
+    </div>
+  </div>
+
+  <div class="console" data-label="LOG" style="margin-top:20px">
+    <div id="log"></div>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+let currentPlan = null;
+
+function log(msg, cls) {
+  const t = new Date().toLocaleTimeString();
+  $('log').insertAdjacentHTML('afterbegin',
+    `<div><span class="t">${t}</span><span class="${cls || ''}">${msg}</span></div>`);
+}
+
+const KNOB_LABELS = {
+  DISTORT_DRIVE: ['GAIN', 10], DISTORT_BASS: ['BASS', 10], DISTORT_MID: ['MID', 10],
+  DISTORT_TREBLE: ['TREBLE', 10], DISTORT_PRESENCE: ['PRESENCE', 10],
+  DISTORT_DEPTH: ['DEPTH', 10], DISTORT_MASTER: ['MASTER', 10],
+};
+
+async function refresh() {
+  try {
+    const r = await fetch('/api/state');
+    const s = await r.json();
+    if (!s.connected) throw new Error(s.error || 'no link');
+    $('link').className = 'pill on';
+    if (s.preset) $('preset').innerHTML = `PRESET ${s.preset.number} <b>${s.preset.name}</b>`;
+    if (s.scene) $('scene').innerHTML = `SCENE ${s.scene.number} <b>${s.scene.name}</b>`;
+    $('blocks').innerHTML = s.blocks.map(b =>
+      `<span class="block ${b.bypassed ? 'byp' : ''}">${b.label}<span class="ch">${b.channel}</span></span>`
+    ).join('');
+    const knobs = Object.entries(s.values)
+      .filter(([k]) => KNOB_LABELS[k])
+      .map(([k, v]) => {
+        const [label, max] = KNOB_LABELS[k];
+        return `<div class="knob"><span class="k">${label}</span><span class="v">${v}</span>
+                <div class="bar"><i style="width:${Math.min(100, v / max * 100)}%"></i></div></div>`;
+      });
+    const others = Object.entries(s.values)
+      .filter(([k]) => !KNOB_LABELS[k] && (k.startsWith('INPUT_') || k.startsWith('GATE_')))
+      .slice(0, 4)
+      .map(([k, v]) => `<div class="knob"><span class="k">${k.replace(/_/g, ' ')}</span><span class="v">${v}</span></div>`);
+    $('knobs').innerHTML = knobs.join('') + others.join('') || '<span class="hint">no data</span>';
+  } catch (e) {
+    $('link').className = 'pill off';
+  }
+}
+
+function describe(a) {
+  if (a.kind === 'set_scene') return `Scene select: ${a.value}`;
+  if (a.kind === 'set_bypass') return `${a.block} ${a.instance}: ${a.bypassed ? 'bypass' : 'engage'}`;
+  if (a.kind === 'set_channel') return `${a.block} ${a.instance}: channel ${'ABCD'[a.value]}`;
+  if (a.kind === 'set_tempo') return `Tempo: ${a.value} BPM`;
+  if (a.kind === 'set_type') return `${a.block} ${a.instance}: model → ${a.type_name}`;
+  return `${a.block} ${a.instance} / ${a.param}: set to ${a.value}`;
+}
+
+async function engage() {
+  const prompt = $('prompt').value.trim();
+  if (!prompt) return;
+  $('engage').disabled = true;
+  $('engage').innerHTML = '<span class="spin">◍</span>';
+  log(`interpreting: "${prompt}"`);
+  try {
+    const r = await fetch('/api/plan', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({prompt}),
+    });
+    const plan = await r.json();
+    if (plan.error) throw new Error(plan.error);
+    if (plan.clarification) {
+      log(`needs clarification: ${plan.clarification}`, 'err');
+      $('planbox').style.display = 'none';
+      return;
+    }
+    currentPlan = plan;
+    $('plansummary').textContent = plan.summary;
+    $('plancards').innerHTML = plan.actions.map(a => `
+      <div class="plan-card">
+        <div><div class="what">${describe(a)}</div><div class="why">${a.reason || ''}</div></div>
+        <div class="delta">${a.kind === 'set_param' ? '→ ' + a.value : ''}</div>
+      </div>`).join('');
+    $('planbox').style.display = 'block';
+    log(`plan ready: ${plan.actions.length} change(s). Confirm to transmit.`, 'ok');
+  } catch (e) {
+    log(`plan failed: ${e.message}`, 'err');
+  } finally {
+    $('engage').disabled = false;
+    $('engage').textContent = 'ENGAGE';
+  }
+}
+
+async function apply() {
+  if (!currentPlan) return;
+  $('apply').disabled = true; $('discard').disabled = true;
+  log('transmitting to FM9...');
+  try {
+    const r = await fetch('/api/apply', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        actions: currentPlan.actions,
+        expected_preset: currentPlan.device ? currentPlan.device.preset.number : null,
+      }),
+    });
+    const out = await r.json();
+    if (out.error) throw new Error(out.error);
+    const cards = document.querySelectorAll('.plan-card');
+    out.results.forEach((res, i) => {
+      if (cards[i]) cards[i].classList.add(res.ok ? 'done' : 'fail');
+      const extra = res.before !== undefined && res.before !== null
+        ? ` (${res.before} → ${res.after})` : '';
+      log(`${describe(res.action)}: ${res.detail}${extra}`, res.ok ? 'ok' : 'err');
+    });
+    $('prompt').value = '';
+    setTimeout(() => { $('planbox').style.display = 'none'; refresh(); }, 1500);
+  } catch (e) {
+    log(`transmit failed: ${e.message}`, 'err');
+  } finally {
+    $('apply').disabled = false; $('discard').disabled = false;
+    currentPlan = null;
+  }
+}
+
+$('engage').onclick = engage;
+$('prompt').addEventListener('keydown', e => { if (e.key === 'Enter') engage(); });
+$('apply').onclick = apply;
+$('discard').onclick = () => { $('planbox').style.display = 'none'; currentPlan = null; log('plan discarded'); };
+
+refresh();
+setInterval(refresh, 5000);
+</script>
+</body>
+</html>
