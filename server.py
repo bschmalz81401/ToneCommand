@@ -163,7 +163,7 @@ class Action(BaseModel):
 
 # family -> (type param id, roster attribute)
 TYPE_PARAMS = {"DISTORT": (10, "amp_roster"), "FUZZ": (0, "drive_roster"),
-               "REVERB": (0, "reverb_roster")}
+               "REVERB": (10, "reverb_roster")}
 
 
 def resolve_type_ordinal(family: str, name: str) -> tuple[int, str] | None:
