@@ -203,6 +203,29 @@ class FM9:
         self._send(p.build_set_grid_cell(row_1based, col_1based, effect_id))
         time.sleep(0.3)
 
+    def send_preset_file(self, syx_bytes: bytes) -> bool:
+        """Send a .syx preset dump (0x77/0x78/0x79 chain addressed to the
+        edit buffer) to the device, paced like Fractal-Bot. Loads into the
+        volatile edit buffer only; persisting needs store_preset."""
+        msgs = []
+        i = 0
+        while i < len(syx_bytes):
+            j = syx_bytes.find(b"\xf7", i)
+            if syx_bytes[i] != 0xF0 or j == -1:
+                raise ValueError("not a clean .syx sysex stream")
+            msgs.append(list(syx_bytes[i:j + 1]))
+            i = j + 1
+        if not msgs or msgs[0][4] != 0x12:
+            raise ValueError(
+                f"not an FM9 preset (model byte 0x{msgs[0][4]:02x})" if msgs
+                else "empty .syx file")
+        self._drain()
+        for m in msgs:
+            self._send(m)
+            time.sleep(0.06)
+        time.sleep(1.0)
+        return True
+
     def store_preset(self, slot: int):
         """Persist the working buffer to a preset slot. Whitelisted slots
         only (133-140); refuses everything else."""
@@ -240,9 +263,16 @@ class FM9:
         return self.read_display_name(p.mod_slot_eid(slot_1based), p.MOD_PID_SOURCE)
 
     def bind_modifier(self, slot_1based: int, target_effect_id: int,
-                      target_param_id: int, source_ordinal: int):
+                      target_param_id: int, source_ordinal: int,
+                      min_norm: float = 0.0, max_norm: float = 1.0):
         """Bind a modifier slot: pedal/controller source -> block parameter.
-        Three discrete SETs on the slot's own effect id. Edit buffer only."""
+        Edit buffer only.
+
+        CRITICAL: a fresh (never-used) modifier slot has ALL fields zeroed,
+        including the transfer curve (mid/end/slope/scale/offset). A zero
+        curve maps every source position to zero, so the binding silently
+        does nothing. This initializes the curve to linear defaults every
+        time; callers may then override min/max for range floors."""
         eid = p.mod_slot_eid(slot_1based)
         for pid, val in ((p.MOD_PID_TARGET_EFFECT, target_effect_id),
                          (p.MOD_PID_TARGET_PARAM, target_param_id),
@@ -250,6 +280,14 @@ class FM9:
             self._drain()
             self._send(p.build_set_param_discrete(eid, pid, val))
             time.sleep(0.15)
+        # linear transfer curve: start 0, mid 0.5, end 1.0, slope/scale/offset
+        # centered, plus caller's range. Field pids per forgefx-midi map.
+        curve = ((1, min_norm), (2, max_norm), (3, 0.0), (4, 0.5), (5, 1.0),
+                 (6, 0.5), (13, 0.5), (14, 0.5))
+        for pid, val in curve:
+            self._drain()
+            self._send(p.build_set_param_continuous(eid, pid, val))
+            time.sleep(0.08)
 
     def connect_cells(self, src_row: int, src_col: int, dest_row: int,
                       disconnect: bool = False):
