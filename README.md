@@ -1,4 +1,6 @@
-# FM9 Tone Control
+# ToneCommand
+
+**Speak, and your rig obeys.**
 
 Natural-language tone control for the Fractal FM9: type "give me a Van Halen
 Balance era tone with the flanger on the expression pedal", review the exact
@@ -103,8 +105,8 @@ Tested on macOS (Apple Silicon) with Python 3.12 and an FM9 on firmware
 11.00, connected over USB.
 
 ```bash
-git clone https://github.com/monzta1/fm9-tone-control.git
-cd fm9-tone-control
+git clone https://github.com/monzta1/ToneCommand.git
+cd ToneCommand
 python3 -m venv .venv
 .venv/bin/pip install mido python-rtmidi fastapi "uvicorn[standard]" anthropic
 ```
