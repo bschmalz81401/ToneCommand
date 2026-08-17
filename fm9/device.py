@@ -305,6 +305,11 @@ class FM9:
         chans = max(1, self._channels.get(spec.effect_id, 1))
         stride = len(values) // chans if chans > 1 else len(values)
         if channel is None:
+            # channel cache goes stale after set_channel/scene changes; a
+            # live 0x0B query is cheap and keeps reads on the right channel
+            live = self.get_channel(spec.effect_id)
+            if live is not None:
+                self._current_channel[spec.effect_id] = live
             channel = self._current_channel.get(spec.effect_id, 0)
         idx = min(channel, chans - 1) * stride + spec.param_id
         if idx >= len(values):
