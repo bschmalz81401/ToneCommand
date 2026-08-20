@@ -34,7 +34,10 @@ ALIASES = {
 
 # Corrections and additions with provenance go here, not in the JSON.
 OVERRIDES: dict[str, str] = {
-    # roster name -> real pedal
+    # roster name -> real pedal, each with a citable source:
+    # Fractal forum official thread "Fractal Audio DRIVE models: Tone of
+    # Kings (based on King of Tone, aka KoT)" (thread 148207)
+    "Tone of Kings": "Analogman King of Tone",
 }
 
 HEADING = re.compile(
