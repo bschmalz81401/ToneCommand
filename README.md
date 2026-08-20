@@ -88,7 +88,13 @@ Original findings from this project's hardware verification (FM9 firmware
    bulk read instead); the sub 0x1F display-name query returns "NONE" for
    modifier source enums; live modulation (a moving pedal) is invisible to
    every known read, so pedal bindings must be verified physically.
-5. **Shunt-replacement insertion.** Placing a block onto an existing shunt
+5. **Cable drawing hardware-validated.** The community's 6-row cable
+   encoding formula (fn 0x01 sub 0x35), previously byte-derived from
+   captures but unverified as a live write, draws correct cables on FM9
+   firmware 11.00: all masks confirmed by grid read-back. Also verified:
+   placing an already-placed block at a new cell is ignored (a "move" is
+   clear-then-insert, and clearing a cell destroys its cables).
+6. **Shunt-replacement insertion.** Placing a block onto an existing shunt
    cell inherits the shunt's cables, which makes it possible to add effects
    into a preset's signal chain without touching the only partially decoded
    cable-drawing encoding at all.

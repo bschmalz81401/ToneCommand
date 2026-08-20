@@ -29,9 +29,9 @@ class FM9NotFound(RuntimeError):
 # The ONLY preset slots this tool is ever allowed to store to. Designate a
 # small range of disposable test slots and keep everything else on the unit
 # protected: store_preset refuses any slot outside this range.
-# 133-140: original test range. 141-144: per-song setlist presets
-# (extended 2026-08-20, overwriting factory Tweed bank entries).
-SAFE_STORE_SLOTS = range(133, 145)
+# 133-140: original test range. 141-144: per-song setlist presets.
+# 145-148: mono variants of the setlist (extended 2026-08-20).
+SAFE_STORE_SLOTS = range(133, 149)
 
 
 @dataclass
