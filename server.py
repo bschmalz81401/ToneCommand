@@ -221,9 +221,70 @@ def api_plan(body: PromptBody):
     try:
         result = planner.plan(body.prompt, state_text(snap), PARAM_REFERENCE)
         result["device"] = {"preset": snap["preset"], "scene": snap["scene"]}
+        for a in result.get("actions", []):
+            errs, warns = validate_action(Action(**a))
+            a["validation_errors"] = errs
+            a["validation_warnings"] = warns
         return result
     except Exception as e:
         return JSONResponse({"error": f"planner failed: {e}"}, status_code=502)
+
+
+TEMPO_RANGE = (30, 250)   # Fractal tempo limits
+
+
+def validate_action(a: Action) -> tuple[list[str], list[str]]:
+    """Validate an action against the parameter reference BEFORE anything is
+    sent. Returns (errors, warnings). Errors block transmission of that
+    action; warnings are surfaced but do not block. Never auto-corrects.
+    """
+    errors: list[str] = []
+    warnings: list[str] = []
+    if a.kind == "set_scene":
+        scene = a.value if a.value is not None else a.instance
+        if not isinstance(scene, (int, float)) or not 1 <= int(scene) <= 8:
+            errors.append(f"scene must be 1..8, got {scene}")
+        return errors, warnings
+    if a.kind == "set_tempo":
+        if a.value is None or not TEMPO_RANGE[0] <= a.value <= TEMPO_RANGE[1]:
+            errors.append(f"tempo must be {TEMPO_RANGE[0]}..{TEMPO_RANGE[1]} BPM, got {a.value}")
+        return errors, warnings
+    # block-addressed actions
+    try:
+        fam, _eid = reg.resolve_block(a.block or "", a.instance)
+    except (KeyError, ValueError) as e:
+        errors.append(str(e))
+        return errors, warnings
+    if a.kind == "set_bypass":
+        if not isinstance(a.bypassed, bool):
+            errors.append("set_bypass requires bypassed true/false")
+    elif a.kind == "set_channel":
+        if a.value is None or int(a.value) not in (0, 1, 2, 3):
+            errors.append(f"channel must be 0..3 (A-D), got {a.value}")
+    elif a.kind == "set_type":
+        if fam not in TYPE_PARAMS:
+            errors.append(f"model selection not supported on block {a.block}")
+        elif resolve_type_ordinal(fam, a.type_name or "") is None:
+            errors.append(f"unknown model name: {a.type_name!r}")
+    elif a.kind == "set_param":
+        spec = None
+        for (f, pid), pdata in reg.params.items():
+            if f == fam and pdata.get("name") == a.param:
+                spec = reg.spec(f, pid, a.instance)
+                break
+        if spec is None and a.param:
+            spec = reg.find_param(fam, a.param)
+        if spec is None:
+            errors.append(f"unknown parameter {a.param!r} on block {a.block}")
+        elif a.value is None or not isinstance(a.value, (int, float)):
+            errors.append(f"{a.param} requires a numeric value, got {a.value!r}")
+        elif spec.kind == "enum":
+            errors.append(f"{spec.name} is a selector, not a continuous parameter; use set_type or a supported action")
+        elif spec.dmin is None or spec.dmax is None:
+            warnings.append(f"{spec.name} has no calibrated range in the reference; value {a.value} sent unvalidated")
+        elif not spec.dmin <= a.value <= spec.dmax:
+            errors.append(f"{spec.name} value {a.value} outside its range {spec.dmin}..{spec.dmax} {spec.unit or ''}")
+    return errors, warnings
 
 
 def run_action(fm9: FM9, a: Action) -> dict:
@@ -305,10 +366,17 @@ def api_apply(body: ApplyBody):
                                   f"Re-run the prompt against the current preset."},
                         status_code=409)
             for a in body.actions:
+                errs, warns = validate_action(a)
+                if errs:
+                    results.append({"action": a.model_dump(), "ok": False,
+                                    "detail": "validation: " + "; ".join(errs)})
+                    continue
                 try:
                     res = run_action(fm9, a)
                 except Exception as e:
                     res = {"ok": False, "detail": str(e)}
+                if warns:
+                    res["detail"] = (res.get("detail", "") + " | " + "; ".join(warns)).strip(" |")
                 results.append({"action": a.model_dump(), **res})
         except FM9NotFound:
             drop_fm9()

@@ -100,6 +100,11 @@
   .plan-card .delta { color: var(--amber); white-space: nowrap; }
   .plan-card.done { border-left-color: var(--green); }
   .plan-card.fail { border-left-color: var(--red); }
+  .plan-card.vfail { border-left-color: var(--red); background: rgba(255,84,112,0.06); }
+  .plan-card.vwarn { border-left-color: var(--amber); }
+  .vmsg { font-size: 0.72rem; margin-top: 5px; }
+  .vmsg.verr { color: var(--red); }
+  .vmsg.vwrn { color: var(--amber); }
   .plan-actions { display: flex; gap: 12px; margin-top: 14px; }
   #plansummary { color: var(--cyan); font-size: 0.9rem; margin-bottom: 4px; }
 
@@ -253,11 +258,20 @@ async function engage() {
     }
     currentPlan = plan;
     $('plansummary').textContent = plan.summary;
-    $('plancards').innerHTML = plan.actions.map(a => `
-      <div class="plan-card">
-        <div><div class="what">${describe(a)}</div><div class="why">${a.reason || ''}</div></div>
-        <div class="delta">${a.kind === 'set_param' ? '→ ' + a.value : ''}</div>
-      </div>`).join('');
+    $('plancards').innerHTML = plan.actions.map(a => {
+      const errs = a.validation_errors || [];
+      const warns = a.validation_warnings || [];
+      const vclass = errs.length ? ' vfail' : (warns.length ? ' vwarn' : '');
+      const vmsg = errs.concat(warns).map(m =>
+        `<div class="vmsg ${errs.length ? 'verr' : 'vwrn'}">${m}</div>`).join('');
+      return `
+      <div class="plan-card${vclass}">
+        <div><div class="what">${describe(a)}</div><div class="why">${a.reason || ''}</div>${vmsg}</div>
+        <div class="delta">${errs.length ? 'BLOCKED' : (a.kind === 'set_param' ? '→ ' + a.value : '')}</div>
+      </div>`;
+    }).join('');
+    const blocked = plan.actions.filter(a => (a.validation_errors || []).length).length;
+    if (blocked) log(`validation blocked ${blocked} action(s); they will not be transmitted`, 'err');
     $('planbox').style.display = 'block';
     log(`plan ready: ${plan.actions.length} change(s). Confirm to transmit.`, 'ok');
   } catch (e) {
