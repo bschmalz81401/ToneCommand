@@ -43,14 +43,20 @@ class SetResult:
 
 
 class FM9:
-    def __init__(self, registry: Registry | None = None, port_hint: str = "fm9"):
+    def __init__(self, registry: Registry | None = None, port_hint: str = "fm9",
+                 ports=None):
+        """`ports=(inp, outp)` injects transport objects (used by fm9.sim for
+        hardware-free testing); default discovers the real FM9 over mido."""
         self.reg = registry or Registry()
-        ins = [n for n in mido.get_input_names() if port_hint in n.lower()]
-        outs = [n for n in mido.get_output_names() if port_hint in n.lower()]
-        if not ins or not outs:
-            raise FM9NotFound("FM9 MIDI ports not found; is it connected and powered on?")
-        self.inp = mido.open_input(ins[0])
-        self.outp = mido.open_output(outs[0])
+        if ports is not None:
+            self.inp, self.outp = ports
+        else:
+            ins = [n for n in mido.get_input_names() if port_hint in n.lower()]
+            outs = [n for n in mido.get_output_names() if port_hint in n.lower()]
+            if not ins or not outs:
+                raise FM9NotFound("FM9 MIDI ports not found; is it connected and powered on?")
+            self.inp = mido.open_input(ins[0])
+            self.outp = mido.open_output(outs[0])
         # per-effect channel info, refreshed from status dumps
         self._channels: dict[int, int] = {}
         self._current_channel: dict[int, int] = {}

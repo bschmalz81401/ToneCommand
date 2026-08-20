@@ -51,7 +51,12 @@ INTEREST = {
 def get_fm9() -> FM9:
     global _fm9
     if _fm9 is None:
-        _fm9 = FM9(reg)
+        import os
+        if os.environ.get("TONECOMMAND_SIM") == "1":
+            from fm9.sim import SimFM9
+            _fm9 = SimFM9(reg)     # virtual device: UI/planner dev offline
+        else:
+            _fm9 = FM9(reg)
     return _fm9
 
 
