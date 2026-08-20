@@ -43,7 +43,9 @@ PLAN_SCHEMA = {
                 "properties": {
                     "kind": {"type": "string",
                              "enum": ["set_param", "set_scene", "set_bypass",
-                                      "set_channel", "set_tempo", "set_type"]},
+                                      "set_channel", "set_tempo", "set_type",
+                                      "add_block", "bind_pedal",
+                                      "rename_preset", "rename_scene", "store"]},
                     "block": {"type": ["string", "null"],
                               "description": "Block name for set_param/set_bypass/set_channel, e.g. amp, gate, input, delay, reverb, cab, drive, peq, geq, comp"},
                     "instance": {"type": "integer",
@@ -55,12 +57,14 @@ PLAN_SCHEMA = {
                     "bypassed": {"type": ["boolean", "null"],
                                  "description": "For set_bypass: true = bypass the block, false = engage it"},
                     "type_name": {"type": ["string", "null"],
-                                  "description": "For set_type: exact model name from the roster (amp, drive, or reverb)"},
+                                  "description": "For set_type: exact model name from the roster. For rename_preset/rename_scene: the new name (max 32 chars)"},
+                    "position": {"type": ["string", "null"],
+                                 "description": "For add_block: pre, post, or any (relative to the amp)"},
                     "reason": {"type": "string",
                                "description": "Short justification tied to the user's request"},
                 },
                 "required": ["kind", "block", "instance", "param", "value",
-                             "bypassed", "type_name", "reason"],
+                             "bypassed", "type_name", "position", "reason"],
                 "additionalProperties": False,
             },
         },
@@ -95,7 +99,11 @@ Amp/drive/reverb model selection (set_type):
 Scenes and multi-scene requests:
 - Scenes share the same blocks; each scene stores its own per-block bypass states and channel choices. Block PARAMETERS and TYPES are per-channel, shared across scenes.
 - To build "scene X with effect A, scene Y with effect B": set_scene X, set bypass states for X, then set_scene Y, set bypass states for Y. The device ends on the last selected scene. Note in the summary which scene is which.
-- You cannot ADD blocks to a preset. If a requested effect has no block in the current preset, do what is possible with existing blocks and clearly state the limitation in the summary (or clarification if nothing is possible). Never silently substitute a different effect without saying so."""
+- Adding blocks: use add_block (block name + optional position "pre"/"post" relative to the amp) when a requested effect has no block in the preset. It places the block on a free pass-through point in the signal chain; if the executor reports there is no free spot, relay that honestly. Freshly added blocks may need a set_type and parameter settings next.
+- Expression pedal: use bind_pedal (block + param + optional value = floor percent 0-100) to put a continuous parameter under Pedal 2. Pedal 1 is the player's global volume and must NEVER be referenced or rebound.
+- rename_preset / rename_scene (new name in type_name; scene number in value). Tool-created presets are prefixed FM9AI- automatically.
+- store (slot number in value) persists the edit buffer to a preset slot. ONLY slots 133-148 are storable; every other slot is refused by the hardware layer. Only propose store when the user explicitly asks to save, and the UI will ask the user to confirm the overwrite separately.
+- If a requested change is impossible, say so in the summary. Never silently substitute a different effect without saying so."""
 
 
 def _extract_json(text: str) -> dict:
@@ -114,7 +122,8 @@ def _validate(plan_obj: dict) -> dict:
     for a in actions:
         if not isinstance(a, dict) or a.get("kind") not in (
                 "set_param", "set_scene", "set_bypass", "set_channel",
-                "set_tempo", "set_type"):
+                "set_tempo", "set_type", "add_block", "bind_pedal",
+                "rename_preset", "rename_scene", "store"):
             continue
         a.setdefault("block", None)
         a.setdefault("instance", 1)
@@ -122,6 +131,7 @@ def _validate(plan_obj: dict) -> dict:
         a.setdefault("value", None)
         a.setdefault("bypassed", None)
         a.setdefault("type_name", None)
+        a.setdefault("position", None)
         a.setdefault("reason", "")
         clean.append(a)
     plan_obj["actions"] = clean
@@ -165,7 +175,7 @@ def _plan_via_cli(prompt: str, device_state: str, param_reference: str) -> dict:
         '{"summary": str, "actions": [{"kind": "set_param|set_scene|set_bypass|'
         'set_channel|set_tempo|set_type", "block": str|null, "instance": int, '
         '"param": str|null, "value": number|null, "bypassed": bool|null, '
-        '"type_name": str|null, "reason": str}], "clarification": str|null}'
+        '"type_name": str|null, "position": str|null, "reason": str}], "clarification": str|null}'
     )
     cli = find_claude_cli()
     proc = subprocess.run(

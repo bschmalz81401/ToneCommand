@@ -164,7 +164,8 @@ class Action(BaseModel):
     param: str | None = None
     value: float | None = None
     bypassed: bool | None = None
-    type_name: str | None = None
+    type_name: str | None = None   # model name for set_type; new name for renames
+    position: str | None = None    # add_block: "pre" | "post" | "any" (vs amp)
     reason: str = ""
 
 
@@ -260,6 +261,28 @@ def validate_action(a: Action) -> tuple[list[str], list[str]]:
         if not isinstance(scene, (int, float)) or not 1 <= int(scene) <= 8:
             errors.append(f"scene must be 1..8, got {scene}")
         return errors, warnings
+    if a.kind == "store":
+        from fm9.device import SAFE_STORE_SLOTS
+        slot = int(a.value) if a.value is not None else None
+        if slot is None or slot not in SAFE_STORE_SLOTS:
+            errors.append(
+                f"store only allowed to test slots "
+                f"{SAFE_STORE_SLOTS.start}-{SAFE_STORE_SLOTS.stop - 1}, got {a.value}")
+        else:
+            warnings.append(f"store will OVERWRITE whatever is saved in slot {slot}")
+        return errors, warnings
+    if a.kind == "rename_preset":
+        if not a.type_name or not a.type_name.strip():
+            errors.append("rename_preset requires a name in type_name")
+        elif len(a.type_name) > 32:
+            errors.append(f"preset name exceeds 32 chars: {a.type_name!r}")
+        return errors, warnings
+    if a.kind == "rename_scene":
+        if a.value is None or not 1 <= int(a.value) <= 8:
+            errors.append(f"rename_scene requires scene 1..8 in value, got {a.value}")
+        if not a.type_name or len(a.type_name) > 32:
+            errors.append("rename_scene requires a name (max 32 chars) in type_name")
+        return errors, warnings
     if a.kind == "set_tempo":
         if a.value is None or not TEMPO_RANGE[0] <= a.value <= TEMPO_RANGE[1]:
             errors.append(f"tempo must be {TEMPO_RANGE[0]}..{TEMPO_RANGE[1]} BPM, got {a.value}")
@@ -270,7 +293,23 @@ def validate_action(a: Action) -> tuple[list[str], list[str]]:
     except (KeyError, ValueError) as e:
         errors.append(str(e))
         return errors, warnings
-    if a.kind == "set_bypass":
+    if a.kind == "add_block":
+        if a.position not in (None, "pre", "post", "any"):
+            errors.append(f"position must be pre/post/any, got {a.position!r}")
+    elif a.kind == "bind_pedal":
+        spec = reg.find_param(fam, a.param or "")
+        if spec is None:
+            for (f, pid), pdata in reg.params.items():
+                if f == fam and pdata.get("name") == a.param:
+                    spec = reg.spec(f, pid, a.instance)
+                    break
+        if spec is None:
+            errors.append(f"unknown parameter {a.param!r} on block {a.block}")
+        elif spec.kind == "enum":
+            errors.append(f"{spec.name} is a selector; pedals bind to continuous parameters")
+        if a.value is not None and not 0 <= a.value <= 100:
+            errors.append(f"pedal floor must be 0..100 percent, got {a.value}")
+    elif a.kind == "set_bypass":
         if not isinstance(a.bypassed, bool):
             errors.append("set_bypass requires bypassed true/false")
     elif a.kind == "set_channel":
@@ -302,7 +341,85 @@ def validate_action(a: Action) -> tuple[list[str], list[str]]:
     return errors, warnings
 
 
+def _add_block(fm9: FM9, a: Action) -> dict:
+    """Insert a block onto a free shunt cell. Refuses when no sane placement
+    exists rather than guessing (no cable drawing in the planner path)."""
+    fam, eid = reg.resolve_block(a.block or "", a.instance)
+    blocks = fm9.status_dump() or []
+    if any(b.effect_id == eid for b in blocks):
+        return {"ok": False, "detail": f"{a.block} {a.instance} already exists in this preset"}
+    cells = fm9.read_grid() or []
+    amp_cols = [c.col for c in cells if c.effect_id in (58, 59, 60, 61)]
+    amp_col = min(amp_cols) if amp_cols else None
+    shunts = [(c.row, c.col) for c in cells if c.is_shunt]
+    pos = a.position or "any"
+    if pos == "pre" and amp_col is not None:
+        shunts = [(r, c) for r, c in shunts if c < amp_col]
+    elif pos == "post" and amp_col is not None:
+        shunts = [(r, c) for r, c in shunts if c > amp_col]
+    if not shunts:
+        return {"ok": False,
+                "detail": f"no free pass-through cell {pos} of the amp to place "
+                          f"{a.block} on; refusing rather than rewiring the grid"}
+    row, col = sorted(shunts, key=lambda rc: rc[1])[0]
+    fm9.place_block(row + 1, col + 1, eid)
+    placed = [c for c in (fm9.read_grid() or [])
+              if c.effect_id == eid and (c.row, c.col) == (row, col)]
+    ok = bool(placed) and placed[0].cable_in_mask != 0
+    return {"ok": ok,
+            "detail": f"placed at row {row + 1} col {col + 1}, cables inherited"
+                      if ok else "placement failed grid verification"}
+
+
+def _bind_pedal(fm9: FM9, a: Action) -> dict:
+    """Bind Pedal 2 to a continuous parameter using the first free modifier
+    slot, with an initialized transfer curve and optional floor percent."""
+    from fm9 import protocol as fp
+    fam, eid = reg.resolve_block(a.block or "", a.instance)
+    spec = None
+    for (f, pid), pdata in reg.params.items():
+        if f == fam and pdata.get("name") == a.param:
+            spec = reg.spec(f, pid, a.instance)
+            break
+    if spec is None and a.param:
+        spec = reg.find_param(fam, a.param)
+    if spec is None:
+        return {"ok": False, "detail": f"unknown param {a.param}"}
+    slot = None
+    for m in range(1, 17):
+        vals = fm9.bulk_read(fp.mod_slot_eid(m))
+        if vals and len(vals) > fp.MOD_PID_TARGET_EFFECT and                 vals[fp.MOD_PID_TARGET_EFFECT] == 0:
+            slot = m
+            break
+    if slot is None:
+        return {"ok": False, "detail": "no free modifier slot"}
+    floor = (a.value or 0.0) / 100.0
+    fm9.bind_modifier(slot, eid, spec.param_id, 11, min_norm=floor, max_norm=1.0)
+    vals = fm9.bulk_read(fp.mod_slot_eid(slot))
+    ok = bool(vals) and vals[fp.MOD_PID_TARGET_EFFECT] == eid and         vals[fp.MOD_PID_TARGET_PARAM] == spec.param_id and vals[fp.MOD_PID_SOURCE] == 11
+    return {"ok": ok,
+            "detail": f"Pedal 2 -> {spec.name} on modifier slot {slot}"
+                      f"{f', floor {a.value:.0f}%' if a.value else ''}"
+                      if ok else "bind failed verification"}
+
+
 def run_action(fm9: FM9, a: Action) -> dict:
+    if a.kind == "rename_preset":
+        name = a.type_name.strip()
+        if not name.upper().startswith("FM9AI"):
+            name = ("FM9AI-" + name)[:32]
+        fm9.rename_preset(name)
+        got = fm9.current_preset()
+        return {"ok": bool(got and got[1] == name), "detail": f"preset renamed to {name!r}"}
+    if a.kind == "rename_scene":
+        fm9.rename_scene(int(a.value), a.type_name.strip()[:32])
+        got = fm9.scene_name(int(a.value))
+        return {"ok": bool(got and got[1] == a.type_name.strip()[:32]),
+                "detail": f"scene {int(a.value)} renamed to {a.type_name.strip()[:32]!r}"}
+    if a.kind == "store":
+        stored = fm9.store_preset(int(a.value))
+        return {"ok": bool(stored and stored[0] == int(a.value)),
+                "detail": f"stored to slot {int(a.value)}: {stored[1] if stored else '?'}"}
     if a.kind == "set_scene":
         scene_no = int(a.value) if a.value is not None else int(a.instance)
         got = fm9.set_scene(scene_no)
@@ -322,6 +439,10 @@ def run_action(fm9: FM9, a: Action) -> dict:
     if a.kind == "set_channel":
         got = fm9.set_channel(eid, int(a.value))
         return {"ok": got == int(a.value), "detail": f"channel {'ABCD'[got]}"}
+    if a.kind == "add_block":
+        return _add_block(fm9, a)
+    if a.kind == "bind_pedal":
+        return _bind_pedal(fm9, a)
     if a.kind == "set_type":
         pid, _ = TYPE_PARAMS.get(fam, (None, None))
         if pid is None:

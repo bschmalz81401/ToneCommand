@@ -1,0 +1,89 @@
+"""Tests for the planner-exposed builder actions (#9), on the simulator."""
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+import pytest
+
+import server
+from server import Action, validate_action, run_action
+from fm9.sim import SimFM9
+
+
+@pytest.fixture
+def fm9():
+    dev = SimFM9(server.reg)
+    dev.status_dump()
+    return dev
+
+
+def test_add_block_places_on_shunt(fm9):
+    res = run_action(fm9, Action(kind="add_block", block="wah", position="pre"))
+    assert res["ok"], res["detail"]
+    grid = {(c.row + 1, c.col + 1): c for c in fm9.read_grid() or []}
+    placed = [k for k, c in grid.items() if c.effect_id == 94]
+    assert placed and grid[placed[0]].cable_in_mask != 0
+
+
+def test_add_block_refuses_duplicate(fm9):
+    run_action(fm9, Action(kind="add_block", block="wah"))
+    res = run_action(fm9, Action(kind="add_block", block="wah"))
+    assert not res["ok"] and "already exists" in res["detail"]
+
+
+def test_add_block_refuses_without_free_cell(fm9):
+    # the sim's default chain has exactly three shunt cells
+    run_action(fm9, Action(kind="add_block", block="wah"))
+    run_action(fm9, Action(kind="add_block", block="phaser"))
+    run_action(fm9, Action(kind="add_block", block="chorus"))
+    res = run_action(fm9, Action(kind="add_block", block="flanger"))
+    assert not res["ok"] and "refusing" in res["detail"]
+
+
+def test_bind_pedal_uses_free_slot_and_curve(fm9):
+    res = run_action(fm9, Action(kind="bind_pedal", block="delay",
+                                 param="DELAY_MIX", value=20))
+    assert res["ok"], res["detail"]
+    slot = fm9.sim_core.st.buffer["modifiers"][1]
+    assert slot[0] == 11 and slot[8] == 70 and slot[9] == 0
+    assert slot[4] > 0 and slot[5] > 0          # curve initialized
+    assert abs(slot[1] / 65534 - 0.20) < 0.02   # floor honored
+
+
+def test_store_action_and_validation():
+    ok_errs, ok_warns = validate_action(Action(kind="store", value=140))
+    assert not ok_errs and any("OVERWRITE" in w for w in ok_warns)
+    bad_errs, _ = validate_action(Action(kind="store", value=509))
+    assert bad_errs                              # protected slot refused
+
+
+def test_store_executes_on_whitelisted_slot(fm9):
+    run_action(fm9, Action(kind="rename_preset", type_name="Sim Store Test"))
+    res = run_action(fm9, Action(kind="store", value=137))
+    assert res["ok"], res["detail"]
+    fm9.select_preset(0)
+    got = fm9.select_preset(137)
+    assert got[1].startswith("FM9AI-")           # prefix auto-applied
+
+
+def test_rename_prefix_enforced(fm9):
+    res = run_action(fm9, Action(kind="rename_preset", type_name="My Tone"))
+    assert res["ok"]
+    assert fm9.current_preset()[1] == "FM9AI-My Tone"
+
+
+def test_rename_scene(fm9):
+    res = run_action(fm9, Action(kind="rename_scene", value=4, type_name="BRIDGE Big"))
+    assert res["ok"]
+    assert fm9.scene_name(4)[1] == "BRIDGE Big"
+
+
+def test_validation_rejects_pedal_on_selector():
+    errs, _ = validate_action(Action(kind="bind_pedal", block="amp", param="DISTORT_TYPE"))
+    assert errs
+
+
+def test_validation_rejects_bad_position():
+    errs, _ = validate_action(Action(kind="add_block", block="wah", position="sideways"))
+    assert errs

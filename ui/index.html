@@ -235,6 +235,11 @@ function describe(a) {
   if (a.kind === 'set_channel') return `${a.block} ${a.instance}: channel ${'ABCD'[a.value]}`;
   if (a.kind === 'set_tempo') return `Tempo: ${a.value} BPM`;
   if (a.kind === 'set_type') return `${a.block} ${a.instance}: model → ${a.type_name}`;
+  if (a.kind === 'add_block') return `ADD ${a.block} ${a.instance}${a.position ? ' (' + a.position + '-amp)' : ''}`;
+  if (a.kind === 'bind_pedal') return `Pedal 2 → ${a.block} ${a.instance} ${a.param}${a.value ? ' (floor ' + a.value + '%)' : ''}`;
+  if (a.kind === 'rename_preset') return `Rename preset → "${a.type_name}"`;
+  if (a.kind === 'rename_scene') return `Rename scene ${a.value} → "${a.type_name}"`;
+  if (a.kind === 'store') return `STORE to slot ${a.value} (overwrites!)`;
   return `${a.block} ${a.instance} / ${a.param}: set to ${a.value}`;
 }
 
@@ -284,6 +289,14 @@ async function engage() {
 
 async function apply() {
   if (!currentPlan) return;
+  const stores = currentPlan.actions.filter(a => a.kind === 'store');
+  if (stores.length) {
+    const slots = stores.map(a => a.value).join(', ');
+    if (!window.confirm(`This plan STORES to preset slot(s) ${slots}, permanently overwriting whatever is saved there. Continue?`)) {
+      log('store not confirmed; transmit cancelled', 'err');
+      return;
+    }
+  }
   $('apply').disabled = true; $('discard').disabled = true;
   log('transmitting to FM9...');
   try {

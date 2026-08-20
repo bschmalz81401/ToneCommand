@@ -189,10 +189,13 @@ class SimFM9Core:
     # ---- bulk read ----
     def _fn_1f(self, b):
         eid = p.decode14(b[0], b[1])
-        rows = self.st.buffer["params"].get(eid)
-        if rows is None:
-            return [p.envelope(p.FN_MULTIPURPOSE, [0x1F, 0x08, 0x00])]
-        flat = [v for row in rows for v in row]
+        if 3 <= eid <= 34:                       # modifier slots are readable
+            flat = list(self.st.buffer["modifiers"][eid - 2])
+        else:
+            rows = self.st.buffer["params"].get(eid)
+            if rows is None:
+                return [p.envelope(p.FN_MULTIPURPOSE, [0x1F, 0x08, 0x00])]
+            flat = [v for row in rows for v in row]
         frames = [p.envelope(p.FN_BCAST_HEAD, [*p.encode14(eid), *p.encode14(len(flat))])]
         CHUNK = 128
         for off in range(0, len(flat), CHUNK):
