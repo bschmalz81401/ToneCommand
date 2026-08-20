@@ -87,3 +87,22 @@ def test_validation_rejects_pedal_on_selector():
 def test_validation_rejects_bad_position():
     errs, _ = validate_action(Action(kind="add_block", block="wah", position="sideways"))
     assert errs
+
+
+def test_apply_skips_rest_after_failed_add_block(monkeypatch):
+    """A failed add_block must abort the plan: later actions would target a
+    block that never landed (hardware-observed dangling modifier binding)."""
+    from fastapi.testclient import TestClient
+    monkeypatch.setattr(server, "_fm9", SimFM9(server.reg))
+    client = TestClient(server.app)
+    server._fm9.status_dump()
+    run_action(server._fm9, Action(kind="add_block", block="wah"))  # occupy
+    body = {"actions": [
+        {"kind": "add_block", "block": "wah"},                # duplicate: fails
+        {"kind": "set_param", "block": "wah", "param": "WAH_LEVEL", "value": 0},
+    ]}
+    results = client.post("/api/apply", json=body).json()["results"]
+    assert results[0]["ok"] is False
+    assert results[-1]["action"] is None
+    assert "skipped" in results[-1]["detail"]
+    assert len(results) == 2                                  # set_param never ran

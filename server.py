@@ -45,6 +45,12 @@ INTEREST = {
     "PEQ": list(range(0, 5)),
     "DELAY": [0, 1, 12, 32],
     "REVERB": [0, 1, 11],
+    "PHASER": [2, 5, 6, 11, 12],
+    "FLANGER": [1, 3, 4, 11, 12],
+    "CHORUS": [2, 4, 10, 11],
+    "WAH": [6, 10],
+    "TREMOLO": [2, 3, 7],
+    "ROTARY": [0, 5, 6],
 }
 
 
@@ -531,6 +537,15 @@ def api_apply(body: ApplyBody):
                 if warns:
                     res["detail"] = (res.get("detail", "") + " | " + "; ".join(warns)).strip(" |")
                 results.append({"action": a.model_dump(), **res})
+                if not res.get("ok") and a.kind == "add_block":
+                    # later actions in the plan target the block that failed
+                    # to land; running them would set params and bind pedals
+                    # on a block that is not on the grid (hardware-observed
+                    # on 2026-08-20, preset 143: dangling modifier binding)
+                    results.append({"action": None, "ok": False,
+                                    "detail": "remaining actions skipped: "
+                                              "add_block failed"})
+                    break
         except FM9NotFound:
             drop_fm9()
             return JSONResponse({"error": "FM9 not connected"}, status_code=503)
