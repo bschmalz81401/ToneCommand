@@ -20,11 +20,13 @@ def test_sidecar_loads_and_maps():
 
 
 def test_unmapped_drive_falls_back_to_fractal_name():
+    # Coverage reached 86/86 (wiki harvest, 2026-08-20), so simulate a gap:
+    # an ordinal missing from the sidecar must render as the bare Fractal
+    # name, with no '=' and nothing invented.
     reg = Registry()
-    unmapped = [o for o in reg.drive_roster if o not in reg.drive_models]
-    assert unmapped                     # the guide does not cover everything
-    o = unmapped[0]
-    assert reg.drive_description(o) == reg.drive_roster[o]   # no '=', no invention
+    o = next(iter(reg.drive_models))
+    reg.drive_models.pop(o)
+    assert reg.drive_description(o) == reg.drive_roster[o]
 
 
 def test_drift_guard(tmp_path):

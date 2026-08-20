@@ -32,10 +32,15 @@
    "model": "Dallas Rangemaster",
    "guide_title": "OVERRIDE"
   },
+  "5": {
+   "fractal": "Mid Boost",
+   "model": "Fractal Audio original, not based on a real pedal",
+   "guide_title": "OVERRIDE"
+  },
   "6": {
    "fractal": "T808 OD",
-   "model": "Ibanez TS9 Tube Screamer",
-   "guide_title": "T808 OD and T808 Mod"
+   "model": "Ibanez TS-808 Tube Screamer",
+   "guide_title": "OVERRIDE"
   },
   "7": {
    "fractal": "Fat Rat",
@@ -44,8 +49,8 @@
   },
   "8": {
    "fractal": "T808 Mod",
-   "model": "Ibanez TS9 Tube Screamer",
-   "guide_title": "T808 OD and T808 Mod"
+   "model": "modded Ibanez TS-808 Tube Screamer",
+   "guide_title": "OVERRIDE"
   },
   "9": {
    "fractal": "Octave Distortion",
@@ -56,6 +61,16 @@
    "fractal": "Plus Distortion",
    "model": "MXR Distortion +",
    "guide_title": "Plus Dist"
+  },
+  "11": {
+   "fractal": "Hard Fuzz",
+   "model": "Fractal Audio original, not based on a real pedal",
+   "guide_title": "OVERRIDE"
+  },
+  "12": {
+   "fractal": "FET Boost",
+   "model": "Fractal Audio original, not based on a real pedal",
+   "guide_title": "OVERRIDE"
   },
   "13": {
    "fractal": "Tape Distortion",
@@ -102,6 +117,11 @@
    "model": "Dallas-Arbiter Fuzz Face",
    "guide_title": "Face Fuzz"
   },
+  "22": {
+   "fractal": "Bit Crusher",
+   "model": "Fractal Audio original, not based on a real pedal",
+   "guide_title": "OVERRIDE"
+  },
   "23": {
    "fractal": "Eternal Love",
    "model": "Lovepedal Eternity",
@@ -127,6 +147,11 @@
    "model": "versions of the Butler Tube Driver",
    "guide_title": "Tube Drv"
   },
+  "28": {
+   "fractal": "FAS LED-Drive",
+   "model": "Fractal Audio original, not based on a real pedal",
+   "guide_title": "OVERRIDE"
+  },
   "29": {
    "fractal": "SDD Preamp",
    "model": "preamp in Korg SDD-3000",
@@ -147,10 +172,20 @@
    "model": "MXR Micro Amp",
    "guide_title": "Micro Boost"
   },
+  "33": {
+   "fractal": "FAS Boost",
+   "model": "Fractal Audio original, not based on a real pedal",
+   "guide_title": "OVERRIDE"
+  },
   "34": {
    "fractal": "Timothy Mid",
    "model": "Paul Cochrane Timmy",
    "guide_title": "Timothy"
+  },
+  "35": {
+   "fractal": "Shimmer Drive",
+   "model": "Fractal Audio original, not based on a real pedal",
+   "guide_title": "OVERRIDE"
   },
   "36": {
    "fractal": "Blackglass 7K",
@@ -172,9 +207,24 @@
    "model": "Analogman King of Tone",
    "guide_title": "OVERRIDE"
   },
+  "40": {
+   "fractal": "Heartpedal 11",
+   "model": "Lovepedal OD11 / Amp Eleven",
+   "guide_title": "OVERRIDE"
+  },
+  "41": {
+   "fractal": "Jam Ray",
+   "model": "Vemuram Jan Ray",
+   "guide_title": "OVERRIDE"
+  },
   "42": {
    "fractal": "Suhr Riot LED/Si (M)",
    "model": "Suhr Riot (LED/silicon clipping)",
+   "guide_title": "OVERRIDE"
+  },
+  "43": {
+   "fractal": "OD 250",
+   "model": "DOD Overdrive Preamp 250 (2013 reissue)",
    "guide_title": "OVERRIDE"
   },
   "44": {
@@ -182,10 +232,130 @@
    "model": "Paul Cochrane Timmy",
    "guide_title": "Timothy"
   },
+  "45": {
+   "fractal": "TS9DX +",
+   "model": "Ibanez TS9DX Turbo Tube Screamer (+ mode)",
+   "guide_title": "OVERRIDE"
+  },
+  "46": {
+   "fractal": "Box o' Crunch",
+   "model": "MI Audio Crunch Box V1",
+   "guide_title": "OVERRIDE"
+  },
+  "47": {
+   "fractal": "OD 250 Gray",
+   "model": "DOD Overdrive Preamp 250 (1978 gray spec original)",
+   "guide_title": "OVERRIDE"
+  },
+  "48": {
+   "fractal": "Horizon Precision Drive",
+   "model": "Horizon Devices Precision Drive",
+   "guide_title": "OVERRIDE"
+  },
+  "49": {
+   "fractal": "Compulsion Distortion LP",
+   "model": "Fulltone OCD (Low Peak mode)",
+   "guide_title": "OVERRIDE"
+  },
+  "50": {
+   "fractal": "Hoodoo Drive",
+   "model": "Voodoo Lab Overdrive",
+   "guide_title": "OVERRIDE"
+  },
+  "51": {
+   "fractal": "Compulsion Distortion HP",
+   "model": "Fulltone OCD (High Peak mode)",
+   "guide_title": "OVERRIDE"
+  },
+  "52": {
+   "fractal": "TS9DX Hot",
+   "model": "Ibanez TS9DX Turbo Tube Screamer (Hot mode, LED clipping)",
+   "guide_title": "OVERRIDE"
+  },
+  "53": {
+   "fractal": "DS1 Distortion",
+   "model": "BOSS DS-1 Distortion",
+   "guide_title": "OVERRIDE"
+  },
+  "54": {
+   "fractal": "DS1 Distortion Mod",
+   "model": "BOSS DS-1 with Keeley Seeing Eye and Ultra mods",
+   "guide_title": "OVERRIDE"
+  },
+  "55": {
+   "fractal": "MCMLXXXI Drive",
+   "model": "1981 Inventions DRV",
+   "guide_title": "OVERRIDE"
+  },
+  "56": {
+   "fractal": "Sonic Drive",
+   "model": "Maxon/Ibanez SD-9 Sonic Distortion",
+   "guide_title": "OVERRIDE"
+  },
+  "57": {
+   "fractal": "Valve Screamer VS9",
+   "model": "Ibanez TS9 Tube Screamer",
+   "guide_title": "OVERRIDE"
+  },
+  "58": {
+   "fractal": "Maxoff 808",
+   "model": "Maxon OD-808",
+   "guide_title": "OVERRIDE"
+  },
+  "59": {
+   "fractal": "Klone Chiron",
+   "model": "Klon Centaur / KTR",
+   "guide_title": "OVERRIDE"
+  },
+  "60": {
+   "fractal": "Esoteric Bass RCB",
+   "model": "Xotic Bass RC Booster",
+   "guide_title": "OVERRIDE"
+  },
   "61": {
    "fractal": "BB Pre AT",
    "model": "Xotic BB preamp",
    "guide_title": "BB Pre"
+  },
+  "62": {
+   "fractal": "Griddle Cake",
+   "model": "Crowther Hot Cake",
+   "guide_title": "OVERRIDE"
+  },
+  "63": {
+   "fractal": "Bosom Boost",
+   "model": "Friedman Buxom Boost",
+   "guide_title": "OVERRIDE"
+  },
+  "64": {
+   "fractal": "OD-One Overdrive",
+   "model": "BOSS OD-1 Over Drive",
+   "guide_title": "OVERRIDE"
+  },
+  "65": {
+   "fractal": "Nobelium OVD-1",
+   "model": "Nobels ODR-1 BC Natural Overdrive",
+   "guide_title": "OVERRIDE"
+  },
+  "66": {
+   "fractal": "Sunrise Splendor Hi-Cut",
+   "model": "JHS Morning Glory V4 (High Cut switch disengaged)",
+   "guide_title": "OVERRIDE"
+  },
+  "67": {
+   "fractal": "Gauss Drive",
+   "model": "Mesa Flux-Drive",
+   "guide_title": "OVERRIDE"
+  },
+  "68": {
+   "fractal": "Sunrise Splendor",
+   "model": "JHS Morning Glory V4",
+   "guide_title": "OVERRIDE"
+  },
+  "69": {
+   "fractal": "Integral Pre",
+   "model": "TC Electronic Integrated Preamp",
+   "guide_title": "OVERRIDE"
   },
   "70": {
    "fractal": "PI Fuzz - Triangle",
@@ -197,20 +367,75 @@
    "model": "Electro-Harmonix Big Muff Pi",
    "guide_title": "Pi Fuzz"
   },
+  "72": {
+   "fractal": "Colortone Booster",
+   "model": "Colorsound Power Boost",
+   "guide_title": "OVERRIDE"
+  },
+  "73": {
+   "fractal": "Colortone OD",
+   "model": "Colorsound Overdriver",
+   "guide_title": "OVERRIDE"
+  },
+  "74": {
+   "fractal": "MOSFET Distortion",
+   "model": "Ibanez MT10 Mostortion",
+   "guide_title": "OVERRIDE"
+  },
   "75": {
    "fractal": "PI Fuzz - Russian",
    "model": "Electro-Harmonix Big Muff Pi",
    "guide_title": "Pi Fuzz"
   },
+  "76": {
+   "fractal": "Super Fuzz",
+   "model": "Univox Super-Fuzz",
+   "guide_title": "OVERRIDE"
+  },
   "77": {
    "fractal": "Tube Drive 5-Knob",
-   "model": "versions of the Butler Tube Driver",
-   "guide_title": "Tube Drv"
+   "model": "Butler Tube Driver / Dean Markley Overlord",
+   "guide_title": "OVERRIDE"
+  },
+  "78": {
+   "fractal": "77 Custom OD",
+   "model": "MXR M77 Custom Badass Modified O.D.",
+   "guide_title": "OVERRIDE"
+  },
+  "79": {
+   "fractal": "Angry Chuck",
+   "model": "JHS Angry Charlie V3",
+   "guide_title": "OVERRIDE"
+  },
+  "80": {
+   "fractal": "Guardian Photon Speed",
+   "model": "Greer Lightspeed",
+   "guide_title": "OVERRIDE"
+  },
+  "81": {
+   "fractal": "Paradigm Shifter",
+   "model": "Barber Electronics Gain Changer",
+   "guide_title": "OVERRIDE"
   },
   "82": {
    "fractal": "PI Fuzz - Bass",
    "model": "Electro-Harmonix Big Muff Pi",
    "guide_title": "Pi Fuzz"
+  },
+  "83": {
+   "fractal": "NoAmp Bass DI",
+   "model": "Tech 21 SansAmp Bass Driver DI",
+   "guide_title": "OVERRIDE"
+  },
+  "84": {
+   "fractal": "NoAmp Bass Pre",
+   "model": "Tech 21 SansAmp Bass Driver DI (speaker emulation bypassed)",
+   "guide_title": "OVERRIDE"
+  },
+  "85": {
+   "fractal": "Royal Bass DI",
+   "model": "Noble Bass Preamp DI",
+   "guide_title": "OVERRIDE"
   }
  }
 }
