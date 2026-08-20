@@ -13,6 +13,6 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install dependencies
-        run: pip install mido fastapi pydantic pytest
+        run: pip install mido fastapi pydantic pytest httpx2
       - name: Run test suite (simulator + validation, no hardware)
         run: pytest tests/ -q
