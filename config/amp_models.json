@@ -1,0 +1,2820 @@
+{
+ "schema_version": 2,
+ "device": "FM9",
+ "content": "facts",
+ "keyed_by": "FM9_AMP_ROSTER ordinal (the DISTORT_TYPE wire value)",
+ "source": "Amplifier Library Guide v1 (Comprehensive), XML export",
+ "generated_by": "tools/build_amp_models.py",
+ "warning": "Generated file. Hand edits are lost on regeneration; put corrections in OVERRIDES in the generator instead. 'fractal' must stay equal to FM9_AMP_ROSTER[ordinal]; fm9/registry.py enforces that at load time.",
+ "amps": {
+  "0": {
+   "fractal": "59 Bassguy Bright",
+   "guide_index": 8,
+   "guide_title": "‘59 BASSGUY BRIGHT",
+   "model": "Fender Tweed Bassman",
+   "orig_cab": "Fender 4x10 Jensens",
+   "dynacab": "4x10 Bassguy RI",
+   "controls": "Presence, Bass, Middle, Treble & Volume (Drive)",
+   "preamp_tubes": "12AX7A (Syl)",
+   "power_tubes": "6L6/5881",
+   "tonestack": "POST"
+  },
+  "1": {
+   "fractal": "65 Bassguy Normal",
+   "guide_index": 13,
+   "guide_title": "‘65 BASSGUY NORMAL"
+  },
+  "2": {
+   "fractal": "Vibrato Verb",
+   "guide_index": 323,
+   "guide_title": "VIBRATO VERB",
+   "model": "Fender Vibroverb, old model",
+   "orig_cab": "Fender 1x15",
+   "dynacab": "1x15 Vibratoverb",
+   "controls": "Volume, Bass, Treble, Bright switch, Tremolo effect",
+   "preamp_tubes": "7025 (12AX7A Syl)",
+   "power_tubes": "6L6",
+   "tonestack": "PRE"
+  },
+  "3": {
+   "fractal": "Deluxe Verb Vibrato",
+   "guide_index": 109,
+   "guide_title": "DELUXE VERB VIBRATO",
+   "model": "1965 blackface Fender DLX Reverb, AB763, Vibrato channel"
+  },
+  "4": {
+   "fractal": "Double Verb Vibrato",
+   "guide_index": 125,
+   "guide_title": "DOUBLE VERB VIBRATO",
+   "model": "1966 blackface Fender Twin Reverb, vibrato channel"
+  },
+  "5": {
+   "fractal": "JR Blues",
+   "guide_index": 186,
+   "guide_title": "JR BLUES",
+   "model": "Fender Blues Junior 15w",
+   "orig_cab": "Fender 1x12",
+   "dynacab": "1x12 Jr Blues",
+   "controls": "Volume, Treble, Bass, Middle, Master, Fat button",
+   "preamp_tubes": "12AX7A (Syl)",
+   "power_tubes": "EL84",
+   "tonestack": "MID"
+  },
+  "6": {
+   "fractal": "Class-A 15W TB",
+   "guide_index": 95,
+   "guide_title": "CLASS-A 15W TB",
+   "model": "Vox AC15 Top Boost",
+   "orig_cab": "Vox 1x12 (G12M,Alnico)",
+   "dynacab": "1x12 AC20",
+   "controls": "Vol, Cut, Bass, Treble",
+   "preamp_tubes": "12AX7A (Syl)",
+   "power_tubes": "EL84",
+   "tonestack": "POST"
+  },
+  "7": {
+   "fractal": "Class-A 30W",
+   "guide_index": 96,
+   "guide_title": "CLASS-A 30W",
+   "model": "Vox AC-30, AC30HW head, Normal channel",
+   "orig_cab": "Vox 2x12 (Alnico, G12M)",
+   "dynacab": "2x12 Class-A 30W",
+   "controls": "Vol (drive), Bright switch, Treble, Bass, Tone Cut (hi-cut)",
+   "preamp_tubes": "12AX7A (Syl)",
+   "power_tubes": "EL84",
+   "tonestack": "POST"
+  },
+  "8": {
+   "fractal": "Class-A 30W TB",
+   "guide_index": 100,
+   "guide_title": "CLASS-A 30W TB",
+   "model": "Vox AC-30, Top Boost channel of AC30HW head in “Cool” mode (regular, with tone stack)"
+  },
+  "9": {
+   "fractal": "Brit JM45",
+   "guide_index": 56,
+   "guide_title": "BRIT JM45",
+   "model": "30w Marshall JTM 45",
+   "orig_cab": "Marshall 4x12 (G12M, G12H)",
+   "dynacab": "4x12 1960TV",
+   "controls": "Volume Normal/High Treble, Bass, Mid, Treble, Presence",
+   "preamp_tubes": "ECC83",
+   "power_tubes": "EL34/6L6/KT66",
+   "tonestack": "POST"
+  },
+  "10": {
+   "fractal": "Plexi 50W Normal",
+   "guide_index": 220,
+   "guide_title": "PLEXI 50W NORMAL",
+   "model": "1967 Marshall Plexi 50W, Normal channel"
+  },
+  "11": {
+   "fractal": "Plexi 50W High 1",
+   "guide_index": 217,
+   "guide_title": "PLEXI 50W HIGH 1",
+   "model": "1967 Marshall Super Lead Plexi 50W, High Treble chnl"
+  },
+  "12": {
+   "fractal": "1987X Normal",
+   "guide_index": 18,
+   "guide_title": "1987X NORMAL",
+   "model": "50W Marshall 1987X RI, Normal channel"
+  },
+  "13": {
+   "fractal": "1987X Treble",
+   "guide_index": 19,
+   "guide_title": "1987X TREBLE",
+   "model": "50W Marshall 1987X RI, Treble channel"
+  },
+  "14": {
+   "fractal": "Brit 800 2204 High",
+   "guide_index": 46,
+   "guide_title": "BRIT 800 2204 HIGH",
+   "model": "50W Marshall JCM800 2204, High sensitivity in",
+   "orig_cab": "Marshall 4x12 (G12M, G12H, G12-75, V30)",
+   "dynacab": "4x12 1960TV",
+   "controls": "Preamp Vol, Bass, Mid, Treble, Presence, MV",
+   "preamp_tubes": "ECC83",
+   "power_tubes": "EL34/6550",
+   "tonestack": "POST"
+  },
+  "15": {
+   "fractal": "Brit Super",
+   "guide_index": 66,
+   "guide_title": "BRIT SUPER",
+   "model": "Marshall AFD100, AFD mode, based on schematics only",
+   "orig_cab": "Marshall 4x12 (V30)",
+   "dynacab": "4x12 Friedman V30",
+   "controls": "Gain, Bass, Middle, Treble, Presence, Master, Depth",
+   "preamp_tubes": "ECC83",
+   "power_tubes": "EL34",
+   "tonestack": "POST"
+  },
+  "16": {
+   "fractal": "Hipower Normal",
+   "guide_index": 175,
+   "guide_title": "HIPOWER NORMAL",
+   "model": "Hiwatt DR-103, Normal Channel"
+  },
+  "17": {
+   "fractal": "Hipower Brilliant",
+   "guide_index": 173,
+   "guide_title": "HIPOWER BRILLIANT",
+   "model": "1974 Hiwatt DR-103, Brilliant channel",
+   "orig_cab": "Hiwatt 4x12 (Fane)",
+   "dynacab": "4x12 Lerxst",
+   "controls": "Volume, Master, Bass, Mid, Treble, Presence",
+   "preamp_tubes": "ECC83",
+   "power_tubes": "EL34",
+   "tonestack": "MID"
+  },
+  "18": {
+   "fractal": "USA MK IV Rhythm 1",
+   "guide_index": 306,
+   "guide_title": "USA MK IV RHYTHM 1",
+   "model": "Rhythm 1 channel",
+   "controls": "Gain, Treble, Bass, Mid, Presence, Master, Pull Bright, GEQ, Pentode/Triode switch, Class-A/Simul-Class switch, Voicing switch (Mid Gain/Harmonics), Variac"
+  },
+  "19": {
+   "fractal": "USA Pre Clean",
+   "guide_index": 315,
+   "guide_title": "USA PRE CLEAN",
+   "model": "MESA TriAxis preamp, Rhythm Green",
+   "dynacab": "2x12 Lead 80",
+   "controls": "Drive, Treble, Middle, Bass, Preamp Presence, P.A. Presence, Dynamic Voice (GEQ)",
+   "preamp_tubes": "12AX7A (Syl)",
+   "power_tubes": "6L6",
+   "tonestack": ""
+  },
+  "20": {
+   "fractal": "USA MK IV Rhythm 2",
+   "guide_index": 307,
+   "guide_title": "USA MK IV RHYTHM 2",
+   "model": "Rhythm 2 channel",
+   "controls": "Gain, Treble, Bass, Mid, Presence, Master, Pull Fat, Presence Shift, GEQ, Pentode/Triode switch, Class-A/Simul-Class switch, Voicing switch (Mid Gain/Harmonics), Variac"
+  },
+  "21": {
+   "fractal": "USA MK IIC+",
+   "guide_index": 297,
+   "guide_title": "USA MK IIC+",
+   "model": "MESA/Boogie Mark IIC+",
+   "orig_cab": "Mesa 1x12 (C90, EVM)",
+   "dynacab": "4x12 Recto Straight",
+   "controls": "Volume (pull: Bright), Treble (pull: Shift = Fat), Bass (pull: Shift, not modeled), Middle, Presence, Master rhythm (pull: Deep), Lead Drive & Master Lead (pull: Bright)",
+   "preamp_tubes": "12AX7A",
+   "power_tubes": "6L6",
+   "tonestack": "PRE"
+  },
+  "22": {
+   "fractal": "USA MK IIC+ Bright",
+   "guide_index": 298,
+   "guide_title": "USA MK IIC+ BRIGHT",
+   "model": "MESA/Boogie Mark IIC+, Lead Master, Pull Bright on"
+  },
+  "23": {
+   "fractal": "USA MK IV Lead",
+   "guide_index": 302,
+   "guide_title": "USA MK IV LEAD/RHYTHM",
+   "model": "MESA/Boogie Mark IV",
+   "orig_cab": "Mesa 1x12 (C90, V30)",
+   "dynacab": "4x12 Recto Straight",
+   "controls": "Gain, Treble, Bass, Mid, Presence, Master, Graphic EQ, Pentode/Triode switch, Class-A/Simul-Class switch, Voicing switch (Mid Gain/Harmonics), Variac",
+   "preamp_tubes": "12AX7A (Syl)",
+   "power_tubes": "6L6 (deliver most powerful clean sounds along with richest distortion). Can also use:"
+  },
+  "24": {
+   "fractal": "USA MK IV Lead Bright",
+   "guide_index": 303,
+   "guide_title": "USA MK IV LEAD BRIGHT",
+   "model": "Lead channel, Voicing: Harmonics, Pull Bright on"
+  },
+  "25": {
+   "fractal": "Recto2 Orange Vintage",
+   "guide_index": 237,
+   "guide_title": "RECTO2 ORANGE VINTAGE",
+   "model": "MESA Dual Rectifier 3-chnl, Orange, Vintage"
+  },
+  "26": {
+   "fractal": "Recto2 Orange Modern",
+   "guide_index": 236,
+   "guide_title": "RECTO2 ORANGE MODERN",
+   "model": "MESA Dual Rectifier 3-chnl, Orange, Modern"
+  },
+  "27": {
+   "fractal": "Recto2 Red Vintage",
+   "guide_index": 239,
+   "guide_title": "RECTO2 RED VINTAGE",
+   "model": "MESA Dual Rectifier 3-channel , Red, Vintage"
+  },
+  "28": {
+   "fractal": "Recto2 Red Modern",
+   "guide_index": 238,
+   "guide_title": "RECTO2 RED MODERN",
+   "model": "MESA Dual Rectifier 3-channel, Red, Modern"
+  },
+  "29": {
+   "fractal": "Euro Blue",
+   "guide_index": 128,
+   "guide_title": "EURO BLUE",
+   "model": "Bogner Ecstasy 20th Anniv., Blue in Vintage mode",
+   "orig_cab": "Bogner 2x12 or 4x12 (V30)",
+   "dynacab": "4x12 Friedman V30",
+   "controls": "Presence, Vol, Treble, Middle, Bass, Gain(Drive), 3-way Bright switch, Structure switch, Old/New switch, Excursion switch(Depth), Gain switch, Plexi Mode",
+   "preamp_tubes": "ECC83",
+   "power_tubes": "6L6 (modeled) or EL34",
+   "tonestack": "POST"
+  },
+  "30": {
+   "fractal": "Euro Red",
+   "guide_index": 130,
+   "guide_title": "EURO RED",
+   "model": "Bogner Ecstasy 20th Anniv. Red in Vintage mode"
+  },
+  "31": {
+   "fractal": "Shiver Clean",
+   "guide_index": 251,
+   "guide_title": "SHIVER CLEAN",
+   "model": "Bogner Shiva 20th Anniversary, Clean channel",
+   "orig_cab": "Bogner 1x12 or 2x12 (Classic 80, V30)",
+   "dynacab": "2x12 Lead 80",
+   "controls": "Volume, Bass, Treble, Bright switch, Presence, Master, Excursion (Depth)",
+   "preamp_tubes": "ECC83",
+   "power_tubes": "KT88",
+   "tonestack": "MID"
+  },
+  "32": {
+   "fractal": "Shiver Lead",
+   "guide_index": 252,
+   "guide_title": "SHIVER LEAD",
+   "model": "Bogner Shiva 20th Anniversary, Lead channel",
+   "controls": "Gain, Bass, Middle, Treble, Bright switch, Presence, Master, Excursion (Depth)",
+   "tonestack": "POST"
+  },
+  "33": {
+   "fractal": "Euro Uber",
+   "guide_index": 132,
+   "guide_title": "EURO UBER",
+   "model": "Bogner Uberschall",
+   "orig_cab": "Bogner 4x12 Uberkab (G12-T75 & V30)",
+   "dynacab": "4x12 Recto Straight",
+   "controls": "Gain, Master, Bass, Middle, Treble, Presence",
+   "preamp_tubes": "ECC83",
+   "power_tubes": "EL34 (KT88 or 6L6 in real amp)",
+   "tonestack": "POST"
+  },
+  "34": {
+   "fractal": "Solo 99 Clean",
+   "guide_index": 256,
+   "guide_title": "SOLO 99 CLEAN",
+   "model": "Soldano/Caswell X99 preamp, Clean channel",
+   "preamp_tubes": "12AX7A",
+   "power_tubes": "6L6",
+   "tonestack": ""
+  },
+  "35": {
+   "fractal": "Solo 100 Rhythm",
+   "guide_index": 261,
+   "guide_title": "SOLO 100 RHYTHM",
+   "model": "Soldano SLO-100, Normal chnl, Rhythm mode"
+  },
+  "36": {
+   "fractal": "Solo 100 Lead",
+   "guide_index": 260,
+   "guide_title": "SOLO 100 LEAD",
+   "model": "Soldano SLO-100, Overdrive channel"
+  },
+  "37": {
+   "fractal": "Friedman BE V1",
+   "guide_index": 155,
+   "guide_title": "FRIEDMAN BE V1",
+   "model": "later BE-100, voice: left"
+  },
+  "38": {
+   "fractal": "Friedman HBE V1",
+   "guide_index": 161,
+   "guide_title": "FRIEDMAN HBE V1",
+   "model": "later BE-100, voice: left, HBE mode"
+  },
+  "39": {
+   "fractal": "PVH 6160 Block Lead",
+   "guide_index": 226,
+   "guide_title": "PVH 6160 BLOCK",
+   "model": "Peavey “Block Letter” EVH 5150, Lead channel",
+   "orig_cab": "",
+   "dynacab": "",
+   "controls": "Pre Gain, Post Gain (Master), Low, Mid, High, Resonance/Depth, Presence",
+   "preamp_tubes": "12AX7A (JJ)",
+   "power_tubes": "6L6",
+   "tonestack": "POST"
+  },
+  "40": {
+   "fractal": "Mr Z MZ-38",
+   "guide_index": 200,
+   "guide_title": "MR Z MZ-38",
+   "model": "Dr. Z Maz 38 SR",
+   "orig_cab": "Dr. Z 1x12 (G12H)",
+   "dynacab": "1x12 AC20",
+   "controls": "Volume, Master, Bass, Mid, Treble, Cut",
+   "preamp_tubes": "12AX7A (Syl)",
+   "power_tubes": "EL84",
+   "tonestack": "POST"
+  },
+  "41": {
+   "fractal": "CA3+ Rhythm",
+   "guide_index": 70,
+   "guide_title": "CA3+ RHYTHM",
+   "model": "CAE 3+ SE preamp, Rhythm channel"
+  },
+  "42": {
+   "fractal": "CA3+ Lead",
+   "guide_index": 69,
+   "guide_title": "CA3+ LEAD",
+   "model": "CAE 3+ SE preamp, Crunch channel"
+  },
+  "43": {
+   "fractal": "Wrecker Rocket",
+   "guide_index": 331,
+   "guide_title": "WRECKER ROCKET",
+   "model": "Trainwreck Rocket,",
+   "orig_cab": "Marshall 4x12 (G12-M25)",
+   "dynacab": "4x12 Friedman GB",
+   "controls": "Volume (Input Drive), Bass, Treble, Cut (Hi-Cut)",
+   "preamp_tubes": "12AX7A (Syl)",
+   "power_tubes": "EL84",
+   "tonestack": "PRE"
+  },
+  "44": {
+   "fractal": "Cornfed M50",
+   "guide_index": 103,
+   "guide_title": "CORNFED M50",
+   "model": "Cornford MK50 II, OD channel",
+   "orig_cab": "Cornford 4x12 (V30)",
+   "dynacab": "4x12 Friedman V30",
+   "controls": "Gain (Input Drive), Overdrive, Bass, Middle, Treble, Volume, 2 MV, Presence & Resonance (Depth)",
+   "preamp_tubes": "ECC83",
+   "power_tubes": "EL34/6L6",
+   "tonestack": "POST"
+  },
+  "45": {
+   "fractal": "Carol-Ann OD-2",
+   "guide_index": 84,
+   "guide_title": "CAROL-ANN OD-2",
+   "model": "Carol-Ann OD-2",
+   "orig_cab": "EV-12L, Classic Lead 80, Scholz",
+   "dynacab": "1x12 Scholz",
+   "controls": "MV, PreGain, Drive",
+   "preamp_tubes": "12AX7A (Syl)",
+   "power_tubes": "6L6",
+   "tonestack": "POST"
+  },
+  "46": {
+   "fractal": "Fryette D60 Less",
+   "guide_index": 166,
+   "guide_title": "FRYETTE D60 LESS",
+   "model": "Fryette Deliverance 60 Series II, less mode (3 gain stages)",
+   "orig_cab": "Fryette 4x12 P50E (Fane F70G)",
+   "dynacab": "4x12 Friedman V30",
+   "controls": "Gain 1 & 2, Master, Bass, Middle, Treble, Presence, Depth",
+   "preamp_tubes": "12AX7A",
+   "power_tubes": "KT88",
+   "tonestack": "POST"
+  },
+  "47": {
+   "fractal": "Fryette D60 More",
+   "guide_index": 167,
+   "guide_title": "FRYETTE D60 MORE",
+   "model": "Fryette Deliverance 60 II, more mode (4 gain stages)"
+  },
+  "48": {
+   "fractal": "Brit Brown",
+   "guide_index": 55,
+   "guide_title": "BRIT BROWN",
+   "model": "Custom FAS model",
+   "dynacab": "4x12 5153",
+   "power_tubes": "EL34"
+  },
+  "49": {
+   "fractal": "Citrus RV50",
+   "guide_index": 93,
+   "guide_title": "CITRUS RV50",
+   "model": "Orange Rockerverb 50 MKII, Dirty Channel",
+   "orig_cab": "Orange 4x12 (V30)",
+   "dynacab": "4x12 Citrus",
+   "controls": "Volume, Gain, Treble, Middle, Bass",
+   "preamp_tubes": "ECC83",
+   "power_tubes": "EL34",
+   "tonestack": "POST"
+  },
+  "50": {
+   "fractal": "Jazz 120",
+   "guide_index": 177,
+   "guide_title": "JAZZ 120",
+   "model": "Roland Jazz Chorus 120",
+   "orig_cab": "Roland 2x12 Silver AlNiCo",
+   "dynacab": "2x12 Double Verb",
+   "controls": "Volume, Bass, Mid, Treble, Bright switch",
+   "power_tubes": "Transistor (solid-state)",
+   "tonestack": "PRE"
+  },
+  "51": {
+   "fractal": "Energyball",
+   "guide_index": 127,
+   "guide_title": "ENERGYBALL",
+   "model": "Engl Powerball, Lead channel",
+   "orig_cab": "Engl 4x12 (V30, V60)",
+   "dynacab": "4x12 Recto Straight",
+   "controls": "Gain, Lo/Hi Lead, Bass, Mid-Open/-Focus, Treble, Open/Focus, Presence, Depth Punch",
+   "preamp_tubes": "ECC83",
+   "power_tubes": "6L6",
+   "tonestack": "POST"
+  },
+  "52": {
+   "fractal": "ODS-100 Clean",
+   "guide_index": 203,
+   "guide_title": "ODS-100 CLEAN",
+   "model": "Dumble ODS-100 Ford, clean channel",
+   "orig_cab": "Dumble 2x12 or 4x12 (G12-65, EVM/EV-L)",
+   "dynacab": "4x12 Rumble EV12L",
+   "controls": "Volume, Bass, Middle, Treble, OD Level, OD Ratio, Master, Presence, Bright switch, Mid boost switch (Deep), footswitch PAB",
+   "preamp_tubes": "12AX7A (Syl)",
+   "power_tubes": "6L6",
+   "tonestack": "MID"
+  },
+  "53": {
+   "fractal": "ODS-100 HRM",
+   "guide_index": 207,
+   "guide_title": "ODS-100 HRM",
+   "model": "Dumble HRM circuit, OD chnl, Mid switch (Deep) off",
+   "preamp_tubes": "12AX7A (Syl)",
+   "power_tubes": "EL34"
+  },
+  "54": {
+   "fractal": "FAS Rhythm",
+   "guide_index": 147,
+   "guide_title": "FAS RHYTHM",
+   "model": "Custom Model, Hybrid Marshall/MESA amp",
+   "dynacab": "4x12 1960TV",
+   "power_tubes": "6L6"
+  },
+  "55": {
+   "fractal": "FAS Lead 1",
+   "guide_index": 142,
+   "guide_title": "FAS LEAD 1",
+   "model": "Custom FAS Model",
+   "dynacab": "4x12 V30 5153 Stealth",
+   "power_tubes": "6L6"
+  },
+  "56": {
+   "fractal": "FAS Lead 2",
+   "guide_index": 143,
+   "guide_title": "FAS LEAD 2",
+   "model": "Custom FAS Model, Hot-rod British lead sound",
+   "dynacab": "4x12 V30 5153 Stealth",
+   "power_tubes": "EL34",
+   "tonestack": ""
+  },
+  "57": {
+   "fractal": "FAS Modern",
+   "guide_index": 144,
+   "guide_title": "FAS MODERN",
+   "model": "Custom FAS Model, High gain hybrid tone",
+   "dynacab": "4x12 Recto Straight",
+   "power_tubes": "6L6"
+  },
+  "58": {
+   "fractal": "Das Metall",
+   "guide_index": 104,
+   "guide_title": "DAS METALL",
+   "model": "Diezel VH4 (schematics, ear-tuned, not matched)",
+   "orig_cab": "Diezel 4x12 (V30, G12-100)",
+   "dynacab": "4x12 Recto Straight",
+   "controls": "Gain, Vol, Bass, Mid, Treble, Pres(4k), Deep(80Hz)",
+   "preamp_tubes": "ECC83",
+   "power_tubes": "6L6",
+   "tonestack": "POST"
+  },
+  "59": {
+   "fractal": "Brit Pre",
+   "guide_index": 64,
+   "guide_title": "BRIT PRE",
+   "model": "Marshall JMP-1 preamp (OD Channel)",
+   "controls": "Volume, Gain, Bass, Middle, Treble, Presence",
+   "preamp_tubes": "ECC83",
+   "tonestack": "POST"
+  },
+  "60": {
+   "fractal": "Buddah DuoMaster",
+   "guide_index": 67,
+   "guide_title": "BUDDAH DUOMASTER",
+   "model": "Budda Twinmaster",
+   "orig_cab": "1x12/1x15 Budda Phat 12/15",
+   "dynacab": "2x12 Double Verb",
+   "controls": "Bass, Treble, Volume",
+   "preamp_tubes": "12AX7A (Syl)",
+   "power_tubes": "EL84",
+   "tonestack": "POST"
+  },
+  "61": {
+   "fractal": "Matchbox Chiefman 1",
+   "guide_index": 195,
+   "guide_title": "MATCHBOX CHIEFTAIN 1",
+   "model": "Matchless Chieftain, Single channel",
+   "orig_cab": "Matchless 2x12 (G12H)",
+   "dynacab": "2x12 Chiefman",
+   "controls": "Vol, Master, Bass, Mid, Treble, Brilliance (HiCut)",
+   "preamp_tubes": "12AX7A (Syl)",
+   "power_tubes": "EL34",
+   "tonestack": "PRE"
+  },
+  "62": {
+   "fractal": "Matchbox Chiefman 2",
+   "guide_index": 196,
+   "guide_title": "MATCHBOX CHIEFTAIN 2",
+   "model": "Matchless Chieftain boosted (more gain/high emphasis)"
+  },
+  "63": {
+   "fractal": "Cameron CCV 1A",
+   "guide_index": 71,
+   "guide_title": "CAMERON CCV 1A",
+   "model": "Cameron CCV-100, Channel 1, less gain",
+   "dynacab": "4x12 Friedman GB",
+   "controls": "Channel 1: Punch (Resonance/Depth), Presence, Master, Bass, Middle, Treble & Gain, 3-way Voicing switch (resonance), 3-way Dark switch (presence), 3-way Gain Style switch (Jose Master gain/clipping), 3-way Bright switch (less noticeable at higher gain settings)",
+   "preamp_tubes": "12AX7A (JJ)",
+   "power_tubes": "EL34",
+   "tonestack": "PRE"
+  },
+  "64": {
+   "fractal": "Cameron CCV 2A",
+   "guide_index": 73,
+   "guide_title": "CAMERON CCV 2A",
+   "model": "Cameron CCV-100, Channel 2, Bright 1 switch left, Bright 2 switch left, Gain Style switch left",
+   "tonestack": "POST",
+   "controls": "Channel 2: Punch (= Resonance / Depth), Presence, Solo Master, Master, Bass, Middle, Treble, two Gain controls, 3-way Gain Style switch, two Bright switches, Drive switch"
+  },
+  "65": {
+   "fractal": "SV Bass 2",
+   "guide_index": 278,
+   "guide_title": "SV BASS 2",
+   "model": "1970 Ampeg SVT, channel 1, midrange switch in position 3"
+  },
+  "66": {
+   "fractal": "Tube Pre",
+   "guide_index": 286,
+   "guide_title": "TUBE PRE",
+   "model": "Generic tube preamp model",
+   "orig_cab": "",
+   "dynacab": "1x12 G12T-100",
+   "preamp_tubes": "12AX7",
+   "power_tubes": "5881"
+  },
+  "67": {
+   "fractal": "FAS Brown",
+   "guide_index": 136,
+   "guide_title": "FAS BROWN",
+   "model": "Custom Model, EVH Brown Sound",
+   "dynacab": "4x12 1960TV",
+   "power_tubes": "EL34"
+  },
+  "68": {
+   "fractal": "Big Hair",
+   "guide_index": 39,
+   "guide_title": "BIG HAIR",
+   "model": "Custom FAS model,",
+   "dynacab": "4x12 1960TV",
+   "power_tubes": "6L6"
+  },
+  "69": {
+   "fractal": "Solo 99 Lead",
+   "guide_index": 257,
+   "guide_title": "SOLO 99 LEAD",
+   "model": "Soldano/Caswell X99 preamp, Lead channel"
+  },
+  "70": {
+   "fractal": "Supertweed",
+   "guide_index": 274,
+   "guide_title": "SUPERTWEED",
+   "model": "Custom FA S model",
+   "dynacab": "1x12 Deluxe Tweed",
+   "power_tubes": "6L6"
+  },
+  "71": {
+   "fractal": "Texas Star Lead",
+   "guide_index": 280,
+   "guide_title": "TEXAS STAR LEAD",
+   "model": "MESA Lone Star Classic, Lead channel"
+  },
+  "72": {
+   "fractal": "FAS Wreck",
+   "guide_index": 150,
+   "guide_title": "FAS WRECK",
+   "model": "Custom, OG WRECKER 1 model",
+   "dynacab": "4x12 Friedman GB",
+   "power_tubes": "EL34"
+  },
+  "73": {
+   "fractal": "Brit JVM OD1 Orange",
+   "guide_index": 59,
+   "guide_title": "BRIT JVM OD1 ORANGE"
+  },
+  "74": {
+   "fractal": "Brit JVM OD2 Orange",
+   "guide_index": 62,
+   "guide_title": "BRIT JVM OD2 ORANGE"
+  },
+  "75": {
+   "fractal": "FAS 6160",
+   "guide_index": 133,
+   "guide_title": "FAS 6160",
+   "model": "Custom Model (Peavey 5150)",
+   "dynacab": "4x12 5153",
+   "power_tubes": "6L6"
+  },
+  "76": {
+   "fractal": "Legend 100",
+   "guide_index": 193,
+   "guide_title": "LEGEND 100",
+   "model": "Carvin Legacy VL100, Steve Vai’s VL100, lead channel",
+   "orig_cab": "Carvin 2x12/4x12 (V30)",
+   "dynacab": "4x12 Friedman V30",
+   "controls": "Presence, Treble (11k), Mid(650Hz), Bass(80Hz), Drive, Vol",
+   "preamp_tubes": "12AX7A",
+   "power_tubes": "EL34",
+   "tonestack": "POST"
+  },
+  "77": {
+   "fractal": "USA MK IV Lead Mid",
+   "guide_index": 304,
+   "guide_title": "USA MK IV LEAD MID GAIN",
+   "model": "Lead channel, Voicing: Mid Gain, Pull Bright off"
+  },
+  "78": {
+   "fractal": "USA MK IV Lead Mid Bright",
+   "guide_index": 305,
+   "guide_title": "USA MK IV LEAD MID GAIN BRIGHT",
+   "model": "Lead channel, Voicing: Mid Gain, Pull Bright engaged"
+  },
+  "79": {
+   "fractal": "Princetone 5F2",
+   "guide_index": 223,
+   "guide_title": "PRINCETONE 5F2",
+   "model": "Fender Tweed Princeton Late ‘50s 5F2-A model",
+   "orig_cab": "Fender 1x10 (C10n)",
+   "dynacab": "1x8 Princetone",
+   "controls": "Volume, Tone",
+   "preamp_tubes": "12AX7A (Syl)",
+   "power_tubes": "6V6",
+   "tonestack": "PRE"
+  },
+  "80": {
+   "fractal": "Blankenship Leeds",
+   "guide_index": 40,
+   "guide_title": "BLANKENSHIP LEEDS",
+   "model": "Dweezil Zappa Blankenship Leeds 21",
+   "orig_cab": "2x10, 1x12, 2x12 (G12M)",
+   "dynacab": "1x12 Div13 CJ11",
+   "controls": "Volume, Tone & tremolo",
+   "preamp_tubes": "ECC83",
+   "power_tubes": "EL84",
+   "tonestack": "POST"
+  },
+  "81": {
+   "fractal": "5153 100W Green",
+   "guide_index": 21,
+   "guide_title": "5153 100W GREEN",
+   "model": "EVH 5150-III Green channel (clean)"
+  },
+  "82": {
+   "fractal": "5153 100W Blue",
+   "guide_index": 20,
+   "guide_title": "5153 100W BLUE",
+   "model": "EVH 5150-III blue channel (crunch)",
+   "orig_cab": "Celestion G12EVHs",
+   "dynacab": "4x12 5153, 2x12 5153 Stealth",
+   "controls": "Gain(Drive), Low, Mid, High, MV, Presence",
+   "preamp_tubes": "12AX7A",
+   "power_tubes": "6L6/5881",
+   "tonestack": "POST"
+  },
+  "83": {
+   "fractal": "5153 100W Red",
+   "guide_index": 22,
+   "guide_title": "5153 100W RED"
+  },
+  "84": {
+   "fractal": "Solo 88 Rhythm",
+   "guide_index": 255,
+   "guide_title": "SOLO 88 RHYTHM",
+   "model": "Soldano X88R preamp, Rhythm channel"
+  },
+  "85": {
+   "fractal": "Div/13 CJ",
+   "guide_index": 113,
+   "guide_title": "DIV/13 CJ",
+   "model": "Divided By 13 CJ 11",
+   "orig_cab": "Div by 13 G12M",
+   "dynacab": "1x12 Div13 CJ11",
+   "controls": "Vol (Drive), Mid Gain Boost, Treble, Bass, MV",
+   "preamp_tubes": "12AX7A (Syl)",
+   "power_tubes": "6V6",
+   "tonestack": "PRE"
+  },
+  "86": {
+   "fractal": "Herbie CH2-",
+   "guide_index": 170,
+   "guide_title": "HERBIE CH2-",
+   "model": "Diezel Herbert, Channel 2- (based on Marshall Plexi)"
+  },
+  "87": {
+   "fractal": "Herbie CH2+",
+   "guide_index": 169,
+   "guide_title": "HERBIE CH2+",
+   "model": "Diezel Herbert, Channel 2+ (based on Marshall JC800)",
+   "orig_cab": "Diezel 4x12 (V30, G12-K100)",
+   "dynacab": "4x12 Recto Straight",
+   "controls": "Bass, Mid(1k), Treble, MV, Presence(>3k), Deep(120Hz)",
+   "preamp_tubes": "ECC83",
+   "power_tubes": "KT66 or KT77",
+   "tonestack": "POST"
+  },
+  "88": {
+   "fractal": "Herbie CH3",
+   "guide_index": 171,
+   "guide_title": "HERBIE CH3",
+   "model": "Diezel Herbert, Channel 3 (based on Diezel VH4)"
+  },
+  "89": {
+   "fractal": "Dirty Shirley 1",
+   "guide_index": 111,
+   "guide_title": "DIRTY SHIRLEY 1",
+   "model": "40W Friedman Dirty Shirley, current version",
+   "orig_cab": "Friedman 4x12 (V30, G12M, G12-65, G12H)",
+   "dynacab": "4x12 Friedman GB",
+   "controls": "Gain (Drive), Master, Bass, Middle, Treble, Presence",
+   "preamp_tubes": "12AX7A (JJ)",
+   "power_tubes": "6L6/5881",
+   "tonestack": "POST"
+  },
+  "90": {
+   "fractal": "Dizzy V4 Blue 2",
+   "guide_index": 117,
+   "guide_title": "DIZZY V4 BLUE 2",
+   "model": "Diezel VH4, Diezel VH4 Blue, Crunch",
+   "orig_cab": "Diezel 4x12 (V30, G12-100)",
+   "dynacab": "4x12 Recto Straight",
+   "controls": "Gain, Volume, Bass, Mid, Treble, Presence (4k), Deep (80Hz)",
+   "preamp_tubes": "ECC83",
+   "power_tubes": "6L6/KT77",
+   "tonestack": "POST"
+  },
+  "91": {
+   "fractal": "Dizzy V4 Blue 3",
+   "guide_index": 118,
+   "guide_title": "DIZZY V4 BLUE 3",
+   "model": "Diezel VH4 Blue, Distortion/Mega"
+  },
+  "92": {
+   "fractal": "Dizzy V4 Blue 4",
+   "guide_index": 119,
+   "guide_title": "DIZZY V4 BLUE 4",
+   "model": "Diezel VH4 Blue, Solo/Lead"
+  },
+  "93": {
+   "fractal": "Suhr Badger 18",
+   "guide_index": 270,
+   "guide_title": "SUHR BADGER 18",
+   "model": "Suhr Badger 18",
+   "orig_cab": "Suhr 1(or 2)x12 V30",
+   "dynacab": "1x12 Hot Kitty",
+   "controls": "Bass, Middle, Treble, Gain (Drive), Drive (Master)",
+   "preamp_tubes": "12AX7A Syl",
+   "power_tubes": "EL84",
+   "tonestack": "POST"
+  },
+  "94": {
+   "fractal": "Suhr Badger 30",
+   "guide_index": 271,
+   "guide_title": "SUHR BADGER 30",
+   "model": "Suhr Badger 30",
+   "power_tubes": "EL34",
+   "tonestack": "POST"
+  },
+  "95": {
+   "fractal": "Princetone AA964",
+   "guide_index": 224,
+   "guide_title": "PRINCETONE AA964",
+   "model": "Fender Princeton 68-70 Silverface AA964, no reverb",
+   "orig_cab": "Fender 1x10",
+   "dynacab": "1x10 SF Princetone",
+   "controls": "Volume, Bass, Treble",
+   "preamp_tubes": "7025 (12AX7A Syl)",
+   "power_tubes": "6V6",
+   "tonestack": "MID"
+  },
+  "96": {
+   "fractal": "Supremo Trem",
+   "guide_index": 275,
+   "guide_title": "SUPREMO TREM",
+   "model": "Supro 1964T",
+   "orig_cab": "Supro 2x12",
+   "dynacab": "1x12 AC20",
+   "controls": "Volume, Tone",
+   "preamp_tubes": "12AX7A (Syl)",
+   "power_tubes": "6973",
+   "tonestack": "PRE"
+  },
+  "97": {
+   "fractal": "Atomica Low",
+   "guide_index": 37,
+   "guide_title": "ATOMICA LOW",
+   "model": "Cameron Atomica (low gain input)"
+  },
+  "98": {
+   "fractal": "Atomica High",
+   "guide_index": 36,
+   "guide_title": "ATOMICA HIGH",
+   "model": "Cameron Atomica (high gain input w/ add’l gain stage)",
+   "orig_cab": "cab with G12H speakers",
+   "dynacab": "4x12 5153",
+   "controls": "Thump(Depth), Presence, Bass, Mid, Treble, MV, Gain(Drive), Edge(Bright), 3 Gain Voices",
+   "preamp_tubes": "12AX7A (JJ)",
+   "power_tubes": "EL34",
+   "tonestack": "POST"
+  },
+  "99": {
+   "fractal": "Deluxe Tweed Jumped",
+   "guide_index": 107,
+   "guide_title": "DELUXE TWEED JUMPED",
+   "model": "‘57 narrow-panel Fender Tweed Deluxe 5E3 jumpered inputs"
+  },
+  "100": {
+   "fractal": "Spawn Q-Rod OD2-1",
+   "guide_index": 267,
+   "guide_title": "SPAWN Q-ROD OD2-1",
+   "model": "Splawn Quickrod, OD ch, Lead mode, 1st gear"
+  },
+  "101": {
+   "fractal": "Spawn Q-Rod OD2-2",
+   "guide_index": 268,
+   "guide_title": "SPAWN Q-ROD OD2-2",
+   "model": "Splawn Quickrod, OD ch, Lead mode, 2nd gear"
+  },
+  "102": {
+   "fractal": "Spawn Q-Rod OD2-3",
+   "guide_index": 269,
+   "guide_title": "SPAWN Q-ROD OD2-3",
+   "model": "Splawn Quickrod, OD ch, Lead mode, 3rd gear"
+  },
+  "103": {
+   "fractal": "Brit Silver",
+   "guide_index": 65,
+   "guide_title": "BRIT SILVER",
+   "model": "Marshall Silver Jubilee",
+   "orig_cab": "Marshall 4x12 V30",
+   "dynacab": "4x12 Lerxst",
+   "controls": "Presence, Bass, Mid, Treble, Gain, Master",
+   "preamp_tubes": "ECC83",
+   "power_tubes": "EL34",
+   "tonestack": "POST"
+  },
+  "104": {
+   "fractal": "Spawn Nitrous 2",
+   "guide_index": 263,
+   "guide_title": "SPAWN NITROUS 2",
+   "model": "Splawn Nitro, OD channel, OD-2 (Lead mode)"
+  },
+  "105": {
+   "fractal": "FAS Crunch",
+   "guide_index": 139,
+   "guide_title": "FAS CRUNCH",
+   "model": "Custom Ultimate British-sound amp model",
+   "dynacab": "4x12 1960TV",
+   "power_tubes": "EL34"
+  },
+  "106": {
+   "fractal": "Two Stone J35 PAB",
+   "guide_index": 288,
+   "guide_title": "TWO STONE J35 PAB",
+   "model": "Two-Rock Jet 35, Lead mode PAB on (tonestack byp)"
+  },
+  "107": {
+   "fractal": "Fox ODS",
+   "guide_index": 151,
+   "guide_title": "FOX ODS",
+   "model": "Fuchs Overdrive Supreme 50, OD chnl",
+   "orig_cab": "Fuchs 2x12 (Eminence)",
+   "dynacab": "4x12 Rumble EV12S",
+   "controls": "Gain, Input, Brite sw, Deep sw, Master, Accent (Presence)",
+   "preamp_tubes": "12AX7A (Syl)",
+   "power_tubes": "6L6",
+   "tonestack": "POST"
+  },
+  "108": {
+   "fractal": "Hot Kitty",
+   "guide_index": 176,
+   "guide_title": "HOT KITTY",
+   "model": "Bad Cat Hot Cat 30, Dirty channel",
+   "orig_cab": "BadCat 1x12 (proprietary Celestion)",
+   "dynacab": "1x12 Hot Kitty",
+   "controls": "Gain, Edge, Level, Bass, Mid, Treble, Brilliance (Hi-Cut), Master",
+   "preamp_tubes": "12AX7A (Syl)",
+   "power_tubes": "EL34",
+   "tonestack": "POST"
+  },
+  "109": {
+   "fractal": "Band-Commander",
+   "guide_index": 38,
+   "guide_title": "BAND-COMMANDER",
+   "model": "‘68 silverface Fender Bandmaster head with blackface AB763 circuit, Vibrato channel model",
+   "orig_cab": "Fender 2x12",
+   "dynacab": "2x12 65 Bassguy",
+   "controls": "Vol(Drive), Bright, Treble, Bass, Tremolo",
+   "preamp_tubes": "12AX7A (Syl)",
+   "power_tubes": "6L6/5881",
+   "tonestack": "PRE"
+  },
+  "110": {
+   "fractal": "Super Verb Vibrato",
+   "guide_index": 273,
+   "guide_title": "SUPER VERB VIBRATO",
+   "model": "‘64 Fender Super Reverb AB763, Vibrato chnl",
+   "controls": "Volume, Bass, Middle, Treble, Bright switch"
+  },
+  "111": {
+   "fractal": "Vibra-King",
+   "guide_index": 320,
+   "guide_title": "VIBRA-KING",
+   "model": "Custom Fen der Vibro-King",
+   "orig_cab": "Fender 3x10",
+   "dynacab": "4x10 Bassguy RI",
+   "controls": "Volume, Treble, Bass, Middle, Fat switch, Tremolo effect",
+   "preamp_tubes": "12AX7A (Syl)",
+   "power_tubes": "6L6",
+   "tonestack": "POST"
+  },
+  "112": {
+   "fractal": "Gibtone Scout",
+   "guide_index": 168,
+   "guide_title": "GIBTONE SCOUT",
+   "model": "Gibson GA17RVT Scout",
+   "orig_cab": "Gibson 1x10",
+   "dynacab": "1x10 BF Princetone",
+   "controls": "Volume (Drive), Tremolo",
+   "preamp_tubes": "12AX7A (Syl)",
+   "power_tubes": "6AQ5 (EL84)",
+   "tonestack": "PRE"
+  },
+  "113": {
+   "fractal": "PVH 6160+ Lead",
+   "guide_index": 232,
+   "guide_title": "PVH 6160+ LEAD",
+   "model": "Peavey 6160+/EVH 5150II, Lead channel",
+   "controls": "Pre, Low, Mid, High, Post, Resonance, Presence"
+  },
+  "114": {
+   "fractal": "Solo 100 Clean",
+   "guide_index": 259,
+   "guide_title": "SOLO 100 CLEAN",
+   "model": "Soldano SLO-100, Normal channel, Clean mode",
+   "orig_cab": "Soldano 4x12 (Eminence)",
+   "dynacab": "4x12 Solo 100",
+   "controls": "Gain, Bass, Middle, Treble, Master, Presence, Bright switch (Normal channel only), Depth (with Depth mod)",
+   "preamp_tubes": "12AX7A",
+   "power_tubes": "6L6",
+   "tonestack": "POST"
+  },
+  "115": {
+   "fractal": "USA Pre LD2 Green",
+   "guide_index": 317,
+   "guide_title": "USA PRE LD2 GREEN",
+   "model": "MESA TriAxis preamp, Lead 2 Green",
+   "controls": "Drive, Lead Drive (Overdrive), Treble, Middle, Bass, Preamp Presence, P.A. Presence, Presence Shift, Dynamic Voice (GEQ)"
+  },
+  "116": {
+   "fractal": "USA Pre LD2 Yellow",
+   "guide_index": 319,
+   "guide_title": "USA PRE LD2 YELLOW",
+   "model": "MESA TriAxis preamp, Lead 2 Yellow"
+  },
+  "117": {
+   "fractal": "CA3+ Clean",
+   "guide_index": 68,
+   "guide_title": "CA3+ CLEAN",
+   "model": "Custom Audio Amplifiers 3+ SE preamp, Clean channel",
+   "dynacab": "4x12 Friedman V30",
+   "controls": "Gain, Bass, Middle, Treble, Master, Bright switch. Active tube EQ: Treble & Bass",
+   "preamp_tubes": "12AX7A",
+   "power_tubes": "EL34",
+   "tonestack": "PRE/POST"
+  },
+  "118": {
+   "fractal": "Fox ODS Mid",
+   "guide_index": 152,
+   "guide_title": "FOX ODS DEEP",
+   "model": "Fuchs OD Supreme 50, deep switch on"
+  },
+  "119": {
+   "fractal": "Brit JVM OD1 Green",
+   "guide_index": 58,
+   "guide_title": "BRIT JVM OD1 GREEN",
+   "model": "Marshall JVM410H, Green OD1 Channel",
+   "orig_cab": "Marshall 4x12 G12T75",
+   "dynacab": "4x12 1960TV",
+   "controls": "MV, Bass, Middle, Treble, Gain (Drive), Presence, Resonance (Depth)",
+   "preamp_tubes": "ECC83",
+   "power_tubes": "EL34",
+   "tonestack": "POST"
+  },
+  "120": {
+   "fractal": "Brit JVM OD2 Green",
+   "guide_index": 61,
+   "guide_title": "BRIT JVM OD2 GREEN"
+  },
+  "121": {
+   "fractal": "Vibrato Lux",
+   "guide_index": 322,
+   "guide_title": "VIBRATO LUX",
+   "model": "Fender Vibrolux",
+   "orig_cab": "Fender 2x10 or 1x12",
+   "dynacab": "1x12 Vibrato Lux",
+   "controls": "Volume, Bass, Treble",
+   "preamp_tubes": "7025 (12AX7A Syl)",
+   "power_tubes": "6L6",
+   "tonestack": "PRE"
+  },
+  "122": {
+   "fractal": "Brit 800 Mod",
+   "guide_index": 51,
+   "guide_title": "BRIT 800 MOD",
+   "model": "50W Marshall JCM 800 with mods",
+   "dynacab": "4x12 1960TV",
+   "preamp_tubes": "ECC83",
+   "power_tubes": "EL34/6550"
+  },
+  "123": {
+   "fractal": "Nuclear-Tone",
+   "guide_index": 202,
+   "guide_title": "NUCLEAR-TONE",
+   "model": "Swart Atomic Space Tone",
+   "orig_cab": "Swart 1x12 (Mojotone BV-25m)",
+   "dynacab": "1x12 Nuclear Tone",
+   "controls": "Volume (Drive), Tone (Treble), Tremolo effect",
+   "preamp_tubes": "12AX7A (Syl)",
+   "power_tubes": "6V6",
+   "tonestack": "PRE"
+  },
+  "124": {
+   "fractal": "Bludojai Clean",
+   "guide_index": 41,
+   "guide_title": "BLUDOJAI CLEAN",
+   "model": "Bludotone ECC83, clean channel, PAB (Preamp Bypass off)",
+   "orig_cab": "Bludotone 1x12, 2x12 (G12-65, EVM)",
+   "dynacab": "4x12 Rumble EV12L",
+   "controls": "Volume Treble, Middle, Bass, Master, Presence, Bright. Switchable PAB: bypass tonestack (Bass/Mid/Treble)",
+   "preamp_tubes": "12AX7A (Syl)",
+   "power_tubes": "6L6",
+   "tonestack": "MID"
+  },
+  "125": {
+   "fractal": "Bludojai Lead PAB",
+   "guide_index": 43,
+   "guide_title": "BLUDOJAI LEAD PAB",
+   "model": "Bludotone Ojai, OD channel, PAB on",
+   "controls": "Clean controls+OD Drive/Level",
+   "tonestack": "PRE"
+  },
+  "126": {
+   "fractal": "Plexi 100W High",
+   "guide_index": 210,
+   "guide_title": "PLEXI 100W HIGH",
+   "model": "‘69 Marshall Super Lead Plexi 100w, High Treble channel"
+  },
+  "127": {
+   "fractal": "Plexi 100W Normal",
+   "guide_index": 212,
+   "guide_title": "PLEXI 100W NORMAL",
+   "model": "1969 Marshall Super Lead Plexi, 100W, Normal chnl"
+  },
+  "128": {
+   "fractal": "Ruby Rocket Bright",
+   "guide_index": 250,
+   "guide_title": "RUBY ROCKET BRIGHT",
+   "model": "Paul Ruby Rocket , Bright switch: on"
+  },
+  "129": {
+   "fractal": "AC-20 EF86 Bass",
+   "guide_index": 29,
+   "guide_title": "AC-20 EF86 BASS",
+   "model": "Morgan AC20 Deluxe, EF86 Bass",
+   "preamp_tubes": "EF86"
+  },
+  "130": {
+   "fractal": "Princetone Reverb",
+   "guide_index": 225,
+   "guide_title": "PRINCETONE REVERB",
+   "model": "Fender Princeton Reverb",
+   "orig_cab": "Fender 1x10",
+   "dynacab": "1x10 SF Princetone",
+   "controls": "Volume, Bass, Treble",
+   "preamp_tubes": "7025 (12AX7A Syl)",
+   "power_tubes": "6V6",
+   "tonestack": "MID"
+  },
+  "131": {
+   "fractal": "Comet Concourse",
+   "guide_index": 102,
+   "guide_title": "COMET CONCOURSE",
+   "model": "Komet Concorde",
+   "orig_cab": "Komet’s 2x12 has Classic Lead 80",
+   "dynacab": "2x12 Lead 80",
+   "controls": "Volume, Treble, Middle, Bass, Presence, Hi Cut",
+   "preamp_tubes": "12AX7A",
+   "power_tubes": "EL34",
+   "tonestack": "PRE"
+  },
+  "132": {
+   "fractal": "FAS Modern II",
+   "guide_index": 145,
+   "guide_title": "FAS MODERN II",
+   "model": "Custom Model, Tighter FAS Modern version",
+   "dynacab": "4x12 Recto Straight",
+   "power_tubes": "6L6"
+  },
+  "133": {
+   "fractal": "Carol-Ann Triptik Modern",
+   "guide_index": 87,
+   "guide_title": "CAROL-ANN TRIPTIK MODERN",
+   "model": "Carol-Ann Triptik 50w, Modern Channel"
+  },
+  "134": {
+   "fractal": "Carol-Ann Triptik Classic",
+   "guide_index": 85,
+   "guide_title": "CAROL-ANN TRIPTIK CLASSIC",
+   "model": "Carol-Ann Triptik 50w, Classic Channel",
+   "orig_cab": "Carol-Ann 1x12 (Scholz Classic)",
+   "dynacab": "1x12 Scholz",
+   "controls": "Input Level, Drive (channels 2&3), Bass, Mid, Treble, Presence, Master, Classic/Modern voice switch",
+   "preamp_tubes": "12AX7A",
+   "power_tubes": "EL34",
+   "tonestack": "POST"
+  },
+  "135": {
+   "fractal": "Carol-Ann Triptik Clean",
+   "guide_index": 86,
+   "guide_title": "CAROL-ANN TRIPTIK CLEAN",
+   "model": "Carol-Ann Triptik 50w, Clean Channel"
+  },
+  "136": {
+   "fractal": "Thordendal Vintage",
+   "guide_index": 282,
+   "guide_title": "THORDENDAL VINTAGE",
+   "model": "Custom model of MESA Dual Rectifier, Vintage mode"
+  },
+  "137": {
+   "fractal": "Thordendal Modern",
+   "guide_index": 281,
+   "guide_title": "THORDENDAL MODERN",
+   "model": "Custom model MESA Dual Rectifier, Modern mode",
+   "orig_cab": "Mesa 4x12 (V30)",
+   "dynacab": "4x12 Recto Straight",
+   "controls": "Gain, MV, Bass, Middle, Treble, Presence, Supply Sag",
+   "preamp_tubes": "12AX7A",
+   "power_tubes": "6L6",
+   "tonestack": "POST"
+  },
+  "138": {
+   "fractal": "ODS-100 HRM Mid",
+   "guide_index": 208,
+   "guide_title": "ODS-100 HRM MID",
+   "model": "Based on Dumble HRM circuit, OD chnl, Deep on",
+   "preamp_tubes": "12AX7A (Syl)",
+   "power_tubes": "EL34"
+  },
+  "139": {
+   "fractal": "Euro Blue Modern",
+   "guide_index": 129,
+   "guide_title": "EURO BLUE MODERN",
+   "model": "Bogner Ecstasy 20th Anniv. Blue in Modern mode"
+  },
+  "140": {
+   "fractal": "Euro Red Modern",
+   "guide_index": 131,
+   "guide_title": "EURO RED MODERN",
+   "model": "Bogner Ecstasy 20th Anniv. Red in Modern mode"
+  },
+  "141": {
+   "fractal": "Plexi 50W Jumped",
+   "guide_index": 219,
+   "guide_title": "PLEXI 50W JUMPED",
+   "model": "1967 Marshall Plexi 50W, jumpered channels"
+  },
+  "142": {
+   "fractal": "AC-20 EF86 Treble",
+   "guide_index": 30,
+   "guide_title": "AC-20 EF86 TREBLE",
+   "model": "Morgan AC20 Deluxe, EF86 Treble",
+   "preamp_tubes": "EF86"
+  },
+  "143": {
+   "fractal": "Comet 60",
+   "guide_index": 101,
+   "guide_title": "COMET 60",
+   "model": "Komet 60",
+   "orig_cab": "Komet’s 2x12 (Classic Lead 80)",
+   "dynacab": "2x12 Lead 80",
+   "controls": "Volume, Treble, Middle, Bass, Presence, Hi Cut",
+   "preamp_tubes": "12AX7A",
+   "power_tubes": "EL34",
+   "tonestack": "PRE"
+  },
+  "144": {
+   "fractal": "Hipower Jumped",
+   "guide_index": 174,
+   "guide_title": "HIPOWER JUMPED",
+   "model": "Hiwatt DR-103, jumpered channels"
+  },
+  "145": {
+   "fractal": "Plexi 100W Jumped",
+   "guide_index": 211,
+   "guide_title": "PLEXI 100W JUMPED",
+   "model": "1969 Marshall Super Lead Plexi, 100W, jumper chnls"
+  },
+  "146": {
+   "fractal": "Brit JM45 Jumped",
+   "guide_index": 57,
+   "guide_title": "BRIT JM45 JUMPED"
+  },
+  "147": {
+   "fractal": "1987X Jumped",
+   "guide_index": 17,
+   "guide_title": "1987X JUMPED",
+   "model": "50W Marshall 1987X reissue, jumpered channels",
+   "orig_cab": "Marshall 4x12 (G12M, G12H)",
+   "dynacab": "4x12 1960TV",
+   "controls": "Volume Normal/Treble, Bass, Mid, Treble, Presence",
+   "preamp_tubes": "ECC83",
+   "power_tubes": "EL34",
+   "tonestack": "POST"
+  },
+  "148": {
+   "fractal": "Recto1 Orange Normal",
+   "guide_index": 234,
+   "guide_title": "RECTO1 ORANGE NORMAL",
+   "model": "MESA Dual Rectifier 2-ch, Orange, Vintage mode"
+  },
+  "149": {
+   "fractal": "Recto1 Red",
+   "guide_index": 235,
+   "guide_title": "RECTO1 RED",
+   "model": "MESA Dual Rectifier 2-channel, Red, Modern"
+  },
+  "150": {
+   "fractal": "ODS-100 Ford PAB",
+   "guide_index": 205,
+   "guide_title": "ODS-100 FORD PAB",
+   "model": "R. Ford’s #102 Dumble, OD chnl, PAB on, Mid switch off",
+   "preamp_tubes": "12AX7A (Syl)",
+   "power_tubes": "6L6"
+  },
+  "151": {
+   "fractal": "Bogfish Strato",
+   "guide_index": 45,
+   "guide_title": "BOGFISH STRATO",
+   "model": "Bogner Fish preamp (Strato channel)"
+  },
+  "152": {
+   "fractal": "Bogfish Brown",
+   "guide_index": 44,
+   "guide_title": "BOGFISH BROWN",
+   "model": "Bogner Fish preamp (Brown channel)",
+   "dynacab": "4x12 Friedman V30",
+   "controls": "Volume(Drive), Treble, Middle, Bass, MV",
+   "preamp_tubes": "ECC83",
+   "power_tubes": "EL34",
+   "tonestack": "POST"
+  },
+  "153": {
+   "fractal": "5F1 Tweed",
+   "guide_index": 1,
+   "guide_title": "5F1 TWEED CHAMPLIFIER",
+   "model": "Narrow-panel Fender Tweed Champ, 5F1",
+   "orig_cab": "1x6”or 8” Alnico (Jensen P8T/Oxford 8EV)",
+   "dynacab": "1x8 5F1 Tweed",
+   "controls": "Volume (Drive)",
+   "preamp_tubes": "12AX7A Syl",
+   "power_tubes": "6V6",
+   "tonestack": "PRE"
+  },
+  "154": {
+   "fractal": "Wrecker Express",
+   "guide_index": 327,
+   "guide_title": "WRECKER EXPRESS",
+   "model": "Trainwreck Express, Bright switch in center/top position",
+   "orig_cab": "Marshall 4x12 (G12-M25)",
+   "dynacab": "4x12 Friedman GB",
+   "controls": "Volume, Bass, Mid, Treble, Presence, 3-position Bright switch (center: off, top: clarity & sparkle, bottom: jangly highs)",
+   "preamp_tubes": "12AX7A (Syl)",
+   "power_tubes": "EL34 (can use 6V6)",
+   "tonestack": "POST"
+  },
+  "155": {
+   "fractal": "Two Stone J35",
+   "guide_index": 287,
+   "guide_title": "TWO STONE J35",
+   "model": "Two-Rock Jet 35",
+   "orig_cab": "Two Stone 2x12 (G12-65)",
+   "dynacab": "4x12 Rumble EV12L",
+   "controls": "Treble (pulled: Bright), Mid (pulled: boost), Bass (pulled: Deep), Gain (pulled: Bypass), Master (pulled: Lead mode), Lead Gain, Lead Master & Reverb",
+   "preamp_tubes": "12AX7A (Syl)",
+   "power_tubes": "6L6 (6v6 used in 22w version)",
+   "tonestack": "PRE"
+  },
+  "156": {
+   "fractal": "ODS-100 Ford",
+   "guide_index": 204,
+   "guide_title": "ODS-100 FORD",
+   "model": "#102 Dumble, Schematics of Robben Ford #102 Dumble OD channel, PAB off",
+   "orig_cab": "Dumble 2x12 or 4x12 (G12-65, EVM)",
+   "dynacab": "4x12 Rumble EV12L",
+   "preamp_tubes": "12AX7A (Syl)",
+   "power_tubes": "6L6",
+   "tonestack": "PRE"
+  },
+  "157": {
+   "fractal": "Mr Z MZ-8",
+   "guide_index": 201,
+   "guide_title": "MR Z MZ-8",
+   "model": "Dr. Z Maz 8",
+   "orig_cab": "Dr. Z 1x12 G12H",
+   "dynacab": "1x12 AC20",
+   "controls": "Volume, Master, Bass, Mid, Treble, Cut",
+   "preamp_tubes": "12AX7A (Syl)",
+   "power_tubes": "EL84",
+   "tonestack": "POST"
+  },
+  "158": {
+   "fractal": "Car Ambler",
+   "guide_index": 83,
+   "guide_title": "CAR AMBLER",
+   "model": "Carr Rambler",
+   "orig_cab": "Carr 1x12 (Eminence Elsinore)",
+   "dynacab": "1x12 Car Ambler",
+   "controls": "Volume, Treble, Middle, Bass, Tremolo effect",
+   "preamp_tubes": "12AX7A (Syl)",
+   "power_tubes": "6L6",
+   "tonestack": ""
+  },
+  "159": {
+   "fractal": "USA Metro Blues",
+   "guide_index": 296,
+   "guide_title": "USA METRO BLUES",
+   "model": "MESA Subway Blues",
+   "orig_cab": "Mesa 1x10 (Eminence Black Shadow)",
+   "dynacab": "1x10 Metro Blues",
+   "controls": "Volume, Bass, Mid, Treble, FAT switch",
+   "preamp_tubes": "12AX7A",
+   "power_tubes": "EL84",
+   "tonestack": "PRE"
+  },
+  "160": {
+   "fractal": "Wrecker Liverpool",
+   "guide_index": 329,
+   "guide_title": "WRECKER LIVERPOOL",
+   "model": "Trainwreck Liverpool",
+   "orig_cab": "Marshall 4x12 (G12-M25)",
+   "dynacab": "4x12 Friedman GB",
+   "controls": "Volume, Bass, Mid, Treble, Presence, three-position Bright switch (center: off, top: clarity & sparkle, bottom: jangly highs)",
+   "preamp_tubes": "12AX7A (Syl)",
+   "power_tubes": "EL84",
+   "tonestack": "PRE"
+  },
+  "161": {
+   "fractal": "Citrus Terrier",
+   "guide_index": 94,
+   "guide_title": "CITRUS TERRIER",
+   "model": "Orange Tiny Terror",
+   "orig_cab": "Orange 1x12/2x12 (G12H)",
+   "dynacab": "2x12 Texas Star",
+   "controls": "Vol, Gain, Tone",
+   "preamp_tubes": "ECC83",
+   "power_tubes": "EL84",
+   "tonestack": "PRE"
+  },
+  "162": {
+   "fractal": "Citrus A30 Clean",
+   "guide_index": 90,
+   "guide_title": "CITRUS A30 CLEAN",
+   "model": "Orange AD30HTC, Clean channel",
+   "orig_cab": "Orange 2x12 (V30)",
+   "dynacab": "4x12 Citrus",
+   "controls": "Gain, Master, Bass, Mid, Treble",
+   "preamp_tubes": "ECC83",
+   "power_tubes": "EL84",
+   "tonestack": "POST"
+  },
+  "163": {
+   "fractal": "Citrus A30 Dirty",
+   "guide_index": 91,
+   "guide_title": "CITRUS A30 DIRTY",
+   "model": "Orange AD30HTC, Dirty channel (2)"
+  },
+  "164": {
+   "fractal": "Div/13 FT37 Low",
+   "guide_index": 116,
+   "guide_title": "DIV/13 FT37 LOW",
+   "model": "Divided By 13 FTR 37w, Low: channel 1, Mid Gain Boost: off",
+   "controls": "Volume & Tone knob (referred as “Click” as it clicks between settings). No Master Volume, keep at default in amp block"
+  },
+  "165": {
+   "fractal": "Div/13 FT37 High",
+   "guide_index": 115,
+   "guide_title": "DIV/13 FT37 HIGH",
+   "model": "Divided By 13 FTR 37w",
+   "orig_cab": "Divided by 13 (G12H/Alnico)",
+   "dynacab": "2x12 Chiefman",
+   "controls": "Volume (Drive) Pull: Mid Gain Boost, Treble, Bass",
+   "preamp_tubes": "12AX7A (Syl)",
+   "power_tubes": "6V6",
+   "tonestack": "PRE"
+  },
+  "166": {
+   "fractal": "Matchbox D-30",
+   "guide_index": 197,
+   "guide_title": "MATCHBOX D-30",
+   "model": "Matchless DC-30",
+   "orig_cab": "Matchless 2x12 (25w G12M & 30w G12H)",
+   "dynacab": "2x12 Chiefman",
+   "controls": "Volume, Bass, Treble, Cut, bypassable Master",
+   "preamp_tubes": "12AX7A Syl (12AX7)",
+   "power_tubes": "EL84",
+   "tonestack": "POST"
+  },
+  "167": {
+   "fractal": "FAS Class-A",
+   "guide_index": 138,
+   "guide_title": "FAS CLASS-A",
+   "model": "Custom Amp model born by accident",
+   "dynacab": "2x12 Class-A 30W",
+   "power_tubes": "EL84"
+  },
+  "168": {
+   "fractal": "USA Bass 400 1",
+   "guide_index": 289,
+   "guide_title": "USA BASS 400 1",
+   "model": "MESA Bass 400 amp",
+   "orig_cab": "Mesa bass cab",
+   "dynacab": "1x15 Heart Key",
+   "controls": "Bass, Middle, Treble, Pull Bright, Bass Shift, 7-band GEQ, Master, Volume",
+   "preamp_tubes": "12AX7A (Syl)",
+   "power_tubes": "6550",
+   "tonestack": "POST"
+  },
+  "169": {
+   "fractal": "USA Bass 400 2",
+   "guide_index": 290,
+   "guide_title": "USA BASS 400 2",
+   "model": "MESA Bass 400 bass amp, Bass Shift on"
+  },
+  "170": {
+   "fractal": "Citrus Bass 200",
+   "guide_index": 92,
+   "guide_title": "CITRUS BASS 200",
+   "model": "Orange AD200B bass amp",
+   "orig_cab": "Orange bass cab",
+   "dynacab": "1x15 Heart Key",
+   "controls": "Volume, Gain, Bass, Middle, Treble",
+   "preamp_tubes": "ECC83",
+   "power_tubes": "6550",
+   "tonestack": "POST"
+  },
+  "171": {
+   "fractal": "FAS Bass",
+   "guide_index": 134,
+   "guide_title": "FAS BASS",
+   "model": "Custom model Bass Amp with active controls",
+   "dynacab": "1x15 Portabass",
+   "power_tubes": "6550"
+  },
+  "172": {
+   "fractal": "Tremolo Lux",
+   "guide_index": 283,
+   "guide_title": "TREMOLO LUX",
+   "model": "Fender Tremolux",
+   "orig_cab": "Fender 2x10",
+   "dynacab": "2x12 Super 6G4",
+   "controls": "Vol, Bright, Treble, Bass",
+   "preamp_tubes": "7025 (12AX7 Syl)",
+   "power_tubes": "6L6",
+   "tonestack": "PRE"
+  },
+  "173": {
+   "fractal": "FAS Brootalz",
+   "guide_index": 135,
+   "guide_title": "FAS BROOTALZ",
+   "model": "Custom Aggressive, High-gain Amp Model",
+   "dynacab": "4x12 5153 Stealth",
+   "power_tubes": "6550"
+  },
+  "174": {
+   "fractal": "Recto1 Orange Modern",
+   "guide_index": 233,
+   "guide_title": "RECTO1 ORANGE MODERN",
+   "model": "MESA Dual Rectifier 2-channel, Orange, Modern mode",
+   "orig_cab": "Mesa 4x12 (V30)",
+   "dynacab": "4x12 Recto Straight",
+   "controls": "Gain, MV, Bass, Mid, Treble, Presence, Supply Sag",
+   "preamp_tubes": "12AX7A",
+   "power_tubes": "6L6",
+   "tonestack": "POST"
+  },
+  "175": {
+   "fractal": "Angle Severe 1",
+   "guide_index": 31,
+   "guide_title": "ANGLE SEVERE 1",
+   "model": "Engl Savage 120 (Channel 2 Contour switch off, boosts lower midrange ~500Hz, for warm tone)",
+   "orig_cab": "Engl 4x12 (V30, V60)",
+   "dynacab": "4x12 Recto Straight",
+   "controls": "Gain (input sensitivity), Lead (distortion), Lead Boost switch, Contour switch, Bass, Mid, Treble, Master, Presence, Depth Boost switch",
+   "preamp_tubes": "ECC83",
+   "power_tubes": "6550",
+   "tonestack": "POST"
+  },
+  "176": {
+   "fractal": "Angle Severe 2",
+   "guide_index": 32,
+   "guide_title": "ANGLE SEVERE 2",
+   "model": "Engl Savage 120 (Chnl 2 Contour on, boost from 1200Hz & lower mid cut, for transparency)"
+  },
+  "177": {
+   "fractal": "USA Pre LD2 Red",
+   "guide_index": 318,
+   "guide_title": "USA PRE LD2 RED",
+   "model": "MESA TriAxis preamp, Lead 2 Red"
+  },
+  "178": {
+   "fractal": "USA Pre LD1 Red",
+   "guide_index": 316,
+   "guide_title": "USA PRE LD1 RED",
+   "model": "MESA TriAxis preamp, Lead 1 Red (TX-4 board)",
+   "controls": "Drive, Lead Drive (Overdrive), Treble, Middle, Bass, Preamp Presence, Dynamic Voice (GEQ)"
+  },
+  "179": {
+   "fractal": "Texas Star Clean",
+   "guide_index": 279,
+   "guide_title": "TEXAS STAR CLEAN",
+   "model": "MESA Lone Star Classic, Clean channel",
+   "orig_cab": "Mesa 2x12 (C90)",
+   "dynacab": "2x12 Texas Star",
+   "controls": "Gain, Treble, Mid, Bass, Presence, MV, Channel Master",
+   "preamp_tubes": "12AX7",
+   "power_tubes": "6L6",
+   "tonestack": "PRE"
+  },
+  "180": {
+   "fractal": "AC-20 12AX7 Treble",
+   "guide_index": 28,
+   "guide_title": "AC-20 12AX7 TREBLE",
+   "model": "Morgan AC20 Deluxe, 12AX7, Treble",
+   "preamp_tubes": "12AX7A (Syl)"
+  },
+  "181": {
+   "fractal": "Vibrato Verb AA",
+   "guide_index": 324,
+   "guide_title": "VIBRATO VERB AA",
+   "model": "Fender Vibroverb",
+   "orig_cab": "Fender 1x15 (Jensen C15N, JBL D130, Eminence)",
+   "dynacab": "1x15 Vibratoverb",
+   "preamp_tubes": "7025 (12AX7A Syl)",
+   "power_tubes": "6L6",
+   "tonestack": "PRE"
+  },
+  "182": {
+   "fractal": "Vibrato Verb AB",
+   "guide_index": 325,
+   "guide_title": "VIBRATO VERB AB",
+   "model": "Fender Vibroverb, AB763 (based on AB763 circuit)",
+   "preamp_tubes": "7025 (12AX7A Syl)"
+  },
+  "183": {
+   "fractal": "Carol-Ann Tucana Lead",
+   "guide_index": 89,
+   "guide_title": "CAROL-ANN TUCANA LEAD",
+   "model": "Carol-Ann Tucana 3, Lead Channel",
+   "controls": "Input Level, Bass, Mid, Treble, Gain, Master, Presence"
+  },
+  "184": {
+   "fractal": "JR Blues Fat",
+   "guide_index": 187,
+   "guide_title": "JR BLUES FAT",
+   "model": "Fender Blues Junior, Fat switch on"
+  },
+  "185": {
+   "fractal": "Solo 88 Lead",
+   "guide_index": 254,
+   "guide_title": "SOLO 88 LEAD",
+   "model": "Soldano X88R preamp, Lead channel"
+  },
+  "186": {
+   "fractal": "Brit AFS100 1",
+   "guide_index": 53,
+   "guide_title": "BRIT AFS100 1",
+   "model": "Marshall Slash AFD100 Sign. Special Collector Ed. #76",
+   "orig_cab": "Marshall 4x12 (V30)",
+   "dynacab": "4x12 Friedman V30",
+   "controls": "Gain (Drive), Bass, Middle, Treble, Presence, Master",
+   "preamp_tubes": "ECC83",
+   "power_tubes": "6550/EL34",
+   "tonestack": "POST"
+  },
+  "187": {
+   "fractal": "Brit AFS100 2",
+   "guide_index": 54,
+   "guide_title": "BRIT AFS100 2",
+   "model": "Marshall Slash AFD100 AFD mode"
+  },
+  "188": {
+   "fractal": "Class-A 30W Hot",
+   "guide_index": 99,
+   "guide_title": "CLASS-A 30W HOT",
+   "model": "Vox AC30 AC30HW, Top Boost chnl, Hot mode(no tonestack)",
+   "controls": "Volume, Treble, Bass, Hot/Cool switch, Tone Cut, Master"
+  },
+  "189": {
+   "fractal": "Dizzy V4 Silver 3",
+   "guide_index": 121,
+   "guide_title": "DIZZY V4 SILVER 3",
+   "model": "Diezel VH4 Silver, Distortion/Mega"
+  },
+  "190": {
+   "fractal": "Dizzy V4 Silver 2",
+   "guide_index": 120,
+   "guide_title": "DIZZY V4 SILVER 2",
+   "model": "Diezel VH4 Silver, Crunch"
+  },
+  "191": {
+   "fractal": "Dizzy V4 Silver 4",
+   "guide_index": 122,
+   "guide_title": "DIZZY V4 SILVER 4",
+   "model": "Diezel VH4 Silver, Solo/Lead"
+  },
+  "192": {
+   "fractal": "1959SLP Normal",
+   "guide_index": 15,
+   "guide_title": "1959SLP NORMAL",
+   "model": "100W Marshall Super Lead Plexi 1959 RI, Normal chnl"
+  },
+  "193": {
+   "fractal": "1959SLP Treble",
+   "guide_index": 16,
+   "guide_title": "1959SLP TREBLE",
+   "model": "100W Marshall Super Lead Plexi ‘59 RI, Treble channel"
+  },
+  "194": {
+   "fractal": "1959SLP Jumped",
+   "guide_index": 14,
+   "guide_title": "1959SLP JUMPED",
+   "model": "100W Marshall Super Lead Plexi 1959 RI, jumpered chnls",
+   "orig_cab": "Marshall 4x12 (G12M, G12H)",
+   "dynacab": "4x12 1960TV",
+   "controls": "Vol Normal/Treble, Bass, Mid, Treble, Presence",
+   "preamp_tubes": "ECC83",
+   "power_tubes": "EL34",
+   "tonestack": "POST"
+  },
+  "195": {
+   "fractal": "FAS Modern III",
+   "guide_index": 146,
+   "guide_title": "FAS MODERN III",
+   "model": "Custom Model, like Recto with tighter bass",
+   "dynacab": "4x12 Recto Straight",
+   "power_tubes": "6L6"
+  },
+  "196": {
+   "fractal": "ODS-100 Ford PAB Mid",
+   "guide_index": 206,
+   "guide_title": "ODS-100 FORD PAB MID",
+   "model": "R. Ford’s #102 Dumble, OD chnl, PAB on, Mid sw on",
+   "preamp_tubes": "12AX7A (Syl)",
+   "power_tubes": "6L6"
+  },
+  "197": {
+   "fractal": "Mr Z Highway 66",
+   "guide_index": 199,
+   "guide_title": "MR Z HWY 66",
+   "model": "Dr. Z Route 66",
+   "orig_cab": "Dr. Z 2x12 (V30 & G12H)",
+   "dynacab": "2x12 Chiefman",
+   "controls": "Volume, Bass, Treble",
+   "preamp_tubes": "EF86",
+   "power_tubes": "KT66",
+   "tonestack": "POST"
+  },
+  "198": {
+   "fractal": "6G4 Super",
+   "guide_index": 6,
+   "guide_title": "6G4 SUPER",
+   "model": "Fender Super Amp",
+   "orig_cab": "Jensen 2x10”",
+   "dynacab": "2x10 Super 6G4",
+   "controls": "Volume (Drive),",
+   "preamp_tubes": "12AX7A Syl",
+   "power_tubes": "6L6",
+   "tonestack": "PRE"
+  },
+  "199": {
+   "fractal": "6G12 Concert",
+   "guide_index": 7,
+   "guide_title": "6G12 CONCERT",
+   "model": "Fender Concert 6G12",
+   "orig_cab": "Fender 4x10 (Jensen)",
+   "dynacab": "4x10 Bassguy RI",
+   "controls": "Volume (Drive), Bass,",
+   "preamp_tubes": "7025 (12AX7A Syl)",
+   "power_tubes": "6L6/5881",
+   "tonestack": "PRE"
+  },
+  "200": {
+   "fractal": "65 Bassguy Bass",
+   "guide_index": 12,
+   "guide_title": "‘65 BASSGUY BASS",
+   "model": "Fender Bassman",
+   "orig_cab": "2x12” Jensens",
+   "dynacab": "2x12 65 Bassguy",
+   "controls": "Volume, Treble, Bass",
+   "preamp_tubes": "7025 (12AX7A Syl)",
+   "power_tubes": "6L6/5881",
+   "tonestack": "PRE"
+  },
+  "201": {
+   "fractal": "Vibra-King Fat",
+   "guide_index": 321,
+   "guide_title": "VIBRA-KING FAT",
+   "model": "Custom Fender Vibro-King, Fat switch: on"
+  },
+  "202": {
+   "fractal": "Spawn Q-Rod OD1-1",
+   "guide_index": 264,
+   "guide_title": "SPAWN Q-ROD OD1-1",
+   "model": "Splawn Quickrod, OD channel, Rhythm mode, 1st gear (Plexi)",
+   "orig_cab": "Splawn (G12M, G12-65, V30)",
+   "dynacab": "4x12 Friedman GB",
+   "controls": "Presence, Bass, Middle, Treble, Volume, Gain, Mode",
+   "preamp_tubes": "12AX7A",
+   "power_tubes": "EL34",
+   "tonestack": "POST"
+  },
+  "203": {
+   "fractal": "Spawn Q-Rod OD1-2",
+   "guide_index": 265,
+   "guide_title": "SPAWN Q-ROD OD1-2",
+   "model": "Splawn Quickrod, OD ch, Rhythm, gear 3(hot rod JCM800)"
+  },
+  "204": {
+   "fractal": "Spawn Q-Rod OD1-3",
+   "guide_index": 266,
+   "guide_title": "SPAWN Q-ROD OD1-3",
+   "model": "Splawn Quickrod, OD, Rhythm, gear 3 (super hot-rod 800)"
+  },
+  "205": {
+   "fractal": "Carol-Ann Tucana Clean",
+   "guide_index": 88,
+   "guide_title": "CAROL-ANN TUCANA CLEAN",
+   "model": "Carol-Ann Tucana 3, Clean Channel",
+   "orig_cab": "G12M, Classic Lead 80, Scholz",
+   "dynacab": "1x12 Scholz",
+   "controls": "Input Level, Bass, Mid, Treble, Master, Presence",
+   "preamp_tubes": "12AX7A",
+   "power_tubes": "KT88",
+   "tonestack": "POST"
+  },
+  "206": {
+   "fractal": "Brit JVM OD1 Red",
+   "guide_index": 60,
+   "guide_title": "BRIT JVM OD1 RED"
+  },
+  "207": {
+   "fractal": "Brit JVM OD2 Red",
+   "guide_index": 63,
+   "guide_title": "BRIT JVM OD2 RED"
+  },
+  "208": {
+   "fractal": "Cameron CCV 1B",
+   "guide_index": 72,
+   "guide_title": "CAMERON CCV 1B",
+   "model": "Cameron CCV-100, Channel 1, more gain"
+  },
+  "209": {
+   "fractal": "Cameron CCV 2B",
+   "guide_index": 74,
+   "guide_title": "CAMERON CCV 2B",
+   "model": "Cameron CCV-100, Channel 2, Bright 1 switch left, Bright 2 switch right, Gain Style switch left"
+  },
+  "210": {
+   "fractal": "Cameron CCV 2C",
+   "guide_index": 75,
+   "guide_title": "CAMERON CCV 2C",
+   "model": "Cameron CCV-100, Channel 2, Bright 1 switch left, Bright 2 switch right, Gain Style switch left"
+  },
+  "211": {
+   "fractal": "Cameron CCV 2D",
+   "guide_index": 76,
+   "guide_title": "CAMERON CCV 2D",
+   "model": "Cameron CCV-100, Ch2, Brt 1 left/Brt 2 right, GainStyle left"
+  },
+  "212": {
+   "fractal": "Friedman Small Box",
+   "guide_index": 165,
+   "guide_title": "FRIEDMAN SMALL BOX",
+   "model": "Friedman Smallbox, Channel 2 (high gain)",
+   "orig_cab": "Friedman 3x12 (V30 &/or G12M)",
+   "dynacab": "4x12 Friedman GB",
+   "controls": "Gain, Master, Bass, Middle, Treble, Presence, Bright switch (channel 1 “Plexi” only)",
+   "preamp_tubes": "12AX7A (JJ)",
+   "power_tubes": "EL34",
+   "tonestack": "POST"
+  },
+  "213": {
+   "fractal": "5153 50W Blue",
+   "guide_index": 26,
+   "guide_title": "5153 50W BLUE",
+   "model": "50w EVH 5150-III (blue channel)",
+   "orig_cab": "5150 4x12, 2x12 (G12H, G12EVH)",
+   "dynacab": "4x12 5153 / 2x12 5153 Stealth",
+   "controls": "Gain, Low, Mid, High, Volume, Presence, Reso/Depth",
+   "preamp_tubes": "12AX7A",
+   "power_tubes": "6L6",
+   "tonestack": "POST"
+  },
+  "214": {
+   "fractal": "Div/13 CJ Boost",
+   "guide_index": 114,
+   "guide_title": "DIV/13 CJ BOOST",
+   "model": "Divided By 13 CJ11, mid gain boost on"
+  },
+  "215": {
+   "fractal": "USA MK IIC+ Deep",
+   "guide_index": 299,
+   "guide_title": "USA MK IIC+ DEEP",
+   "model": "MESA/Boogie Mark IIC+, Lead Master, Pull Deep on"
+  },
+  "216": {
+   "fractal": "USA MK IIC+ Deep Bright",
+   "guide_index": 300,
+   "guide_title": "USA MK IIC+ DEEP BRIGHT",
+   "model": "MESA/Boogie Mark IIC+, Lead Master, Pull Deep & Pull Bright engaged"
+  },
+  "217": {
+   "fractal": "5F8 Tweed Bright",
+   "guide_index": 3,
+   "guide_title": "5F8 TWEED BRIGHT",
+   "model": "Keith Urban’s ‘59 narrow-panel, high-power Fender Tweed Twin, 5F8, Bright channel",
+   "orig_cab": "Fender 2x12 P12N, Urban’s cab: Two-Rocks",
+   "dynacab": "2x12 Double Verb",
+   "controls": "Presence, Middle, Bass, Treble, Bright/Normal Inputs Volume",
+   "preamp_tubes": "12AX7A Syl",
+   "power_tubes": "6L6/5881",
+   "tonestack": "POST"
+  },
+  "218": {
+   "fractal": "Double Verb Silverface",
+   "guide_index": 124,
+   "guide_title": "DOUBLE VERB SILVERFACE",
+   "model": "1971 silverface Fender Twin Reverb",
+   "orig_cab": "Fender 2x12, original speakers",
+   "dynacab": "2x12 Double Verb",
+   "controls": "Bass, Mid, Treble, Bright switch",
+   "preamp_tubes": "7025 (12AX7A Syl)",
+   "power_tubes": "6L6",
+   "tonestack": "PRE"
+  },
+  "219": {
+   "fractal": "Vibrato Verb Custom",
+   "guide_index": 326,
+   "guide_title": "VIBRATO VERB SRV",
+   "model": "Fender Vibroverb Custom RI",
+   "dynacab": "1x15 Vibratoverb",
+   "preamp_tubes": "12AX7A (Syl)",
+   "power_tubes": "6L6",
+   "tonestack": "PRE"
+  },
+  "220": {
+   "fractal": "JMPre-1 OD1",
+   "guide_index": 182,
+   "guide_title": "JMPRE-1 OD1",
+   "model": "Marshall JMP-1 Preamp, OD1 mode"
+  },
+  "221": {
+   "fractal": "JMPre-1 OD2",
+   "guide_index": 184,
+   "guide_title": "JMPRE-1 OD2",
+   "model": "Marshall JMP-1 Preamp, OD2 mode"
+  },
+  "222": {
+   "fractal": "JMPre-1 OD1 Bass Shift",
+   "guide_index": 183,
+   "guide_title": "JMPRE-1 OD1 BASS SHIFT",
+   "model": "Marshall JMP-1 Preamp, OD1 mode, bass shift on"
+  },
+  "223": {
+   "fractal": "JMPre-1 OD2 Bass Shift",
+   "guide_index": 185,
+   "guide_title": "JMPRE-1 OD2 BASS SHIFT",
+   "model": "Marshall JMP-1 Preamp, OD2 mode, bass shift on"
+  },
+  "224": {
+   "fractal": "Deluxe Verb Normal",
+   "guide_index": 108,
+   "guide_title": "DELUXE VERB NORMAL",
+   "model": "Fender DLX Rvrb",
+   "orig_cab": "Fender 1x12 with Jensen C12(K), EVM 12L, JBL D120 Or Fender 2x10 w/ Jensen C10N, C10Q or Jensen 25W Alnico P10R",
+   "dynacab": "1x12 Deluxe Verb",
+   "controls": "Volume, Bass, Treble, Reverb effect",
+   "preamp_tubes": "7025 (12AX7A Syl)",
+   "power_tubes": "6V6",
+   "tonestack": "PRE"
+  },
+  "225": {
+   "fractal": "Double Verb Normal",
+   "guide_index": 123,
+   "guide_title": "DOUBLE VERB NORMAL",
+   "model": "‘66 blackface Fender Twin Reverb",
+   "orig_cab": "Fender 2x12 with original speakers",
+   "dynacab": "2x12 Double Verb",
+   "controls": "Volume, Bass, Middle, Treble, Bright switch",
+   "preamp_tubes": "7025 (12AX7A Syl)",
+   "power_tubes": "6L6",
+   "tonestack": "PRE"
+  },
+  "226": {
+   "fractal": "Super Verb Normal",
+   "guide_index": 272,
+   "guide_title": "SUPER VERB NORMAL",
+   "model": "1964 Fender Super Reverb",
+   "orig_cab": "Fender 4x10",
+   "dynacab": "4x10 Bassguy RI",
+   "controls": "Vol, Bass, Treble, Bright",
+   "preamp_tubes": "7025 (12AX7A Syl)",
+   "power_tubes": "6L6",
+   "tonestack": "PRE"
+  },
+  "227": {
+   "fractal": "Bludojai Lead",
+   "guide_index": 42,
+   "guide_title": "BLUDOJAI LEAD",
+   "model": "Bludotone Ojai, OD channel, PAB off",
+   "controls": "Clean model controls+OD Drive/level",
+   "tonestack": "POST"
+  },
+  "228": {
+   "fractal": "Plexi 50W 6550",
+   "guide_index": 214,
+   "guide_title": "PLEXI 50W 6550",
+   "model": "‘72 Marshall Plexi 50w, 6550 pwr tubes,hi treble chnl",
+   "power_tubes": "6550"
+  },
+  "229": {
+   "fractal": "FAS Hot Rod",
+   "guide_index": 141,
+   "guide_title": "FAS HOT ROD",
+   "model": "Cliff’s ideal modded Marshall model",
+   "dynacab": "4x12 1960TV",
+   "power_tubes": "EL34"
+  },
+  "230": {
+   "fractal": "PVH 6160+ Crunch",
+   "guide_index": 230,
+   "guide_title": "PVH 6160+ CRUNCH",
+   "model": "Peavey 6160+/EVH 5150II, Crunch chnl, Bright off"
+  },
+  "231": {
+   "fractal": "PVH 6160+ Clean",
+   "guide_index": 228,
+   "guide_title": "PVH 6160+ CLEAN",
+   "model": "Peavey 6160+/EVH 5150II, Clean chnl, Bright sw off",
+   "orig_cab": "Peavey 4x12 (V30)",
+   "dynacab": "4x12 5153",
+   "controls": "Pre (Input Drive), Bright switch (6dB@2kHz), Crunch switch, Low, Mid, High, Post (Master), Resonance (Depth), Presence",
+   "preamp_tubes": "12AX7A",
+   "power_tubes": "6L6",
+   "tonestack": "POST"
+  },
+  "232": {
+   "fractal": "Solo 88 Clean",
+   "guide_index": 253,
+   "guide_title": "SOLO 88 CLEAN",
+   "model": "Soldano X88R preamp, Clean channel",
+   "orig_cab": "",
+   "dynacab": "4x12 Solo 100",
+   "controls": "Gain, Bass, Middle, Treble, Volume, Bright switch",
+   "preamp_tubes": "12AX7A",
+   "power_tubes": "6L6"
+  },
+  "233": {
+   "fractal": "Class-A 30W Bright",
+   "guide_index": 97,
+   "guide_title": "CLASS-A 30W BRIGHT",
+   "model": "Vox AC-30, possibly Bright channel of older Vox AC-30"
+  },
+  "234": {
+   "fractal": "Plexi 50W High 2",
+   "guide_index": 218,
+   "guide_title": "PLEXI 50W HIGH 2",
+   "model": "1967 Marshall Super Lead Plexi 50W, High Treble chnl"
+  },
+  "235": {
+   "fractal": "Spawn Nitrous 1",
+   "guide_index": 262,
+   "guide_title": "SPAWN NITROUS 1",
+   "model": "Splawn Nitro, OD channel, OD-1 (Rhythm mode)",
+   "orig_cab": "Splawn 4x12 (G12M, G12-65, V30)",
+   "dynacab": "4x12 Lerxst",
+   "controls": "Resonance, Presence, Bass, Middle, Treble, Master, Gain",
+   "preamp_tubes": "12AX7A",
+   "power_tubes": "KT88 (EL34 & 6L6 work too)",
+   "tonestack": "POST"
+  },
+  "236": {
+   "fractal": "Ruby Rocket",
+   "guide_index": 249,
+   "guide_title": "RUBY ROCKET",
+   "model": "Paul Ruby Rocket",
+   "orig_cab": "1x12 (Alnico/G12M)",
+   "dynacab": "1x12 Div13 CJ",
+   "controls": "Volume, Bass, Treble, Cut, Bright switch",
+   "preamp_tubes": "12AX7A (Syl)",
+   "power_tubes": "EL84",
+   "tonestack": "POST"
+  },
+  "237": {
+   "fractal": "AC-20 12AX7 Bass",
+   "guide_index": 27,
+   "guide_title": "AC-20 12AX7 BASS",
+   "model": "Morgan AC20 Deluxe, Bass model",
+   "orig_cab": "Morgan 1x12 (G12 Alnico Blue)",
+   "dynacab": "1x12 AC20",
+   "controls": "Volume, Cut, Sun/Moon switch (Bright), Brilliance switch (Bass Cut), EF86/12AX7 switch",
+   "preamp_tubes": "12AX7A (Syl)",
+   "power_tubes": "EL84",
+   "tonestack": "POST"
+  },
+  "238": {
+   "fractal": "Plexi 100W 1970",
+   "guide_index": 209,
+   "guide_title": "PLEXI 100W 1970",
+   "model": "1970 Marshall Plexi",
+   "orig_cab": "Marshall 4x12 (G12M, G12H)",
+   "dynacab": "4x12 1960TV",
+   "controls": "Vol Nrml/Treble, Bass, Middle, Treble, Presence",
+   "preamp_tubes": "ECC83",
+   "power_tubes": "EL34",
+   "tonestack": "POST"
+  },
+  "239": {
+   "fractal": "JS410 Lead Orange",
+   "guide_index": 191,
+   "guide_title": "JS410 LEAD ORANGE",
+   "model": "Marshall JVM410HJS, Lead Orange (more gain)"
+  },
+  "240": {
+   "fractal": "JS410 Lead Red",
+   "guide_index": 192,
+   "guide_title": "JS410 LEAD RED",
+   "model": "Marshall JVM410HJS, Lead Red (even more gain)"
+  },
+  "241": {
+   "fractal": "JS410 Crunch Orange",
+   "guide_index": 188,
+   "guide_title": "JS410 CRUNCH ORANGE",
+   "model": "Joe Satriani’s Marshall JVM410HJS, Crunch Orange (JCM 2203)",
+   "orig_cab": "Marshall 4x12 (V30 & G12H)",
+   "dynacab": "4x12 Friedman V30",
+   "controls": "Volume, Gain, Bass, Middle, Treble, Master, Presence, Resonance, Mid-Shift (off:~650Hz, on:~500Hz)",
+   "preamp_tubes": "ECC83",
+   "power_tubes": "EL34",
+   "tonestack": "POST"
+  },
+  "242": {
+   "fractal": "JS410 Crunch Red",
+   "guide_index": 189,
+   "guide_title": "JS410 CRUNCH RED",
+   "model": "Marshall JVM410HJS, Crunch Red (modded JCM 2203)"
+  },
+  "243": {
+   "fractal": "Friedman BE V2",
+   "guide_index": 157,
+   "guide_title": "FRIEDMAN BE V2",
+   "model": "later BE-100, voice: middle (brightest)"
+  },
+  "244": {
+   "fractal": "Friedman HBE V2",
+   "guide_index": 163,
+   "guide_title": "FRIEDMAN HBE V2",
+   "model": "later BE-100, voice: middle (brightest), HBE mode"
+  },
+  "245": {
+   "fractal": "Dweezil's Bassguy",
+   "guide_index": 126,
+   "guide_title": "DWEEZIL’S BASSGUY",
+   "model": "Fender Bassman, Dweezil Zappa’s ‘65 blackface AB165, modded by Blankenship",
+   "orig_cab": "Fender 2x12 (Oxford)",
+   "dynacab": "4x12 1960TV",
+   "controls": "Volume, Negative feedback, fixed Presence circuit (at 10)",
+   "preamp_tubes": "7025 (12AX7A Syl)",
+   "power_tubes": "6L6",
+   "tonestack": "PRE"
+  },
+  "246": {
+   "fractal": "Friedman BE V3",
+   "guide_index": 158,
+   "guide_title": "FRIEDMAN BE V3",
+   "model": "later BE-100, voice: right"
+  },
+  "247": {
+   "fractal": "Friedman HBE V3",
+   "guide_index": 164,
+   "guide_title": "FRIEDMAN HBE V3",
+   "model": "later BE-100, voice: right, HBE mode"
+  },
+  "248": {
+   "fractal": "USA MK IIC++",
+   "guide_index": 301,
+   "guide_title": "USA MK IIC++",
+   "model": "custom FAS model of MESA/Boogie IIC+"
+  },
+  "249": {
+   "fractal": "Legend 100 II",
+   "guide_index": 194,
+   "guide_title": "LEGEND 100 II",
+   "model": "Carvin VL300 Legacy 3, channel 3",
+   "controls": "Bass, Middle, Treble, Presence, Drive, Volume, Master"
+  },
+  "250": {
+   "fractal": "Capt Hook 2B",
+   "guide_index": 80,
+   "guide_title": "CAPT HOOK 2B",
+   "model": "Hook Captain 34, Channel 2, Edge on (alters mids)"
+  },
+  "251": {
+   "fractal": "Capt Hook 3B",
+   "guide_index": 82,
+   "guide_title": "CAPT HOOK 3B",
+   "model": "Hook Captain 34, Channel 3"
+  },
+  "252": {
+   "fractal": "Capt Hook 2A",
+   "guide_index": 79,
+   "guide_title": "CAPT HOOK 2A",
+   "model": "Hook Captain 34, Channel 2, Edge switch off",
+   "controls": "Gain, Level, Bass, Mid, Treble, Boost switch, Edge switch (changes tone stack), Presence & Balls"
+  },
+  "253": {
+   "fractal": "Capt Hook 3A",
+   "guide_index": 81,
+   "guide_title": "CAPT HOOK 3A",
+   "model": "Hook Captain 34, Channel 3, Edge switch off",
+   "controls": "Gain, Level, Bass, Mid, Treble, Boost switch, Edge switch (changes tone stack), Presence & Balls"
+  },
+  "254": {
+   "fractal": "Capt Hook 1A",
+   "guide_index": 77,
+   "guide_title": "CAPT HOOK 1A",
+   "model": "Hook Captain 34",
+   "orig_cab": "Hook 2x12 or 4x12 (V30, G12H, G12-65, WGS)",
+   "dynacab": "2x12 5153 Stealth",
+   "controls": "Gain (w/ Pull function), Level, Bass, Mid, Treble, EQ bypass switch, Bright switch, Presence & Balls",
+   "preamp_tubes": "ECC83",
+   "power_tubes": "EL34",
+   "tonestack": "PRE/POST"
+  },
+  "255": {
+   "fractal": "Capt Hook 1B",
+   "guide_index": 78,
+   "guide_title": "CAPT HOOK 1B",
+   "model": "Hook Captain 34, Channel 1, EQ Bypass on (no Bass/Middle/Treble), Boost switch on"
+  },
+  "256": {
+   "fractal": "Dirty Shirley 2",
+   "guide_index": 112,
+   "guide_title": "DIRTY SHIRLEY 2",
+   "model": "40W Friedman Dirty Shirley, earlier version, different component values, lil more aggro vs 111 model"
+  },
+  "257": {
+   "fractal": "Brit 800 #34",
+   "guide_index": 50,
+   "guide_title": "BRIT 800 #34",
+   "model": "50W Marshall JCM 800, Santiago #34 modifications",
+   "dynacab": "4x12 1960TV",
+   "power_tubes": "EL34/6550"
+  },
+  "258": {
+   "fractal": "5F1 Tweed EC",
+   "guide_index": 2,
+   "guide_title": "5F1 TWEED EC CHAMPLIFIER",
+   "model": "2011 Fender EC Vibro-Champ",
+   "orig_cab": "Fender 1x8",
+   "dynacab": "1x8 5F1 Tweed",
+   "controls": "Volume, Tremolo effect",
+   "power_tubes": "6V6",
+   "tonestack": "PRE"
+  },
+  "259": {
+   "fractal": "Friedman BE V1 Fat",
+   "guide_index": 156,
+   "guide_title": "FRIEDMAN BE V1 FAT",
+   "model": "later BE-100, voice: left, FAT switch on"
+  },
+  "260": {
+   "fractal": "Friedman HBE V1 Fat",
+   "guide_index": 162,
+   "guide_title": "FRIEDMAN HBE V1 FAT",
+   "model": "later BE-100, voice: left, FAT on, HBE"
+  },
+  "261": {
+   "fractal": "Plexi 2204",
+   "guide_index": 213,
+   "guide_title": "PLEXI 2204",
+   "model": "1981 Marshall JMP 2204 50W Master Volume Head",
+   "controls": "Vol Nrml/Treble, Bass, Mid, Treble, Presence, MV"
+  },
+  "262": {
+   "fractal": "Friedman HBE C45",
+   "guide_index": 160,
+   "guide_title": "FRIEDMAN HBE C45",
+   "model": "later BE-100, C45 switch on, HBE mode"
+  },
+  "263": {
+   "fractal": "Porta-Bass",
+   "guide_index": 222,
+   "guide_title": "PORTA-BASS",
+   "model": "Ampeg Portaflex bass amp (SVT-7 PRO???)",
+   "orig_cab": "SVT cab, 1 or more 10”, 12” or 15” Eminence",
+   "dynacab": "1x15 Portabass",
+   "controls": "Gain, Volume, Bass, Mid, Treble, Ultra Hi",
+   "preamp_tubes": "12AX7",
+   "power_tubes": "6L6",
+   "tonestack": ""
+  },
+  "264": {
+   "fractal": "SV Bass 1",
+   "guide_index": 277,
+   "guide_title": "SV BASS 1",
+   "model": "Ampeg SVT Bass Amp",
+   "orig_cab": "SVT 8x10",
+   "dynacab": "8x10 SV Bass",
+   "controls": "Vol, Treble, Midrange, Bass, MV, Ultra-Hi switch (Bright)",
+   "preamp_tubes": "12AX7 (Syl)",
+   "power_tubes": "6550",
+   "tonestack": "PRE"
+  },
+  "265": {
+   "fractal": "FAS Skull Crusher",
+   "guide_index": 148,
+   "guide_title": "FAS SKULL CRUSHER",
+   "model": "Custom Model",
+   "dynacab": "4x12 Recto Straight",
+   "power_tubes": "6L6"
+  },
+  "266": {
+   "fractal": "USA JP IIC+ Red",
+   "guide_index": 292,
+   "guide_title": "USA JP IIC+ RED",
+   "model": "MESA/Boogie JP-2C, Red: channel 3",
+   "controls": "(Pull) Gain, Master, (Pull) Presence, Presence Shift, Treble, Mid, Bass, GEQ, Shred mode switch"
+  },
+  "267": {
+   "fractal": "USA JP IIC+ Yellow",
+   "guide_index": 294,
+   "guide_title": "USA JP IIC+ YELLOW",
+   "model": "MESA/Boogie JP-2C, Yellow: channel 2",
+   "orig_cab": "(Pull) Gain, Master, (Pull) Presence, Presence Shift, Treble, Mid, Bass, GEQ, Shred mode switch"
+  },
+  "268": {
+   "fractal": "USA JP IIC+ Green",
+   "guide_index": 291,
+   "guide_title": "USA JP IIC+ GREEN",
+   "model": "MESA/Boogie JP-2C, Green: channel 1",
+   "orig_cab": "Mesa 1x12 (C90, V30)",
+   "dynacab": "4x12 Recto Straight",
+   "controls": "Gain, Master, Presence, Treble, Mid, Bass, GEQ,",
+   "preamp_tubes": "12AX7A",
+   "power_tubes": "6L6",
+   "tonestack": "PRE"
+  },
+  "269": {
+   "fractal": "Wrecker Express Bright",
+   "guide_index": 328,
+   "guide_title": "WRECKER EXPRESS BRIGHT",
+   "model": "Trainwreck Express"
+  },
+  "270": {
+   "fractal": "Wrecker Liverpool Bright",
+   "guide_index": 330,
+   "guide_title": "WRECKER LIVERPOOL BRIGHT",
+   "model": "Trainwreck Liverpool"
+  },
+  "271": {
+   "fractal": "Matchbox D-30 EF86",
+   "guide_index": 198,
+   "guide_title": "MATCHBOX D-30 EF86",
+   "model": "Matchless DC-30, channel 2 (EF86 preamp tubes)",
+   "controls": "Volume, Tone, Cut, bypassable Master",
+   "preamp_tubes": "EF86",
+   "power_tubes": "EL84",
+   "tonestack": ""
+  },
+  "272": {
+   "fractal": "FAS Express",
+   "guide_index": 140,
+   "guide_title": "FAS EXPRESS",
+   "model": "Custom Modded Trainwreck Express model",
+   "dynacab": "4x12 Friedman GB",
+   "power_tubes": "EL34"
+  },
+  "273": {
+   "fractal": "Triple Crest 2",
+   "guide_index": 284,
+   "guide_title": "TRIPLE CREST 2",
+   "model": "MESA Triple Crown TC-100, Channel 2 (Lo)",
+   "orig_cab": "MESA cab with V30 speakers",
+   "dynacab": "4x12 USA Mc90",
+   "controls": "Gain, Treble, Mid, Bass, Presence",
+   "preamp_tubes": "12AX7",
+   "power_tubes": "EL34",
+   "tonestack": ""
+  },
+  "274": {
+   "fractal": "Triple Crest 3",
+   "guide_index": 285,
+   "guide_title": "TRIPLE CREST 3",
+   "model": "MESA Triple Crown TC-100, Channel 3 (Hi)"
+  },
+  "275": {
+   "fractal": "PVH 6160+ Crunch Bright",
+   "guide_index": 231,
+   "guide_title": "PVH 6160+ CRUNCH BRIGHT",
+   "model": "Peavey 6160+/EVH 5150II, Crunch chnl, Bright on"
+  },
+  "276": {
+   "fractal": "PVH 6160+ Clean Bright",
+   "guide_index": 229,
+   "guide_title": "PVH 6160+ CLEAN BRIGHT",
+   "model": "Peavey 6160+/EVH 5150II, Clean chnl, Bright on"
+  },
+  "277": {
+   "fractal": "Plexi 50W 6CA7",
+   "guide_index": 215,
+   "guide_title": "PLEXI 50W 6CA7",
+   "model": "Marshall Lead Plexi 50W, 6AC7 power tubes",
+   "power_tubes": "6AC7"
+  },
+  "278": {
+   "fractal": "Solo 99 Lead Bright",
+   "guide_index": 258,
+   "guide_title": "SOLO 99 LEAD BRIGHT",
+   "model": "Soldano/Caswell X99 preamp, Lead channel, Bright: on"
+  },
+  "279": {
+   "fractal": "Archean",
+   "guide_index": 33,
+   "guide_title": "ARCHEAN",
+   "model": "100W PRS Archon (Lead chnl, bright off)",
+   "orig_cab": "Celestion V-Type",
+   "dynacab": "4x12 Friedman GB",
+   "controls": "MV, Bass, Mid, Treble, Bright, Vol, Depth, Presence",
+   "preamp_tubes": "12AX7",
+   "power_tubes": "6L6",
+   "tonestack": "POST"
+  },
+  "280": {
+   "fractal": "Archean Bright",
+   "guide_index": 34,
+   "guide_title": "ARCHEAN BRIGHT",
+   "model": "100W PRS Archon (Lead Channel, bright on)"
+  },
+  "281": {
+   "fractal": "Archean Clean",
+   "guide_index": 35,
+   "guide_title": "ARCHEAN CLEAN",
+   "model": "100W PRS Archon (Lead Channel, bright on)"
+  },
+  "282": {
+   "fractal": "59 Bassguy Jumped",
+   "guide_index": 9,
+   "guide_title": "‘59 BASSGUY JUMPED",
+   "model": "‘59 narrow-panel Fender Tweed Bassman, 5F6-A, jumpered channels"
+  },
+  "283": {
+   "fractal": "Deluxe Tweed",
+   "guide_index": 106,
+   "guide_title": "DELUXE TWEED",
+   "model": "Fender Tweed Deluxe, 1957 narrow-panel 5E3, bright input",
+   "orig_cab": "Fender 1x12 (Jensen P12R, C12N or Celestion Alnico Blue)",
+   "dynacab": "1x12 Deluxe Tweed",
+   "controls": "Volume (Drive), Tone (Treble)",
+   "preamp_tubes": "12AX7A (Syl)",
+   "power_tubes": "6V6",
+   "tonestack": "PRE"
+  },
+  "284": {
+   "fractal": "USA JP IIC+ Red Shred",
+   "guide_index": 293,
+   "guide_title": "USA JP IIC+ RED SHRED",
+   "model": "MESA/Boogie JP-2C, Red: channel 3, Shred mode"
+  },
+  "285": {
+   "fractal": "USA JP IIC+ Yellow Shred",
+   "guide_index": 295,
+   "guide_title": "USA JP IIC+ YELLOW SHRED",
+   "model": "MESA/Boogie JP-2C, Yellow: channel 2, Shred mode"
+  },
+  "286": {
+   "fractal": "Friedman BE C45",
+   "guide_index": 154,
+   "guide_title": "FRIEDMAN BE C45",
+   "model": "later BE-100, C45 switch engaged",
+   "power_tubes": "EL34",
+   "tonestack": ""
+  },
+  "287": {
+   "fractal": "Friedman BE 2010",
+   "guide_index": 153,
+   "guide_title": "FRIEDMAN BE 2010",
+   "model": "2010 Friedman BE-100 (probably Marsha edition)",
+   "orig_cab": "Friedman 4x12 (V30 &/or G12M)",
+   "dynacab": "4x12 Friedman V30",
+   "controls": "Vol I & II, Master, Bass, Middle, Treble, Presence",
+   "preamp_tubes": "12AX7A (JJ)",
+   "power_tubes": "EL34",
+   "tonestack": "POST"
+  },
+  "288": {
+   "fractal": "Friedman HBE 2010",
+   "guide_index": 159,
+   "guide_title": "FRIEDMAN HBE 2010",
+   "model": "‘10 Friedman BE-100 , HBE mode, May be Marsha edition"
+  },
+  "289": {
+   "fractal": "FAS Buttery",
+   "guide_index": 137,
+   "guide_title": "FAS BUTTERY",
+   "model": "Custom FAS Model (v1 AxeFx legacy model)",
+   "dynacab": "2x12 Double Verb",
+   "power_tubes": "EL84"
+  },
+  "290": {
+   "fractal": "59 Bassguy Normal",
+   "guide_index": 10,
+   "guide_title": "‘59 BASSGUY NORMAL",
+   "model": "‘59 narrow-panel Fender Tweed Bassman, 5F6-A, normal channel"
+  },
+  "291": {
+   "fractal": "5F8 Tweed Normal",
+   "guide_index": 5,
+   "guide_title": "5F8 TWEED NORMAL",
+   "model": "Urban’s ‘59 Fender Tweed Twin, 5F8, Normal chnl"
+  },
+  "292": {
+   "fractal": "5F8 Tweed Jumped",
+   "guide_index": 4,
+   "guide_title": "5F8 TWEED JUMPED",
+   "model": "Urban’s ‘59 Fender Tweed Twin, 5F8, Jumpered chnls"
+  },
+  "293": {
+   "fractal": "JMPre-1 Clean1",
+   "guide_index": 178,
+   "guide_title": "JMPRE-1 CLEAN 1",
+   "model": "Marshall JMP-1 Preamp, Clean 1",
+   "dynacab": "4x12 1960TV",
+   "controls": "Volume, Gain, Bass, Middle, Treble, Presence, Bass shift, Depth, PA Presence (power amp)",
+   "preamp_tubes": "ECC83",
+   "power_tubes": "EL34",
+   "tonestack": "POST"
+  },
+  "294": {
+   "fractal": "JMPre-1 Clean1 Bass Shift",
+   "guide_index": 179,
+   "guide_title": "JMPRE-1 CLEAN 1 BASS SHIFT",
+   "model": "Marshall JMP-1 Preamp, Clean 1, bass shift on"
+  },
+  "295": {
+   "fractal": "JMPre-1 Clean2",
+   "guide_index": 180,
+   "guide_title": "JMPRE-1 CLEAN 2",
+   "model": "Marshall JMP-1 Preamp, Clean 2"
+  },
+  "296": {
+   "fractal": "JMPre-1 Clean2 Bass Shift",
+   "guide_index": 181,
+   "guide_title": "JMPRE-1 CLEAN 2 BASS SHIFT",
+   "model": "Marshall JMP-1 Preamp, Clean 1, bass shift on"
+  },
+  "297": {
+   "fractal": "Diamante Fire",
+   "guide_index": 110,
+   "guide_title": "DIAMANTE FIRE",
+   "model": "22W Diamond Del Fuego",
+   "orig_cab": "single GH12H, V30",
+   "dynacab": "1x12 Hot Kitty",
+   "controls": "Volume, Tone, Tremolo effect",
+   "preamp_tubes": "12AX7",
+   "power_tubes": "EL84",
+   "tonestack": "POST"
+  },
+  "298": {
+   "fractal": "PVH 6160 Block Crunch",
+   "guide_index": 227,
+   "guide_title": "PVH 6160 BLOCK CRUNCH",
+   "model": "Peavey’s 6505, Rhythm channel, Crunch switch engaged",
+   "orig_cab": "Peavey 4x12 (Sheffield 1200)",
+   "dynacab": "4x12 5153",
+   "controls": "Pre Gain, Post Gain (Master), Low, Mid, High, Resonance/Depth, Presence, Bright switch, Crunch switch",
+   "preamp_tubes": "12AX7A (JJ)",
+   "power_tubes": "6L6",
+   "tonestack": "POST"
+  },
+  "299": {
+   "fractal": "Plexi Studio 20",
+   "guide_index": 221,
+   "guide_title": "PLEXI STUDIO 20",
+   "model": "Marshall SV20H",
+   "orig_cab": "Celestion V-Type",
+   "dynacab": "4x12 1960TV",
+   "controls": "Low/Hi switch, Presence, Bass, Mid, Treble, Nrml/Hi Vol",
+   "preamp_tubes": "12AX7",
+   "power_tubes": "EL34",
+   "tonestack": ""
+  },
+  "300": {
+   "fractal": "Plexi 50W 6CA7 Jumped",
+   "guide_index": 216,
+   "guide_title": "PLEXI 50W 6CA7 JUMPED",
+   "model": "Marshall Lead Plexi 50W, 6AC7 power tubes, jumpered channels"
+  },
+  "301": {
+   "fractal": "Herbie MK3",
+   "guide_index": 172,
+   "guide_title": "HERBIE MK3",
+   "model": "Diezel Herbert MKIII, Channel 2+"
+  },
+  "302": {
+   "fractal": "59 Bassguy RI Jumped",
+   "guide_index": 11,
+   "guide_title": "‘59 BASSGUY RI JUMPED",
+   "model": "Fender ‘59 Bassman LTD,",
+   "orig_cab": "Fender 4x10 Jensens",
+   "dynacab": "4x10 Bassguy RI",
+   "controls": "Volume Normal/Bright, Bass,",
+   "preamp_tubes": "12AY7",
+   "power_tubes": "5881s"
+  },
+  "303": {
+   "fractal": "Revv Gen Purple 1",
+   "guide_index": 243,
+   "guide_title": "REVV GEN PURPLE 1",
+   "model": "REVV GENERATOR 120 MKIII Rev A Purple Gain channel, Aggression: least (green)"
+  },
+  "304": {
+   "fractal": "Revv Gen Purple 2",
+   "guide_index": 244,
+   "guide_title": "REVV GEN PURPLE 2",
+   "model": "REVV GENERATOR 120 MKIII Rev A Purple Gain channel, Aggression: tight (blue)"
+  },
+  "305": {
+   "fractal": "Revv Gen Purple 3",
+   "guide_index": 245,
+   "guide_title": "REVV GEN PURPLE 3",
+   "model": "REVV GENERATOR 120 MKIII Rev A"
+  },
+  "306": {
+   "fractal": "Revv Gen Red 1",
+   "guide_index": 246,
+   "guide_title": "REVV GEN RED 1",
+   "model": "REVV GENERATOR 120 MKIII Rev A"
+  },
+  "307": {
+   "fractal": "Revv Gen Red 2",
+   "guide_index": 247,
+   "guide_title": "REVV GEN RED 2",
+   "model": "REVV GENERATOR 120 MKIII Rev A"
+  },
+  "308": {
+   "fractal": "Revv Gen Red 3",
+   "guide_index": 248,
+   "guide_title": "REVV GEN RED 3",
+   "model": "REVV GENERATOR 120 MKIII Rev A"
+  },
+  "309": {
+   "fractal": "Revv Gen Green 1",
+   "guide_index": 240,
+   "guide_title": "REVV GEN GREEN 1",
+   "model": "REVV GENERATOR 120 MKIII Rev A Green channel, Drive switch: off",
+   "orig_cab": "Revv 4x12 (V30)",
+   "dynacab": "4x12 Friedman V30",
+   "controls": "Gain, Bass, Mid, Treble, Level, MV, Presence, Depth",
+   "preamp_tubes": "12AX7",
+   "power_tubes": "6L6 (but KT88 & EL34 work too)",
+   "tonestack": "POST"
+  },
+  "310": {
+   "fractal": "Revv Gen Green 2",
+   "guide_index": 241,
+   "guide_title": "REVV GEN GREEN 2",
+   "model": "REVV GENERATOR 120 MKIII Rev A Green channel, Drive switch: blue"
+  },
+  "311": {
+   "fractal": "Revv Gen Green 3",
+   "guide_index": 242,
+   "guide_title": "REVV GEN GREEN 3",
+   "model": "REVV GENERATOR 120 MKIII Rev A Green channel, Drive switch: red"
+  },
+  "312": {
+   "fractal": "JS410 Lead Green",
+   "guide_index": 190,
+   "guide_title": "JS410 LEAD GREEN",
+   "model": "Marshall JVM410H, Lead Green (OD1 on original JVM)"
+  },
+  "313": {
+   "fractal": "5153 100W Stealth Blue",
+   "guide_index": 23,
+   "guide_title": "5153 100W STEALTH BLUE",
+   "model": "EVH 5150III 100S 100W (blue chnl)",
+   "orig_cab": "5150 4x12, 2x12 (G12H, G12EVH)",
+   "dynacab": "4x12 5153 / 2x12 5153 Stealth",
+   "controls": "Gain, Low, Mid, High, Volume, Presence, Resonance/Depth",
+   "preamp_tubes": "12AX7A",
+   "power_tubes": "6L6",
+   "tonestack": "POST"
+  },
+  "314": {
+   "fractal": "Brit 800 2203 High",
+   "guide_index": 48,
+   "guide_title": "BRIT 800 2203 HIGH",
+   "model": "100W Marshall JCM 800 2203 JMP (high input)",
+   "orig_cab": "Marshall 4x12 (G12M)",
+   "dynacab": "4x12 1960TV",
+   "controls": "Presence, Bass, Middle, Treble, MV, Preamp Vol",
+   "preamp_tubes": "ECC83",
+   "power_tubes": "EL34/6550"
+  },
+  "315": {
+   "fractal": "5153 100W Stealth Green",
+   "guide_index": 24,
+   "guide_title": "5153 100W STEALTH GREEN",
+   "model": "EVH 5150III 100S 100W (green chnl)"
+  },
+  "316": {
+   "fractal": "5153 100W Stealth Red",
+   "guide_index": 25,
+   "guide_title": "5153 100W STEALTH RED",
+   "model": "EVH 5150III 100S 100W (red chnl)"
+  },
+  "317": {
+   "fractal": "USA MK V Green",
+   "guide_index": 308,
+   "guide_title": "USA MK V GREEN",
+   "model": "MESA/Boogie Mark V , Channel 1, Clean",
+   "orig_cab": "Mesa 1x12 (C90, V30)",
+   "dynacab": "4x12 Recto Straight",
+   "controls": "Gain, Bass, Mid, Treble, Presence, Master, Normal/Bold switch & EQ switch",
+   "preamp_tubes": "12AX7",
+   "power_tubes": "6L6",
+   "tonestack": "PRE"
+  },
+  "318": {
+   "fractal": "Brit 800 2204 Low",
+   "guide_index": 47,
+   "guide_title": "BRIT 800 2204 LOW",
+   "model": "50w Marshall JCM800, 2204, low sensitivity input"
+  },
+  "319": {
+   "fractal": "Brit 800 2203 Low",
+   "guide_index": 49,
+   "guide_title": "BRIT 800 2203 LOW",
+   "model": "100W Marshall JCM 800 2203 JMP (low input)"
+  },
+  "320": {
+   "fractal": "USA MK V Red IIC+",
+   "guide_index": 309,
+   "guide_title": "USA MK V RED IIC+",
+   "model": "MESA/Boogie MkV, Channel 3, IIC+ mode, Bright off",
+   "controls": "Gain, Bass, Mid, Treble, Presence, Master, Normal/Bright, EQ switch"
+  },
+  "321": {
+   "fractal": "USA MK V Red IIC+ Bright",
+   "guide_index": 310,
+   "guide_title": "USA MK V RED IIC+ Bright",
+   "model": "MESA/Boogie MkV, Channel 3 in MK II C+ mode, Bright on"
+  },
+  "322": {
+   "fractal": "USA MK V Red MKIV",
+   "guide_index": 311,
+   "guide_title": "USA MK V RED MKIV",
+   "model": "MESA/Boogie MkV, Channel 3 in MK IV mode, Bright off"
+  },
+  "323": {
+   "fractal": "USA MK V Red MKIV Bright",
+   "guide_index": 312,
+   "guide_title": "USA MK V RED MKIV Bright",
+   "model": "MESA/Boogie MkV, Channel 3 in MK IV mode, Bright on"
+  },
+  "324": {
+   "fractal": "USA MK V Red XT",
+   "guide_index": 313,
+   "guide_title": "USA MK V RED XT",
+   "model": "MESA/Boogie MkV, Channel 3 in Extreme mode, Bright off"
+  },
+  "325": {
+   "fractal": "USA MK V Red XT Bright",
+   "guide_index": 314,
+   "guide_title": "USA MK V RED XT Bright",
+   "model": "MESA/Boogie MkV, Chnl 3, Extreme mode, Bright on"
+  },
+  "326": {
+   "fractal": "Class-A 30W Brilliant",
+   "guide_index": 98,
+   "guide_title": "CLASS-A 30W BRILLIANT",
+   "model": "Vox AC-30 AC30HW, Normal chnl, but with a different tonestack (Matchbox D-30)"
+  },
+  "327": {
+   "fractal": "FAS Stealth Blue",
+   "guide_index": 149,
+   "guide_title": "FAS STEALTH BLUE",
+   "model": "Custom Model, EVH 5153 Stealth, Blue channel",
+   "dynacab": "4x12 Recto Straight",
+   "power_tubes": "6L6"
+  },
+  "328": {
+   "fractal": "Brit 800 Studio 20",
+   "guide_index": 52,
+   "guide_title": "BRIT 800 STUDIO 20",
+   "model": "Marshall Studio Classic SC20H",
+   "dynacab": "4x12 1960TV",
+   "controls": "Presence, Bass, Middle, Treble, Master, Preamp Vol",
+   "preamp_tubes": "ECC83",
+   "power_tubes": "EL34/6550"
+  },
+  "329": {
+   "fractal": "Supro Black Magick",
+   "guide_index": 276,
+   "guide_title": "SUPRO BLACK MAGICK",
+   "model": "Supro 1695T Black Magick",
+   "orig_cab": "Supro 1x12",
+   "dynacab": "1x12 Black Magick",
+   "controls": "Volume, Tone, Tremolo effect",
+   "preamp_tubes": "12AX7",
+   "power_tubes": "6973",
+   "tonestack": "PRE"
+  },
+  "330": {
+   "fractal": "Deluxe 6G3",
+   "guide_index": 105,
+   "guide_title": "DELUXE 6G3",
+   "model": "Fender Deluxe,",
+   "orig_cab": "",
+   "dynacab": "1x12 Deluxe Verb",
+   "controls": "Volume, Tone",
+   "preamp_tubes": "12AX7",
+   "power_tubes": "6V6",
+   "tonestack": ""
+  }
+ }
+}
