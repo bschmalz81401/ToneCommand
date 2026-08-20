@@ -39,7 +39,7 @@ OVERRIDES: dict[str, str] = {
     # Kings (based on King of Tone, aka KoT)" (thread 148207)
     "Tone of Kings": "Analogman King of Tone",
     # Forum DRIVE-models index thread 122838 (yek), titles harvested from a
-    # human-pasted copy 2026-08-21:
+    # human-pasted copy 2026-08-20:
     #   "Blackglass B7K (based on Darkglass B7K)"
     "Blackglass 7K": "Darkglass B7K",
     #   "Treb Boost (based on Dallas Rangemaster)" - upgrades the PDF's
