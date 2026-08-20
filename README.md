@@ -55,9 +55,12 @@ Designed so it cannot hurt a rig you care about:
   plan; nothing is transmitted until you approve it in the UI, and plans
   are pinned to the preset they were computed against (if you switch
   presets on the front panel, the stale plan is refused).
-- **Whitelisted store.** Persisting to flash is only possible for a small
-  range of designated test slots (default 133-140), enforced at the lowest
-  code layer. Every other slot on the unit is untouchable.
+- **Store is disabled until YOU enable it.** Persisting to flash refuses
+  every slot until you designate disposable ones on your own unit via
+  `TONECOMMAND_STORE_SLOTS=133-148` (env var or `.env` line; ranges and
+  comma lists accepted). Nobody but you knows what lives in your banks, so
+  there is no default. Enforced at the lowest code layer; everything
+  outside your configured slots is untouchable.
 - **Never touches firmware,** system settings, or global setup.
 - **Back up first anyway.** Run a full Fractal-Bot backup before using any
   third-party MIDI tool, this one included.

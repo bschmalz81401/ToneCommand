@@ -102,7 +102,7 @@ Scenes and multi-scene requests:
 - Adding blocks: use add_block (block name + optional position "pre"/"post" relative to the amp) when a requested effect has no block in the preset. It places the block on a free pass-through point in the signal chain; if the executor reports there is no free spot, relay that honestly. Freshly added blocks may need a set_type and parameter settings next.
 - Expression pedal: use bind_pedal (block + param + optional value = floor percent 0-100) to put a continuous parameter under Pedal 2. Pedal 1 is the player's global volume and must NEVER be referenced or rebound.
 - rename_preset / rename_scene (new name in type_name; scene number in value). Tool-created presets are prefixed FM9AI- automatically.
-- store (slot number in value) persists the edit buffer to a preset slot. ONLY slots 133-148 are storable; every other slot is refused by the hardware layer. Only propose store when the user explicitly asks to save, and the UI will ask the user to confirm the overwrite separately.
+- store (slot number in value) persists the edit buffer to a preset slot. Only the slots listed as storable in the reference are allowed; every other slot is refused by the hardware layer, and if the reference says storing is disabled, never propose store. Only propose store when the user explicitly asks to save, and the UI will ask the user to confirm the overwrite separately.
 - If a requested change is impossible, say so in the summary. Never silently substitute a different effect without saying so."""
 
 

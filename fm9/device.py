@@ -7,6 +7,7 @@ store command (fn 0x01 sub 0x26) is deliberately not implemented.
 from __future__ import annotations
 
 import time
+from pathlib import Path
 from dataclasses import dataclass
 
 import mido
@@ -26,12 +27,42 @@ class FM9NotFound(RuntimeError):
     pass
 
 
-# The ONLY preset slots this tool is ever allowed to store to. Designate a
-# small range of disposable test slots and keep everything else on the unit
-# protected: store_preset refuses any slot outside this range.
-# 133-140: original test range. 141-144: per-song setlist presets.
-# 145-148: mono variants of the setlist (extended 2026-08-20).
-SAFE_STORE_SLOTS = range(133, 149)
+def get_store_slots() -> set[int]:
+    """The ONLY preset slots this tool is allowed to store to, configured by
+    the user for their own unit. Sources, first match wins:
+
+      1. env var  TONECOMMAND_STORE_SLOTS
+      2. a TONECOMMAND_STORE_SLOTS= line in .env at the repo root
+
+    Format: "133-148" or "133,140,150-155". DEFAULT IS EMPTY: storing is
+    disabled until the owner designates disposable slots, because nobody
+    but the owner knows what lives in their banks."""
+    import os
+    raw = os.environ.get("TONECOMMAND_STORE_SLOTS", "")
+    if not raw:
+        env_file = Path(__file__).resolve().parent.parent / ".env"
+        if env_file.exists():
+            for line in env_file.read_text().splitlines():
+                if line.strip().startswith("TONECOMMAND_STORE_SLOTS="):
+                    raw = line.split("=", 1)[1].strip()
+                    break
+    slots: set[int] = set()
+    for part in raw.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        if "-" in part:
+            a, _, b = part.partition("-")
+            try:
+                slots.update(range(int(a), int(b) + 1))
+            except ValueError:
+                pass
+        else:
+            try:
+                slots.add(int(part))
+            except ValueError:
+                pass
+    return {n for n in slots if 0 <= n <= 511}
 
 
 @dataclass
@@ -235,12 +266,21 @@ class FM9:
         return True
 
     def store_preset(self, slot: int):
-        """Persist the working buffer to a preset slot. Whitelisted slots
-        only (133-140); refuses everything else."""
-        if slot not in SAFE_STORE_SLOTS:
+        """Persist the working buffer to a preset slot. Only slots the user
+        has designated via TONECOMMAND_STORE_SLOTS; refuses everything else,
+        and refuses everything when nothing is configured."""
+        allowed = get_store_slots()
+        if not allowed:
             raise PermissionError(
-                f"store to slot {slot} refused: only test slots "
-                f"{SAFE_STORE_SLOTS.start}-{SAFE_STORE_SLOTS.stop - 1} are allowed")
+                "storing is disabled: no store slots configured. Set "
+                "TONECOMMAND_STORE_SLOTS (env or .env), e.g. "
+                "TONECOMMAND_STORE_SLOTS=133-148, choosing slots on YOUR unit "
+                "that are safe to overwrite")
+        if slot not in allowed:
+            raise PermissionError(
+                f"store to slot {slot} refused: configured store slots are "
+                f"{sorted(allowed)[0]}-{sorted(allowed)[-1]}"
+                if allowed else f"store to slot {slot} refused")
         self._drain()
         self._send(p.build_store_preset(slot))
         time.sleep(1.5)

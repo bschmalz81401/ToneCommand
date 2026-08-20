@@ -83,6 +83,11 @@ def param_reference() -> str:
                          f"\"{label}\", {s.dmin}..{s.dmax} {s.unit or ''}, {s.scale})")
     lines.append("Scenes: 1-8 via set_scene. Block bypass via set_bypass. "
                  "Block channel A-D (0-3) via set_channel. Tempo via set_tempo.")
+    from fm9.device import get_store_slots
+    _slots = sorted(get_store_slots())
+    lines.append(f"Storable slots (store action): "
+                 f"{_slots[0]}-{_slots[-1]}" if _slots else
+                 "Storing is DISABLED on this install (no slots configured); never propose store.")
     lines.append("\nAmp models selectable via set_type (block=amp). One per line as "
                  "`type_name = the real-world amp it models`; use the name to the "
                  "LEFT of the '=' as type_name, verbatim:")
@@ -262,12 +267,15 @@ def validate_action(a: Action) -> tuple[list[str], list[str]]:
             errors.append(f"scene must be 1..8, got {scene}")
         return errors, warnings
     if a.kind == "store":
-        from fm9.device import SAFE_STORE_SLOTS
+        from fm9.device import get_store_slots
+        allowed = get_store_slots()
         slot = int(a.value) if a.value is not None else None
-        if slot is None or slot not in SAFE_STORE_SLOTS:
-            errors.append(
-                f"store only allowed to test slots "
-                f"{SAFE_STORE_SLOTS.start}-{SAFE_STORE_SLOTS.stop - 1}, got {a.value}")
+        if not allowed:
+            errors.append("storing is disabled: configure TONECOMMAND_STORE_SLOTS "
+                          "with slots on your unit that are safe to overwrite")
+        elif slot is None or slot not in allowed:
+            errors.append(f"store only allowed to configured slots "
+                          f"{sorted(allowed)[0]}-{sorted(allowed)[-1]}, got {a.value}")
         else:
             warnings.append(f"store will OVERWRITE whatever is saved in slot {slot}")
         return errors, warnings
