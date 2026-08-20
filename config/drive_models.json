@@ -29,8 +29,8 @@
   },
   "4": {
    "fractal": "Treble Boost",
-   "model": "a treble booster",
-   "guide_title": "Treb Boost"
+   "model": "Dallas Rangemaster",
+   "guide_title": "OVERRIDE"
   },
   "6": {
    "fractal": "T808 OD",
@@ -137,6 +137,11 @@
    "model": "BOSS FA-1 FET Amplifier",
    "guide_title": "FET Preamp"
   },
+  "31": {
+   "fractal": "Suhr Riot Ge (R)",
+   "model": "Suhr Riot (germanium clipping)",
+   "guide_title": "OVERRIDE"
+  },
   "32": {
    "fractal": "Micro Boost",
    "model": "MXR Micro Amp",
@@ -147,6 +152,16 @@
    "model": "Paul Cochrane Timmy",
    "guide_title": "Timothy"
   },
+  "36": {
+   "fractal": "Blackglass 7K",
+   "model": "Darkglass B7K",
+   "guide_title": "OVERRIDE"
+  },
+  "37": {
+   "fractal": "Suhr Riot LED (L)",
+   "model": "Suhr Riot (LED clipping)",
+   "guide_title": "OVERRIDE"
+  },
   "38": {
    "fractal": "Timothy Up",
    "model": "Paul Cochrane Timmy",
@@ -155,6 +170,11 @@
   "39": {
    "fractal": "Tone of Kings",
    "model": "Analogman King of Tone",
+   "guide_title": "OVERRIDE"
+  },
+  "42": {
+   "fractal": "Suhr Riot LED/Si (M)",
+   "model": "Suhr Riot (LED/silicon clipping)",
    "guide_title": "OVERRIDE"
   },
   "44": {

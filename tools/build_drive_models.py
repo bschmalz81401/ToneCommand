@@ -38,6 +38,18 @@ OVERRIDES: dict[str, str] = {
     # Fractal forum official thread "Fractal Audio DRIVE models: Tone of
     # Kings (based on King of Tone, aka KoT)" (thread 148207)
     "Tone of Kings": "Analogman King of Tone",
+    # Forum DRIVE-models index thread 122838 (yek), titles harvested from a
+    # human-pasted copy 2026-08-21:
+    #   "Blackglass B7K (based on Darkglass B7K)"
+    "Blackglass 7K": "Darkglass B7K",
+    #   "Treb Boost (based on Dallas Rangemaster)" - upgrades the PDF's
+    #   generic "a treble booster"
+    "Treble Boost": "Dallas Rangemaster",
+    #   "Ruckus (based on Suhr Riot)" - the FM9 renamed Ruckus to the three
+    #   Suhr Riot clipping variants
+    "Suhr Riot Ge (R)": "Suhr Riot (germanium clipping)",
+    "Suhr Riot LED (L)": "Suhr Riot (LED clipping)",
+    "Suhr Riot LED/Si (M)": "Suhr Riot (LED/silicon clipping)",
 }
 
 HEADING = re.compile(
