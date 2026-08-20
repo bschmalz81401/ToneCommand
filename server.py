@@ -92,8 +92,11 @@ def param_reference() -> str:
                  "`type_name = the real-world amp it models`; use the name to the "
                  "LEFT of the '=' as type_name, verbatim:")
     lines.extend(reg.amp_description(o) for o in reg.amp_roster)
-    lines.append("\nDrive models selectable via set_type (block=drive):")
-    lines.append(", ".join(str(v) for v in reg.drive_roster.values()))
+    lines.append("\nDrive models selectable via set_type (block=drive). One per line as "
+                 "`type_name = the real pedal it models` where known; use the LEFT name "
+                 "verbatim as type_name. Entries without an '=' have no confirmed "
+                 "real-world mapping; do not invent one:")
+    lines.extend(reg.drive_description(o) for o in reg.drive_roster)
     lines.append("\nReverb types selectable via set_type (block=reverb):")
     lines.append(", ".join(str(v) for v in reg.reverb_roster.values()))
     return "\n".join(lines)
@@ -192,6 +195,12 @@ def resolve_type_ordinal(family: str, name: str) -> tuple[int, str] | None:
                if needle in str(l).lower()]
     if matches:
         return min(matches, key=lambda m: len(m[1]))
+    if family == "FUZZ":
+        by_model = [(int(o), str(roster.get(o, o)))
+                    for o, rec in reg.drive_models.items()
+                    if needle in str(rec.get("model", "")).lower()]
+        if len(by_model) == 1:
+            return by_model[0]
     if family == "DISTORT":
         # The planner sees amps as "Fractal name = real amp"; accept the right
         # hand side too, in case it answers with the amp it was actually after.

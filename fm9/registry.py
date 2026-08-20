@@ -76,6 +76,10 @@ class AmpModelsStale(RuntimeError):
     """config/amp_models.json describes a roster that no longer matches."""
 
 
+class DriveModelsStale(RuntimeError):
+    """config/drive_models.json describes a roster that no longer matches."""
+
+
 class Registry:
     def __init__(self, config_path: Path = CONFIG,
                  amp_models_path: Path = AMP_MODELS):
@@ -90,6 +94,8 @@ class Registry:
         self.drive_roster: dict = data.get("FM9_DRIVE_ROSTER", {})
         self.reverb_roster: dict = data.get("FM9_REVERB_TYPE_ROSTER", {})
         self.amp_models: dict = self._load_amp_models(amp_models_path)
+        self.drive_models: dict = self._load_drive_models(
+            Path(__file__).resolve().parent.parent / "config" / "drive_models.json")
 
     def _load_amp_models(self, path: Path) -> dict:
         """Load the real-world amp sidecar, refusing it if the roster moved.
@@ -110,6 +116,29 @@ class Registry:
                 f"({len(drift)} of {len(amps)} entries). Regenerate it with "
                 f"tools/build_amp_models.py. First mismatches: " + "; ".join(drift[:3]))
         return amps
+
+    def _load_drive_models(self, path: Path) -> dict:
+        """Drive sidecar, same contract as the amp one: refuse on drift."""
+        if not path.exists():
+            return {}
+        drives = json.loads(path.read_text()).get("drives", {})
+        drift = [k for k, v in drives.items()
+                 if self.drive_roster.get(k) != v.get("fractal")]
+        if drift:
+            raise DriveModelsStale(
+                f"{path.name} is out of sync with the catalog drive roster "
+                f"({len(drift)} of {len(drives)} entries). Regenerate with "
+                f"tools/build_drive_models.py.")
+        return drives
+
+    def drive_model(self, ordinal: int | str) -> str | None:
+        """Real pedal modeled by a drive roster ordinal, if known."""
+        return self.drive_models.get(str(ordinal), {}).get("model")
+
+    def drive_description(self, ordinal: int | str) -> str:
+        name = self.drive_roster.get(str(ordinal), str(ordinal))
+        model = self.drive_model(ordinal)
+        return f"{name} = {model}" if model else name
 
     def amp_model(self, ordinal: int | str) -> str | None:
         """Real-world amp modeled by a roster ordinal, if known."""

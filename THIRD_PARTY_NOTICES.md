@@ -167,3 +167,17 @@ which is gitignored.
 
 Amplifier specifications in that guide derive from manufacturer manuals and
 websites.
+
+---
+
+## Yek's Guide to the Fractal Audio Drive Models
+
+- Document: "Yek's Guide to the Fractal Audio Drive Models", a community
+  reference by Alexander van Engelen (yek), publicly mirrored.
+- Not redistributed by this project; `tools/build_drive_models.py` reads a
+  local copy.
+
+`config/drive_models.json` is generated from that guide's own section
+headings ("<model> (based on <pedal>)"): factual model-to-pedal identity
+only. The guide's prose synopses and tips are not reproduced. FM9 drive
+models added after the guide's last update remain unmapped by design.

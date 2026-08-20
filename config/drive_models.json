@@ -1,0 +1,191 @@
+{
+ "schema_version": 1,
+ "device": "FM9",
+ "content": "facts-only mapping of drive roster ordinals to the real pedals they model",
+ "keyed_by": "FM9_DRIVE_ROSTER ordinal",
+ "source": "Yek's Guide to the Fractal Audio Drive Models (community PDF); facts only, no prose reproduced",
+ "generated_by": "tools/build_drive_models.py",
+ "warning": "generated; corrections belong in the generator's OVERRIDES table",
+ "drives": {
+  "0": {
+   "fractal": "Rat Distortion",
+   "model": "two versions of the Pro Co RAT",
+   "guide_title": "Rat Dist and Fat Rat"
+  },
+  "1": {
+   "fractal": "PI Fuzz",
+   "model": "Electro-Harmonix Big Muff Pi",
+   "guide_title": "Pi Fuzz"
+  },
+  "2": {
+   "fractal": "Tube Drive 3-Knob",
+   "model": "versions of the Butler Tube Driver",
+   "guide_title": "Tube Drv"
+  },
+  "3": {
+   "fractal": "Super OD",
+   "model": "BOSS SD-1 Super OverDrive",
+   "guide_title": "Super OD"
+  },
+  "4": {
+   "fractal": "Treble Boost",
+   "model": "a treble booster",
+   "guide_title": "Treb Boost"
+  },
+  "6": {
+   "fractal": "T808 OD",
+   "model": "Ibanez TS9 Tube Screamer",
+   "guide_title": "T808 OD and T808 Mod"
+  },
+  "7": {
+   "fractal": "Fat Rat",
+   "model": "two versions of the Pro Co RAT",
+   "guide_title": "Rat Dist and Fat Rat"
+  },
+  "8": {
+   "fractal": "T808 Mod",
+   "model": "Ibanez TS9 Tube Screamer",
+   "guide_title": "T808 OD and T808 Mod"
+  },
+  "9": {
+   "fractal": "Octave Distortion",
+   "model": "Tycobrahe Octavia",
+   "guide_title": "Octave Dist"
+  },
+  "10": {
+   "fractal": "Plus Distortion",
+   "model": "MXR Distortion +",
+   "guide_title": "Plus Dist"
+  },
+  "13": {
+   "fractal": "Tape Distortion",
+   "model": "Ampex reel-to-reel recorder",
+   "guide_title": "Tape Dist"
+  },
+  "14": {
+   "fractal": "Full OD",
+   "model": "Fulltone Full-Drive 2",
+   "guide_title": "Full OD"
+  },
+  "15": {
+   "fractal": "Blues OD",
+   "model": "Marshall Blues Breaker",
+   "guide_title": "Blues OD"
+  },
+  "16": {
+   "fractal": "Shred Distortion",
+   "model": "Marshall Shred Master",
+   "guide_title": "Shred Dist"
+  },
+  "17": {
+   "fractal": "M-Zone Distortion",
+   "model": "BOSS MT-2 Metal Zone",
+   "guide_title": "M-Zone Dist"
+  },
+  "18": {
+   "fractal": "Bender Fuzz",
+   "model": "Sola Sound/Vox Tone Bender",
+   "guide_title": "Bender Fuzz"
+  },
+  "19": {
+   "fractal": "BB Pre",
+   "model": "Xotic BB preamp",
+   "guide_title": "BB Pre"
+  },
+  "20": {
+   "fractal": "Master Fuzz",
+   "model": "Maestro Fuzz-Tone FZ-1A",
+   "guide_title": "Master Fuzz"
+  },
+  "21": {
+   "fractal": "Face Fuzz",
+   "model": "Dallas-Arbiter Fuzz Face",
+   "guide_title": "Face Fuzz"
+  },
+  "23": {
+   "fractal": "Eternal Love",
+   "model": "Lovepedal Eternity",
+   "guide_title": "Eternal Love"
+  },
+  "24": {
+   "fractal": "Esoteric ACB",
+   "model": "Xotic AC Booster",
+   "guide_title": "Esoteric ACB"
+  },
+  "25": {
+   "fractal": "Esoteric RCB",
+   "model": "Xotic RC Booster",
+   "guide_title": "Esoteric RCB"
+  },
+  "26": {
+   "fractal": "Zen Master",
+   "model": "Hermida Zendrive",
+   "guide_title": "Zen Master"
+  },
+  "27": {
+   "fractal": "Tube Drive 4-Knob",
+   "model": "versions of the Butler Tube Driver",
+   "guide_title": "Tube Drv"
+  },
+  "29": {
+   "fractal": "SDD Preamp",
+   "model": "preamp in Korg SDD-3000",
+   "guide_title": "SDD Preamp"
+  },
+  "30": {
+   "fractal": "FET Preamp",
+   "model": "BOSS FA-1 FET Amplifier",
+   "guide_title": "FET Preamp"
+  },
+  "32": {
+   "fractal": "Micro Boost",
+   "model": "MXR Micro Amp",
+   "guide_title": "Micro Boost"
+  },
+  "34": {
+   "fractal": "Timothy Mid",
+   "model": "Paul Cochrane Timmy",
+   "guide_title": "Timothy"
+  },
+  "38": {
+   "fractal": "Timothy Up",
+   "model": "Paul Cochrane Timmy",
+   "guide_title": "Timothy"
+  },
+  "44": {
+   "fractal": "Timothy Down",
+   "model": "Paul Cochrane Timmy",
+   "guide_title": "Timothy"
+  },
+  "61": {
+   "fractal": "BB Pre AT",
+   "model": "Xotic BB preamp",
+   "guide_title": "BB Pre"
+  },
+  "70": {
+   "fractal": "PI Fuzz - Triangle",
+   "model": "Electro-Harmonix Big Muff Pi",
+   "guide_title": "Pi Fuzz"
+  },
+  "71": {
+   "fractal": "PI Fuzz - Ram's Head",
+   "model": "Electro-Harmonix Big Muff Pi",
+   "guide_title": "Pi Fuzz"
+  },
+  "75": {
+   "fractal": "PI Fuzz - Russian",
+   "model": "Electro-Harmonix Big Muff Pi",
+   "guide_title": "Pi Fuzz"
+  },
+  "77": {
+   "fractal": "Tube Drive 5-Knob",
+   "model": "versions of the Butler Tube Driver",
+   "guide_title": "Tube Drv"
+  },
+  "82": {
+   "fractal": "PI Fuzz - Bass",
+   "model": "Electro-Harmonix Big Muff Pi",
+   "guide_title": "Pi Fuzz"
+  }
+ }
+}
