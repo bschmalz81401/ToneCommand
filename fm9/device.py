@@ -91,6 +91,16 @@ class FM9:
         # per-effect channel info, refreshed from status dumps
         self._channels: dict[int, int] = {}
         self._current_channel: dict[int, int] = {}
+        # preflight: if another process holds the port or the stream is
+        # poisoned, reads return garbage while writes appear to work
+        # (observed 2026-08-20). Fail loudly instead.
+        self._drain()
+        if self.current_preset() is None:
+            self.close()
+            raise FM9NotFound(
+                "FM9 port opened but the device did not answer a preset-name "
+                "query. Either it is still booting, FM9-Edit is running, or a "
+                "zombie process is holding the MIDI port (ps aux | grep python).")
 
     def close(self):
         # mido/CoreMIDI port close can hang forever, leaving a zombie
@@ -362,6 +372,10 @@ class FM9:
         values = self.bulk_read(spec.effect_id)
         if not values:
             return None
+        if spec.effect_id not in self._channels:
+            # unpopulated channel cache silently collapses every channel
+            # read to channel A (issue #12); populate before indexing
+            self.status_dump()
         chans = max(1, self._channels.get(spec.effect_id, 1))
         stride = len(values) // chans if chans > 1 else len(values)
         if channel is None:

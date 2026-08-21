@@ -37,3 +37,14 @@ def test_validation(name, action, want_errs, want_warns):
     errs, warns = validate_action(Action(**action))
     assert (len(errs) > 0) == (want_errs > 0), errs
     assert (len(warns) > 0) == (want_warns > 0), warns
+
+
+def test_add_block_and_bind_pedal_carry_honesty_warnings():
+    """Factory defaults are not a sound, and pedal curves are undecoded
+    (issues #11/#12, hardware session 2026-08-20): both must warn."""
+    from server import Action, validate_action
+    errs, warns = validate_action(Action(kind="add_block", block="phaser"))
+    assert not errs and any("factory-default" in w for w in warns)
+    errs, warns = validate_action(
+        Action(kind="bind_pedal", block="delay", param="DELAY_MIX"))
+    assert any("NOT verified" in w for w in warns)

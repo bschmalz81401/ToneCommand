@@ -193,20 +193,27 @@ def main():
     dev.rename_preset(VARIANTS[SLOT]["name"])
     print("scenes programmed")
 
-    # 8. verify pass
+    # 8. verify pass via status_dump (0x13), the read path that has matched
+    #    audible reality; get_bypass (0x0A) contradicted the ears on 2026-08-20
+    import time as _t
     fails = []
     for i, (sname, amp_ch, drv_ch, comp, cho, aur, dly) in enumerate(SCENES, 1):
-        dev.set_scene(i)
+        dev.set_scene(i); _t.sleep(0.3)
+        state = {b.effect_id: b.bypassed for b in dev.status_dump() or []}
         checks = [("COMP", not comp), ("CHORUS", not cho),
                   ("MULTITAP", not aur), ("DELAY", not dly)]
         if drv_ch is None:
             checks.append(("FUZZ", True))
         for fam, want in checks:
-            got = dev.get_bypass(eid(fam))
+            got = state.get(eid(fam))
             if got != want:
-                fails.append((i, fam, want, got))
+                fails.append((i, fam, "want_bypassed" if want else "want_on", got))
     dev.set_scene(1)
-    print("VERIFY:", "ALL SCENE STATES OK" if not fails else f"FAILS: {fails}")
+    print("READ-VERIFY:", "scene states consistent" if not fails else f"FAILS: {fails}")
+    print("EAR CHECKLIST (read-backs are not proof, a human must confirm):")
+    print("  [ ] scene 1 cleans shimmer with Aurora repeats")
+    print("  [ ] scene levels roughly balanced (esp. LEAD vs cleans)")
+    print("  [ ] scene 8 delay audible; any pedal sweep direction confirmed")
     return 0 if not fails else 1
 
 if __name__ == "__main__":

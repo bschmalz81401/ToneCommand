@@ -361,6 +361,16 @@ def validate_action(a: Action) -> tuple[list[str], list[str]]:
             warnings.append(f"{spec.name} has no calibrated range in the reference; value {a.value} sent unvalidated")
         elif not spec.dmin <= a.value <= spec.dmax:
             errors.append(f"{spec.name} value {a.value} outside its range {spec.dmin}..{spec.dmax} {spec.unit or ''}")
+    if a.kind == "add_block":
+        warnings.append(
+            "new blocks arrive with factory-default settings and will sound "
+            "plain until voiced (clone a reference preset's settings or dial "
+            "by ear); default voicing is not a finished sound")
+    if a.kind == "bind_pedal":
+        warnings.append(
+            "pedal-binding curve direction is NOT verified on this hardware "
+            "(issue #11): sweep may be reversed or dead; confirm by ear "
+            "immediately after applying")
     return errors, warnings
 
 
