@@ -56,7 +56,19 @@ def main(start: int, end: int) -> None:
                 print(f"{n}: no answer, skipping"); continue
             time.sleep(0.15)
             blocks = dev.status_dump() or []
-            rec = {"number": n, "name": got[1], "blocks": [], "harvested": True}
+            from fm9 import protocol as p
+            bpm = dev._request(p.build_get_tempo(),
+                               lambda d: p.decode14(d[5], d[6])
+                               if p.is_fractal(d, p.FN_TEMPO_BPM) and len(d) >= 7
+                               else None)
+            scene_names = {}
+            for sc in range(1, 9):
+                try:
+                    scene_names[sc] = dev.scene_name(sc)[1]
+                except Exception:
+                    break
+            rec = {"number": n, "name": got[1], "tempo": bpm,
+                   "scene_names": scene_names, "blocks": [], "harvested": True}
             present = {}
             for b in blocks:
                 fam = reg.family_of_effect_id(b.effect_id)

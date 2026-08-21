@@ -68,6 +68,20 @@ def main(num: int) -> None:
                 else:
                     bits.append(f"{label}={round(w / 65534 * 100)}%")
             print(f"  {fam} ch{'ABCD'[b.channel]}: " + ", ".join(bits))
+        from fm9 import protocol as p
+        bpm = dev._request(p.build_get_tempo(),
+                           lambda d: p.decode14(d[5], d[6])
+                           if p.is_fractal(d, p.FN_TEMPO_BPM) and len(d) >= 7
+                           else None)
+        print(f"tempo: {bpm} BPM")
+        for slot in range(1, 17):
+            vals = dev.bulk_read(p.mod_slot_eid(slot))
+            if not vals or not vals[p.MOD_PID_SOURCE]:
+                continue
+            tgt = reg.family_of_effect_id(vals[p.MOD_PID_TARGET_EFFECT])
+            print(f"  modifier slot {slot}: source {vals[p.MOD_PID_SOURCE]} -> "
+                  f"{tgt[0] if tgt else vals[p.MOD_PID_TARGET_EFFECT]} "
+                  f"pid {vals[p.MOD_PID_TARGET_PARAM]}")
         print("scenes:")
         for sc in range(1, 9):
             dev.set_scene(sc)
