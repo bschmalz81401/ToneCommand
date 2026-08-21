@@ -63,7 +63,9 @@ def test_zeroed_get_is_noop(fm9):
 
 
 def test_amp_type_names_fresh_others_stale(fm9):
+    import time
     fm9.set_param_ordinal(fm9.reg.spec("DISTORT", 10), 39)
+    time.sleep(0.1)                    # writes are async; settle before reading
     assert fm9.read_display_name(58, 10) == "PVH 6160 Block Lead"
     assert fm9.read_display_name(70, 11) != "PVH 6160 Block Lead"  # stale elsewhere
 
