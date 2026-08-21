@@ -57,3 +57,13 @@ def test_cab_description_resolves_real_cabinet():
     d = reg.cab_description(4, 0)
     assert "=" in d and "Danelectro" in d          # bank0/4 per merged sidecar
     assert reg.cab_description(999, 9) == "999"    # graceful unknown
+
+
+def test_effect_type_models_load_and_reach_planner():
+    from fm9.registry import Registry
+    from server import param_reference
+    reg = Registry()
+    assert reg.effect_type_models["chorus_types"]["Small Copy"].startswith("EHX")
+    ref = param_reference()
+    assert "Deluxe Mind Guy = Deluxe Memory Man" in ref
+    assert "Dytronics Songbird" in ref

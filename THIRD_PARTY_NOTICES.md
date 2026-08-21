@@ -184,6 +184,15 @@ models added after the guide's last update remain unmapped by design.
 
 ---
 
+## Fractal Audio Wiki (community wiki), effect-type pages
+
+- Pages: "Delay block", "Chorus block" (wiki.fractalaudio.com)
+- Facts-only extraction of which real-world units the delay and chorus
+  types reference, in config/effect_type_models.json via
+  tools/build_effect_type_models.py. No wiki prose is reproduced.
+
+---
+
 ## Fractal Audio Wiki (community wiki)
 
 - Page: "Cab models", https://wiki.fractalaudio.com/wiki/index.php?title=Cab_models

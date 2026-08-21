@@ -1,0 +1,33 @@
+{
+ "schema_version": 1,
+ "device": "FM9",
+ "content": "facts-only real-world references for delay and chorus type NAMES; the catalog has no type rosters so this is name-keyed and cannot drift-check against ordinals",
+ "keyed_by": "Fractal type display name",
+ "source": "Fractal wiki 'Delay block' and 'Chorus block' pages, human-pasted 2026-08-21; facts only, no prose",
+ "generated_by": "tools/build_effect_type_models.py",
+ "warning": "ordinal mapping requires hardware (issue #5); never assume the wiki's list order matches the enum order",
+ "delay_types": {
+  "Deluxe Mind Guy": "Deluxe Memory Man (original, not reissue; 'DMM')",
+  "Stereo Mind Guy": "Deluxe Memory Man (stereo variant of the same reference)",
+  "DM-Two Delay": "DM-2 analog delay",
+  "Graphite Copy Delay": "Carbon Copy analog delay",
+  "2290 W/ Modulation": "the 2290 (80s rack digital delay); NOTE: ships with Phase Reverse = Right, silent if summed to mono after the block",
+  "Zephyr": "Fractal Audio original, not based on a real unit",
+  "Vintage Digital": "early primitive 8-bit digital delay (era model, no specific unit named)"
+ },
+ "chorus_types": {
+  "MX234": "MXR M234 Analog Chorus",
+  "MX234 Stereo": "MXR M134 Stereo Chorus (per wiki; section/list names disagree upstream)",
+  "Small Copy": "EHX Small Clone",
+  "Japan CH-1": "Boss Super Chorus CH-1",
+  "Rockguy": "Rockman X-100 chorus",
+  "Japan CE-1 Chorus": "Boss CE-1 (pedal version of the Roland JC-120 chorus), chorus mode",
+  "Japan CE-1 Vibrato": "Boss CE-1, vibrato mode",
+  "Japan CE-2": "Boss CE-2 (1979 mono chorus, successor of the CE-1)",
+  "Japan CE-2 Bass": "Boss CE-2 Bass",
+  "Dimension 1": "Roland SDD-320 Dimension D (types correspond to the unit's modes)",
+  "Dimension 2": "Roland SDD-320 Dimension D",
+  "Dimension 3": "Roland SDD-320 Dimension D",
+  "Stereo Tri-Chorus": "Dytronics Songbird TSC-1380"
+ }
+}

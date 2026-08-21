@@ -105,6 +105,9 @@ class Registry:
         self.amp_models: dict = self._load_amp_models(amp_models_path)
         self.drive_models: dict = self._load_drive_models(
             Path(__file__).resolve().parent.parent / "config" / "drive_models.json")
+        et_path = Path(__file__).resolve().parent.parent / "config" / "effect_type_models.json"
+        self.effect_type_models: dict = (
+            json.loads(et_path.read_text()) if et_path.exists() else {})
         cab_sidecar = self._load_cab_models(cab_models_path)
         self.cab_models: dict = cab_sidecar.get("cabs", {})
         self.dynacabs: dict = cab_sidecar.get("dynacabs", {})

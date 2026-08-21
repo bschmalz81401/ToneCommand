@@ -103,6 +103,14 @@ def param_reference() -> str:
                  "verbatim as type_name. Entries without an '=' have no confirmed "
                  "real-world mapping; do not invent one:")
     lines.extend(reg.drive_description(o) for o in reg.drive_roster)
+    et = reg.effect_type_models
+    if et:
+        lines.append("\nDelay/chorus type real-world references (NAME-keyed; "
+                     "types cannot be SET yet, use for describing and "
+                     "recommending only):")
+        for section in ("delay_types", "chorus_types"):
+            for name, model in (et.get(section) or {}).items():
+                lines.append(f"{name} = {model}")
     lines.append("\nReverb types selectable via set_type (block=reverb):")
     lines.append(", ".join(str(v) for v in reg.reverb_roster.values()))
     return "\n".join(lines)
