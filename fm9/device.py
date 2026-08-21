@@ -93,8 +93,20 @@ class FM9:
         self._current_channel: dict[int, int] = {}
 
     def close(self):
-        self.inp.close()
-        self.outp.close()
+        # mido/CoreMIDI port close can hang forever, leaving a zombie
+        # process that holds the port and silently poisons the next
+        # session's reads (observed 2026-08-20). Close with a hard deadline.
+        import threading
+
+        def _close():
+            try:
+                self.inp.close()
+                self.outp.close()
+            except Exception:
+                pass
+        t = threading.Thread(target=_close, daemon=True)
+        t.start()
+        t.join(timeout=3.0)
 
     # --- transport ---
 

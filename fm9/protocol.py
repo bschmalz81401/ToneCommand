@@ -340,9 +340,17 @@ def build_set_grid_routing(src_row: int, src_col: int, dest_row: int,
     src_gp = (src_col - 1) * GRID_ROWS + (src_row - 1)
     b21 = src_gp // 2
     col_term = (3 * (src_col - 1)) // 2 + 1
-    dest_sign = 1 if dest_row >= 3 else 0
+    if dest_row == src_row == 2:
+        # same-row draws on row 2 use their own encoding, decoded by probe
+        # on hardware fw 11.00 (2026-08-20): odd source column -> sign 0,
+        # b23 3; even -> sign 1, b23 1. The general formula below is wrong
+        # for this case (verified: it draws nothing).
+        dest_sign, b23_val = (0, 3) if src_col % 2 else (1, 1)
+    else:
+        dest_sign = 1 if dest_row >= 3 else 0
+        b23_val = (abs(dest_row - 3) + (2 if src_col % 2 == 0 else 0)) % 4
     b22 = ((src_gp & 1) << 6) | (col_term + dest_sign)
-    b23 = ((abs(dest_row - 3) + (2 if src_col % 2 == 0 else 0)) % 4) << 5
+    b23 = b23_val << 5
     return envelope(FN_PARAM, [
         SUB_GRID_ROUTING, 0x00,
         0x00, 0x00, 0x00, 0x00,

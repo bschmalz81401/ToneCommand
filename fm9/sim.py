@@ -330,13 +330,20 @@ class SimFM9Core:
     def _cable_lut(cls):
         if cls._CABLE_LUT is None:
             lut = {}
-            for sc in range(1, 14):
-                for sr in range(1, 7):
-                    if sr == 1 and sc % 2 == 0:
-                        continue
-                    for dr in range(1, 7):
-                        f = p.build_set_grid_routing(sr, sc, dr)
-                        lut[tuple(f[1:-1][5:][15:18])] = (sr, sc, dr)
+            # same-row draws go in LAST: their hardware-decoded bytes collide
+            # with what the general formula predicts for some cross-row draws
+            # (the formula is only verified where hardware confirmed it), and
+            # the hardware-verified meaning must win the collision.
+            for same_row_pass in (False, True):
+                for sc in range(1, 14):
+                    for sr in range(1, 7):
+                        if sr == 1 and sc % 2 == 0:
+                            continue
+                        for dr in range(1, 7):
+                            if (dr == sr) != same_row_pass:
+                                continue
+                            f = p.build_set_grid_routing(sr, sc, dr)
+                            lut[tuple(f[1:-1][5:][15:18])] = (sr, sc, dr)
             cls._CABLE_LUT = lut
         return cls._CABLE_LUT
 
