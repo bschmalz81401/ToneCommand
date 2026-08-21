@@ -48,3 +48,12 @@ def test_add_block_and_bind_pedal_carry_honesty_warnings():
     errs, warns = validate_action(
         Action(kind="bind_pedal", block="delay", param="DELAY_MIX"))
     assert any("NOT verified" in w for w in warns)
+
+
+def test_cab_description_resolves_real_cabinet():
+    """Uses the accessor Brian shipped in #14: (ordinal, bank)."""
+    from fm9.registry import Registry
+    reg = Registry()
+    d = reg.cab_description(4, 0)
+    assert "=" in d and "Danelectro" in d          # bank0/4 per merged sidecar
+    assert reg.cab_description(999, 9) == "999"    # graceful unknown

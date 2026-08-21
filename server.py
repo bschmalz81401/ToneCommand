@@ -126,6 +126,14 @@ def snapshot(fm9: FM9) -> dict:
         label = f"{FRIENDLY.get(fname, fname)} {inst}"
         out_blocks.append({"family": fname, "instance": inst, "label": label,
                            "bypassed": b.bypassed, "channel": "ABCD"[b.channel]})
+        if fname == "CABINET" and "cab" not in values:
+            vals = fm9.bulk_read(b.effect_id)
+            if vals:
+                chans = max(1, fm9._channels.get(b.effect_id, 1))
+                stride = len(vals) // chans if chans > 1 else len(vals)
+                base = min(b.channel, chans - 1) * stride
+                bank, slot = vals[base + 0], vals[base + 4]
+                values["cab"] = reg.cab_description(slot, bank)
         if fname in INTEREST and fname not in seen_fams:
             seen_fams.add(fname)
             vals = fm9.bulk_read(reg.effect_id(fname, inst))
