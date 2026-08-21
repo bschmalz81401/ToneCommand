@@ -101,6 +101,38 @@ Original findings from this project's hardware verification (FM9 firmware
    cell inherits the shunt's cables, which makes it possible to add effects
    into a preset's signal chain without touching the only partially decoded
    cable-drawing encoding at all.
+7. **Same-row cable draws on row 2 use their own encoding.** The general
+   6-row formula silently draws nothing for a row-2-to-row-2 connection.
+   Probed on hardware (fw 11.00): odd source columns need dest_sign 0 with
+   b23 3, even columns dest_sign 1 with b23 1. The general formula's
+   prediction for those byte values collides with a different geometry, so
+   the same bytes mean different things than it assumes. Row 5 same-row
+   draws match the general formula. Also observed: a 2-row diagonal draw
+   does not register at all, and re-sending an identical draw does NOT
+   remove the cable (removal is a different, still-unknown message).
+8. **Writes are asynchronous; unsettled reads lie plausibly.** A read
+   issued immediately after a write returns the pre-write state with no
+   error indication. The bundled simulator now models this (an 80ms settle
+   window) and additionally tracks "undecoded territory": operations no
+   hardware session has verified are reported by name rather than
+   silently simulated.
+
+## Grounding Data
+
+The planner grounds Fractal's model names in the real-world gear they
+model, so "give me a Klon into a JCM800 with a greenback 4x12" resolves
+to actual ordinals instead of guesses:
+
+| Domain | Coverage | Source |
+|---|---|---|
+| Amp models | 331 / 331 | Yek's Amp Guide (community PDF, facts only) |
+| Drive models | 86 / 86 | Yek's Drive Guide + Fractal wiki Drive block page |
+| Cab IRs | 2,235 / 2,237 | Fractal wiki Cab models page (via @bschmalz81401) |
+| DynaCabs | 45 / 45 | same |
+
+All sidecars are facts-only (no prose reproduced), carry the Fractal
+name they were built against, and fail loudly if a catalog update
+renumbers the rosters. Unknowns stay unknown: nothing is invented.
 
 ## Disclaimer
 

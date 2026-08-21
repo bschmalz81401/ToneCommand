@@ -94,6 +94,8 @@ class FM9:
         # preflight: if another process holds the port or the stream is
         # poisoned, reads return garbage while writes appear to work
         # (observed 2026-08-20). Fail loudly instead.
+        import atexit
+        atexit.register(self.close)     # zombie ports poison later sessions
         self._drain()
         if self.current_preset() is None:
             self.close()
@@ -101,6 +103,13 @@ class FM9:
                 "FM9 port opened but the device did not answer a preset-name "
                 "query. Either it is still booting, FM9-Edit is running, or a "
                 "zombie process is holding the MIDI port (ps aux | grep python).")
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        self.close()
+        return False
 
     def close(self):
         # mido/CoreMIDI port close can hang forever, leaving a zombie
