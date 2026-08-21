@@ -125,6 +125,7 @@ def main():
                 time.sleep(0.02)
 
         def verify_block(fam, wires, label, tol=655):
+            time.sleep(0.25)               # writes are async; unsettled reads lie
             e = eid(fam, inst=1)
             got = dev.bulk_read(e) or []
             chans = max(1, dev._channels.get(e, 1))
@@ -210,6 +211,11 @@ def main():
                 fails.append((i, fam, "want_bypassed" if want else "want_on", got))
     dev.set_scene(1)
     print("READ-VERIFY:", "scene states consistent" if not fails else f"FAILS: {fails}")
+    undecoded = sorted(getattr(dev, "sim_core", None).undecoded)         if SIM and hasattr(dev, "sim_core") else []
+    if undecoded:
+        print("UNDECODED TERRITORY TOUCHED (sim cannot vouch for these):")
+        for u in undecoded:
+            print("  !!", u)
     print("EAR CHECKLIST (read-backs are not proof, a human must confirm):")
     print("  [ ] scene 1 cleans shimmer with Aurora repeats")
     print("  [ ] scene levels roughly balanced (esp. LEAD vs cleans)")

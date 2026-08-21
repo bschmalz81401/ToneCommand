@@ -70,8 +70,10 @@ def test_amp_type_names_fresh_others_stale(fm9):
 
 def test_grid_insert_requires_select(fm9):
     """Insert without select lands on the cursor, not the target cell."""
+    import time
     fm9._drain()
     fm9._send(p.build_set_grid_cell(4, 10, 94))   # raw insert, no select
+    time.sleep(0.1)                                # writes are async on hardware
     cells = {(c.row + 1, c.col + 1): c.effect_id for c in fm9.read_grid() or []}
     assert cells.get((4, 10)) != 94               # did NOT land at target
     assert cells.get((1, 1)) == 94                # landed on the cursor cell
@@ -147,3 +149,31 @@ def test_tempo_roundtrip_and_store(fm9):
     got = fm9._request(p.build_get_tempo(),
                        lambda d: p.decode14(d[5], d[6]) if p.is_fractal(d, p.FN_TEMPO_BPM) and len(d) >= 7 else None)
     assert got == 86
+
+
+def test_reads_inside_settle_window_see_stale_state(fm9):
+    """Hardware writes are async: a read right after a raw write must see
+    the OLD value (the 2026-08-20 race class). Settled reads see the new."""
+    import time
+    from fm9 import protocol as p2
+    spec = fm9.reg.spec("DISTORT", 11)
+    fm9.set_param_display(spec, 3.0)          # settled write, known base
+    time.sleep(0.1)
+    fm9._send(p2.build_set_param_continuous(spec.effect_id, spec.param_id, 0.9))
+    stale = fm9.get_param_wire(spec, channel=0)
+    time.sleep(0.12)
+    fresh = fm9.get_param_wire(spec, channel=0)
+    assert stale != fresh                      # unsettled read lied honestly
+    assert abs(fresh / 65534 - 0.9) < 0.02
+
+
+def test_undecoded_territory_is_reported(fm9):
+    """The sim must name what hardware never verified instead of passing
+    silently: modifier curve writes and unproven cable geometries."""
+    fm9.bind_modifier(1, 70, 0, 11, min_norm=0.0, max_norm=0.5)
+    fm9.place_block(2, 6, 0)
+    fm9.place_block(5, 6, 126)
+    fm9.connect_cells(2, 5, 5)                 # 3-row jump: never verified
+    rep = "\n".join(sorted(fm9.sim_core.undecoded))
+    assert "modifier slot" in rep and "issue #11" in rep
+    assert "cable" in rep and "not" in rep

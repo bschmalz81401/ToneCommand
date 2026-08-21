@@ -11,9 +11,17 @@ faithfully modeling the quirks learned on real hardware (fw 11.00):
 - display-name reads (sub 1F) are fresh only for the AMP block
 - bulk reads are channel-blocked
 
+- writes are ASYNC: reads within the settle window (80ms) see the old
+  state, exactly like hardware; unsettled read-after-write races fail here
+- undecoded territory is TRACKED, not silently simulated: touching
+  anything hardware never verified (modifier curve writes, unproven cable
+  geometries) lands in sim_core.undecoded for the run to report
+
 HARD RULE: this is a REGRESSION tool, never verification. New protocol
 claims are proven on hardware first, then taught to the sim. A sim pass
-says nothing about the real device.
+plus an EMPTY undecoded report means the script only used decoded,
+hardware-proven operations; a non-empty report names exactly what still
+needs ears on the real device (lesson of 2026-08-20).
 
 Usage:
     from fm9.sim import SimFM9
@@ -396,13 +404,82 @@ class _SimIn:
         pass
 
 
+WRITE_SUBS = {0x09, 0x52, 0x28, 0x2B, 0x26, 0x30, 0x32, 0x35}
+READ_SUBS = {0x2E, 0x1F}
+SETTLE = 0.08          # hardware settle window: reads inside it see OLD state
+
+
+def _classify(d):
+    """'write' | 'read' | None for a mido-style frame body."""
+    fn, body = d[4], d[5:-1]
+    if fn == 0x01 and body:
+        if body[0] in WRITE_SUBS:
+            return "write"
+        if body[0] in READ_SUBS:
+            return "read"
+        return None
+    if fn in (0x0A, 0x0B):
+        return "write" if len(body) >= 3 else "read"
+    if fn == 0x0C:
+        return "write" if (body and body[0] != 0x7F) else "read"
+    if fn == p.FN_TEMPO_BPM:
+        return "write" if len(body) >= 2 else "read"
+    if fn in (0x0D, 0x0E, 0x13, 0x1F):     # 0x1F = bulk param read
+        return "read"
+    return None
+
+
 class _SimOut:
     def __init__(self, core: SimFM9Core, inp: _SimIn):
         self.core, self.inp = core, inp
+        core.undecoded = set()
+        core._snapshot = None
+        core._snapshot_expire = 0.0
+
+    def _note_undecoded(self, d):
+        body = d[5:-1]
+        if d[4] == 0x01 and body and body[0] in (0x09, 0x52) and len(body) >= 4:
+            eid = p.decode14(body[2], body[3])
+            if 3 <= eid <= 34:
+                self.core.undecoded.add(
+                    f"modifier slot {eid - 2} written: curve semantics are "
+                    f"undecoded on hardware (issue #11) - EAR-VERIFY the sweep")
+        if d[4] == 0x01 and body and body[0] == 0x35:
+            hit = SimFM9Core._cable_lut().get(tuple(body[15:18]))
+            if hit:
+                sr, sc, dr = hit
+                verified = (dr == sr and sr in (2, 5)) or abs(dr - sr) == 1
+                if not verified:
+                    self.core.undecoded.add(
+                        f"cable r{sr}c{sc}->r{dr}c{sc + 1}: geometry not "
+                        f"hardware-verified; confirm on device before trusting")
 
     def send(self, msg):
         if msg.type == "sysex":
+            import time as _time
             frame = [0xF0, *msg.data, 0xF7]
+            d = frame[1:-1]
+            kind = _classify(d) if len(d) > 5 else None
+            now = _time.monotonic()
+            if kind == "write":
+                self._note_undecoded(d)
+                # hardware applies writes asynchronously: snapshot the
+                # pre-write state so reads inside the settle window see it
+                if now >= self.core._snapshot_expire:
+                    self.core._snapshot = copy.deepcopy(self.core.st.buffer)
+                self.core._snapshot_expire = now + SETTLE
+                for resp in self.core.handle(frame):
+                    self.inp.queue.append(SimpleNamespace(type="sysex", data=resp[1:-1]))
+                return
+            if kind == "read" and self.core._snapshot is not None                     and now < self.core._snapshot_expire:
+                live = self.core.st.buffer
+                self.core.st.buffer = self.core._snapshot
+                try:
+                    for resp in self.core.handle(frame):
+                        self.inp.queue.append(SimpleNamespace(type="sysex", data=resp[1:-1]))
+                finally:
+                    self.core.st.buffer = live
+                return
             for resp in self.core.handle(frame):
                 self.inp.queue.append(SimpleNamespace(type="sysex", data=resp[1:-1]))
         elif msg.type == "program_change":
