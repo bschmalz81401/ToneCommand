@@ -108,7 +108,7 @@ def param_reference() -> str:
         lines.append("\nDelay/chorus type real-world references (NAME-keyed; "
                      "types cannot be SET yet, use for describing and "
                      "recommending only):")
-        for section in ("delay_types", "chorus_types"):
+        for section in ("delay_types", "chorus_types", "multitap_types"):
             for name, model in (et.get(section) or {}).items():
                 lines.append(f"{name} = {model}")
     lines.append("\nReverb types selectable via set_type (block=reverb):")

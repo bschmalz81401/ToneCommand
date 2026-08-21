@@ -29,5 +29,26 @@
   "Dimension 2": "Roland SDD-320 Dimension D",
   "Dimension 3": "Roland SDD-320 Dimension D",
   "Stereo Tri-Chorus": "Dytronics Songbird TSC-1380"
+ },
+ "multitap_types": {
+  "1210": "TC 1210 Spatial Expander / Stereo Chorus Flanger",
+  "A.H. Clean Long": "Allan Holdsworth's use of the Yamaha UD Stomp",
+  "A.H. Clean Short": "Allan Holdsworth's use of the Yamaha UD Stomp",
+  "A.H. Lead Long": "Allan Holdsworth's use of the Yamaha UD Stomp",
+  "A.H. Lead Short": "Allan Holdsworth's use of the Yamaha UD Stomp",
+  "A.H. Swell Long": "Allan Holdsworth's use of the Yamaha UD Stomp",
+  "A.H. Swell Short": "Allan Holdsworth's use of the Yamaha UD Stomp",
+  "Aerosol": "a chorus preset in the Lexicon MPX 1",
+  "Aurora Delay": "Keeley HALO Andy Timmons delay pedal (Robert Keeley personally offered insight and a diagram)",
+  "PCM Circular": "Lexicon PCM",
+  "PCM Pan": "Lexicon PCM",
+  "Space Tape": "Roland Space Echo tape delay",
+  "Quad Chorus": "the Quad Chorus block of previous-generation Fractal hardware",
+  "Strange Things": "themed on the TV series (not a gear model)"
+ },
+ "known_ordinals": {
+  "multitap": {
+   "Aurora Delay": 1
+  }
  }
 }

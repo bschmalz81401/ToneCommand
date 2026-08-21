@@ -67,3 +67,5 @@ def test_effect_type_models_load_and_reach_planner():
     ref = param_reference()
     assert "Deluxe Mind Guy = Deluxe Memory Man" in ref
     assert "Dytronics Songbird" in ref
+    assert "Aurora Delay = Keeley HALO" in ref
+    assert reg.effect_type_models["known_ordinals"]["multitap"]["Aurora Delay"] == 1

@@ -59,6 +59,38 @@ CHORUS = {
     "Stereo Tri-Chorus": "Dytronics Songbird TSC-1380",
 }
 
+# Fractal wiki "Multitap Delay block" page (edited 2026-06-27), human-
+# pasted 2026-08-21. The "based on" statements are in the types list.
+MULTITAP = {
+    "1210": "TC 1210 Spatial Expander / Stereo Chorus Flanger",
+    "A.H. Clean Long": "Allan Holdsworth's use of the Yamaha UD Stomp",
+    "A.H. Clean Short": "Allan Holdsworth's use of the Yamaha UD Stomp",
+    "A.H. Lead Long": "Allan Holdsworth's use of the Yamaha UD Stomp",
+    "A.H. Lead Short": "Allan Holdsworth's use of the Yamaha UD Stomp",
+    "A.H. Swell Long": "Allan Holdsworth's use of the Yamaha UD Stomp",
+    "A.H. Swell Short": "Allan Holdsworth's use of the Yamaha UD Stomp",
+    "Aerosol": "a chorus preset in the Lexicon MPX 1",
+    "Aurora Delay": "Keeley HALO Andy Timmons delay pedal (Robert Keeley "
+                    "personally offered insight and a diagram)",
+    "PCM Circular": "Lexicon PCM",
+    "PCM Pan": "Lexicon PCM",
+    "Space Tape": "Roland Space Echo tape delay",
+    "Quad Chorus": "the Quad Chorus block of previous-generation Fractal "
+                   "hardware",
+    "Strange Things": "themed on the TV series (not a gear model)",
+}
+
+# The one ordinal we actually know, proven on hardware, never guessed:
+KNOWN_ORDINALS = {
+    "multitap": {
+        # MULTITAP_BASETYPE (pid 0) ordinal 1 = Aurora Delay, verified on
+        # FM9 fw 11.00 by setting it and confirming by ear against preset
+        # 509 (2026-08-19/20 sessions)
+        "Aurora Delay": 1,
+    },
+}
+
+
 def main() -> None:
     out = {
         "schema_version": 1,
@@ -74,10 +106,13 @@ def main() -> None:
                    "assume the wiki's list order matches the enum order",
         "delay_types": DELAY,
         "chorus_types": CHORUS,
+        "multitap_types": MULTITAP,
+        "known_ordinals": KNOWN_ORDINALS,
     }
     dest = ROOT / "config" / "effect_type_models.json"
     dest.write_text(json.dumps(out, indent=1, ensure_ascii=False) + "\n")
-    print(f"delay: {len(DELAY)} mapped; chorus: {len(CHORUS)} mapped -> {dest}")
+    print(f"delay: {len(DELAY)}, chorus: {len(CHORUS)}, "
+          f"multitap: {len(MULTITAP)} mapped -> {dest}")
 
 if __name__ == "__main__":
     sys.exit(main())
