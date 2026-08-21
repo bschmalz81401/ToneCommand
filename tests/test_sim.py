@@ -155,13 +155,19 @@ def test_reads_inside_settle_window_see_stale_state(fm9):
     """Hardware writes are async: a read right after a raw write must see
     the OLD value (the 2026-08-20 race class). Settled reads see the new."""
     import time
+    import fm9.sim as simmod
     from fm9 import protocol as p2
     spec = fm9.reg.spec("DISTORT", 11)
     fm9.set_param_display(spec, 3.0)          # settled write, known base
     time.sleep(0.1)
-    fm9._send(p2.build_set_param_continuous(spec.effect_id, spec.param_id, 0.9))
-    stale = fm9.get_param_wire(spec, channel=0)
-    time.sleep(0.12)
+    prev = simmod.SETTLE
+    simmod.SETTLE = 30.0                      # deterministic: no clock racing
+    try:
+        fm9._send(p2.build_set_param_continuous(spec.effect_id, spec.param_id, 0.9))
+        stale = fm9.get_param_wire(spec, channel=0)
+    finally:
+        simmod.SETTLE = prev
+    fm9.sim_core._snapshot_expire = 0.0       # force the window closed
     fresh = fm9.get_param_wire(spec, channel=0)
     assert stale != fresh                      # unsettled read lied honestly
     assert abs(fresh / 65534 - 0.9) < 0.02
