@@ -8,7 +8,9 @@ faithfully modeling the quirks learned on real hardware (fw 11.00):
 - clearing a grid cell destroys its cables
 - fresh modifier slots are all-zero (a bind without curve init is dead)
 - sub 09 00 with value 0 on a continuous param is a no-op (the zeroed GET)
-- display-name reads (sub 1F) are fresh only for the AMP block
+- display-name reads (sub 1F) never track the amp type (they return
+  the roster's first entry), return NONE for modifier sources, and a
+  stale constant elsewhere - plausible wrong values, never errors
 - bulk reads are channel-blocked
 
 - writes are ASYNC: reads within the settle window (80ms) see the old
@@ -289,9 +291,14 @@ class SimFM9Core:
 
     def _type_name(self, b):
         eid, pid = self._target(b)
-        if 58 <= eid <= 61:                      # amp: fresh names (hardware)
-            w = self.st.block_param(eid, 10) or 0
-            name = self.st.reg.amp_roster.get(str(w), "Unknown")
+        if 58 <= eid <= 61:
+            # The 0x1F name query does NOT track DISTORT_TYPE: it returns
+            # the roster's FIRST entry regardless of the actual amp, before
+            # and after writes, through >=3s of settle. Proven on fw 12.00
+            # by @bschmalz81401 (PR #15) and reproduced exactly on the
+            # fw 11.00 reference unit 2026-08-21. The earlier "fresh for
+            # amp" model here was a misread of an early session.
+            name = self.st.reg.amp_roster.get("0", "Unknown")
         elif 3 <= eid <= 34:
             name = "NONE"                        # mod sources: stale NONE
         else:

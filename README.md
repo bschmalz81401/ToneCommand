@@ -89,8 +89,14 @@ Original findings from this project's hardware verification (FM9 firmware
 4. **Documented dead ends** so nobody re-burns time on them: the sub 09 00
    GET always returns a zeroed value field on fw 11.00 (use the fn 0x1F
    bulk read instead); the sub 0x1F display-name query returns "NONE" for
-   modifier source enums; live modulation (a moving pedal) is invisible to
-   every known read, so pedal bindings must be verified physically.
+   modifier source enums, and for the amp block it returns the roster's
+   FIRST entry regardless of the actual amp type - before and after
+   writes, through seconds of settle (proven on fw 12.00 by
+   @bschmalz81401, reproduced on fw 11.00; this project's earlier "fresh
+   for amp" claim was wrong). Never verify a type through it; read the
+   wire value and map through the roster. Live modulation (a moving
+   pedal) is invisible to every known read, so pedal bindings must be
+   verified physically.
 5. **Cable drawing hardware-validated.** The community's 6-row cable
    encoding formula (fn 0x01 sub 0x35), previously byte-derived from
    captures but unverified as a live write, draws correct cables on FM9
