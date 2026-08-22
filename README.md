@@ -13,6 +13,36 @@ USB MIDI with read-back verification.
 <!-- DEMO PLACEHOLDER: prompt typed -> plan cards -> TRANSMIT -> FM9 screen
      changes -> riff with the pedal sweeping the jet flanger -->
 
+## Why this is different
+
+**It knows what the models actually are.** Fractal names like "Brit 800
+2204 High" or "1x12 Bludo 906 B" resolve to the real gear they capture:
+all 331 amps, all 86 drives, and 2,235 cab IRs are mapped to their
+real-world counterparts, every entry cited to community sources, facts
+only. Ask for "a Klon into a JCM800 with a greenback 4x12" and it knows
+exactly which ordinals you mean. When it doesn't know, it says so.
+Nothing is ever invented.
+
+**It tells the truth about hardware.** Every write is verified by
+reading the unit back. Presets are stored only to slots you whitelist,
+only on explicit confirmation. The bundled simulator models the FM9's
+real quirks, including async writes and the operations no hardware
+session has verified yet, which it reports by name instead of silently
+simulating.
+
+**It was built on a real rig, for real Sundays.** This codebase preps an
+actual worship setlist every week: per-song presets voiced from the
+artists' own published tone breakdowns, scene maps from the charts, an
+expression pedal riding every delay. The tooling exists because the gig
+does.
+
+**It gives back.** Building it meant decoding parts of the FM9 editor
+protocol nobody had written down: grid cable encodings, negative
+parameter wire format, which reads lie and which don't. It's all
+documented below in Protocol Contributions, free for any Fractal tool
+builder. The first outside contributor has already mapped the entire cab
+catalog and is porting the concept to HeadRush.
+
 ## Credits & Prior Work
 
 This project would not exist without the Fractal community's protocol work.
