@@ -2,7 +2,29 @@
 
 Notable changes to ToneCommand. Dates are UTC.
 
-## Unreleased
+## 0.1.0 (2026-08-22)
+
+First tagged release: installation is now repeatable, so the version
+number means something.
+
+### Added (release polish, 2026-08-22)
+- Packaging: pyproject.toml with declared dependencies and a
+  one-command launcher (`pip install -e .` then `tonecommand`).
+- README: UI screenshot (captured against the bundled simulator),
+  architecture diagram, "What you can say" examples, and an explicit
+  capability/firmware compatibility table.
+- docs/HARDWARE-VALIDATION.md: the hardware feasibility report,
+  relocated from PHASE1-REPORT.md and retitled as public documentation.
+
+### Changed (release polish, 2026-08-22)
+- Tagline reworded from "Speak" to "Describe the tone you want":
+  the shipped workflow is typed, and the pitch should not promise a
+  voice input that does not exist yet.
+- test_phase2.py renamed to hardware_regression.py; the two-tier test
+  story (simulator suite in CI on every push, 13-check regression on
+  hardware) is now documented in the README.
+- CI installs from pyproject instead of an ad-hoc pip line, which also
+  fixes a dependency typo (httpx2).
 
 ### Added (2026-08-22)
 - Tone recipes: shareable, cited, replayable builds (docs/RECIPES.md,

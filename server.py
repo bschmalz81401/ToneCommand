@@ -631,6 +631,10 @@ def api_apply(body: ApplyBody):
     return {"results": results}
 
 
-if __name__ == "__main__":
+def main():
     import uvicorn
     uvicorn.run(app, host="127.0.0.1", port=8909)
+
+
+if __name__ == "__main__":
+    main()

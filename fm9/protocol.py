@@ -15,7 +15,7 @@ Origin and attribution:
   placement, grid-read id aliasing, FM9 Pedal 2 source ordinal).
 
 Firmware-sensitive. Developed against FM9 firmware 11.x; the parameter
-get/set paths re-verified on 12.00 (test_phase2.py, 2026-08-19).
+get/set paths re-verified on 12.00 (hardware_regression.py, 2026-08-19).
 """
 from __future__ import annotations
 

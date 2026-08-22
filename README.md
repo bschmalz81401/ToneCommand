@@ -1,17 +1,33 @@
 # ToneCommand
 
-**Speak, and your rig obeys.**
+**Describe the tone you want. Your rig obeys.**
 
 Natural-language tone control for the Fractal FM9: type "give me a Van Halen
 Balance era tone with the flanger on the expression pedal", review the exact
 parameter changes it proposes, confirm, and they land on the hardware over
 USB MIDI with read-back verification.
 
-## Demo
+![ToneCommand UI: command bar, live signal chain, and amp telemetry](docs/img/ui.png)
 
-> Video coming soon.
-<!-- DEMO PLACEHOLDER: prompt typed -> plan cards -> TRANSMIT -> FM9 screen
-     changes -> riff with the pedal sweeping the jet flanger -->
+*The UI running against the bundled FM9 simulator, which exercises the same
+code path as hardware. Changes are proposed first and sent only after you
+confirm; the state panels are read back from the device, not assumed.*
+
+## What you can say
+
+Everything below is a real request the planner resolves into concrete,
+verified parameter changes (block, channel, ordinal, wire value), shown to
+you before anything is sent:
+
+- "give me a Van Halen Balance era tone with the flanger on the expression pedal"
+- "a Klon into a JCM800 with a greenback 4x12"
+- "tighten the gate for drop C and bump the presence slightly"
+- "make scene 1 a dry crunch rhythm and keep the wets in scene 2"
+- "put the delay and reverb mix on pedal 2 so I can swell into the chorus"
+- "add a subtle octave-down layer like a POG under the lead"
+
+Requests that need facts the project cannot verify get an honest refusal
+instead of an invented answer (see Grounding Data below).
 
 ## Why this is different
 
@@ -44,6 +60,32 @@ parameter wire format, which reads lie and which don't. It's all
 documented below in Protocol Contributions, free for any Fractal tool
 builder. The first outside contributor has already mapped the entire cab
 catalog and is porting the concept to HeadRush.
+
+## How it works
+
+```mermaid
+flowchart LR
+    U["Your words"] --> P["Planner<br/>Claude + facts-only<br/>grounding sidecars"]
+    P --> V["Safety layer<br/>validation, confirmation,<br/>preset-pinned plans,<br/>store whitelist"]
+    V -- "approved plan" --> A["Device adapter<br/>contract"]
+    A --> D["FM9 device layer<br/>SysEx over USB MIDI"]
+    A --> S["Simulator<br/>models the real quirks"]
+    D -- "read-back verify" --> V
+```
+
+The planner never touches the wire. It emits a plan in a closed action
+vocabulary; the safety layer validates every action against the grounded
+catalogs, pins the plan to the preset it was computed for, and requires
+your confirmation in the UI. Only then does the device layer transmit,
+and every write is verified by reading the unit back. The simulator sits
+behind the same adapter contract as the hardware, so the entire test
+suite runs without an FM9 attached ([ARCHITECTURE.md](ARCHITECTURE.md)
+has the full contract).
+
+The strategy is deliberately FM9-first: make this the safest, most
+reliable natural-language control surface for one device before adding
+others. The adapter contract exists so future devices inherit the safety
+layer instead of reimplementing it, but depth comes before breadth.
 
 ## Engineering principles
 
@@ -212,6 +254,30 @@ All sidecars are facts-only (no prose reproduced), carry the Fractal
 name they were built against, and fail loudly if a catalog update
 renumbers the rosters. Unknowns stay unknown: nothing is invented.
 
+## Compatibility
+
+Verified means proven by write-plus-readback on real hardware in this
+project's regression runs; nothing below is assumed.
+
+| Capability | FM9 fw 11.00 | FM9 fw 12.00 | Simulator |
+|---|---|---|---|
+| Scene, bypass, channel control | Verified | Verified (contributor) | Modeled |
+| Parameter set with read-back verify | Verified | Verified (contributor) | Modeled |
+| Expression pedal (modifier) binding | Verified | Untested | Modeled |
+| Block insert and cable drawing | Verified | Untested | Modeled, incl. known encoding quirks |
+| Store to whitelisted slots | Verified | Untested | Modeled |
+| Tone library harvest (all 512 slots) | Verified | Untested | Modeled |
+
+Hardware: developed and regression-tested on an FM9 Mk II Turbo. Other
+FM9 variants share the model byte and should behave identically, but are
+untested. Axe-Fx III and FM3 use different model bytes and are not
+supported. Firmware outside 11.x / 12.00 is untested; the editor
+protocol is unofficial and firmware-sensitive, and the hardware
+regression suite passing is the green light after any update. The
+original protocol feasibility findings, with the exact commands and
+responses observed, are written up in
+[docs/HARDWARE-VALIDATION.md](docs/HARDWARE-VALIDATION.md).
+
 ## Disclaimer
 
 Not affiliated with or endorsed by Fractal Audio Systems. Uses
@@ -227,8 +293,11 @@ USB, on firmware 11.00 and 12.00.
 git clone https://github.com/monzta1/ToneCommand.git
 cd ToneCommand
 python3 -m venv .venv
-.venv/bin/pip install mido python-rtmidi fastapi "uvicorn[standard]" anthropic
+.venv/bin/pip install -e .
 ```
+
+Dependencies are declared in [pyproject.toml](pyproject.toml); add
+`".[dev]"` to also get the test tooling.
 
 Natural-language planning uses, in order of preference:
 1. The Claude Code CLI, if installed and signed in (usage bills to your
@@ -239,24 +308,25 @@ Natural-language planning uses, in order of preference:
 Run:
 
 ```bash
-.venv/bin/python server.py
+.venv/bin/tonecommand
 # open http://127.0.0.1:8909 with the FM9 connected and powered on
 ```
 
-Sanity checks and utilities:
+Testing is two-tier:
 
 ```bash
-.venv/bin/python test_phase2.py   # 13-check hardware regression; run after any firmware update
-.venv/bin/python build_133.py     # example: scripted full preset build (stores to test slot 133)
+.venv/bin/pytest tests/                    # simulator + validation suite, no hardware needed (runs in CI on every push)
+.venv/bin/python hardware_regression.py    # 13-check on-hardware regression; run after any firmware update
+.venv/bin/python build_133.py              # example: scripted full preset build (stores to test slot 133)
 ```
 
 Notes:
 - Do not run FM9-Edit and this tool at the same time; FM9-Edit resets the
   edit buffer when it connects. Stored presets are safe and remain fully
   viewable/editable in FM9-Edit afterwards.
-- Firmware other than 11.x and 12.00 is untested; the editor protocol is
-  unofficial and firmware-sensitive. `test_phase2.py` passing is the green
-  light after any update.
+- Firmware and hardware coverage is spelled out in the Compatibility
+  section above; run `hardware_regression.py` after any firmware update
+  before trusting writes.
 
 ## Support
 

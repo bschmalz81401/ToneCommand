@@ -5,7 +5,7 @@ mcp-midi-control, Apache-2.0) and maps friendly block/param names onto
 (effect_id, param_id, display range, scale).
 
 Firmware: catalog mined against FM9 11.x; parameter get/set re-verified on
-12.00 (test_phase2.py, 2026-08-19). After any firmware update, re-verify the
+12.00 (hardware_regression.py, 2026-08-19). After any firmware update, re-verify the
 editor protocol paths (fn 0x01) before trusting writes.
 """
 from __future__ import annotations

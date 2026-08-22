@@ -1,4 +1,4 @@
-# Phase 1 Feasibility Report: FM9 natural-language tone controller
+# Hardware Validation Report: FM9 editor-protocol feasibility
 
 Date: 2026-08-16. Hardware: Fractal FM9, firmware 11.00 (build Jan 19 2026), USB MIDI on macOS (Apple Silicon). Test stack: Python 3.12, mido + python-rtmidi.
 

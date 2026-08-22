@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Phase 2 live verification against the FM9.
+"""Live 13-check hardware regression against the FM9.
 
 Edit-buffer only. Every parameter is restored to its original value and
 the run ends by re-selecting the stored preset, which discards the edit

@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tonecommand"
+version = "0.1.0"
+description = "Natural-language tone control for the Fractal FM9 over USB MIDI"
+readme = "README.md"
+license = {file = "LICENSE"}
+requires-python = ">=3.11"
+dependencies = [
+    "mido>=1.3,<2",
+    "python-rtmidi>=1.5,<2",
+    "fastapi>=0.111,<1",
+    "uvicorn[standard]>=0.30,<1",
+    "pydantic>=2.7,<3",
+    "anthropic>=0.40",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "httpx>=0.27",
+]
+
+[project.urls]
+Homepage = "https://github.com/monzta1/ToneCommand"
+Issues = "https://github.com/monzta1/ToneCommand/issues"
+
+[project.scripts]
+tonecommand = "server:main"
+
+[tool.setuptools]
+py-modules = ["server"]
+packages = ["fm9"]
