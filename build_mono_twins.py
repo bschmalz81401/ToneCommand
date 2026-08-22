@@ -16,9 +16,10 @@ ROOT = Path(__file__).resolve().parent.parent if (
 sys.path.insert(0, str(ROOT))
 from fm9.registry import Registry  # noqa: E402
 
-PAIRS = [(151, 154, "FM9AI-M-IKnowAName v2"),
-         (152, 155, "FM9AI-M-WhoElse v2"),
-         (153, 156, "FM9AI-M-WhatAGod v2")]
+# 154 became the Goodbye Yesterday rock cut (2026-08-22); twins shifted
+PAIRS = [(151, 155, "FM9AI-M-IKnowAName v2"),
+         (152, 156, "FM9AI-M-WhoElse v2"),
+         (153, 157, "FM9AI-M-WhatAGod v2")]
 
 def main() -> int:
     reg = Registry()

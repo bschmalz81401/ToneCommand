@@ -69,3 +69,19 @@ def test_effect_type_models_load_and_reach_planner():
     assert "Dytronics Songbird" in ref
     assert "Aurora Delay = Keeley HALO" in ref
     assert reg.effect_type_models["known_ordinals"]["multitap"]["Aurora Delay"] == 1
+
+
+def test_fm9_and_simulator_satisfy_the_device_adapter_contract():
+    """ARCHITECTURE.md step 1: the adapter contract is code, and both the
+    real device class and its simulator are certified against it."""
+    from fm9.adapter import DeviceAdapter
+    from fm9.device import FM9
+    from fm9.sim import SimFM9
+    from fm9.registry import Registry
+    sim = SimFM9(Registry())
+    assert isinstance(sim, DeviceAdapter)
+    for name in ("status_dump", "current_preset", "select_preset",
+                 "set_scene", "set_bypass", "set_channel",
+                 "set_param_display", "set_param_ordinal", "bulk_read",
+                 "store_preset", "close"):
+        assert callable(getattr(FM9, name, None)), f"FM9 lacks {name}"
