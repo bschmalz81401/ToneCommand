@@ -80,13 +80,18 @@ MULTITAP = {
     "Strange Things": "themed on the TV series (not a gear model)",
 }
 
-# The one ordinal we actually know, proven on hardware, never guessed:
+# Ordinals proven on hardware, never guessed:
 KNOWN_ORDINALS = {
     "multitap": {
         # MULTITAP_BASETYPE (pid 0) ordinal 1 = Aurora Delay, verified on
         # FM9 fw 11.00 by setting it and confirming by ear against preset
         # 509 (2026-08-19/20 sessions)
         "Aurora Delay": 1,
+    },
+    "pitch": {
+        # wire-verified 2026-08-21 with Moncy reading the front panel
+        "Dual Detune": 0,
+        "Dual Chromatic": 2,
     },
 }
 
