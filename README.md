@@ -45,6 +45,40 @@ documented below in Protocol Contributions, free for any Fractal tool
 builder. The first outside contributor has already mapped the entire cab
 catalog and is porting the concept to HeadRush.
 
+## Engineering principles
+
+This project runs on a few non-negotiable rules, and the repository is
+the evidence they're followed:
+
+**Claims are verified or labeled.** Every protocol behavior in
+[docs/PROTOCOL.md](docs/PROTOCOL.md) was proven by write-plus-readback
+on real hardware or is explicitly marked UNDECODED. When we got
+something wrong, the correction is public and marked SUPERSEDED - the
+ledger keeps our mistakes on the record alongside the fixes, because a
+reference you can't audit is not a reference.
+
+**The safety layer is architecture, not policy.** Validation before
+send, explicit confirmation, store whitelists, read-back verification,
+and simulator honesty live above the device layer
+([ARCHITECTURE.md](ARCHITECTURE.md)), so no device port, contributor, or
+future feature can accidentally weaken them. New devices inherit safety;
+they don't reimplement it.
+
+**Failures become infrastructure.** Every hardware bug this project hit
+was converted into a permanent defense: silent write failures became
+read-back verification, a severed-cable incident became self-repairing
+block insertion, a silently ignored parameter write became a device-layer
+fix with a regression test, and the simulator now reproduces each quirk
+so the class of bug can't ship twice. The [CHANGELOG](CHANGELOG.md)
+records cause alongside fix.
+
+**Contributions are spec-gated and reviewed.** Community PRs land after
+assessment-first workflows, CI, and review with file-level findings -
+including the one where a contributor proved the maintainers wrong and
+the codebase changed to match the hardware. Data contributions carry
+citations and drift guards; invented facts are rejected regardless of
+how plausible they look.
+
 ## Credits & Prior Work
 
 This project would not exist without the Fractal community's protocol work.
