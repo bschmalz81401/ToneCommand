@@ -82,6 +82,17 @@ def main(num: int) -> None:
             print(f"  modifier slot {slot}: source {vals[p.MOD_PID_SOURCE]} -> "
                   f"{tgt[0] if tgt else vals[p.MOD_PID_TARGET_EFFECT]} "
                   f"pid {vals[p.MOD_PID_TARGET_PARAM]}")
+        cells = dev.read_grid() or []
+        occ = sorted(cells, key=lambda c: (c.row, c.col))
+        starved = [(c.row + 1, c.col + 1) for c in occ
+                   if c.cable_in_mask == 0 and c.col > 0
+                   and reg.family_of_effect_id(c.effect_id or 0)
+                   and reg.family_of_effect_id(c.effect_id or 0)[0] != "INPUT"]
+        if starved:
+            print("CHAIN WARNING: cells with NO input cable (possible silent "
+                  "break, or an undecoded mask corner):")
+            for r, c in starved:
+                print(f"  row {r} col {c}")
         print("scenes:")
         for sc in range(1, 9):
             dev.set_scene(sc)

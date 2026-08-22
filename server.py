@@ -415,6 +415,17 @@ def _add_block(fm9: FM9, a: Action) -> dict:
     after = fm9.read_grid() or []
     placed = [c for c in after
               if c.effect_id == eid and (c.row, c.col) == (row, col)]
+    if not placed:
+        # the FM9 refuses over-budget inserts SILENTLY: nothing lands, no
+        # error (hardware-observed 2026-08-21, amp2 on a loaded preset)
+        still_shunt = any(c.is_shunt and (c.row, c.col) == (row, col) for c in after)
+        if still_shunt:
+            return {"ok": False,
+                    "detail": f"insert of {a.block} landed nothing at row "
+                              f"{row + 1} col {col + 1}; the FM9 refuses "
+                              f"over-DSP-budget inserts silently - the preset "
+                              f"is likely too heavy for this block (free up "
+                              f"a block and retry)"}
     ok = bool(placed) and placed[0].cable_in_mask != 0
     # shunt-replacement can drop the OUTGOING cable (hardware-observed
     # 2026-08-21: downstream cell left with no input = silent preset).
