@@ -412,12 +412,27 @@ def _add_block(fm9: FM9, a: Action) -> dict:
                           f"{a.block} on; refusing rather than rewiring the grid"}
     row, col = sorted(shunts, key=lambda rc: rc[1])[0]
     fm9.place_block(row + 1, col + 1, eid)
-    placed = [c for c in (fm9.read_grid() or [])
+    after = fm9.read_grid() or []
+    placed = [c for c in after
               if c.effect_id == eid and (c.row, c.col) == (row, col)]
     ok = bool(placed) and placed[0].cable_in_mask != 0
+    # shunt-replacement can drop the OUTGOING cable (hardware-observed
+    # 2026-08-21: downstream cell left with no input = silent preset).
+    # Verify the next cell still has an input; redraw same-row if not.
+    if ok:
+        nxt = next((c for c in after if (c.row, c.col) == (row, col + 1)), None)
+        if nxt is not None and nxt.cable_in_mask == 0:
+            fm9.connect_cells(row + 1, col + 1, row + 1)
+            after2 = fm9.read_grid() or []
+            nxt2 = next((c for c in after2 if (c.row, c.col) == (row, col + 1)), None)
+            if nxt2 is None or nxt2.cable_in_mask == 0:
+                return {"ok": False,
+                        "detail": f"placed at row {row + 1} col {col + 1} but the "
+                                  f"outgoing cable was lost and could not be "
+                                  f"redrawn; downstream is disconnected"}
     return {"ok": ok,
-            "detail": f"placed at row {row + 1} col {col + 1}, cables inherited"
-                      if ok else "placement failed grid verification"}
+            "detail": f"placed at row {row + 1} col {col + 1}, cables verified "
+                      f"in and out" if ok else "placement failed grid verification"}
 
 
 def _bind_pedal(fm9: FM9, a: Action) -> dict:
