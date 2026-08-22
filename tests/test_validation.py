@@ -112,3 +112,18 @@ def test_zero_ordinal_set_actually_lands():
     fm9.set_param_ordinal(spec, 5); time.sleep(0.12)
     fm9.set_param_ordinal(spec, 0); time.sleep(0.12)
     assert fm9.get_param_wire(spec) == 0
+
+
+def test_gig_mode_locks_out_everything_but_scenes(monkeypatch):
+    from fastapi.testclient import TestClient
+    import server
+    from fm9.sim import SimFM9
+    monkeypatch.setattr(server, "_fm9", SimFM9(server.reg))
+    client = TestClient(server.app)
+    assert client.post("/api/gig", json={"on": True}).json()["gig_mode"]
+    r = client.post("/api/apply", json={"actions": [
+        {"kind": "set_param", "block": "amp", "param": "DISTORT_DRIVE", "value": 5}]})
+    assert r.status_code == 423 and "GIG MODE" in r.json()["error"]
+    r = client.post("/api/apply", json={"actions": [{"kind": "set_scene", "value": 2}]})
+    assert r.status_code == 200
+    client.post("/api/gig", json={"on": False})

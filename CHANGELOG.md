@@ -4,6 +4,27 @@ Notable changes to ToneCommand. Dates are UTC.
 
 ## Unreleased
 
+### Added (2026-08-22)
+- Tone recipes: shareable, cited, replayable builds (docs/RECIPES.md,
+  tools/replay_recipe.py, first recipe published). Store is forbidden by
+  format; every replay ends in an ear checklist.
+- docs/PROTOCOL.md: the hardware findings ledger as a citable spec,
+  including the zero-ordinal GET trap, the display-name trap, cable
+  encoding status, and the read-honesty ranking.
+- Tone lock (tools/tone_lock.py): wire-level regression testing for
+  presets; lock a baseline, detect any drifted parameter by name.
+- Gig mode: POST /api/gig locks the server to scene changes only (HTTP
+  423 for everything else) for the duration of a performance.
+- DSP budget advisor (tools/budget_advisor.py): predicts silent insert
+  refusals from the owner's own preset library instead of a fake CPU
+  model - it correctly "predicts" the stereo-pair refusal of 2026-08-21.
+
+### Fixed
+- Ordinal 0 could never be set through the discrete path (zero-valued
+  sub 09 is the device's GET); zero ordinals now route through a
+  continuous 0.0 write. Earlier zero-ordinal type sets may have silently
+  no-opped; hardware re-verification queued.
+
 ### Added
 - Complete grounding data: amps 331/331, drives 86/86, cab IRs 2,235/2,237
   plus all 45 DynaCabs (cabs via @bschmalz81401, #14), and 34 delay/chorus/

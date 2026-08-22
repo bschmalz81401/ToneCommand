@@ -560,9 +560,36 @@ def run_action(fm9: FM9, a: Action) -> dict:
     return {"ok": False, "detail": f"unknown action {a.kind}"}
 
 
+import os as _os
+
+GIG_SAFE_KINDS = {"set_scene"}
+_gig_mode = {"on": _os.environ.get("TONECOMMAND_GIG_MODE") == "1"}
+
+
+@app.post("/api/gig")
+def api_gig(body: dict):
+    """Performance lockout: while on, only scene changes reach hardware."""
+    _gig_mode["on"] = bool(body.get("on"))
+    return {"gig_mode": _gig_mode["on"]}
+
+
+@app.get("/api/gig")
+def api_gig_state():
+    return {"gig_mode": _gig_mode["on"]}
+
+
 @app.post("/api/apply")
 def api_apply(body: ApplyBody):
     results = []
+    if _gig_mode["on"]:
+        blocked = [a.kind for a in body.actions if a.kind not in GIG_SAFE_KINDS]
+        if blocked:
+            return JSONResponse(
+                {"error": f"GIG MODE is on: refusing {sorted(set(blocked))}. "
+                          f"Only scene changes are allowed during a "
+                          f"performance. POST /api/gig {{\"on\": false}} "
+                          f"after the set."},
+                status_code=423)
     with _lock:
         try:
             fm9 = get_fm9()
