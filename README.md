@@ -30,11 +30,13 @@ real quirks, including async writes and the operations no hardware
 session has verified yet, which it reports by name instead of silently
 simulating.
 
-**It was built on a real rig, for real Sundays.** This codebase preps an
-actual worship setlist every week: per-song presets voiced from the
-artists' own published tone breakdowns, scene maps from the charts, an
-expression pedal riding every delay. The tooling exists because the gig
-does.
+**It was built on a real rig, for real gigs.** This codebase preps
+actual setlists: worship sets on Sunday, metal shows with Shieldbearer
+whenever the stage calls. Per-song presets voiced from the artists' own
+published tone breakdowns, 80s-metal rhythm channels next to ambient
+drone scenes, an expression pedal riding every delay. The tooling
+exists because the gigs do, and it has to cover everything from
+edge-of-breakup cleans to high-gain chug in the same rig.
 
 **It gives back.** Building it meant decoding parts of the FM9 editor
 protocol nobody had written down: grid cable encodings, negative
