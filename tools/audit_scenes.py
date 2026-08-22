@@ -20,7 +20,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 from fm9.registry import Registry  # noqa: E402
 
-WET = {"DELAY", "REVERB", "MULTITAP", "FDBKRET"}
+WET = {"DELAY", "REVERB", "MULTITAP"}
 PROMISES_WET = ("ambient", "swell", "clean", "cln")
 PROMISES_DRY = ("dry", "crunch")
 
@@ -73,8 +73,16 @@ def main(a: int, b: int) -> int:
                 dry = not {x.removesuffix("2") for x in on} & WET
                 promise = any(k in nm.lower() for k in PROMISES_WET)
                 promise_dry = any(k in nm.lower() for k in PROMISES_DRY)
+                # a bypassed feedback Return alongside an engaged Send can
+                # sever presets whose main path crosses the loop bus
+                # (154's routing, hardware-observed 2026-08-22)
+                snd = st.get(reg.effect_id("FDBKSEND"))
+                ret = st.get(reg.effect_id("FDBKRET"))
+                severed = (snd and not snd.bypassed) and (ret and ret.bypassed)
                 mark = ""
-                if dry and promise:
+                if severed:
+                    mark = "  <- FDBKRET bypassed with Send engaged: path may be severed"
+                elif dry and promise:
                     mark = "  <- DRY but name promises ambience"
                 elif not dry and promise_dry:
                     mark = "  <- WET but name promises dry"

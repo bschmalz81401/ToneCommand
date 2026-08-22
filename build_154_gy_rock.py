@@ -53,12 +53,14 @@ def main() -> int:
         dev.set_scene(1); time.sleep(0.3)
         dev.set_channel(eid("DISTORT"), 1)
         dev.set_channel(eid("CABINET"), 1)
-        # both instances of every wet family, plus the feedback return that
-        # re-blends the parallel wet loop (144's rig runs Delay 2 / Reverb 2
-        # through send/return; bypassing only instance 1 left scene 1 wet,
-        # hardware-observed 2026-08-22)
+        # both instances of every wet family. NEVER bypass FDBKRET here:
+        # in this rig the main path crosses the send/return bus (input
+        # chain ends at Send, Return heads the chain feeding the amps),
+        # so a bypassed Return severs ALL signal (hardware-observed
+        # 2026-08-22). The delays/reverbs are inline with Thru bypass,
+        # so bypassing them is what makes the scene dry.
         wet_eids = [eid(f, i) for f in ("FUZZ", "DELAY", "REVERB", "COMP")
-                    for i in (1, 2)] + [eid("FDBKRET")]
+                    for i in (1, 2)]
         for e in wet_eids:
             dev.set_bypass(e, True)
             time.sleep(0.15)
