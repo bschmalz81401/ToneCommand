@@ -435,9 +435,20 @@ class FM9:
                          before, after)
 
     def set_param_ordinal(self, spec: ParamSpec, ordinal: int) -> SetResult:
-        """Set a discrete (enum/type) param by roster ordinal."""
+        """Set a discrete (enum/type) param by roster ordinal.
+
+        Ordinal 0 CANNOT go through the discrete path: a sub 09 frame with
+        a zero value is the device's zeroed-GET no-op, so the set silently
+        does nothing (caught by recipe replay in the sim, 2026-08-22 -
+        which also means earlier zero-ordinal sets like Small Room reverb
+        may never have landed; verify on hardware). Send a continuous 0.0
+        instead, which writes wire 0 = ordinal 0.
+        """
         before = self.get_param_display(spec)
-        frame = p.build_set_param_discrete(spec.effect_id, spec.param_id, ordinal)
+        if ordinal == 0:
+            frame = p.build_set_param_continuous(spec.effect_id, spec.param_id, 0.0)
+        else:
+            frame = p.build_set_param_discrete(spec.effect_id, spec.param_id, ordinal)
         self._param_echo(frame, spec.effect_id, spec.param_id, timeout=0.6)
         after = self.get_param_display(spec)
         return SetResult(True, "sent (discrete)", before, after)

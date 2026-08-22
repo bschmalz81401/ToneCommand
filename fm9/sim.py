@@ -62,7 +62,8 @@ def _default_preset(number: int, reg: Registry) -> dict:
     display row 2, with shunts, plus 8 scenes of per-block state."""
     grid = {}
     chain = [(2, 1, 37), (2, 2, None), (2, 3, 58), (2, 4, 62), (2, 5, None),
-             (2, 6, 70), (2, 7, None), (2, 8, 42)]
+             (2, 6, 70), (2, 7, None), (2, 8, 118), (2, 9, 46), (2, 10, 66),
+             (2, 11, 42)]   # ...fuzz, comp, reverb: realistic recipe targets
     prev_row = None
     for row, col, eid in chain:
         c = _Cell(eid if eid else None, is_shunt=eid is None)

@@ -85,3 +85,30 @@ def test_fm9_and_simulator_satisfy_the_device_adapter_contract():
                  "set_param_display", "set_param_ordinal", "bulk_read",
                  "store_preset", "close"):
         assert callable(getattr(FM9, name, None)), f"FM9 lacks {name}"
+
+
+def test_recipe_replays_clean_in_sim():
+    """The published recipe must validate and apply end to end on the sim,
+    and recipes may never contain store actions."""
+    import json, subprocess, sys, os
+    env = dict(os.environ, TONECOMMAND_SIM="1")
+    r = subprocess.run([sys.executable, "tools/replay_recipe.py",
+                        "recipes/goodbye-yesterday-rock-intro.json", "--apply"],
+                       capture_output=True, text=True, env=env, timeout=300)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "EAR CHECKLIST" in r.stdout
+    rec = json.load(open("recipes/goodbye-yesterday-rock-intro.json"))
+    assert all(a["kind"] != "store" for a in rec["actions"])
+
+
+def test_zero_ordinal_set_actually_lands():
+    """Ordinal 0 via the discrete path is the zeroed-GET no-op; the device
+    layer must route it through a continuous 0.0 write instead (found by
+    recipe replay; the class of bug that silently no-ops type changes)."""
+    from fm9.sim import SimFM9
+    import time
+    fm9 = SimFM9(); fm9.status_dump()
+    spec = fm9.reg.spec("REVERB", 10)
+    fm9.set_param_ordinal(spec, 5); time.sleep(0.12)
+    fm9.set_param_ordinal(spec, 0); time.sleep(0.12)
+    assert fm9.get_param_wire(spec) == 0

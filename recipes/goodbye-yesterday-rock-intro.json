@@ -1,0 +1,35 @@
+{
+  "recipe_version": 1,
+  "name": "goodbye-yesterday-rock-intro",
+  "title": "Goodbye Yesterday: dry rock-crunch intro, produced body",
+  "device": "FM9",
+  "author": "monzta1",
+  "tested_firmware": "11.00",
+  "sources": [
+    "E Edwards (Elevation Rhythm), official Goodbye Yesterday tutorial: one heavy overdrive played softly through the whole song, a very small room reverb, a minimal couple-repeats delay throughout, a wide stereo delay only from the Refrain",
+    "Owner variation (monzta1): open the song on a dry Marshall-style crunch scene, no effects at all, then drop into the produced sound from scene 2"
+  ],
+  "assumes": "an 8-scene preset with amp (multi-channel), drive, delay and reverb blocks; scene 1 = intro, scene 2+ = song body",
+  "actions": [
+    {"kind": "set_scene", "value": 1, "reason": "the intro scene"},
+    {"kind": "set_channel", "block": "amp", "value": 1, "reason": "a dedicated crunch channel keeps the clean channel untouched"},
+    {"kind": "set_type", "block": "amp", "type_name": "Brit 800 2204 High", "reason": "the JCM800: definitive good-crunch-not-metal rock rhythm"},
+    {"kind": "set_param", "block": "amp", "param": "DISTORT_DRIVE", "value": 5.5, "reason": "crunch with hair, still not metal; tune to taste"},
+    {"kind": "set_bypass", "block": "drive", "bypassed": true, "reason": "intro is bone dry"},
+    {"kind": "set_bypass", "block": "delay", "bypassed": true, "reason": "intro is bone dry"},
+    {"kind": "set_bypass", "block": "reverb", "bypassed": true, "reason": "intro is bone dry"},
+    {"kind": "set_bypass", "block": "comp", "bypassed": true, "reason": "intro is bone dry"},
+    {"kind": "rename_scene", "value": 1, "type_name": "INTRO Crunch", "reason": "scenes carry song-section names"},
+    {"kind": "set_scene", "value": 2, "reason": "the produced body starts here"},
+    {"kind": "set_bypass", "block": "delay", "bypassed": false, "reason": "artist spec: minimal delay through the song body"},
+    {"kind": "set_bypass", "block": "reverb", "bypassed": false, "reason": "artist spec: small room, very minimal"},
+    {"kind": "set_type", "block": "reverb", "type_name": "Small Room", "reason": "artist: a room, just very minimal - not a hall"},
+    {"kind": "set_param", "block": "reverb", "param": "REVERB_MIX", "value": 10.0, "reason": "felt more than heard"}
+  ],
+  "ear_checklist": [
+    "scene 1: pure dry crunch, rocks on its own with no effects",
+    "scene 2: soft picking sings through the drive, never chokes",
+    "the room reverb is felt, not heard",
+    "levels match between scene 1 and scene 2"
+  ]
+}
