@@ -30,7 +30,23 @@ Notable changes to ToneCommand. Dates are UTC.
 - A failed add_block aborts the remaining plan instead of binding pedals to
   blocks that never landed.
 
+### Added (2026-08-21 session)
+- Tone library harvested: all 512 on-device presets captured as voicing
+  references (local-only), plus a per-scene consistency audit that caught
+  and fixed a systemic dry-scene staging bug across the setlist.
+- Effect-type grounding: 34 delay/chorus/multitap names mapped from wiki
+  sources; pitch type ordinals begun (wire-verified, human-in-the-loop).
+- add_block verifies and self-repairs the downstream cable after
+  shunt-replacement.
+
 ### Protocol findings (README "Protocol Contributions")
+- Negative signed params are 16-bit two's complement on the wire
+  (-12 = 65524). Pitch types: Dual Detune = 0, Dual Chromatic = 2.
+- Shunt-replacement inherits the incoming cable only; the outgoing side
+  can silently drop. Row-4 same-row cable draws follow the general
+  formula. Shunts cannot be inserted; a unity Volume block is the
+  pass-through workaround. Inserts are silently refused over the DSP
+  budget.
 - Row-2 same-row cable encoding; cable draw is idempotent (removal is a
   different, unknown message); 2-row diagonal draws do not register.
 - Writes are asynchronous; unsettled reads return plausible stale values.
