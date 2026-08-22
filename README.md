@@ -112,6 +112,12 @@ Full license reproductions and file-level provenance:
 
 ## Safety
 
+**Rule zero: this tool can never brick a device.** It touches only
+user data, every operation is recoverable by a power cycle and preset
+reselect, and the transport layer refuses to send any message type
+outside its decoded, verified surface - firmware and bootloader
+operations are structurally unreachable, on every device, forever.
+
 Designed so it cannot hurt a rig you care about:
 
 - **Edit-buffer by default.** All changes go to the FM9's volatile working

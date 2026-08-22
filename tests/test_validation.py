@@ -127,3 +127,17 @@ def test_gig_mode_locks_out_everything_but_scenes(monkeypatch):
     r = client.post("/api/apply", json={"actions": [{"kind": "set_scene", "value": 2}]})
     assert r.status_code == 200
     client.post("/api/gig", json={"on": False})
+
+
+def test_never_brick_guard_blocks_unknown_functions():
+    """Hard rule: unknown/undecoded function ids are structurally
+    unsendable. The tool must be INCAPABLE of reaching firmware or
+    bootloader surfaces on any device."""
+    import pytest
+    from fm9.sim import SimFM9
+    from fm9 import protocol as p
+    fm9 = SimFM9()
+    evil = p.envelope(0x40, [0x00, 0x00])       # undecoded function id
+    with pytest.raises(PermissionError, match="NEVER-BRICK"):
+        fm9._send(evil)
+    fm9._send(p.build_get_scene())               # decoded surface still works

@@ -15,6 +15,14 @@ ordinals, the simulator that models them.
 
 **The product (invariant):** natural language in, verified hardware state
 out, under a safety contract:
+0. Never brick, ever: the tool only touches user data (presets,
+   parameters, edit buffers), every operation is recoverable by
+   power-cycle plus preset reselect at worst, and the transport layer
+   structurally refuses any function id outside the decoded,
+   hardware-verified, user-data-scoped surface. Firmware, bootloader and
+   flash operations are permanently out of scope for every device,
+   forever. Extending the sendable surface requires a hardware-verified
+   decode AND a documented recovery path.
 1. Grounding: model names resolve to real-world gear, facts-only, cited,
    never invented. Unknowns stay unknown and say so.
 2. Validate before send: every plan is checked against the device's own

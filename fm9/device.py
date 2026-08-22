@@ -133,7 +133,24 @@ class FM9:
         for _ in self.inp.iter_pending():
             pass
 
+    # NEVER-BRICK GUARD (hard rule, 2026-08-22): this tool must never be
+    # able to damage any device. Only function ids that are decoded,
+    # hardware-verified, and USER-DATA scoped may ever reach the wire.
+    # Firmware update, bootloader, flash, and every unknown function id
+    # are structurally unreachable - not policy, architecture. Extending
+    # this set requires a hardware-verified decode of the new function
+    # and a documented recovery path (power-cycle + preset reselect).
+    SENDABLE_FNS = frozenset({0x01, 0x08, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E,
+                              0x13, 0x14, 0x1F})
+
     def _send(self, frame: list[int]):
+        if len(frame) > 5 and frame[0] == 0xF0:
+            fn = frame[5]
+            if fn not in self.SENDABLE_FNS:
+                raise PermissionError(
+                    f"NEVER-BRICK GUARD: refusing to send function 0x{fn:02x}. "
+                    f"Only decoded, user-data-scoped functions may reach any "
+                    f"device. See ARCHITECTURE.md invariant 0.")
         self.outp.send(mido.Message("sysex", data=frame[1:-1]))
 
     def _request(self, frame: list[int], want, timeout: float = 1.0):
