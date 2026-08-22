@@ -102,4 +102,7 @@ float32), 0x32 grid insert, 0x35 cable draw.
 Cable removal; multi-row diagonal draw encoding; row-1 even-column
 source draws; modifier curve semantics for from-scratch bindings; most
 type-enum ordinal tables (delay, chorus, reverb beyond name lists);
-DSP budget introspection.
+DSP budget introspection; the precise conditions under which the
+per-scene bypass GET (fn 0x0A) disagrees with the status dump (observed
+once contradicting audible reality; status dump has matched the ears
+every time since - use it).
