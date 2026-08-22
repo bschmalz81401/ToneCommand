@@ -24,3 +24,4 @@ config/cab_models.full.json
 *.blk
 *.fasBundle
 backups/
+tonecommand.egg-info/
