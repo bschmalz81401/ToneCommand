@@ -20,8 +20,9 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 from fm9.registry import Registry  # noqa: E402
 
-WET = {"DELAY", "REVERB", "MULTITAP"}
+WET = {"DELAY", "REVERB", "MULTITAP", "FDBKRET"}
 PROMISES_WET = ("ambient", "swell", "clean", "cln")
+PROMISES_DRY = ("dry", "crunch")
 
 def main(a: int, b: int) -> int:
     reg = Registry()
@@ -51,19 +52,34 @@ def main(a: int, b: int) -> int:
                         return None
                     w = dev.get_param_wire(spec, channel=bk.channel)
                     return round(w / 65534 * 100, 1) if w is not None else None
-                on = [f for f in ("FUZZ", *WET, "CHORUS", "PITCH")
-                      if (bk := st.get(reg.effect_id(f))) and not bk.bypassed]
+                # both instances of every family: bypassing/checking only
+                # instance 1 is how 154 scene 1 shipped wet (2026-08-22)
+                on = []
+                for f in ("FUZZ", *WET, "CHORUS", "PITCH"):
+                    for inst in (1, 2):
+                        try:
+                            e = reg.effect_id(f, inst)
+                        except Exception:
+                            continue
+                        bk = st.get(e)
+                        if bk and not bk.bypassed:
+                            on.append(f if inst == 1 else f + "2")
                 row = {"preset": n, "scene": sc, "name": nm,
                        "amp_gain": val(amp_gain, "DISTORT"),
                        "amp_level": val(amp_lvl, "DISTORT"),
                        "delay_mix": val(dly_mix, "DELAY"),
                        "reverb_mix": val(rev_mix, "REVERB"), "active": on}
                 rows.append(row)
-                dry = not (set(on) & WET)
+                dry = not {x.removesuffix("2") for x in on} & WET
                 promise = any(k in nm.lower() for k in PROMISES_WET)
-                mark = "  <- DRY but name promises ambience" if dry and promise else ""
-                print(f"{n} {sc}:{nm[:20]:20s} {','.join(on) or 'dry'}{mark}")
+                promise_dry = any(k in nm.lower() for k in PROMISES_DRY)
+                mark = ""
                 if dry and promise:
+                    mark = "  <- DRY but name promises ambience"
+                elif not dry and promise_dry:
+                    mark = "  <- WET but name promises dry"
+                print(f"{n} {sc}:{nm[:20]:20s} {','.join(on) or 'dry'}{mark}")
+                if mark:
                     flags.append(row)
     out = ROOT / "kb" / "tone_library" / "scene_audit.json"
     out.parent.mkdir(parents=True, exist_ok=True)

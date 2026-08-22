@@ -23,7 +23,7 @@ def main() -> int:
     else:
         from fm9.device import FM9
         dev = FM9(reg)
-    def eid(f): return reg.effect_id(f)
+    def eid(f, inst=1): return reg.effect_id(f, inst)
     with dev:
         dev.select_preset(144); time.sleep(0.4)
         dev.store_preset(154); time.sleep(1.0)
@@ -53,8 +53,14 @@ def main() -> int:
         dev.set_scene(1); time.sleep(0.3)
         dev.set_channel(eid("DISTORT"), 1)
         dev.set_channel(eid("CABINET"), 1)
-        for fam in ("FUZZ", "DELAY", "REVERB", "COMP"):
-            dev.set_bypass(eid(fam), True)
+        # both instances of every wet family, plus the feedback return that
+        # re-blends the parallel wet loop (144's rig runs Delay 2 / Reverb 2
+        # through send/return; bypassing only instance 1 left scene 1 wet,
+        # hardware-observed 2026-08-22)
+        wet_eids = [eid(f, i) for f in ("FUZZ", "DELAY", "REVERB", "COMP")
+                    for i in (1, 2)] + [eid("FDBKRET")]
+        for e in wet_eids:
+            dev.set_bypass(e, True)
             time.sleep(0.15)
         dev.rename_scene(1, "INTRO Crunch")
         dev.set_scene(1)
@@ -64,8 +70,7 @@ def main() -> int:
         dev.set_scene(1); time.sleep(0.3)
         st = {b.effect_id: b for b in dev.status_dump() or []}
         amp = st.get(eid("DISTORT"))
-        dry = all((st.get(eid(f)) is None or st[eid(f)].bypassed)
-                  for f in ("FUZZ", "DELAY", "REVERB", "COMP"))
+        dry = all((st.get(e) is None or st[e].bypassed) for e in wet_eids)
         w = dev.get_param_wire(reg.spec("DISTORT", 10), channel=1)
         ok = amp is not None and amp.channel == 1 and dry and w == 14
         print(f"cold verify: amp ch{'ABCD'[amp.channel] if amp else '?'} "
