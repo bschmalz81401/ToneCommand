@@ -258,6 +258,13 @@ Notes:
   unofficial and firmware-sensitive. `test_phase2.py` passing is the green
   light after any update.
 
+## Support
+
+ToneCommand is free and always will be. If it saved you an evening of
+preset fiddling, you can [buy the maintainer a coffee](https://buymeacoffee.com/shieldbearer)
+under his stage name, Shieldbearer - the same rig this tool preps for
+real gigs.
+
 ## License
 
 Apache License 2.0 for this project's code. Vendored and derived content
