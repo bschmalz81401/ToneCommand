@@ -28,7 +28,7 @@ it. Corrections to our own earlier claims are kept, marked SUPERSEDED.
 | 0x0A | bypass get/set | set = payload with state byte; get = shorter |
 | 0x0B | channel get/set | |
 | 0x0C | scene get/set | 0x7F = get |
-| 0x0D/0x0E | preset / scene name | |
+| 0x0D/0x0E | preset / scene name | 0x0D answers for ANY slot by number, out of flash, without selecting it |
 | 0x13 | status dump | blocks + bypass + channel; the most honest state read |
 | 0x14 | tempo | 14-bit BPM |
 | 0x1F | bulk param read | replies 0x74/0x75/0x76 burst; channel-blocked (index = channel * stride + paramId) |
@@ -96,6 +96,27 @@ float32), 0x32 grid insert, 0x35 cable draw.
     query (never). Channel-indexed reads require the channel count cache
     to be populated (a status dump) or every channel silently reads as
     channel A.
+14. **Empty slots identify themselves, and leave a ghost.** The FM9
+    names an unused preset slot `<EMPTY>`: the device's own marker, not an
+    inference. Clearing a slot writes `"<EMPTY>\0"` over the FIRST 8 BYTES
+    of the 32-byte name field and leaves the remainder of the previous name
+    in flash, so a name field must be cut at the FIRST NUL. Right-stripping
+    it instead (what this project did until now) yields
+    `'<EMPTY>\x00 Phat Time'` - the marker glued to the tail of a preset
+    that no longer exists. The surviving tail starts at byte 8, which is why
+    ghosts read as fragments (`'ror'`, `'2C'`, `'tep Closer'`). An empty
+    slot's scene-name fields read as all-NUL, with no ghost. Verified over
+    all 512 slots on fw 12.00: 440 occupied, 72 empty, 68 of those carrying
+    a ghost.
+15. **fn 0x0D reads any slot without loading it.** Passing a preset number
+    (rather than 0x7F 0x7F for "current") answers from flash and leaves the
+    loaded preset and the edit buffer alone, and the reply echoes the
+    requested number so it cannot be confused with the current preset. A
+    512-slot query sweep was byte-identical to a select-and-read sweep of
+    the same unit, took 4.7s instead of ~4.5 minutes (9ms/slot vs a 400ms
+    select settle), and the front panel never moved. This is the only known
+    whole-library read that costs the player nothing - every other preset
+    inspection here discards the edit buffer.
 
 ## Undecoded territory (help welcome)
 

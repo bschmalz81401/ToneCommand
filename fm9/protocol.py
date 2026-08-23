@@ -499,12 +499,54 @@ def parse_multipurpose(data: list[int]) -> tuple[int, int] | None:
     return (data[5], data[6])
 
 
-def parse_patch_name(data: list[int]) -> tuple[int, str] | None:
+# --- name fields (fixed width, NUL padded) ---
+
+NAME_FIELD_LEN = 32
+EMPTY_SLOT_NAME = "<EMPTY>"     # the FM9's own marker for an unused slot
+
+
+def is_empty_slot_name(name: str) -> bool:
+    """True for the marker the FM9 itself writes into a cleared slot."""
+    return name.strip() == EMPTY_SLOT_NAME
+
+
+def decode_name_field(raw) -> tuple[str, str]:
+    """Split a NUL-padded name field into (name, ghost).
+
+    Clearing a preset writes "<EMPTY>\\0" over the FIRST 8 BYTES of the
+    32-byte name field and leaves the rest of the previous name in flash, so
+    the field must be cut at the FIRST NUL rather than merely right-stripped.
+    What follows that NUL is a ghost: the tail (byte 8 onward) of whatever
+    name used to occupy the slot. Diagnostic only - never a current name.
+    """
+    head, _, tail = bytes(raw).partition(b"\x00")
+    name = head.decode("ascii", "replace").rstrip("\x00 ")
+    ghost = tail.replace(b"\x00", b" ").decode("ascii", "replace").strip()
+    return (name, ghost)
+
+
+@dataclass
+class SlotName:
+    """A preset slot's stored name, with any ghost kept out of the name."""
+    number: int
+    name: str
+    ghost: str = ""
+
+    @property
+    def empty(self) -> bool:
+        return is_empty_slot_name(self.name)
+
+
+def parse_patch_name_full(data: list[int]) -> SlotName | None:
     if not is_fractal(data, FN_PATCH_NAME) or len(data) < 40:
         return None
-    num = decode14(data[5], data[6])
-    name = "".join(chr(c) for c in data[7:39]).rstrip("\x00 ")
-    return (num, name)
+    name, ghost = decode_name_field(data[7:7 + NAME_FIELD_LEN])
+    return SlotName(decode14(data[5], data[6]), name, ghost)
+
+
+def parse_patch_name(data: list[int]) -> tuple[int, str] | None:
+    got = parse_patch_name_full(data)
+    return (got.number, got.name) if got else None
 
 
 def parse_scene(data: list[int]) -> int | None:
@@ -516,7 +558,11 @@ def parse_scene(data: list[int]) -> int | None:
 def parse_scene_name(data: list[int]) -> tuple[int, str] | None:
     if not is_fractal(data, FN_SCENE_NAME) or len(data) < 39:
         return None
-    return (data[5] + 1, "".join(chr(c) for c in data[6:38]).rstrip("\x00 "))
+    # Same fixed-width NUL-padded encoding as the preset name field. No ghost
+    # has been observed here (an empty preset's scene names read as all-NUL),
+    # so this shares decode_name_field for consistency, not as a fix.
+    name, _ = decode_name_field(data[6:6 + NAME_FIELD_LEN])
+    return (data[5] + 1, name)
 
 
 def parse_bypass(data: list[int]) -> tuple[int, bool] | None:
