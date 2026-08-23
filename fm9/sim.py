@@ -57,6 +57,27 @@ class _Cell:
         self.cable_in_mask = 0   # bit n = fed from display row n of prev col
 
 
+# Slots the simulated unit reports as empty, mirroring the layout observed on
+# the reference FM9: a cleared slot keeps a ghost of its previous name, and
+# some carry none (old name was <= 8 characters, or the slot was never used).
+SIM_EMPTY_SLOTS = {386: "Phat Time", 387: "Live FM9+", 449: "", 511: ""}
+
+
+def _empty_preset(number: int) -> dict:
+    """A cleared slot: no blocks, no grid, no cables, blank scene names.
+    Hardware reads an empty preset's scene-name fields as all-NUL."""
+    return {
+        "number": number,
+        "name": p.EMPTY_SLOT_NAME,
+        "scene_names": {s: "" for s in range(1, 9)},
+        "grid": {},
+        "scenes": {s: {} for s in range(1, 9)},
+        "params": {},
+        "modifiers": {s: [0] * 25 for s in range(1, 33)},
+        "tempo": 120,
+    }
+
+
 def _default_preset(number: int, reg: Registry) -> dict:
     """A minimal but realistic preset: In -> Amp -> Cab -> Delay -> Out on
     display row 2, with shunts, plus 8 scenes of per-block state."""
@@ -100,6 +121,8 @@ class SimState:
     def __init__(self, reg: Registry | None = None):
         self.reg = reg or Registry()
         self.presets: dict[int, dict] = {}
+        # slot -> ghost of the name it used to hold
+        self.empty_slots: dict[int, str] = dict(SIM_EMPTY_SLOTS)
         self.buffer = self._load(0)
         self.scene = 1
         self.cursor = 0          # internal grid cursor (cell index)
@@ -107,7 +130,9 @@ class SimState:
 
     def _load(self, number: int) -> dict:
         if number not in self.presets:
-            self.presets[number] = _default_preset(number, self.reg)
+            self.presets[number] = (
+                _empty_preset(number) if number in self.empty_slots
+                else _default_preset(number, self.reg))
         return copy.deepcopy(self.presets[number])
 
     def select_preset(self, number: int):
@@ -150,20 +175,41 @@ class SimFM9Core:
             self.st.scene = b[0] + 1
         return [p.envelope(p.FN_SCENE, [self.st.scene - 1])]
 
+    @staticmethod
+    def _name_field(name: str, ghost: str = "") -> list[int]:
+        """32-byte NUL-padded name field. A cleared slot has "<EMPTY>\\0"
+        written over its first 8 bytes with the old name's tail left behind,
+        which is what makes cutting at the first NUL mandatory."""
+        raw = name.encode("ascii", "replace")
+        if p.is_empty_slot_name(name):
+            raw += b"\x00" + ghost.encode("ascii", "replace")
+        return list(raw.ljust(p.NAME_FIELD_LEN, b"\x00")[:p.NAME_FIELD_LEN])
+
     def _fn_0d(self, b):
+        """Answers for ANY slot by number, read from "flash": the loaded
+        preset and the edit buffer are untouched (hardware behaves this way,
+        verified over all 512 slots)."""
         if len(b) >= 2 and not (b[0] == 0x7F and b[1] == 0x7F):
             num = p.decode14(b[0], b[1])
-            name = self.st.presets.get(num, {}).get("name") or \
-                _default_preset(num, self.st.reg)["name"]
+            if num in self.st.empty_slots:
+                field = self._name_field(p.EMPTY_SLOT_NAME,
+                                         self.st.empty_slots[num])
+            else:
+                name = self.st.presets.get(num, {}).get("name") or \
+                    _default_preset(num, self.st.reg)["name"]
+                field = self._name_field(name)
         else:
             num, name = self.st.buffer["number"], self.st.buffer["name"]
-        payload = [*p.encode14(num)] + [ord(c) for c in name.ljust(32)[:32]]
-        return [p.envelope(p.FN_PATCH_NAME, payload)]
+            field = self._name_field(name, self.st.empty_slots.get(num, ""))
+        return [p.envelope(p.FN_PATCH_NAME, [*p.encode14(num)] + field)]
 
     def _fn_0e(self, b):
         s = self.st.scene if (not b or b[0] == 0x7F) else b[0] + 1
         name = self.st.buffer["scene_names"].get(s, f"Scene {s}")
-        return [p.envelope(p.FN_SCENE_NAME, [s - 1] + [ord(c) for c in name.ljust(32)[:32]])]
+        # an empty preset reads as an all-NUL scene-name field
+        field = ([0] * 32 if not name
+                 else [ord(c) for c in name.ljust(32)[:32]])
+        return [p.envelope(p.FN_SCENE_NAME, [s - 1] + field)]
 
     def _fn_0a(self, b):
         eid = p.decode14(b[0], b[1])

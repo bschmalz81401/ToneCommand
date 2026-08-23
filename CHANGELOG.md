@@ -2,6 +2,36 @@
 
 Notable changes to ToneCommand. Dates are UTC.
 
+## Unreleased
+
+### Added (empty-slot probe, 2026-08-23)
+- `tools/find_empty_slots.py`: reports which preset slots are free, as
+  contiguous ranges, and suggests a target for a from-scratch build.
+  Non-destructive - it selects nothing, so it is safe to run mid-session
+  with a preset you are playing loaded.
+- `FM9.slot_name()` / `is_slot_empty()` / `scan_slots()`: read a slot's
+  stored name by number, out of flash, without selecting it. fn 0x0D
+  supports this and nothing here used it before; every other preset
+  inspection in the project discards the edit buffer to do its work.
+- `FM9.require_empty_slot()`: gate for building a preset from scratch, so
+  a build cannot start by clobbering a preset someone owns. Opt-in target
+  check; store stays separately whitelisted.
+- `protocol.SlotName`, `decode_name_field()`, `is_empty_slot_name()`, and
+  `EMPTY_SLOT_NAME`: the `<EMPTY>` marker is now a first-class concept
+  instead of a string no code recognized.
+- Simulator models empty slots (`SIM_EMPTY_SLOTS`), including the ghost
+  bytes and the all-NUL scene-name fields, so all of the above is
+  testable headless.
+
+### Fixed (empty-slot probe, 2026-08-23)
+- Preset names are cut at the first NUL instead of right-stripped.
+  Clearing a slot overwrites only the first 8 bytes of the 32-byte name
+  field, so `current_preset()` had been reporting names like
+  `'<EMPTY>\x00 Phat Time'` - the marker glued to the tail of a preset
+  that no longer exists. Replaying the new parser over 512 real captured
+  name fields changes no occupied name and drops the ghost from all 72
+  empty ones. See docs/PROTOCOL.md findings 14 and 15.
+
 ## 0.1.0 (2026-08-22)
 
 First tagged release: installation is now repeatable, so the version

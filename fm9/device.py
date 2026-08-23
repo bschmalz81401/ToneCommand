@@ -185,6 +185,54 @@ class FM9:
     def current_preset(self) -> tuple[int, str] | None:
         return self._request(p.build_get_patch_name(), p.parse_patch_name)
 
+    def slot_name(self, preset: int) -> p.SlotName | None:
+        """A slot's STORED name, read WITHOUT selecting it.
+
+        fn 0x0D takes a preset number and the device answers from flash, so
+        the loaded preset and the edit buffer are untouched. Verified over all
+        512 slots on fw 12.00: byte-identical to a select-and-read sweep of
+        the same unit, with the loaded preset unchanged. Answers carry the
+        requested number back, so a stale or current-preset reply is rejected
+        rather than misattributed.
+        """
+        def want(d):
+            got = p.parse_patch_name_full(d)
+            return got if got is not None and got.number == preset else None
+        return self._request(p.build_get_patch_name(preset), want)
+
+    def is_slot_empty(self, preset: int) -> bool | None:
+        """True/False, or None if the slot did not answer."""
+        got = self.slot_name(preset)
+        return None if got is None else got.empty
+
+    def scan_slots(self, start: int = 0, end: int = 511):
+        """Read every slot name in a range without disturbing the device.
+
+        Yields SlotName per answering slot, skipping any that stays silent
+        after one retry. Read-only by construction: no select, no write.
+        """
+        for n in range(start, end + 1):
+            got = self.slot_name(n) or self.slot_name(n)
+            if got is not None:
+                yield got
+
+    def require_empty_slot(self, preset: int) -> p.SlotName:
+        """Gate for building a preset from scratch into a slot.
+
+        Refuses anything but a slot the FM9 itself reports as <EMPTY>, so a
+        from-scratch build cannot start by clobbering a preset someone owns.
+        Store remains separately whitelisted (see store_preset); this is a
+        target check, not a store permission.
+        """
+        got = self.slot_name(preset)
+        if got is None:
+            raise FM9NotFound(f"preset {preset} did not answer a name query")
+        if not got.empty:
+            raise ValueError(
+                f"preset {preset} holds {got.name!r}; building from scratch "
+                "requires a slot the device reports as <EMPTY>")
+        return got
+
     def current_scene(self) -> int | None:
         return self._request(p.build_get_scene(), p.parse_scene)
 
