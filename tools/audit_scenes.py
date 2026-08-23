@@ -79,8 +79,15 @@ def main(a: int, b: int) -> int:
                 snd = st.get(reg.effect_id("FDBKSEND"))
                 ret = st.get(reg.effect_id("FDBKRET"))
                 severed = (snd and not snd.bypassed) and (ret and ret.bypassed)
+                # a bypassed INPUT block feeds silence into the grid: source
+                # blocks have no thru (hardware-observed on the MONO twins'
+                # scene 1, 2026-08-23)
+                inp = st.get(reg.effect_id("INPUT"))
+                muted = inp is not None and inp.bypassed
                 mark = ""
-                if severed:
+                if muted:
+                    mark = "  <- INPUT bypassed: scene is silent"
+                elif severed:
                     mark = "  <- FDBKRET bypassed with Send engaged: path may be severed"
                 elif dry and promise:
                     mark = "  <- DRY but name promises ambience"
