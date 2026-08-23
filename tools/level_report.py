@@ -107,6 +107,23 @@ def main(a: int, b: int) -> int:
                                      "under reference with no trim lift")
                         flags.append(r)
                         print(f"  ^ FLAG {n} scene {r['scene']}: {r['flag']}")
+                # loudness staircase (Moncy 2026-08-23): scenes 1-5 run
+                # softest to loudest. Paper can only prove a DEFINITE
+                # inversion: both levers (amp level and trim) strictly
+                # below the previous scene's. Ears judge the rest.
+                stair = {r["scene"]: r for r in preset_rows if r["scene"] <= 5}
+                for k in sorted(stair):
+                    if k - 1 not in stair:
+                        continue
+                    a, b = stair[k - 1], stair[k]
+                    amp_down = (a["amp_level_db"] is not None and b["amp_level_db"] is not None
+                                and b["amp_level_db"] < a["amp_level_db"] - 0.5)
+                    vol_down = (a.get("vol_gain") is not None and b.get("vol_gain") is not None
+                                and b["vol_gain"] < a["vol_gain"])
+                    if amp_down and vol_down:
+                        b["flag"] = f"staircase inversion: quieter than scene {k - 1} on both levers"
+                        flags.append(b)
+                        print(f"  ^ FLAG {n} scene {k}: {b['flag']}")
                 spread = max(levels.values()) - min(levels.values())
                 if spread > SPREAD_DB:
                     f = {"preset": n, "flag": f"amp level spread {round(spread, 1)} dB"}
