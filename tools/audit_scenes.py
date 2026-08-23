@@ -22,7 +22,7 @@ from fm9.registry import Registry  # noqa: E402
 
 WET = {"DELAY", "REVERB", "MULTITAP"}
 PROMISES_WET = ("ambient", "swell", "clean", "cln")
-PROMISES_DRY = ("dry", "crunch")
+PROMISES_DRY = ("dry",)
 
 def main(a: int, b: int) -> int:
     reg = Registry()
@@ -35,7 +35,7 @@ def main(a: int, b: int) -> int:
     amp_gain = reg.spec("DISTORT", 11)
     amp_lvl = reg.find_param("DISTORT", "Level")
     dly_mix = reg.spec("DELAY", 0)
-    rev_mix = reg.spec("REVERB", 11)
+    rev_mix = reg.spec("REVERB", 0)
     rows, flags = [], []
     with dev:
         for n in range(a, b + 1):
