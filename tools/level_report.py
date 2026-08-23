@@ -88,10 +88,23 @@ def main(a: int, b: int) -> int:
                       if r["amp_level_db"] is not None}
             if levels:
                 ref = levels.get(3, statistics.median(levels.values()))
+                ref_row = next((r for r in preset_rows if r["scene"] == 3), None)
+                ref_vol = ref_row.get("vol_gain") if ref_row else None
                 for r in preset_rows:
                     lv = r["amp_level_db"]
                     if lv is not None and lv - ref > HOT_DB:
                         r["flag"] = f"+{round(lv - ref, 1)} dB over reference"
+                        flags.append(r)
+                        print(f"  ^ FLAG {n} scene {r['scene']}: {r['flag']}")
+                    # a plus/lead scene must never sit BELOW the reference on
+                    # BOTH levers (amp level and trim): "more" cannot be quieter
+                    boosty = any(k in r["name"].upper() for k in ("+", "LEAD"))
+                    below_amp = lv is not None and lv < ref - 1.0
+                    below_vol = (ref_vol is not None and r.get("vol_gain") is not None
+                                 and r["vol_gain"] <= ref_vol)
+                    if boosty and r["scene"] != 3 and below_amp and below_vol:
+                        r["flag"] = (f"boost-named scene sits {round(ref - lv, 1)} dB "
+                                     "under reference with no trim lift")
                         flags.append(r)
                         print(f"  ^ FLAG {n} scene {r['scene']}: {r['flag']}")
                 spread = max(levels.values()) - min(levels.values())
