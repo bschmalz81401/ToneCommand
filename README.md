@@ -328,6 +328,15 @@ Notes:
   section above; run `hardware_regression.py` after any firmware update
   before trusting writes.
 
+## Community
+
+ToneCommand has a Slack:
+**[join here](https://join.slack.com/t/tonecommand/shared_invite/zt-47oosli5y-GMHa93bbD4Qf76X4s1Crfg)**.
+Protocol decodes land in #protocol-decodes with their evidence, the
+HeadRush port lives in #headrush, and #show-and-tell is for what your
+rig did on stage. If you're building on the protocol findings, porting
+to another device, or just got a tone you're proud of, come say hi.
+
 ## Support
 
 ToneCommand is free and always will be. If it saved you an evening of
