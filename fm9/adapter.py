@@ -41,6 +41,17 @@ class DeviceAdapter(Protocol):
 
     def bulk_read(self, effect_id: int) -> Any: ...
 
+    def slot_name(self, preset: int) -> Any:
+        """A slot's STORED name read by number, without selecting it and
+        without disturbing the loaded preset (PR #19). Any device with
+        addressable preset slots can answer this."""
+        ...
+
+    def is_slot_empty(self, preset: int) -> Any:
+        """True/False from the device's own empty marker, or None if the
+        slot did not answer. Gate for from-scratch builds."""
+        ...
+
     def store_preset(self, slot: int) -> Any:
         """Whitelisted, confirmation-gated persistence. Must refuse
         non-whitelisted targets."""
