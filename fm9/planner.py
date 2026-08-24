@@ -30,6 +30,8 @@ import logging
 import os
 import shutil
 import subprocess
+import urllib.error
+import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -266,9 +268,13 @@ def _cli_error_message(proc: subprocess.CompletedProcess) -> str:
     return " | ".join(parts)[:300]
 
 
-def _plan_via_cli(prompt: str, device_state: str,
-                  param_reference: str) -> tuple[dict, str]:
-    full_prompt = (
+def _full_prompt(prompt: str, device_state: str, param_reference: str) -> str:
+    """The one prompt every text-completion backend sends.
+
+    Kept verbatim from the CLI path so the three backends differ only in
+    transport, never in what the model was asked.
+    """
+    return (
         f"{SYSTEM}\n\n"
         f"Controllable parameter reference:\n{param_reference}\n\n"
         f"Current device state:\n{device_state}\n\n"
@@ -280,6 +286,11 @@ def _plan_via_cli(prompt: str, device_state: str,
         '"param": str|null, "value": number|null, "bypassed": bool|null, '
         '"type_name": str|null, "position": str|null, "reason": str}], "clarification": str|null}'
     )
+
+
+def _plan_via_cli(prompt: str, device_state: str,
+                  param_reference: str) -> tuple[dict, str]:
+    full_prompt = _full_prompt(prompt, device_state, param_reference)
     cli = find_claude_cli()
     if not cli:
         raise BackendFailure("cli", "unavailable", "claude binary not found")
@@ -316,6 +327,108 @@ def _plan_via_cli(prompt: str, device_state: str,
     except ValueError as exc:
         raise BackendFailure("cli", "unreadable_output", str(exc)[:200],
                              target=cli)
+
+
+CLIPROXY_DEFAULT_URL = "http://127.0.0.1:8317/v1"   # CLIProxyAPI's default
+
+JSON_ONLY = ("Respond with a single JSON object only. No markdown fences, no "
+             "preamble, no reasoning.")
+
+
+def _openai_base_url() -> str:
+    """Configured OpenAI-compatible endpoint, or "" when there is none."""
+    return _env("PLANNER_BASE_URL").rstrip("/")
+
+
+def completion_text(choice: dict | None) -> str:
+    """Text out of one chat-completion choice, the tolerant way.
+
+    `content` is a string on most servers and a list of parts on some. Local
+    reasoning models (llama.cpp, LM Studio) routinely spend the whole token
+    budget on `reasoning_content` and leave `content` empty, so that is a
+    fallback rather than a dead end.
+    """
+    message = (choice or {}).get("message") or {}
+    content = message.get("content")
+    if isinstance(content, str) and content.strip():
+        return content
+    if isinstance(content, list):
+        parts = []
+        for part in content:
+            if isinstance(part, str):
+                parts.append(part)
+            elif isinstance(part, dict):
+                parts.append(str(part.get("text") or ""))
+        joined = "".join(parts)
+        if joined.strip():
+            return joined
+    reasoning = message.get("reasoning_content")
+    return reasoning if isinstance(reasoning, str) else ""
+
+
+def _plan_via_openai(prompt: str, device_state: str,
+                     param_reference: str) -> tuple[dict, str]:
+    """Any OpenAI-compatible chat-completions endpoint.
+
+    This is the path to CLIProxyAPI - and through it to Claude Code, Codex,
+    Grok, Gemini or Kimi over their own OAuth logins - as well as to a local
+    LLM or OpenRouter. PLANNER_API_KEY is optional by design: an OAuth router
+    authenticates upstream and often wants no key at all.
+    """
+    base = _openai_base_url()
+    if not base:
+        raise BackendFailure("openai", "unavailable",
+                             "PLANNER_BASE_URL is not set")
+    model = _env("PLANNER_MODEL", "local")
+    payload = json.dumps({
+        "model": model,
+        "messages": [
+            {"role": "system", "content": f"{SYSTEM}\n\n{JSON_ONLY}"},
+            {"role": "user",
+             "content": _full_prompt(prompt, device_state, param_reference)},
+        ],
+        "temperature": 0.2,
+        "max_tokens": int(_env("PLANNER_MAX_TOKENS", "8192")),
+    }).encode()
+    headers = {"content-type": "application/json"}
+    key = _env("PLANNER_API_KEY")
+    if key:
+        headers["authorization"] = f"Bearer {key}"
+    req = urllib.request.Request(f"{base}/chat/completions", data=payload,
+                                 headers=headers, method="POST")
+    try:
+        with urllib.request.urlopen(req, timeout=TIMEOUT_S) as resp:
+            raw = resp.read().decode("utf-8", "replace")
+    except urllib.error.HTTPError as exc:                   # reached; refused
+        body = exc.read().decode("utf-8", "replace").strip()[:300]
+        raise BackendFailure("openai", "http_status",
+                             f"{exc.code} {body or exc.reason}", base, model)
+    except urllib.error.URLError as exc:                    # never reached
+        if isinstance(exc.reason, TimeoutError):
+            raise BackendFailure("openai", "timeout",
+                                 f"no reply within {TIMEOUT_S}s", base, model)
+        raise BackendFailure("openai", "transport",
+                             f"unreachable: {exc.reason}", base, model)
+    except TimeoutError:
+        raise BackendFailure("openai", "timeout",
+                             f"no reply within {TIMEOUT_S}s", base, model)
+    try:
+        data = json.loads(raw)
+    except (json.JSONDecodeError, ValueError):
+        raise BackendFailure("openai", "unreadable_output",
+                             raw.strip()[:200] or "empty body", base, model)
+    choices = data.get("choices") or []
+    text = completion_text(choices[0] if choices else None)
+    if not text.strip():
+        raise BackendFailure(
+            "openai", "empty_output",
+            "reply carried no content; a reasoning model needs a larger "
+            "PLANNER_MAX_TOKENS, or check PLANNER_MODEL", base, model)
+    try:
+        return _extract_json(text), data.get("model") or model
+    except ValueError as exc:
+        raise BackendFailure("openai", "unreadable_output", str(exc)[:200],
+                             base, model)
 
 
 def _plan_via_api(prompt: str, device_state: str,
@@ -366,6 +479,7 @@ def _api_available() -> bool:
 
 
 _RUNNERS = {
+    "openai": _plan_via_openai,
     "cli": _plan_via_cli,
     "api": _plan_via_api,
 }
@@ -387,6 +501,8 @@ def candidates() -> list[str]:
                 f"PLANNER_BACKEND={pinned!r} is not one of {', '.join(BACKENDS)}")
         return [pinned]
     order = []
+    if _openai_base_url():
+        order.append("openai")
     if find_claude_cli():
         order.append("cli")
     if _api_available():
