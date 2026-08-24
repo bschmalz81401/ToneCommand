@@ -31,6 +31,17 @@ Notable changes to ToneCommand. Dates are UTC.
   Control Change by the shared SendGuard, and the pedal's serial
   control port is opened read-only, since firmware and bootloader
   traffic travels over that kind of channel on an undecoded device.
+### Fixed (docs, 2026-08-24)
+- The README's claim that FM9-Edit resets the edit buffer when it connects
+  was wrong. Tested with FM9-Edit 1.03.21 on fw 12.00: unsaved edits
+  survived the editor connecting, and reads stayed correct while it polled
+  the shared port at ~60 msg/s. Buffer edits are lost to a preset load from
+  either side, which is ordinary behaviour. Concurrent writes, older editor
+  versions and fw 11.00 remain untested and are marked as such.
+  docs/PROTOCOL.md finding 23.
+- README compatibility table and Protocol Contributions brought current
+  with what fw 12.00 has actually proven.
+
 ### Fixed (preset numbering, 2026-08-24)
 - Tools now print preset numbers both ways: the wire number (0-511) and the
   number FM9-Edit and the front panel show for the same slot (1-512). They

@@ -173,6 +173,17 @@ float32), 0x32 grid insert, 0x35 cable draw.
     `<EMPTY>` marker, so a naive reader concludes the slot is OCCUPIED -
     the wrong direction for any code deciding where it is safe to write.
     Validate the range before trusting the reply.
+23. **FM9-Edit coexists with a third-party client; connecting does not
+    clear the edit buffer.** Tested with FM9-Edit 1.03.21 against fw 12.00:
+    an unsaved chain built over MIDI survived the editor connecting to the
+    same unit, and 12 consecutive rounds of `current_preset`, by-number
+    slot name, grid read and bulk read all returned identical correct
+    values while the editor polled fn 0x01 at ~61 messages/second on the
+    shared CoreMIDI port. Buffer edits are lost to a PRESET LOAD from
+    either side, which is the documented mechanism and not editor-specific.
+    UNTESTED: simultaneous writes from both clients, older editor versions,
+    and fw 11.00. This corrects a longstanding note in the README that
+    connecting resets the buffer.
 
 ## Undecoded territory (help welcome)
 

@@ -354,9 +354,19 @@ Testing is two-tier:
 ```
 
 Notes:
-- Do not run FM9-Edit and this tool at the same time; FM9-Edit resets the
-  edit buffer when it connects. Stored presets are safe and remain fully
-  viewable/editable in FM9-Edit afterwards.
+- FM9-Edit can be open at the same time, but only one of you should be
+  making edits. This note used to say FM9-Edit resets the edit buffer when
+  it connects; that was tested and it does not. With an unsaved chain
+  sitting in the buffer, FM9-Edit 1.03.21 connected to an FM9 on fw 12.00
+  and the edits survived intact, and twelve rounds of reads here stayed
+  correct while the editor polled the shared CoreMIDI port at ~60
+  messages/second. What actually discards buffer edits is LOADING a
+  preset - from FM9-Edit, the front panel, or this tool - which is the
+  ordinary mechanism rather than an FM9-Edit quirk. Two clients writing
+  the same parameters will still fight, and concurrent writes are untested,
+  so keep editing to one side at a time. Older FM9-Edit versions and
+  fw 11.00 are untested here. Stored presets are safe either way and remain
+  fully viewable and editable in FM9-Edit.
 - Firmware and hardware coverage is spelled out in the Compatibility
   section above; run `hardware_regression.py` after any firmware update
   before trusting writes.
