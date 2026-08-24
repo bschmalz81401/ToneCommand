@@ -309,7 +309,9 @@ protocol is unofficial and firmware-sensitive, and the hardware
 regression suite passing is the green light after any update. The
 original protocol feasibility findings, with the exact commands and
 responses observed, are written up in
-[docs/HARDWARE-VALIDATION.md](docs/HARDWARE-VALIDATION.md).
+[docs/HARDWARE-VALIDATION.md](docs/HARDWARE-VALIDATION.md) - a dated
+snapshot from 2026-08-16, kept as a record rather than maintained; the
+living protocol record is [docs/PROTOCOL.md](docs/PROTOCOL.md).
 
 ## Disclaimer
 

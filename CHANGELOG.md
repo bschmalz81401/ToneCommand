@@ -32,6 +32,12 @@ Notable changes to ToneCommand. Dates are UTC.
   control port is opened read-only, since firmware and bootloader
   traffic travels over that kind of channel on an undecoded device.
 ### Fixed (docs, 2026-08-24)
+- docs/HARDWARE-VALIDATION.md is marked as a preserved 2026-08-16 snapshot
+  rather than current documentation, listing what has been superseded since
+  - the firmware 11.x pin, and its statement that the store command would
+  never be implemented in the write path (it is, whitelisted). The body is
+  left as written; a dated report is worth more as a record than as a
+  document quietly edited to stay true.
 - The README's claim that FM9-Edit resets the edit buffer when it connects
   was wrong. Tested with FM9-Edit 1.03.21 on fw 12.00: unsaved edits
   survived the editor connecting, and reads stayed correct while it polled
