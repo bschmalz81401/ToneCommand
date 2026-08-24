@@ -20,9 +20,12 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 from fm9.registry import Registry  # noqa: E402
 
+from tools.conventions import load as load_conventions  # noqa: E402
+
 WET = {"DELAY", "REVERB", "MULTITAP"}
-PROMISES_WET = ("ambient", "swell", "clean", "cln")
-PROMISES_DRY = ("dry",)
+_CONV = load_conventions()
+PROMISES_WET = tuple(_CONV.get("promises_wet", []))
+PROMISES_DRY = tuple(_CONV.get("promises_dry", []))
 
 def main(a: int, b: int) -> int:
     reg = Registry()

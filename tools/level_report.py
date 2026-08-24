@@ -29,9 +29,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 from fm9.registry import Registry  # noqa: E402
+from tools.conventions import load as load_conventions  # noqa: E402
 
-HOT_DB = 3.0
-SPREAD_DB = 6.0
+CONV = load_conventions()
+HOT_DB = CONV.get("hot_db")
+SPREAD_DB = CONV.get("spread_db")
+BOOST_NAMES = tuple(CONV.get("boost_names", []))
+STAIRCASE = CONV.get("staircase_scenes_1_to_5", False)
 
 
 def main(a: int, b: int) -> int:
@@ -92,13 +96,13 @@ def main(a: int, b: int) -> int:
                 ref_vol = ref_row.get("vol_gain") if ref_row else None
                 for r in preset_rows:
                     lv = r["amp_level_db"]
-                    if lv is not None and lv - ref > HOT_DB:
+                    if HOT_DB is not None and lv is not None and lv - ref > HOT_DB:
                         r["flag"] = f"+{round(lv - ref, 1)} dB over reference"
                         flags.append(r)
                         print(f"  ^ FLAG {n} scene {r['scene']}: {r['flag']}")
                     # a plus/lead scene must never sit BELOW the reference on
                     # BOTH levers (amp level and trim): "more" cannot be quieter
-                    boosty = any(k in r["name"].upper() for k in ("+", "LEAD"))
+                    boosty = any(k in r["name"].upper() for k in BOOST_NAMES)
                     below_amp = lv is not None and lv < ref - 1.0
                     below_vol = (ref_vol is not None and r.get("vol_gain") is not None
                                  and r["vol_gain"] <= ref_vol)
@@ -111,7 +115,8 @@ def main(a: int, b: int) -> int:
                 # softest to loudest. Paper can only prove a DEFINITE
                 # inversion: both levers (amp level and trim) strictly
                 # below the previous scene's. Ears judge the rest.
-                stair = {r["scene"]: r for r in preset_rows if r["scene"] <= 5}
+                stair = ({r["scene"]: r for r in preset_rows if r["scene"] <= 5}
+                         if STAIRCASE else {})
                 for k in sorted(stair):
                     if k - 1 not in stair:
                         continue
@@ -125,7 +130,7 @@ def main(a: int, b: int) -> int:
                         flags.append(b)
                         print(f"  ^ FLAG {n} scene {k}: {b['flag']}")
                 spread = max(levels.values()) - min(levels.values())
-                if spread > SPREAD_DB:
+                if SPREAD_DB is not None and spread > SPREAD_DB:
                     f = {"preset": n, "flag": f"amp level spread {round(spread, 1)} dB"}
                     flags.append(f)
                     print(f"  ^ FLAG {n}: {f['flag']}")

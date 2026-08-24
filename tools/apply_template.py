@@ -38,10 +38,10 @@ sys.path.insert(0, str(ROOT))
 from fm9.device import FM9  # noqa: E402
 from fm9.registry import Registry  # noqa: E402
 from fm9 import protocol as p  # noqa: E402
+from tools.conventions import load as load_conventions  # noqa: E402
 
 SKIP_EIDS = (37, 42, 182, 200, 201)   # input, output, send: never touched
 VOL_CH = {"A": 0, "B": 1, "C": 2, "D": 3}
-TRIMS = {0: 8.0, 1: 9.0, 2: 9.0, 3: 7.0}
 
 
 def main(preset: int, mapping_path: str) -> int:
@@ -76,9 +76,11 @@ def main(preset: int, mapping_path: str) -> int:
             d.set_scene(1); time.sleep(0.3)
             r = d.set_param_display(reg.spec("DELAY", 0), m["delay_mix"])
             print("delay mix:", r.ok)
-        has_vol = m.get("has_volume", True)
+        trims_src = m.get("trims") or load_conventions().get("trims") or {}
+        trims = {VOL_CH[k]: v for k, v in trims_src.items()}
+        has_vol = m.get("has_volume", True) and bool(trims)
         if has_vol:
-            for ch, val in TRIMS.items():
+            for ch, val in trims.items():
                 d.set_channel(vol, ch); time.sleep(0.25)
                 d.set_param_display(reg.spec("VOLUME", 0), val)
             print("volume trims voiced")
