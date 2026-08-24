@@ -193,15 +193,24 @@ def _env_path() -> Path:
 
 
 def _unquote(value: str) -> str:
-    """Drop one matching pair of surrounding quotes, and any trailing comment.
+    """A dotenv value: quotes off, trailing comment off, in that order.
 
-    Quoting is ordinary dotenv style, and an unstripped quote is silently
-    poisonous: PLANNER_API_KEY="k" sends `Bearer "k"` and every request 401s.
+    Both halves are ordinary dotenv style and they combine, so the quotes
+    have to be found FIRST or `"240"  # five minutes` keeps its quotes -
+    which is silently poisonous in exactly the way an unstripped quote
+    always is: PLANNER_API_KEY sends `Bearer "k"` and 401s, a quoted base
+    URL fails as an unknown url type while the router is up, and a quoted
+    timeout falls back to the default.
+
+    When a value opens with a quote, that quote pair delimits it and
+    anything after the closing quote is comment - which also keeps a `#`
+    that lives INSIDE the quotes, where it is data rather than a comment.
     """
     val = value.strip()
-    for q in ('"', "'"):
-        if len(val) >= 2 and val.startswith(q) and val.endswith(q):
-            return val[1:-1]
+    if val[:1] in ('"', "'"):
+        close = val.find(val[0], 1)
+        if close != -1:
+            return val[1:close]
     if " #" in val:                      # PLANNER_TIMEOUT=300  # five minutes
         val = val.split(" #", 1)[0].strip()
     return val

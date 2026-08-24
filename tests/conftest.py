@@ -17,3 +17,27 @@ if str(ROOT) not in sys.path:
 # Tests run with a configured store range (the empty-default behavior has
 # its own dedicated tests in test_store_config.py).
 os.environ.setdefault("TONECOMMAND_STORE_SLOTS", "133-148")
+
+
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def isolated_env(tmp_path, monkeypatch):
+    """Never read the developer's real .env, in ANY test module.
+
+    _env falls back to that file whenever a variable is unset OR empty, so
+    setenv("") and delenv cannot mask a real line. This lived in one test
+    module first, where an autouse fixture covers only that module: the
+    openai and grok suites stayed exposed, and with a realistic .env present
+    they read PLANNER_BASE_URL out of it and opened a connection - at a live
+    CLIProxyAPI on 8317, that means POSTing the test prompt at the real
+    router. Belongs here, where it covers every module.
+    """
+    from fm9 import planner
+    monkeypatch.setattr(planner, "_env_path", lambda: tmp_path / ".env")
+    for name in ("PLANNER_BACKEND", "PLANNER_BASE_URL", "PLANNER_MODEL",
+                 "PLANNER_API_KEY", "PLANNER_TIMEOUT", "PLANNER_MAX_TOKENS",
+                 "GROK_CLI_MODEL", "ANTHROPIC_API_KEY"):
+        monkeypatch.delenv(name, raising=False)
+    return tmp_path / ".env"

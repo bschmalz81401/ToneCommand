@@ -168,23 +168,6 @@ def test_cli_env_skips_empty_values():
 
 # --- configuration parsing: must not take the app down or leak quotes ---
 
-@pytest.fixture(autouse=True)
-def isolated_env(tmp_path, monkeypatch):
-    """Never read the developer's real .env.
-
-    _env falls back to the file whenever a variable is unset OR empty, so
-    setenv("") and delenv cannot mask a real line. Without this, once someone
-    follows the README and puts PLANNER_BASE_URL in .env, the "no base url"
-    test stops testing anything and fires the prompt at their live router.
-    """
-    monkeypatch.setattr(planner, "_env_path", lambda: tmp_path / ".env")
-    for name in ("PLANNER_BACKEND", "PLANNER_BASE_URL", "PLANNER_MODEL",
-                 "PLANNER_API_KEY", "PLANNER_TIMEOUT", "PLANNER_MAX_TOKENS",
-                 "GROK_CLI_MODEL", "ANTHROPIC_API_KEY"):
-        monkeypatch.delenv(name, raising=False)
-    return tmp_path / ".env"
-
-
 def test_a_malformed_timeout_does_not_break_the_import(isolated_env):
     """It used to be int() at module scope: a dotenv comment crashed
     `import fm9.planner`, and server.py imports it at startup."""
@@ -293,3 +276,18 @@ def test_the_cli_model_comes_from_modelusage():
     assert planner.cli_envelope_model(
         {"modelUsage": {"claude-sonnet-4-6": {}}}) == "claude-sonnet-4-6"
     assert planner.cli_envelope_model({"modelUsage": {}}) == planner.CLI_MODEL
+
+
+def test_quotes_and_a_trailing_comment_together(isolated_env):
+    """Both are ordinary dotenv style, so they combine. Quotes must be found
+    first or the value keeps them and fails in the usual silent ways."""
+    assert planner._unquote('"240"  # five minutes') == "240"
+    assert planner._unquote('"http://127.0.0.1:8317/v1"  # my router') \
+        == "http://127.0.0.1:8317/v1"
+    assert planner._unquote("'sk-local'  # key") == "sk-local"
+    # a # inside the quotes is data, not a comment
+    assert planner._unquote('"abc #def"') == "abc #def"
+    isolated_env.write_text('PLANNER_TIMEOUT="240"  # five minutes\n'
+                            'PLANNER_BASE_URL="http://127.0.0.1:8317/v1"  # mine\n')
+    assert planner.timeout_s() == 240
+    assert planner._openai_base_url() == "http://127.0.0.1:8317/v1"
