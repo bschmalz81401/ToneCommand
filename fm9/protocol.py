@@ -504,6 +504,27 @@ def parse_multipurpose(data: list[int]) -> tuple[int, int] | None:
 NAME_FIELD_LEN = 32
 EMPTY_SLOT_NAME = "<EMPTY>"     # the FM9's own marker for an unused slot
 
+# The wire numbers presets 0..511. FM9-Edit and the unit's front panel number
+# the same 512 slots 1..512, so anything a human reads needs +1. Verified on
+# hardware: wire 0 is '59 Bassguy', which FM9-Edit lists as 001, and a chain
+# built at wire 386 appears in FM9-Edit as 387.
+PRESET_COUNT = 512
+
+
+def editor_number(wire_preset: int) -> int:
+    """Wire preset number as FM9-Edit and the front panel show it."""
+    return wire_preset + 1
+
+
+def slot_label(wire_preset: int) -> str:
+    """Both numbers, for anything a person reads.
+
+    Printing the wire number alone invites clearing the wrong preset: the
+    owner checks the editor, sees a different number, and has to work out
+    which of us is off by one.
+    """
+    return f"{wire_preset} (FM9-Edit {editor_number(wire_preset)})"
+
 
 def is_empty_slot_name(name: str) -> bool:
     """True for the marker the FM9 itself writes into a cleared slot."""
@@ -535,6 +556,15 @@ class SlotName:
     @property
     def empty(self) -> bool:
         return is_empty_slot_name(self.name)
+
+    @property
+    def editor(self) -> int:
+        """This slot's number as FM9-Edit and the front panel show it."""
+        return editor_number(self.number)
+
+    @property
+    def label(self) -> str:
+        return slot_label(self.number)
 
 
 def parse_patch_name_full(data: list[int]) -> SlotName | None:

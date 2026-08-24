@@ -122,3 +122,46 @@ def test_range_collapse_reports_contiguous_free_runs():
     assert runs([386, 387, 388, 449, 508, 509]) == [(386, 388), (449, 449),
                                                     (508, 509)]
     assert runs([]) == []
+
+
+# --- preset numbering: wire 0-511 vs FM9-Edit 1-512 ---
+
+def test_editor_numbering_is_one_based():
+    """FM9-Edit and the front panel number the same 512 slots from 1."""
+    assert p.editor_number(0) == 1
+    assert p.editor_number(386) == 387        # the slot this was found on
+    assert p.editor_number(511) == p.PRESET_COUNT == 512
+
+
+def test_slot_label_shows_both_numbers():
+    assert p.slot_label(386) == "386 (FM9-Edit 387)"
+    got = p.SlotName(386, "<EMPTY>", "Phat Time")
+    assert got.editor == 387 and got.label == "386 (FM9-Edit 387)"
+
+
+def test_out_of_range_slots_are_refused_not_believed():
+    """The unit ANSWERS a query for preset 512 with a blank name, and a blank
+    is not the <EMPTY> marker - so an unguarded read calls it OCCUPIED, which
+    is the wrong direction for code deciding where to write."""
+    dev = SimFM9(Registry())
+    with dev:
+        for bad in (-1, 512, 9999):
+            with pytest.raises(ValueError, match="out of range"):
+                dev.slot_name(bad)
+        with pytest.raises(ValueError, match="out of range"):
+            list(dev.scan_slots(500, 512))
+
+
+def test_range_refusal_names_both_numbering_schemes():
+    dev = SimFM9(Registry())
+    with dev:
+        with pytest.raises(ValueError) as err:
+            dev.slot_name(512)
+    assert "0-511" in str(err.value) and "1-512" in str(err.value)
+
+
+def test_an_occupied_slot_refusal_carries_the_editor_number():
+    dev = SimFM9(Registry())
+    with dev:
+        with pytest.raises(ValueError, match=r"preset 0 \(FM9-Edit 1\)"):
+            dev.require_empty_slot(0)

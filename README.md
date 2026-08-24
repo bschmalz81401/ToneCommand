@@ -169,6 +169,10 @@ Designed so it cannot hurt a rig you care about:
   plan; nothing is transmitted until you approve it in the UI, and plans
   are pinned to the preset they were computed against (if you switch
   presets on the front panel, the stale plan is refused).
+- **Preset numbers are 0-based here.** The MIDI wire numbers the 512 slots
+  0-511, while FM9-Edit and the front panel number them 1-512 — so wire 386
+  is the preset your editor calls 387. Tools print both. `TONECOMMAND_STORE_SLOTS`
+  takes WIRE numbers, so `133-148` designates what the editor shows as 134-149.
 - **Store is disabled until YOU enable it.** Persisting to flash refuses
   every slot until you designate disposable ones on your own unit via
   `TONECOMMAND_STORE_SLOTS=133-148` (env var or `.env` line; ranges and

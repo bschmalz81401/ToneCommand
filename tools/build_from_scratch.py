@@ -30,6 +30,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
+from fm9 import protocol as p  # noqa: E402
 from fm9.registry import Registry  # noqa: E402
 
 # Consecutive columns on display row 3: cables only ever run to the next
@@ -54,9 +55,11 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--slot", type=int, default=None,
-                    help="build here; must be empty, or the run refuses")
+                    help="build here (WIRE number 0-511, which FM9-Edit shows "
+                         "as 1-512); must be empty, or the run refuses")
     ap.add_argument("--range", type=int, nargs=2, metavar=("START", "END"),
-                    default=[0, 511], help="slots to search (default 0 511)")
+                    default=[0, 511],
+                    help="wire slots to search (default 0 511)")
     args = ap.parse_args(argv)
 
     reg = Registry()
@@ -76,11 +79,11 @@ def main(argv=None) -> int:
         except (NoEmptySlot, ValueError) as exc:
             print(f"refusing to build: {exc}")
             return 1
-        print(f"target: slot {target.number}, reported {target.name!r} by the "
+        print(f"target: slot {target.label}, reported {target.name!r} by the "
               f"device" + (f" (ghost {target.ghost!r})" if target.ghost else ""))
         if held:
-            print(f"leaving preset {held[0]} ({held[1]!r}); its edit buffer is "
-                  "discarded by the switch")
+            print(f"leaving preset {p.slot_label(held[0])} ({held[1]!r}); its "
+                  "edit buffer is discarded by the switch")
 
         dev.select_preset(target.number)
         time.sleep(SETTLE)
@@ -119,7 +122,7 @@ def main(argv=None) -> int:
             print(f"NOTE: bypassed blocks: {', '.join(bypassed)}")
         if ok:
             print(f"chain is continuous: {' -> '.join(l for _, l in CHAIN)}")
-            print(f"loaded on {target.number}, edit buffer only - nothing "
+            print(f"loaded on {target.label}, edit buffer only - nothing "
                   "stored, so the slot still reads <EMPTY> in flash")
             print("PLAY IT. Audible is the claim; your ears outrank every read "
                   "path here.")

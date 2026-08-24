@@ -160,6 +160,19 @@ float32), 0x32 grid insert, 0x35 cable draw.
     its own encoding, finding 6). Cables only ever run to the NEXT column,
     and shunts cannot be inserted (finding 8), so a from-scratch chain must
     occupy consecutive columns or hop through a unity Volume block.
+21. **Preset numbering is 0-based on the wire, 1-based everywhere a human
+    looks.** The wire numbers the 512 slots 0-511; FM9-Edit and the front
+    panel number the same slots 1-512. Wire 0 is `59 Bassguy`, which the
+    editor lists as 001; a chain built at wire 386 appears in FM9-Edit as
+    387. Anything an owner reads has to say which it means, or the wrong
+    preset gets cleared. Note `TONECOMMAND_STORE_SLOTS` is WIRE-numbered:
+    `133-148` is what the editor shows as 134-149.
+22. **Out-of-range preset queries are ANSWERED, not refused.** fn 0x0D for
+    preset 512 or beyond echoes the requested number back with a blank
+    (all-NUL) name field rather than staying silent. A blank is not the
+    `<EMPTY>` marker, so a naive reader concludes the slot is OCCUPIED -
+    the wrong direction for any code deciding where it is safe to write.
+    Validate the range before trusting the reply.
 
 ## Undecoded territory (help welcome)
 

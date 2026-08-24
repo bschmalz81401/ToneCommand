@@ -106,3 +106,11 @@ def test_the_build_stores_nothing(sim, capsys):
         assert d.slot_name(386).name == "<EMPTY>"
         assert d.is_slot_empty(386) is True
     assert "nothing stored" in capsys.readouterr().out
+
+
+def test_the_tool_prints_the_editor_number_too(sim, capsys):
+    """The owner reads FM9-Edit, not the wire: a bare wire number is how the
+    wrong preset gets cleared."""
+    assert main([]) == 0
+    out = capsys.readouterr().out
+    assert "386 (FM9-Edit 387)" in out

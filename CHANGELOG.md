@@ -31,6 +31,20 @@ Notable changes to ToneCommand. Dates are UTC.
   Control Change by the shared SendGuard, and the pedal's serial
   control port is opened read-only, since firmware and bootloader
   traffic travels over that kind of channel on an undecoded device.
+### Fixed (preset numbering, 2026-08-24)
+- Tools now print preset numbers both ways: the wire number (0-511) and the
+  number FM9-Edit and the front panel show for the same slot (1-512). They
+  differ by one, and a bare wire number is how the wrong preset gets
+  cleared. Found by the owner cross-checking a built chain against
+  FM9-Edit.
+- Out-of-range preset numbers are refused instead of believed. The unit
+  answers a query for preset 512 with a blank name, and a blank is not the
+  `<EMPTY>` marker, so an unguarded read called such a slot OCCUPIED - the
+  wrong direction for code choosing where to write.
+- `TONECOMMAND_STORE_SLOTS` is documented as wire-numbered: `133-148` is
+  what the editor shows as 134-149.
+- docs/PROTOCOL.md findings 21-22.
+
 ### Added (from-scratch builds, 2026-08-24)
 - `tools/build_from_scratch.py`: builds INPUT -> amp -> cab -> OUTPUT into
   an empty preset slot, placing every block and drawing every cable, then
