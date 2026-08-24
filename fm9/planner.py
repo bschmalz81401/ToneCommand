@@ -30,6 +30,7 @@ import logging
 import os
 import shutil
 import subprocess
+import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
@@ -184,24 +185,72 @@ class Attempt:
                 "detail": self.detail}
 
 
+def _env_path() -> Path:
+    """The .env file planner config may live in. Indirected so tests can
+    point it somewhere harmless: _env falls back to this file whenever a
+    variable is unset OR empty, so setenv("", ...) cannot mask a real line."""
+    return Path(__file__).resolve().parent.parent / ".env"
+
+
+def _unquote(value: str) -> str:
+    """Drop one matching pair of surrounding quotes, and any trailing comment.
+
+    Quoting is ordinary dotenv style, and an unstripped quote is silently
+    poisonous: PLANNER_API_KEY="k" sends `Bearer "k"` and every request 401s.
+    """
+    val = value.strip()
+    for q in ('"', "'"):
+        if len(val) >= 2 and val.startswith(q) and val.endswith(q):
+            return val[1:-1]
+    if " #" in val:                      # PLANNER_TIMEOUT=300  # five minutes
+        val = val.split(" #", 1)[0].strip()
+    return val
+
+
 def _env(name: str, default: str = "") -> str:
     """env var first, then a NAME= line in .env at the repo root.
 
     Same sourcing convention as device.get_store_slots(), so planner config
     can live in the .env file the store whitelist already uses.
     """
-    val = os.environ.get(name, "").strip()
+    val = _unquote(os.environ.get(name, ""))
     if not val:
-        env_file = Path(__file__).resolve().parent.parent / ".env"
+        env_file = _env_path()
         if env_file.exists():
             for line in env_file.read_text().splitlines():
                 if line.strip().startswith(f"{name}="):
-                    val = line.split("=", 1)[1].strip()
+                    val = _unquote(line.split("=", 1)[1])
                     break
     return val or default
 
 
-TIMEOUT_S = int(_env("PLANNER_TIMEOUT", "180"))   # per backend attempt
+def _env_int(name: str, default: int) -> int:
+    """An int setting that cannot take the app down.
+
+    device.get_store_slots() tolerates a malformed value; this did not, and
+    it was parsed at import, so `PLANNER_TIMEOUT=300  # comment` in .env
+    crashed `import fm9.planner` - taking server.py with it, for users who
+    never plan anything.
+    """
+    raw = _env(name)
+    if not raw:
+        return default
+    try:
+        val = int(raw)
+    except ValueError:
+        log.warning("%s=%r is not a number; using %d", name, raw, default)
+        return default
+    if val <= 0:
+        log.warning("%s=%d must be positive; using %d", name, val, default)
+        return default
+    return val
+
+
+def timeout_s() -> int:
+    """Wall-clock seconds allowed per backend attempt, read per call so a
+    changed value does not wait for a restart."""
+    return _env_int("PLANNER_TIMEOUT", 180)
+
 
 
 def _extract_json(text: str) -> dict:
@@ -224,30 +273,69 @@ def _validate(plan_obj: dict) -> dict:
                 "rename_preset", "rename_scene", "store"):
             continue
         a.setdefault("block", None)
-        a.setdefault("instance", 1)
         a.setdefault("param", None)
         a.setdefault("value", None)
         a.setdefault("bypassed", None)
         a.setdefault("type_name", None)
         a.setdefault("position", None)
-        a.setdefault("reason", "")
+        # instance and reason are NOT nullable on the Action model, and the
+        # prompt shows most siblings as nullable - which invites an explicit
+        # null. setdefault only fills ABSENT keys, so a null used to survive
+        # into Action(**a), raise a pydantic error, and cost the whole plan a
+        # 502 with its diagnostics discarded.
+        if a.get("instance") is None:
+            a["instance"] = 1
+        if a.get("reason") is None:
+            a["reason"] = ""
         clean.append(a)
     plan_obj["actions"] = clean
     return plan_obj
+
+
+SHELL_ENV_KEYS = ("PATH", "HOME", "USER", "LOGNAME", "SHELL", "LANG",
+                  "LC_ALL", "TERM", "TMPDIR")
+
+# How a machine reaches the network at all. Stripping these turns a working
+# planner into a backend_error on any host behind a proxy or a TLS-inspecting
+# firewall - and then falls through to a paid API key nobody meant to use.
+NETWORK_ENV_KEYS = ("HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY",
+                    "http_proxy", "https_proxy", "no_proxy",
+                    "NODE_EXTRA_CA_CERTS", "SSL_CERT_FILE")
+
+# Where the Claude CLI keeps its config and how it authenticates, including
+# the enterprise routes. These are configuration, not foreign secrets: the
+# CLI documentedly honours them, and os.environ used to pass them through.
+CLAUDE_ENV_KEYS = NETWORK_ENV_KEYS + (
+    "ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_BASE_URL",
+    "CLAUDE_CODE_OAUTH_TOKEN", "CLAUDE_CONFIG_DIR", "XDG_CONFIG_HOME",
+    "CLAUDE_CODE_USE_BEDROCK", "CLAUDE_CODE_USE_VERTEX",
+    "AWS_REGION", "AWS_DEFAULT_REGION", "AWS_PROFILE",
+    "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_SESSION_TOKEN",
+    "AWS_BEARER_TOKEN_BEDROCK",
+    "GOOGLE_APPLICATION_CREDENTIALS", "GOOGLE_CLOUD_PROJECT",
+    "CLOUD_ML_REGION",
+)
+
+# The Grok CLI needs none of the above: its own keys, and that is all.
+GROK_ENV_KEYS = ("XAI_API_KEY", "GROK_API_KEY")
 
 
 def cli_env(binary_keys: tuple[str, ...] = (),
             source: dict[str, str] | None = None) -> dict[str, str]:
     """The environment a planner subprocess gets: an allowlist, not a copy.
 
-    A CLI needs a working shell environment and its OWN credentials. Handing
-    it os.environ wholesale also hands it every other secret in the process -
-    an xAI binary receiving ANTHROPIC_API_KEY, for instance, which it has no
-    business seeing. Pass only what the tool in question needs.
+    A CLI needs a working shell environment plus its own configuration and
+    credentials. Handing it os.environ wholesale also hands it every other
+    secret in the process - an xAI binary receiving ANTHROPIC_API_KEY, for
+    instance, which it has no business seeing.
+
+    The allowlist has to be wide enough to keep working setups working:
+    proxies, custom CA bundles, a relocated config dir and the Bedrock and
+    Vertex routes are all configuration a user already had, not leakage.
+    Narrow it per tool via binary_keys, not by starving the shell.
     """
     src = os.environ if source is None else source
-    allow = ("PATH", "HOME", "USER", "LOGNAME", "SHELL", "LANG", "LC_ALL",
-             "TERM", "TMPDIR") + binary_keys
+    allow = SHELL_ENV_KEYS + binary_keys
     return {k: src[k] for k in allow if src.get(k)}
 
 
@@ -297,6 +385,21 @@ def _full_prompt(prompt: str, device_state: str, param_reference: str) -> str:
     )
 
 
+def cli_envelope_model(envelope: dict, fallback: str = CLI_MODEL) -> str:
+    """Which model the claude CLI actually used.
+
+    Verified against a real envelope: there is no top-level `model` key, and
+    `modelUsage` is where the resolved id appears - the same shape as the
+    grok CLI. Reading `model` alone reports the alias we asked for ("sonnet")
+    dressed up as the model that answered.
+    """
+    usage = envelope.get("modelUsage")
+    if isinstance(usage, dict) and usage:
+        return next(iter(usage))
+    model = envelope.get("model")
+    return model if isinstance(model, str) and model else fallback
+
+
 def _plan_via_cli(prompt: str, device_state: str,
                   param_reference: str) -> tuple[dict, str]:
     full_prompt = _full_prompt(prompt, device_state, param_reference)
@@ -307,14 +410,14 @@ def _plan_via_cli(prompt: str, device_state: str,
         proc = subprocess.run(
             [cli, "-p", full_prompt, "--output-format", "json",
              "--model", CLI_MODEL],
-            capture_output=True, text=True, timeout=TIMEOUT_S,
+            capture_output=True, text=True, timeout=timeout_s(),
             cwd="/tmp",
-            env={**cli_env(("ANTHROPIC_API_KEY", "CLAUDE_CODE_OAUTH_TOKEN")),
+            env={**cli_env(CLAUDE_ENV_KEYS),
                  "CLAUDE_CODE_ENTRYPOINT": "fm9-tone"},
         )
     except subprocess.TimeoutExpired:
         raise BackendFailure("cli", "timeout",
-                             f"no reply within {TIMEOUT_S}s", target=cli)
+                             f"no reply within {timeout_s()}s", target=cli)
     if proc.returncode != 0:
         raise BackendFailure("cli", "backend_error", _cli_error_message(proc),
                              target=cli)
@@ -332,7 +435,7 @@ def _plan_via_cli(prompt: str, device_state: str,
         raise BackendFailure("cli", "empty_output", "envelope carried no result",
                              target=cli)
     try:
-        return _extract_json(result_text), envelope.get("model") or CLI_MODEL
+        return _extract_json(result_text), cli_envelope_model(envelope)
     except ValueError as exc:
         raise BackendFailure("cli", "unreadable_output", str(exc)[:200],
                              target=cli)
@@ -392,11 +495,11 @@ def _plan_via_grok_cli(prompt: str, device_state: str,
         args += ["-m", model]
     try:
         proc = subprocess.run(
-            args, capture_output=True, text=True, timeout=TIMEOUT_S,
-            cwd="/tmp", env=cli_env(("XAI_API_KEY", "GROK_API_KEY")))
+            args, capture_output=True, text=True, timeout=timeout_s(),
+            cwd="/tmp", env=cli_env(GROK_ENV_KEYS))
     except subprocess.TimeoutExpired:
         raise BackendFailure("grok", "timeout",
-                             f"no reply within {TIMEOUT_S}s", grok, model)
+                             f"no reply within {timeout_s()}s", grok, model)
     stderr = (proc.stderr or "").strip()[:200]
     try:
         envelope = parse_grok_envelope(proc.stdout)
@@ -462,6 +565,26 @@ def completion_text(choice: dict | None) -> str:
     return reasoning if isinstance(reasoning, str) else ""
 
 
+def _read_until(resp, deadline: float, chunk: int = 65536) -> str:
+    """Read a response body under a WALL-CLOCK deadline.
+
+    urlopen(timeout=...) bounds each socket operation, not the attempt. A
+    wedged router that sends headers promptly and then trickles the body a
+    few bytes at a time never trips it, so /api/plan hangs for minutes with
+    no timeout failure and no fall-through - while the README promises
+    "seconds allowed per backend attempt". Checking the deadline between
+    reads keeps that promise.
+    """
+    parts = []
+    while True:
+        if time.monotonic() > deadline:
+            raise TimeoutError("reply body exceeded the attempt deadline")
+        block = resp.read(chunk)
+        if not block:
+            return b"".join(parts).decode("utf-8", "replace")
+        parts.append(block)
+
+
 def _plan_via_openai(prompt: str, device_state: str,
                      param_reference: str) -> tuple[dict, str]:
     """Any OpenAI-compatible chat-completions endpoint.
@@ -473,8 +596,10 @@ def _plan_via_openai(prompt: str, device_state: str,
     """
     base = _openai_base_url()
     if not base:
-        raise BackendFailure("openai", "unavailable",
-                             "PLANNER_BASE_URL is not set")
+        raise BackendFailure(
+            "openai", "unavailable",
+            f"PLANNER_BASE_URL is not set (CLIProxyAPI defaults to "
+            f"{CLIPROXY_DEFAULT_URL})")
     model = _env("PLANNER_MODEL", "local")
     payload = json.dumps({
         "model": model,
@@ -492,9 +617,11 @@ def _plan_via_openai(prompt: str, device_state: str,
         headers["authorization"] = f"Bearer {key}"
     req = urllib.request.Request(f"{base}/chat/completions", data=payload,
                                  headers=headers, method="POST")
+    limit = timeout_s()
+    deadline = time.monotonic() + limit
     try:
-        with urllib.request.urlopen(req, timeout=TIMEOUT_S) as resp:
-            raw = resp.read().decode("utf-8", "replace")
+        with urllib.request.urlopen(req, timeout=limit) as resp:
+            raw = _read_until(resp, deadline)
     except urllib.error.HTTPError as exc:                   # reached; refused
         body = exc.read().decode("utf-8", "replace").strip()[:300]
         raise BackendFailure("openai", "http_status",
@@ -502,12 +629,12 @@ def _plan_via_openai(prompt: str, device_state: str,
     except urllib.error.URLError as exc:                    # never reached
         if isinstance(exc.reason, TimeoutError):
             raise BackendFailure("openai", "timeout",
-                                 f"no reply within {TIMEOUT_S}s", base, model)
+                                 f"no reply within {timeout_s()}s", base, model)
         raise BackendFailure("openai", "transport",
                              f"unreachable: {exc.reason}", base, model)
-    except TimeoutError:
+    except TimeoutError as exc:
         raise BackendFailure("openai", "timeout",
-                             f"no reply within {TIMEOUT_S}s", base, model)
+                             f"{exc or f'no reply within {limit}s'}", base, model)
     try:
         data = json.loads(raw)
     except (json.JSONDecodeError, ValueError):
@@ -533,11 +660,10 @@ def _plan_via_api(prompt: str, device_state: str,
         import anthropic
     except ImportError as exc:
         raise BackendFailure("api", "unavailable", str(exc))
-    env_file = Path(__file__).resolve().parent.parent / ".env"
-    if not os.environ.get("ANTHROPIC_API_KEY") and env_file.exists():
-        for line in env_file.read_text().splitlines():
-            if line.startswith("ANTHROPIC_API_KEY="):
-                os.environ["ANTHROPIC_API_KEY"] = line.split("=", 1)[1].strip()
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        key = _env("ANTHROPIC_API_KEY")      # shared parser: quotes stripped
+        if key:
+            os.environ["ANTHROPIC_API_KEY"] = key
     client = anthropic.Anthropic()
     response = client.messages.create(
         model=MODEL,
@@ -570,8 +696,14 @@ def _plan_via_api(prompt: str, device_state: str,
 
 
 def _api_available() -> bool:
-    return bool(os.environ.get("ANTHROPIC_API_KEY")) or \
-        (Path(__file__).resolve().parent.parent / ".env").exists()
+    """Whether an Anthropic key is actually configured.
+
+    This used to return True whenever a .env file merely existed. Now that
+    every PLANNER_* setting lives in that same file, a router-only install
+    would always offer a doomed `api` candidate whose authentication noise
+    buries the actionable "openai [transport] unreachable" beside it.
+    """
+    return bool(_env("ANTHROPIC_API_KEY"))
 
 
 _RUNNERS = {
@@ -645,19 +777,28 @@ def plan(prompt: str, device_state: str, param_reference: str) -> dict:
             "or point PLANNER_BASE_URL at an OpenAI-compatible endpoint")
     attempts: list[Attempt] = []
     for name in order:
-        runner = _RUNNERS[name]
+        runner = _RUNNERS.get(name)
+        if runner is None:                 # BACKENDS and _RUNNERS drifted
+            attempts.append(Attempt(name, None, None, "unavailable",
+                                    "no runner is registered for this backend"))
+            continue
+        model = None
         try:
             raw, model = runner(prompt, device_state, param_reference)
+            # Validation stays INSIDE the try: a reply that parses as JSON can
+            # still be shaped wrongly enough to raise here ({"actions": 42} is
+            # valid JSON and a truthy non-iterable), and that is this backend
+            # failing to deliver a plan, not a reason to abandon the rest.
+            plan_obj = _validate(raw)
         except BackendFailure as exc:
             attempts.append(Attempt(exc.backend, exc.target, exc.model,
                                     exc.failure_class, exc.detail))
             continue
         except Exception as exc:
             # An unexpected fault is still this backend failing, not a plan.
-            attempts.append(Attempt(name, None, None, "backend_error",
+            attempts.append(Attempt(name, None, model, "backend_error",
                                     str(exc)[:300]))
             continue
-        plan_obj = _validate(raw)
         resolve = _TARGETS.get(name)
         attempts.append(Attempt(name, resolve() if resolve else None, model))
         plan_obj["backend"] = name

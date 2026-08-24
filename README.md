@@ -355,13 +355,13 @@ the store whitelist uses:
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `PLANNER_BACKEND` | — | Pin one of `openai`, `cli`, `grok`, `api` and disable fallthrough. Required to reach the Grok CLI directly. |
-| `PLANNER_BASE_URL` | — | OpenAI-compatible endpoint, including `/v1`. Setting it makes that backend first. |
+| `PLANNER_BACKEND` | none | Pin one of `openai`, `cli`, `grok`, `api` and disable fallthrough. Required to reach the Grok CLI directly. |
+| `PLANNER_BASE_URL` | none | OpenAI-compatible endpoint, including `/v1`. Setting it makes that backend first. |
 | `PLANNER_MODEL` | `local` | Model for the OpenAI-compatible path. |
-| `PLANNER_API_KEY` | — | Only if your endpoint wants one. Often nothing is needed. |
+| `PLANNER_API_KEY` | none | Only if your endpoint wants one. Often nothing is needed. |
 | `PLANNER_MAX_TOKENS` | `8192` | Reply cap on the OpenAI-compatible path. Reasoning models need headroom. |
 | `PLANNER_TIMEOUT` | `180` | Seconds allowed per backend attempt. |
-| `GROK_CLI_MODEL` | — | Model passed to the `grok` CLI. Unset uses its own default. |
+| `GROK_CLI_MODEL` | none | Model passed to the `grok` CLI. Unset uses its own default. |
 
 ### Using Grok, Codex, Gemini or a local model
 
@@ -374,7 +374,7 @@ constrained to the planner's JSON schema, which the Claude CLI path cannot
 do. Verified against grok 1.0.5.
 
 **Anything else, through a router.** Install and run
-[CLIProxyAPI](https://github.com/router-for-me/CLIProxyAPI) yourself — it is a
+[CLIProxyAPI](https://github.com/router-for-me/CLIProxyAPI) yourself. It is a
 separate MIT-licensed service, not bundled here and not a Python dependency.
 Log it into whichever upstream you want (Claude Code, Codex, Grok, Gemini,
 Kimi all authenticate over their own OAuth), then point this tool at it:
@@ -383,15 +383,15 @@ Kimi all authenticate over their own OAuth), then point this tool at it:
 PLANNER_BASE_URL=http://127.0.0.1:8317/v1
 ```
 
-The same setting reaches a local model instead — LM Studio defaults to
+The same setting reaches a local model instead: LM Studio defaults to
 `http://127.0.0.1:1234/v1`, Ollama to `http://127.0.0.1:11434/v1`. An API key
 is usually unnecessary: an OAuth router authenticates upstream on its own.
 
 Two honest caveats. Only the Claude API and Grok CLI paths *constrain* output
 to the plan schema; the Claude CLI and OpenAI-compatible paths ask for JSON and
 are believed, which is why validation against the device reference is
-load-bearing rather than a safety net. And a weaker model proposes worse tones —
-it cannot hurt the rig, since nothing transmits without your confirmation, but
+load-bearing rather than a safety net. And a weaker model proposes worse tones.
+It cannot hurt the rig, since nothing transmits without your confirmation, but
 it wastes your time.
 
 Run:

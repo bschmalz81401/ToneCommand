@@ -74,7 +74,31 @@ Notable changes to ToneCommand. Dates are UTC.
   process; with a second vendor's CLI in play an xAI binary would have
   received `ANTHROPIC_API_KEY`.
 - The Claude CLI path gained the timeout and empty-output cases it was
-  missing, and now reports the model from its envelope.
+  missing, and reports the model from `modelUsage` rather than a top-level
+  `model` key, which a real envelope does not carry - reading `model` alone
+  reported the alias we asked for.
+- Planner subprocesses get an environment allowlist wide enough to keep
+  working setups working: proxy and CA variables, the CLI's config dir, and
+  the Bedrock and Vertex routes are configuration rather than foreign
+  secrets. Each CLI still sees only its own credentials.
+- `PLANNER_TIMEOUT` is parsed safely and per call. It was an unguarded
+  `int()` at import, so a dotenv-style `PLANNER_TIMEOUT=300  # comment`
+  crashed `import fm9.planner` and took the server down at startup, for
+  users who never plan anything.
+- The OpenAI-compatible path enforces a real wall-clock deadline. urllib's
+  timeout bounds each socket operation, not the attempt, so a router that
+  trickles its body never tripped it and `/api/plan` hung with no timeout
+  failure and no fall-through.
+- `.env` values are unquoted. `PLANNER_API_KEY="sk-local"` was sending
+  `Bearer "sk-local"`, and a quoted base URL failed as an unknown url type.
+- Plan validation runs inside the per-backend try, so a reply that parses
+  as JSON but is shaped wrongly (`{"actions": 42}`) falls through to the
+  next backend instead of aborting the run untyped.
+- An explicit JSON `null` for a non-nullable action field no longer costs
+  the whole plan a 502; nulls are replaced, not merely defaulted when absent.
+- `_api_available()` checks for the key instead of the mere existence of a
+  `.env` file, so a router-only install stops offering a doomed `api`
+  candidate whose auth noise buried the actionable transport failure.
 
 ### Fixed (docs, 2026-08-24)
 - docs/HARDWARE-VALIDATION.md is marked as a preserved 2026-08-16 snapshot
