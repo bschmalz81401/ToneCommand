@@ -132,9 +132,10 @@ def test_the_answering_backend_is_reported_on_the_plan(monkeypatch):
     answered (issue #20)."""
     got = run_with(monkeypatch, ["cli"], {"cli": ok(GOOD, "sonnet")})
     assert got["backend"] == "cli" and got["model"] == "sonnet"
-    assert got["attempts"][-1] == {"backend": "cli", "target": None,
-                                   "model": "sonnet", "failure_class": None,
-                                   "detail": ""}
+    record = got["attempts"][-1]
+    assert record["backend"] == "cli" and record["model"] == "sonnet"
+    assert record["failure_class"] is None and record["detail"] == ""
+    assert "target" in record, "a successful attempt records what it aimed at"
 
 
 # --- subprocess environment ---

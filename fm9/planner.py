@@ -52,6 +52,15 @@ def find_claude_cli() -> str | None:
         key=lambda p: p.parent.parent.parent.name)
     return str(bundles[-1]) if bundles else None
 
+def find_grok_cli() -> str | None:
+    """Locate the grok CLI: PATH first, then the standard install location."""
+    path = shutil.which("grok")
+    if path:
+        return path
+    bundled = Path.home() / ".grok" / "bin" / "grok"
+    return str(bundled) if bundled.exists() else None
+
+
 PLAN_SCHEMA = {
     "type": "object",
     "properties": {
@@ -329,6 +338,93 @@ def _plan_via_cli(prompt: str, device_state: str,
                              target=cli)
 
 
+def grok_model(envelope: dict, fallback: str = "") -> str:
+    """Which model actually answered.
+
+    grok 1.0.5 reports no top-level `model`; the model id is the KEY under
+    `modelUsage`. Verified against the real CLI, not assumed.
+    """
+    usage = envelope.get("modelUsage")
+    if isinstance(usage, dict) and usage:
+        return next(iter(usage))
+    model = envelope.get("model")
+    return model if isinstance(model, str) and model else (fallback or "grok")
+
+
+def parse_grok_envelope(stdout: str) -> dict:
+    """The grok headless envelope, tolerating any preamble around it."""
+    trimmed = stdout.strip()
+    try:
+        return json.loads(trimmed)
+    except (json.JSONDecodeError, ValueError):
+        start, end = trimmed.find("{"), trimmed.rfind("}")
+        if start < 0 or end <= start:
+            raise ValueError(f"no JSON envelope: {trimmed[:200]}")
+        return json.loads(trimmed[start:end + 1])
+
+
+def _plan_via_grok_cli(prompt: str, device_state: str,
+                       param_reference: str) -> tuple[dict, str]:
+    """Grok CLI in headless mode, on the user's existing Grok subscription.
+
+    Reached only by PLANNER_BACKEND=grok or through a router - never
+    auto-selected, for the same reason a `claude` binary on PATH does not
+    outrank a configured endpoint.
+
+    Unlike the Claude CLI path this one CONSTRAINS its output: --json-schema
+    binds the reply to PLAN_SCHEMA (verified on grok 1.0.5 with this exact
+    schema, additionalProperties and required arrays included), so malformed
+    JSON is the model's failure to obey a constraint rather than an
+    instruction. --verbatim keeps the prompt as written; plan mode and
+    subagents are off because a planner wants one answer, not an agent
+    session.
+    """
+    grok = find_grok_cli()
+    if not grok:
+        raise BackendFailure("grok", "unavailable", "grok binary not found")
+    model = _env("GROK_CLI_MODEL")
+    args = [grok,
+            "-p", _full_prompt(prompt, device_state, param_reference),
+            "--json-schema", json.dumps(PLAN_SCHEMA),   # implies output json
+            "--verbatim", "--no-subagents", "--no-plan",
+            "--disable-web-search", "--max-turns", "8"]
+    if model:
+        args += ["-m", model]
+    try:
+        proc = subprocess.run(
+            args, capture_output=True, text=True, timeout=TIMEOUT_S,
+            cwd="/tmp", env=cli_env(("XAI_API_KEY", "GROK_API_KEY")))
+    except subprocess.TimeoutExpired:
+        raise BackendFailure("grok", "timeout",
+                             f"no reply within {TIMEOUT_S}s", grok, model)
+    stderr = (proc.stderr or "").strip()[:200]
+    try:
+        envelope = parse_grok_envelope(proc.stdout)
+    except (ValueError, json.JSONDecodeError) as exc:
+        detail = f"{exc}" + (f" | {stderr}" if stderr else "")
+        if proc.returncode != 0:
+            raise BackendFailure("grok", "backend_error",
+                                 f"exit {proc.returncode}: {stderr or detail}",
+                                 grok, model)
+        raise BackendFailure("grok", "unreadable_output", detail[:300],
+                             grok, model)
+    if envelope.get("type") == "error" or envelope.get("is_error"):
+        message = envelope.get("message") or envelope.get("error") or "no detail"
+        raise BackendFailure("grok", "backend_error", str(message)[:300],
+                             grok, grok_model(envelope, model))
+    text = envelope.get("text") or ""
+    if not text.strip():
+        raise BackendFailure("grok", "empty_output",
+                             f"envelope carried no text (stopReason "
+                             f"{envelope.get('stopReason')!r})",
+                             grok, grok_model(envelope, model))
+    try:
+        return _extract_json(text), grok_model(envelope, model)
+    except ValueError as exc:
+        raise BackendFailure("grok", "unreadable_output", str(exc)[:200],
+                             grok, grok_model(envelope, model))
+
+
 CLIPROXY_DEFAULT_URL = "http://127.0.0.1:8317/v1"   # CLIProxyAPI's default
 
 JSON_ONLY = ("Respond with a single JSON object only. No markdown fences, no "
@@ -480,8 +576,18 @@ def _api_available() -> bool:
 
 _RUNNERS = {
     "openai": _plan_via_openai,
+    "grok": _plan_via_grok_cli,
     "cli": _plan_via_cli,
     "api": _plan_via_api,
+}
+
+# What each backend aims at, for the attempt record. A failure carries its own
+# target; a success has to be resolved the same way the runner resolved it.
+_TARGETS = {
+    "openai": _openai_base_url,
+    "grok": find_grok_cli,
+    "cli": find_claude_cli,
+    "api": lambda: "sdk",
 }
 
 
@@ -552,7 +658,8 @@ def plan(prompt: str, device_state: str, param_reference: str) -> dict:
                                     str(exc)[:300]))
             continue
         plan_obj = _validate(raw)
-        attempts.append(Attempt(name, model=model))
+        resolve = _TARGETS.get(name)
+        attempts.append(Attempt(name, resolve() if resolve else None, model))
         plan_obj["backend"] = name
         plan_obj["model"] = model
         plan_obj["plan_quality"] = _plan_quality(plan_obj)
