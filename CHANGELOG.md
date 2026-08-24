@@ -4,6 +4,28 @@ Notable changes to ToneCommand. Dates are UTC.
 
 ## Unreleased
 
+### Added (2026-08-23 session)
+- tools/apply_template.py: apply any owner-defined 8-scene layout to a
+  preset from a mapping file; mechanics only, conventions stay local.
+- tools/path_audit.py: end-to-end signal-path proof per scene (grid
+  walk, alias-aware, send/return bus, source-block bypass semantics).
+- tools/preset_doctor.py: the full verification ladder as one command.
+- tools/conventions.py + optional local kb/conventions.json: owner
+  conventions (trims, staircase, name vocabularies) enforce only when
+  configured; public tools ship without opinions.
+- DeviceAdapter contract: slot_name / is_slot_empty (by-number reads).
+- Level report: staircase and boost-below-reference checks
+  (convention-gated); scene audit: bypassed-INPUT and severed-Return
+  flags, dual-instance sweeps.
+
+### Fixed (2026-08-23 session)
+- Seven presets carried silent scenes (bypassed Input blocks); the
+  class is now flagged by the audit and proven dead-or-alive by the
+  path audit.
+- Modifier bindings: full revive sequence that survives the device's
+  load-time slot validation (docs/PROTOCOL.md findings 16-17); pedal
+  delay/multitap bindings restored across the owner's presets.
+
 ### Added (empty-slot probe, 2026-08-23)
 - `tools/find_empty_slots.py`: reports which preset slots are free, as
   contiguous ranges, and suggests a target for a from-scratch build.

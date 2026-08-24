@@ -113,6 +113,14 @@ def param_reference() -> str:
                 lines.append(f"{name} = {model}")
     lines.append("\nReverb types selectable via set_type (block=reverb):")
     lines.append(", ".join(str(v) for v in reg.reverb_roster.values()))
+    if reg.dynacabs:
+        lines.append("\nDynaCab cabinets and the real cabs they capture "
+                     "(cab selection is NOT a plannable action yet; use "
+                     "only to describe or recommend, never to propose a "
+                     "set):")
+        for name, rec in reg.dynacabs.items():
+            model = rec.get("model")
+            lines.append(f"{name} = {model}" if model else name)
     return "\n".join(lines)
 
 

@@ -118,6 +118,25 @@ float32), 0x32 grid insert, 0x35 cable draw.
     whole-library read that costs the player nothing - every other preset
     inspection here discards the edit buffer.
 
+16. **Modifier slots are validated at preset load; incomplete revives
+    self-clear.** A modifier slot whose source field is written back on
+    without a full slot rebuild reads healthy immediately, survives a
+    store, and is then found with target AND source zeroed after the
+    preset reloads. Any modifier-write verification must include a
+    reload cycle (store, select away, select back, re-read); immediate
+    read-back races the validation pass and can report state the device
+    is about to discard. (fw 11.00, observed across 13 presets.)
+
+17. **A modifier revive sequence that survives reload.** Rewrite the
+    slot's fields (pids 1-14, excluding the target fields) as continuous
+    writes, then the target effect id, target param id, and source as
+    discrete writes, in that order. Verified across 16 presets, two
+    ear-confirmed. Rewriting fields beyond pid 14 corrupted a slot and
+    triggered the load-time clear. Note: a dead binding can read
+    byte-identical to a live one, so field reads alone can never certify
+    a binding; physical verification (or the finding-16 reload test for
+    structure) is required.
+
 ## Undecoded territory (help welcome)
 
 Cable removal; multi-row diagonal draw encoding; row-1 even-column
