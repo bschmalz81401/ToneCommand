@@ -2,6 +2,24 @@
 
 Notable changes to ToneCommand. Dates are UTC.
 
+## Unreleased
+
+### Fixed (prompt shape, 2026-08-24)
+- The reply shape in the planner prompt is derived from `PLAN_SCHEMA`
+  instead of hand-written. It had drifted to six action kinds while the
+  schema and the validator both accepted eleven, so `add_block`,
+  `bind_pedal`, `rename_preset`, `rename_scene` and `store` were absent
+  from the shape the model was shown - and on the Grok backend the prompt
+  said six while `--json-schema` enforced eleven.
+- `_validate` uses the same derived list, removing the third hand-synced
+  copy. Tests fail if the prompt, the validator and the schema separate
+  again.
+- Measured rather than assumed: this changed no output on
+  claude-sonnet or grok-4.6 for a request needing two of the five missing
+  kinds. Both already emitted them, because the SYSTEM text describes all
+  five in prose. The contradiction was real but recoverable, so this is a
+  correctness and maintenance fix, not a capability gain.
+
 ## 0.3.1 (2026-08-29)
 
 A patch on the day 0.3.0 shipped, because the first person to run it outside
