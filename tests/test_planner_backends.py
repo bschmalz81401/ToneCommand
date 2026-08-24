@@ -135,3 +135,31 @@ def test_the_answering_backend_is_reported_on_the_plan(monkeypatch):
     assert got["attempts"][-1] == {"backend": "cli", "target": None,
                                    "model": "sonnet", "failure_class": None,
                                    "detail": ""}
+
+
+# --- subprocess environment ---
+
+def test_cli_env_is_an_allowlist_not_a_copy():
+    """A planner subprocess gets a working shell environment and its own
+    credentials - not every other secret in the process."""
+    source = {"PATH": "/usr/bin", "HOME": "/Users/x", "TERM": "xterm",
+              "ANTHROPIC_API_KEY": "sk-ant-keep", "XAI_API_KEY": "xai-drop",
+              "DATABASE_URL": "postgres://drop", "AWS_SECRET_ACCESS_KEY": "drop"}
+    env = planner.cli_env(("ANTHROPIC_API_KEY",), source)
+    assert env == {"PATH": "/usr/bin", "HOME": "/Users/x", "TERM": "xterm",
+                   "ANTHROPIC_API_KEY": "sk-ant-keep"}
+
+
+def test_cli_env_gives_each_binary_only_its_own_keys():
+    source = {"PATH": "/usr/bin", "ANTHROPIC_API_KEY": "sk-ant",
+              "XAI_API_KEY": "xai", "GROK_API_KEY": "grok"}
+    claude = planner.cli_env(("ANTHROPIC_API_KEY",), source)
+    grok = planner.cli_env(("XAI_API_KEY", "GROK_API_KEY"), source)
+    assert "XAI_API_KEY" not in claude and "GROK_API_KEY" not in claude
+    assert "ANTHROPIC_API_KEY" not in grok
+    assert grok["XAI_API_KEY"] == "xai"
+
+
+def test_cli_env_skips_empty_values():
+    assert planner.cli_env(("ANTHROPIC_API_KEY",),
+                           {"PATH": "/bin", "ANTHROPIC_API_KEY": ""}) == {"PATH": "/bin"}

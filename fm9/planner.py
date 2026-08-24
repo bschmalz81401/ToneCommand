@@ -225,6 +225,21 @@ def _validate(plan_obj: dict) -> dict:
     return plan_obj
 
 
+def cli_env(binary_keys: tuple[str, ...] = (),
+            source: dict[str, str] | None = None) -> dict[str, str]:
+    """The environment a planner subprocess gets: an allowlist, not a copy.
+
+    A CLI needs a working shell environment and its OWN credentials. Handing
+    it os.environ wholesale also hands it every other secret in the process -
+    an xAI binary receiving ANTHROPIC_API_KEY, for instance, which it has no
+    business seeing. Pass only what the tool in question needs.
+    """
+    src = os.environ if source is None else source
+    allow = ("PATH", "HOME", "USER", "LOGNAME", "SHELL", "LANG", "LC_ALL",
+             "TERM", "TMPDIR") + binary_keys
+    return {k: src[k] for k in allow if src.get(k)}
+
+
 def _cli_error_message(proc: subprocess.CompletedProcess) -> str:
     """Best available error text from a failed CLI run.
 
@@ -274,7 +289,8 @@ def _plan_via_cli(prompt: str, device_state: str,
              "--model", CLI_MODEL],
             capture_output=True, text=True, timeout=TIMEOUT_S,
             cwd="/tmp",
-            env={**os.environ, "CLAUDE_CODE_ENTRYPOINT": "fm9-tone"},
+            env={**cli_env(("ANTHROPIC_API_KEY", "CLAUDE_CODE_OAUTH_TOKEN")),
+                 "CLAUDE_CODE_ENTRYPOINT": "fm9-tone"},
         )
     except subprocess.TimeoutExpired:
         raise BackendFailure("cli", "timeout",
