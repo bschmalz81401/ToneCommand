@@ -205,6 +205,25 @@ float32), 0x32 grid insert, 0x35 cable draw.
     The simulator has modelled exactly this behaviour all along
     (`cable_in_mask &= ~(1 << sr)`); hardware now agrees with it. This
     unblocks the splice half of issue #10.
+25. **Displacing a block costs it nothing.** Clearing a cell removes the
+    block from the grid AND from the status dump, but its settings stay in
+    the preset: re-inserting the same effect id at another cell restores
+    them. Verified on fw 12.00 by comparing the whole parameter array around
+    a move - all 588 values across all four channels byte-identical - with
+    the selected channel and the bypass state preserved too. Only the
+    cables die with the cell (finding 7), and those can now be redrawn and
+    removed at will. This is what makes a splice into a packed row possible:
+    neighbours shift right without losing anyone's tone.
+26. **Splicing into a packed row works, and needs slack to the right.**
+    Cables only ever run to the NEXT column, so nothing can be inserted
+    between two adjacent blocks by cable alone - one of them has to move.
+    Verified end to end on fw 12.00: a GEQ spliced ahead of the amp in a
+    packed lane (INPUT, drive, comp, amp, cab), the amp and cab each shifted
+    one column right with the amp's parameters identical afterwards, the
+    span re-cabled, and the chain continuous. The shift needs a free cell or
+    a shunt to its right to absorb it; shunts cannot be re-inserted
+    (finding 8), so spending one is one-way, and a row with neither must be
+    refused rather than pushing a block off the end of the grid.
 
 ## Undecoded territory (help welcome)
 
