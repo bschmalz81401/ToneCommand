@@ -186,7 +186,7 @@ Designed so it cannot hurt a rig you care about:
 ## Protocol Contributions
 
 Original findings from this project's hardware verification (FM9 firmware
-11.00), offered back to the community projects above:
+11.00 and 12.00), offered back to the community projects above:
 
 1. **FM9 grid insert requires a cell-select first.** The insert frame
    (fn 0x01 sub 0x32) alone lands the block on the device's internal
@@ -240,6 +240,32 @@ Original findings from this project's hardware verification (FM9 firmware
    window) and additionally tracks "undecoded territory": operations no
    hardware session has verified are reported by name rather than
    silently simulated.
+9. **Empty preset slots identify themselves, and leave a ghost.** The FM9
+   writes its own marker, `<EMPTY>`, into an unused slot's name field - so
+   detecting a free slot needs no heuristic. Clearing a slot overwrites
+   only the FIRST 8 BYTES of the 32-byte name field and leaves the rest of
+   the previous name in flash, so name fields must be cut at the first NUL
+   rather than right-stripped. Right-stripping yields the marker glued to
+   the tail of a preset that no longer exists (`'<EMPTY>\0 Phat Time'`).
+   Verified across all 512 slots on fw 12.00.
+10. **fn 0x0D reads any slot by number, out of flash, without loading it.**
+    Passing a preset number instead of the "current" sentinel answers from
+    storage and leaves the loaded preset and the edit buffer untouched, with
+    the requested number echoed back. A 512-slot sweep was byte-identical to
+    a select-and-read sweep of the same unit and took 4.7s instead of ~4.5
+    minutes, with the front panel never moving. Confirmed on fw 11.00 and
+    12.00. Out-of-range numbers are ANSWERED rather than refused - preset
+    512 returns a blank name field - and a blank is not the `<EMPTY>`
+    marker, so unguarded readers call a nonexistent slot occupied.
+11. **A preset can be built from nothing.** An empty slot has NO grid cells
+    at all and no Input or Output blocks - its status dump carries only the
+    ever-present ids 200 and 201 - so there is nothing to splice into and no
+    cable to inherit. Placing blocks into that blank grid works, Input and
+    Output included, each arriving uncabled. Same-row cable draws on row 3
+    then work with the general 6-row formula (previously only rows 4 and 5
+    were confirmed; row 2 needs its own encoding, item 7). Verified on
+    fw 12.00 by building Input -> amp -> cab -> Output across columns 1-4
+    and confirming the result audible by ear.
 
 ## Grounding Data
 
@@ -268,9 +294,12 @@ project's regression runs; nothing below is assumed.
 | Scene, bypass, channel control | Verified | Verified (contributor) | Modeled |
 | Parameter set with read-back verify | Verified | Verified (contributor) | Modeled |
 | Expression pedal (modifier) binding | Verified | Untested | Modeled |
-| Block insert and cable drawing | Verified | Untested | Modeled, incl. known encoding quirks |
+| Block insert and cable drawing | Verified | Verified (contributor) | Modeled, incl. known encoding quirks |
 | Store to whitelisted slots | Verified | Untested | Modeled |
 | Tone library harvest (all 512 slots) | Verified | Untested | Modeled |
+| Slot name read by number, no select | Verified | Verified (contributor) | Modeled |
+| Empty-slot detection (`<EMPTY>` marker) | Untested | Verified (contributor) | Modeled |
+| Preset built from scratch in an empty slot | Untested | Verified (contributor) | Modeled |
 
 Hardware: developed and regression-tested on an FM9 Mk II Turbo. Other
 FM9 variants share the model byte and should behave identically, but are
@@ -321,7 +350,7 @@ Testing is two-tier:
 ```bash
 .venv/bin/pytest tests/                    # simulator + validation suite, no hardware needed (runs in CI on every push)
 .venv/bin/python hardware_regression.py    # 13-check on-hardware regression; run after any firmware update
-.venv/bin/python build_133.py              # example: scripted full preset build (stores to test slot 133)
+.venv/bin/python build_133.py              # example: scripted full preset build (stores to wire slot 133 = FM9-Edit 134)
 ```
 
 Notes:
