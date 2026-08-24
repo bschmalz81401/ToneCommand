@@ -31,6 +31,19 @@ Notable changes to ToneCommand. Dates are UTC.
   Control Change by the shared SendGuard, and the pedal's serial
   control port is opened read-only, since firmware and bootloader
   traffic travels over that kind of channel on an undecoded device.
+### Added (from-scratch builds, 2026-08-24)
+- `tools/build_from_scratch.py`: builds INPUT -> amp -> cab -> OUTPUT into
+  an empty preset slot, placing every block and drawing every cable, then
+  verifying the chain is continuous. Edit buffer only; nothing is stored.
+- `FM9.first_empty_slot()`: finds a free slot, or raises `NoEmptySlot`. The
+  build always lands on a slot the device itself reports as `<EMPTY>` and
+  refuses when there is none - there is no `--force`, because overwriting a
+  preset someone owns should not be one flag away.
+- docs/PROTOCOL.md findings 18-20: an empty slot has no grid cells and no
+  Input/Output blocks (only the ever-present ids 200/201); placing into a
+  blank grid works, arriving uncabled; row-3 same-row cable draws work with
+  the general formula, owner-confirmed audible.
+
 
 ### Added (2026-08-23 session)
 - tools/apply_template.py: apply any owner-defined 8-scene layout to a

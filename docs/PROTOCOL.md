@@ -136,6 +136,30 @@ float32), 0x32 grid insert, 0x35 cable draw.
     byte-identical to a live one, so field reads alone can never certify
     a binding; physical verification (or the finding-16 reload test for
     structure) is required.
+18. **An empty slot is emptier than it looks.** A slot the device names
+    `<EMPTY>` has NO grid cells at all - not even Input or Output - and its
+    status dump carries only effect ids 200 and 201, which are present in
+    every preset and are not in the registry's roster. A hand-built preset
+    has INPUT (37) and OUTPUT (42) as real blocks and shunts filling the
+    row; an empty one has none of it. The grid read still answers normally
+    (746 payload bytes, 47 non-zero against 341 for an occupied preset), so
+    zero cells is a true reading, not a decode failure.
+19. **Placing blocks into a blank grid works, Input and Output included.**
+    Cell-select plus insert lands each block exactly where targeted with no
+    cable inheritance to rely on, because there is nothing to inherit from.
+    Every cell arrives with `cable_in_mask` 0: placed and silent until
+    cabled. This is the easy case of #10 rather than an instance of it -
+    that issue is about splicing into an existing cable, and here there is
+    no cable to splice.
+20. **Row-3 same-row cable draws work with the general formula.** Verified
+    on fw 12.00 by building INPUT -> amp -> cab -> OUTPUT across columns
+    1-4 of display row 3 in an empty preset: each draw set the downstream
+    cell's `cable_in_mask` to 0b1000, matching a hand-built preset on the
+    same row, and the result was **confirmed audible by the owner**.
+    Previously only rows 4 and 5 were verified for same-row runs (row 2 has
+    its own encoding, finding 6). Cables only ever run to the NEXT column,
+    and shunts cannot be inserted (finding 8), so a from-scratch chain must
+    occupy consecutive columns or hop through a unity Volume block.
 
 ## Undecoded territory (help welcome)
 

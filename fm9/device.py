@@ -25,6 +25,10 @@ RESULT_CODES = {
 }
 
 
+class NoEmptySlot(RuntimeError):
+    """Nothing free to build into. A build refuses rather than pick a victim."""
+
+
 class FM9NotFound(RuntimeError):
     pass
 
@@ -234,6 +238,22 @@ class FM9:
             got = self.slot_name(n) or self.slot_name(n)
             if got is not None:
                 yield got
+
+    def first_empty_slot(self, start: int = 0, end: int = 511) -> p.SlotName:
+        """The lowest-numbered empty slot in the range.
+
+        A from-scratch build must land somewhere free, and choosing the slot
+        is not the caller's problem: this finds one or refuses. Raises
+        NoEmptySlot when every slot that answered holds a preset, because
+        overwriting someone's work is never the safe fallback.
+        """
+        for got in self.scan_slots(start, end):
+            if got.empty:
+                return got
+        raise NoEmptySlot(
+            f"no empty presets to build on: every slot in {start}-{end} that "
+            "answered holds a preset. Clear one on the unit (or widen the "
+            "range) and try again; tools/find_empty_slots.py shows the map.")
 
     def require_empty_slot(self, preset: int) -> p.SlotName:
         """Gate for building a preset from scratch into a slot.
