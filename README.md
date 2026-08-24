@@ -334,11 +334,65 @@ python3 -m venv .venv
 Dependencies are declared in [pyproject.toml](pyproject.toml); add
 `".[dev]"` to also get the test tooling.
 
-Natural-language planning uses, in order of preference:
-1. The Claude Code CLI, if installed and signed in (usage bills to your
-   existing Claude subscription), or
-2. The Claude API: put `ANTHROPIC_API_KEY=sk-ant-...` in a `.env` file at
-   the repo root.
+### Planner backends
+
+Natural-language planning tries, in order of preference:
+
+1. **An OpenAI-compatible endpoint**, if `PLANNER_BASE_URL` is set (see
+   below). A configured endpoint wins: choosing one is deliberate, while a
+   `claude` binary on `PATH` is an accident of the machine.
+2. **The Claude Code CLI**, if installed and signed in (usage bills to your
+   existing Claude subscription). The default when nothing is configured -
+   a fresh checkout needs no key.
+3. **The Claude API**: put `ANTHROPIC_API_KEY=sk-ant-...` in a `.env` file
+   at the repo root.
+
+Every plan reports which backend and model answered, and a failed backend
+falls through to the next with its reason recorded.
+
+Settings go in the environment or in `.env` at the repo root, the same file
+the store whitelist uses:
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `PLANNER_BACKEND` | — | Pin one of `openai`, `cli`, `grok`, `api` and disable fallthrough. Required to reach the Grok CLI directly. |
+| `PLANNER_BASE_URL` | — | OpenAI-compatible endpoint, including `/v1`. Setting it makes that backend first. |
+| `PLANNER_MODEL` | `local` | Model for the OpenAI-compatible path. |
+| `PLANNER_API_KEY` | — | Only if your endpoint wants one. Often nothing is needed. |
+| `PLANNER_MAX_TOKENS` | `8192` | Reply cap on the OpenAI-compatible path. Reasoning models need headroom. |
+| `PLANNER_TIMEOUT` | `180` | Seconds allowed per backend attempt. |
+| `GROK_CLI_MODEL` | — | Model passed to the `grok` CLI. Unset uses its own default. |
+
+### Using Grok, Codex, Gemini or a local model
+
+Two routes, and neither ships with this project:
+
+**The Grok CLI directly.** Install xAI's Grok CLI as its own documentation
+directs (`curl -fsSL https://x.ai/cli/install.sh | bash` at the time of
+writing), sign in, then set `PLANNER_BACKEND=grok`. Its replies are
+constrained to the planner's JSON schema, which the Claude CLI path cannot
+do. Verified against grok 1.0.5.
+
+**Anything else, through a router.** Install and run
+[CLIProxyAPI](https://github.com/router-for-me/CLIProxyAPI) yourself — it is a
+separate MIT-licensed service, not bundled here and not a Python dependency.
+Log it into whichever upstream you want (Claude Code, Codex, Grok, Gemini,
+Kimi all authenticate over their own OAuth), then point this tool at it:
+
+```
+PLANNER_BASE_URL=http://127.0.0.1:8317/v1
+```
+
+The same setting reaches a local model instead — LM Studio defaults to
+`http://127.0.0.1:1234/v1`, Ollama to `http://127.0.0.1:11434/v1`. An API key
+is usually unnecessary: an OAuth router authenticates upstream on its own.
+
+Two honest caveats. Only the Claude API and Grok CLI paths *constrain* output
+to the plan schema; the Claude CLI and OpenAI-compatible paths ask for JSON and
+are believed, which is why validation against the device reference is
+load-bearing rather than a safety net. And a weaker model proposes worse tones —
+it cannot hurt the rig, since nothing transmits without your confirmation, but
+it wastes your time.
 
 Run:
 

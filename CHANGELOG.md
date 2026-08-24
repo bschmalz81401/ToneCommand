@@ -45,6 +45,37 @@ Notable changes to ToneCommand. Dates are UTC.
   Control Change by the shared SendGuard, and the pedal's serial
   control port is opened read-only, since firmware and bootloader
   traffic travels over that kind of channel on an undecoded device.
+### Added (planner backends, 2026-08-24)
+- **OpenAI-compatible planner backend** (`PLANNER_BASE_URL`): reaches
+  CLIProxyAPI, and through it Claude Code, Codex, Grok, Gemini or Kimi over
+  their own OAuth logins, plus local models and OpenRouter. No new
+  dependency - urllib, not the openai package. `PLANNER_API_KEY` is
+  optional by design, since an OAuth router needs none.
+- **Grok CLI planner backend** (`PLANNER_BACKEND=grok`), with replies
+  constrained by `--json-schema` to `PLAN_SCHEMA`. Verified on grok 1.0.5.
+  Reached only when pinned or through a router, never auto-selected.
+- **Failure taxonomy and per-attempt record** in `plan()`, implementing
+  @Triumph1701's contract from #7: transport or malformed output is a
+  backend failure and moves on; a reply that parses but says nothing is a
+  planner result and does not fall through; the aggregate error is raised
+  only after every candidate is exhausted, naming each attempt.
+- Every plan now carries `backend`, `model`, `plan_quality` and `attempts`,
+  plus one log line, so backend choice is visible before the settings UI
+  lands.
+- `PLANNER_BACKEND` pins a backend and disables fallthrough; a deliberate
+  choice must not quietly resolve to another vendor's model.
+- README: planner backend table, and instructions for installing and
+  running CLIProxyAPI yourself. It is a separate service, deliberately not
+  vendored and not a dependency.
+
+### Fixed (planner backends, 2026-08-24)
+- Planner subprocesses get an environment allowlist instead of
+  `os.environ`. The `claude` binary had been receiving every secret in the
+  process; with a second vendor's CLI in play an xAI binary would have
+  received `ANTHROPIC_API_KEY`.
+- The Claude CLI path gained the timeout and empty-output cases it was
+  missing, and now reports the model from its envelope.
+
 ### Fixed (docs, 2026-08-24)
 - docs/HARDWARE-VALIDATION.md is marked as a preserved 2026-08-16 snapshot
   rather than current documentation, listing what has been superseded since
