@@ -2,6 +2,24 @@
 
 Notable changes to ToneCommand. Dates are UTC.
 
+## Unreleased
+
+### Fixed (cable removal, 2026-08-24)
+- Cable removal is decoded, and always was: the routing message (sub 0x35)
+  carries an op byte, `ROUTING_DISCONNECT = 0x02` has sat beside
+  `ROUTING_CONNECT` in the codec since the beginning, and nothing had ever
+  sent it. Hardware-verified on fw 12.00 - it clears the mask, is
+  repeatable, is idempotent rather than a toggle, and is SELECTIVE on a
+  cell with several feeds, which is the property issue #10's splice needs.
+  The planned MIDI Monitor sniff session is unnecessary.
+- The simulator's undecoded report no longer flags same-row cable draws on
+  rows 3 and 4 as unverified; both are hardware-confirmed (row 4 in the
+  2026-08-21 session, row 3 while building a preset from scratch). It was
+  telling users to go and confirm something the ledger already recorded.
+- docs/PROTOCOL.md finding 24, with finding 6's "the removal message is
+  UNKNOWN" marked superseded, and cable removal struck from the undecoded
+  territory list.
+
 ## 0.3.1 (2026-08-29)
 
 A patch on the day 0.3.0 shipped, because the first person to run it outside

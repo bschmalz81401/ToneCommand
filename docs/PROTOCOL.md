@@ -71,8 +71,10 @@ float32), 0x32 grid insert, 0x35 cable draw.
    dest_sign 0 / b23 3; even: dest_sign 1 / b23 1), decoded by probe.
    UNDECODED: draws from row 1 of even columns; 2-row-plus diagonals
    (they do not register at all).
-   Cable draw is IDEMPOTENT: re-sending does not remove a cable; the
-   removal message is UNKNOWN.
+   Cable draw is IDEMPOTENT: re-sending does not remove a cable.
+   Removal is a separate op on the same message, see finding 24.
+   SUPERSEDED: "the removal message is UNKNOWN" - it was never unknown,
+   only untested.
 7. **Shunt-replacement inheritance is IN-side only.** Placing a block on
    a shunt keeps the shunt's incoming cable but can DROP the outgoing
    one, silently severing everything downstream. After any insert, read
@@ -186,10 +188,27 @@ float32), 0x32 grid insert, 0x35 cable draw.
     UNTESTED: simultaneous writes from both clients, older editor versions,
     and fw 11.00. This corrects a longstanding note in the README that
     connecting resets the buffer.
+24. **Cable REMOVAL works: same message, op byte 0x02.** sub 0x35 carries
+    an op byte that the codec has always had as `ROUTING_DISCONNECT = 0x02`
+    beside `ROUTING_CONNECT = 0x01`, and nothing had ever sent it - so the
+    ledger recorded removal as unknown and the plan was to sniff FM9-Edit's
+    traffic for it. It needs no sniffing. Verified on fw 12.00 with the
+    identical geometry encoding as the draw:
+    - it clears the cable: destination mask 0b1000 -> 0b0
+    - repeatable: three remove/redraw cycles, clean each time
+    - IDEMPOTENT in its own right: a second removal leaves it off rather
+      than toggling it back on
+    - SELECTIVE, which is the property a splice needs: on a cell fed by two
+      sources (mask 0b11000), removing one feed left 0b1000 - only the
+      named source bit cleared
+    - works for same-row and 1-row-diagonal geometry alike
+    The simulator has modelled exactly this behaviour all along
+    (`cable_in_mask &= ~(1 << sr)`); hardware now agrees with it. This
+    unblocks the splice half of issue #10.
 
 ## Undecoded territory (help welcome)
 
-Cable removal; multi-row diagonal draw encoding; row-1 even-column
+Multi-row diagonal draw encoding; row-1 even-column
 source draws; modifier curve semantics for from-scratch bindings; most
 type-enum ordinal tables (delay, chorus, reverb beyond name lists);
 DSP budget introspection; the precise conditions under which the
