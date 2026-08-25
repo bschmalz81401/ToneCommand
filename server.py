@@ -17,7 +17,7 @@ from pydantic import BaseModel
 
 from fm9.device import FM9, FM9NotFound
 from fm9.registry import Registry
-from fm9 import planner
+from fm9 import ai_settings, planner
 from fm9 import protocol as proto
 
 ROOT = Path(__file__).resolve().parent
@@ -597,6 +597,33 @@ def api_gig_state():
     return {"gig_mode": _gig_mode["on"]}
 
 
+@app.get("/api/ai-settings")
+def api_ai_settings_state():
+    """The saved planner choice, plus what this host can actually run.
+
+    Never returns the API key in any form: `hasKey` says whether one is
+    stored and nothing more.
+    """
+    return {"settings": ai_settings.load().public(),
+            "backends": ai_settings.available_backends(),
+            "defaults": {"cliproxy": ai_settings.CLIPROXY_DEFAULT_URL,
+                         "localLlm": ai_settings.LOCAL_LLM_DEFAULT_URL}}
+
+
+@app.post("/api/ai-settings")
+def api_ai_settings(body: dict):
+    """Save the choice and make it effective for the next prompt.
+
+    A blank or absent apiKey keeps whatever is stored; clearKey removes it.
+    """
+    try:
+        saved = ai_settings.save(body)
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    return {"settings": saved.public(),
+            "backends": ai_settings.available_backends()}
+
+
 @app.post("/api/apply")
 def api_apply(body: ApplyBody):
     results = []
@@ -651,6 +678,9 @@ def api_apply(body: ApplyBody):
 
 
 def main():
+    # a choice made in the UI has to survive a restart, and the planner reads
+    # its configuration from the environment, so push the saved one there
+    ai_settings.apply_to_env()
     import uvicorn
     uvicorn.run(app, host="127.0.0.1", port=8909)
 

@@ -45,6 +45,28 @@ Notable changes to ToneCommand. Dates are UTC.
   Control Change by the shared SendGuard, and the pedal's serial
   control port is opened read-only, since firmware and bootloader
   traffic travels over that kind of channel on an undecoded device.
+### Added (AI settings in the UI, 2026-08-24)
+- `GET`/`POST /api/ai-settings`, following the existing `/api/gig` pair, and
+  an AI SETTINGS panel in the UI: pick Claude Code CLI, Claude API, Grok CLI
+  or an OpenAI-compatible endpoint, with CLIProxyAPI's default prefilled.
+  Takes effect on the next prompt with no restart and no `.env` edit
+  (issue #24).
+- The choice persists in a gitignored `ai_settings.json`, with the
+  environment as the fallback when the file is absent. Precedence, highest
+  first: the file, the environment including `.env`, the built-in default.
+- The API key never reaches the browser. `GET` returns a `hasKey` boolean
+  and nothing more; a blank or absent key on `POST` keeps whatever is
+  stored, and removing one takes an explicit `clearKey`.
+- Only backends the host can actually run are selectable. The rest are
+  shown disabled with the reason, because a dead option that silently falls
+  through to something else is worse than no option.
+- A finished plan says which backend and model produced it, so a
+  wrong-sounding plan is attributable to the model rather than the tool.
+- `fm9/ai_settings.py` deliberately changes no planner behaviour: it writes
+  the saved choice onto the same environment the planner already reads, so
+  a UI selection and a hand-edited `.env` take exactly the same path.
+
+
 ### Added (planner backends, 2026-08-24)
 - **OpenAI-compatible planner backend** (`PLANNER_BASE_URL`): reaches
   CLIProxyAPI, and through it Claude Code, Codex, Grok, Gemini or Kimi over

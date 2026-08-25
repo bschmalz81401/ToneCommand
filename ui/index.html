@@ -139,6 +139,14 @@
   .spin { display: inline-block; animation: spin 0.9s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
   .hint { color: var(--muted); font-size: 0.72rem; margin-top: 10px; letter-spacing: 0.05em; }
+.airow { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.airow select, .airow input {
+  background: #0d0f0d; border: 1px solid #1f2a1f; color: var(--fg);
+  font: inherit; padding: 6px 8px; border-radius: 3px;
+}
+.airow input { flex: 1 1 140px; min-width: 120px; }
+.airow select, .airow button { flex: 0 0 auto; }
+.answered { color: var(--dim); font-size: 11px; letter-spacing: .04em; margin-top: 6px; }
 </style>
 </head>
 <body>
@@ -178,6 +186,19 @@
     <div class="console" data-label="AMP TELEMETRY">
       <div class="knobs" id="knobs"><span class="hint">awaiting link...</span></div>
     </div>
+  </div>
+
+  <div class="console" data-label="AI SETTINGS" style="margin-top:20px">
+    <div class="airow">
+      <select id="aibackend"></select>
+      <input id="aibaseurl" autocomplete="off" spellcheck="false"
+             placeholder="http://127.0.0.1:8317/v1">
+      <input id="aimodel" autocomplete="off" spellcheck="false" placeholder="model">
+      <input id="aikey" type="password" autocomplete="off" placeholder="API key (optional)">
+      <button id="aisave">SAVE</button>
+      <button id="aiclearkey" class="danger">CLEAR KEY</button>
+    </div>
+    <div class="hint">Choose which model plans your prompts. Takes effect on the next prompt, no restart. The key is stored on this machine and never sent to the browser.</div>
   </div>
 
   <div class="console" data-label="LOG" style="margin-top:20px">
@@ -267,7 +288,15 @@ async function engage() {
       return;
     }
     currentPlan = plan;
+    const prevBy = $('planby'); if (prevBy) prevBy.remove();
     $('plansummary').textContent = plan.summary;
+    // half the value of the settings panel: a wrong-sounding plan should be
+    // attributable to the model that produced it, not to the tool
+    if (plan.backend) {
+      $('plansummary').insertAdjacentHTML('afterend',
+        `<div class="answered" id="planby">planned by ${plan.backend}` +
+        `${plan.model ? ' / ' + plan.model : ''}</div>`);
+    }
     $('plancards').innerHTML = plan.actions.map(a => {
       const errs = a.validation_errors || [];
       const warns = a.validation_warnings || [];
@@ -289,6 +318,51 @@ async function engage() {
   } finally {
     $('engage').disabled = false;
     $('engage').textContent = 'ENGAGE';
+  }
+}
+
+let aiDefaults = {};
+
+async function loadAiSettings() {
+  try {
+    const r = await fetch('/api/ai-settings');
+    const d = await r.json();
+    aiDefaults = d.defaults || {};
+    $('aibackend').innerHTML =
+      ['<option value="">auto (let the planner choose)</option>'].concat(
+        d.backends.map(b =>
+          `<option value="${b.backend}"${b.available ? '' : ' disabled'}>` +
+          `${b.label}${b.available ? '' : ' (' + b.why + ')'}</option>`)).join('');
+    $('aibackend').value = d.settings.backend || '';
+    $('aibaseurl').value = d.settings.baseUrl || '';
+    $('aimodel').value = d.settings.model || '';
+    $('aikey').value = '';
+    $('aikey').placeholder = d.settings.hasKey
+      ? 'key stored (blank keeps it)' : 'API key (optional)';
+  } catch (e) {
+    log(`could not read AI settings: ${e.message}`, 'err');
+  }
+}
+
+async function saveAiSettings(extra) {
+  const body = Object.assign({
+    backend: $('aibackend').value,
+    baseUrl: $('aibaseurl').value.trim(),
+    model: $('aimodel').value.trim(),
+    apiKey: $('aikey').value,
+  }, extra || {});
+  try {
+    const r = await fetch('/api/ai-settings', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body),
+    });
+    const d = await r.json();
+    if (d.error) throw new Error(d.error);
+    log(`AI backend: ${d.settings.backend || 'auto'}`
+        + (d.settings.hasKey ? ' (key stored)' : ''), 'ok');
+    await loadAiSettings();
+  } catch (e) {
+    log(`could not save AI settings: ${e.message}`, 'err');
   }
 }
 
@@ -336,6 +410,15 @@ $('prompt').addEventListener('keydown', e => { if (e.key === 'Enter') engage(); 
 $('apply').onclick = apply;
 $('discard').onclick = () => { $('planbox').style.display = 'none'; currentPlan = null; log('plan discarded'); };
 
+$('aisave').onclick = () => saveAiSettings();
+$('aiclearkey').onclick = () => saveAiSettings({clearKey: true});
+$('aibackend').onchange = () => {
+  if ($('aibackend').value === 'openai' && !$('aibaseurl').value) {
+    $('aibaseurl').value = aiDefaults.cliproxy || '';
+  }
+};
+
+loadAiSettings();
 refresh();
 setInterval(refresh, 5000);
 </script>
