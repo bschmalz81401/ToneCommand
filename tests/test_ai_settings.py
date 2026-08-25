@@ -224,3 +224,24 @@ def test_auto_mode_still_honours_a_configured_endpoint(store):
     ai_settings.save({"backend": "", "baseUrl": "http://127.0.0.1:8317/v1"})
     assert os.environ.get("PLANNER_BASE_URL") == "http://127.0.0.1:8317/v1"
     assert planner.candidates()[0] == "openai"
+
+
+def test_optional_controls_say_so_and_the_required_one_does_not(store):
+    """A key an OAuth router never wanted should not send anyone hunting; a
+    key the Claude API genuinely needs must not claim to be optional."""
+    by_name = {b["backend"]: b for b in ai_settings.available_backends()}
+    assert by_name["grok"]["modelOptional"] is True
+    assert by_name["openai"]["modelOptional"] is True
+    assert by_name["openai"]["keyOptional"] is True
+    assert by_name[""]["keyOptional"] is True
+    # the one exception: without this key the backend cannot run at all
+    assert by_name["api"]["keyOptional"] is False
+    assert by_name["api"]["available"] is False
+
+
+def test_the_ui_labels_both_optional_boxes(store):
+    from pathlib import Path
+    ui = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text()
+    assert "model (optional)" in ui
+    assert "API key (optional)" in ui
+    assert "API key (required)" in ui

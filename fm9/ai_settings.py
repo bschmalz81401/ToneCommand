@@ -58,6 +58,12 @@ BACKEND_FIELDS = {
                "key": "PLANNER_API_KEY"},
 }
 
+#: Whether a shown control can be left blank. The Claude API is the one place
+#: a key is genuinely required: without it that backend cannot run at all,
+#: which is why it reports itself unavailable. Everything else is optional,
+#: and saying so stops people hunting for a key an OAuth router never wanted.
+REQUIRED_FIELDS = {"api": ("key",)}
+
 #: Said out loud in the UI, because "no model box" invites the question.
 BACKEND_NOTES = {
     "": "A configured endpoint is tried first, then the Claude CLI, then the "
@@ -247,6 +253,8 @@ def available_backends() -> list[dict]:
             "needsBaseUrl": bool(fields["baseUrl"]),
             "needsModel": bool(fields["model"]),
             "needsKey": bool(fields["key"]),
+            "modelOptional": "model" not in REQUIRED_FIELDS.get(name, ()),
+            "keyOptional": "key" not in REQUIRED_FIELDS.get(name, ()),
             "model": settings.models.get(name or "openai", ""),
             "hasKey": bool(settings.keys.get(name or "openai")),
         })

@@ -71,6 +71,10 @@ Notable changes to ToneCommand. Dates are UTC.
 - Keys and models are stored per backend, so a router key cannot quietly
   become an Anthropic one, and a value cannot steer a backend that never
   reads it.
+- Boxes that can be left blank say so: "model (optional)" and "API key
+  (optional)", so nobody goes hunting for a key an OAuth router never
+  wanted. The Claude API key is labelled required instead, because without
+  it that backend cannot run at all.
 - A finished plan says which backend and model produced it, so a
   wrong-sounding plan is attributable to the model rather than the tool.
 - `fm9/ai_settings.py` deliberately changes no planner behaviour: it writes
