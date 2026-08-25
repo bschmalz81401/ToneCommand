@@ -60,6 +60,17 @@ Notable changes to ToneCommand. Dates are UTC.
 - Only backends the host can actually run are selectable. The rest are
   shown disabled with the reason, because a dead option that silently falls
   through to something else is worse than no option.
+- Only the controls a backend actually reads are shown, for the same reason.
+  The four backends read different variables and two read none at all: the
+  Claude CLI has nothing to configure and its model is a planner constant;
+  the Claude API takes a key (`ANTHROPIC_API_KEY`) and its model is also a
+  constant; the Grok CLI takes a model (`GROK_CLI_MODEL`) and no key; the
+  OpenAI-compatible path takes all three. Auto carries the same three as
+  the OpenAI path, since a configured endpoint is the planner's first
+  candidate.
+- Keys and models are stored per backend, so a router key cannot quietly
+  become an Anthropic one, and a value cannot steer a backend that never
+  reads it.
 - A finished plan says which backend and model produced it, so a
   wrong-sounding plan is attributable to the model rather than the tool.
 - `fm9/ai_settings.py` deliberately changes no planner behaviour: it writes

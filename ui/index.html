@@ -194,11 +194,12 @@
       <input id="aibaseurl" autocomplete="off" spellcheck="false"
              placeholder="http://127.0.0.1:8317/v1">
       <input id="aimodel" autocomplete="off" spellcheck="false" placeholder="model">
-      <input id="aikey" type="password" autocomplete="off" placeholder="API key (optional)">
+      <input id="aikey" type="password" autocomplete="off" placeholder="API key">
       <button id="aisave">SAVE</button>
       <button id="aiclearkey" class="danger">CLEAR KEY</button>
     </div>
-    <div class="hint">Choose which model plans your prompts. Takes effect on the next prompt, no restart. The key is stored on this machine and never sent to the browser.</div>
+    <div class="hint" id="ainote"></div>
+    <div class="hint">Takes effect on the next prompt, no restart. Keys are stored on this machine and never sent to the browser. Only the boxes a backend actually reads are shown.</div>
   </div>
 
   <div class="console" data-label="LOG" style="margin-top:20px">
@@ -322,23 +323,41 @@ async function engage() {
 }
 
 let aiDefaults = {};
+let aiBackends = [];
+
+// Each backend reads different variables, and two of them read none at all.
+// Showing a box a backend ignores is the same sin as offering a backend that
+// silently falls through to another one.
+function aiFields() {
+  const chosen = $('aibackend').value;
+  const b = aiBackends.find(x => x.backend === chosen);
+  const show = (id, on) => { $(id).style.display = on ? '' : 'none'; };
+  show('aibaseurl', !!(b && b.needsBaseUrl));
+  show('aimodel', !!(b && b.needsModel));
+  show('aikey', !!(b && b.needsKey));
+  show('aiclearkey', !!(b && b.needsKey && b.hasKey));
+  $('ainote').textContent = b ? b.note : '';
+  if (b) {
+    $('aimodel').value = b.model || '';
+    $('aikey').value = '';
+    $('aikey').placeholder = b.hasKey ? 'key stored (blank keeps it)' : 'API key';
+  }
+}
 
 async function loadAiSettings() {
   try {
     const r = await fetch('/api/ai-settings');
     const d = await r.json();
     aiDefaults = d.defaults || {};
-    $('aibackend').innerHTML =
-      ['<option value="">auto (let the planner choose)</option>'].concat(
-        d.backends.map(b =>
-          `<option value="${b.backend}"${b.available ? '' : ' disabled'}>` +
-          `${b.label}${b.available ? '' : ' (' + b.why + ')'}</option>`)).join('');
+    aiBackends = d.backends || [];
+    // options come from the server, auto included, so labels and the fields
+    // each backend honours are described in exactly one place
+    $('aibackend').innerHTML = aiBackends.map(b =>
+      `<option value="${b.backend}"${b.available ? '' : ' disabled'}>` +
+      `${b.label}${b.available ? '' : ' (' + b.why + ')'}</option>`).join('');
     $('aibackend').value = d.settings.backend || '';
     $('aibaseurl').value = d.settings.baseUrl || '';
-    $('aimodel').value = d.settings.model || '';
-    $('aikey').value = '';
-    $('aikey').placeholder = d.settings.hasKey
-      ? 'key stored (blank keeps it)' : 'API key (optional)';
+    aiFields();
   } catch (e) {
     log(`could not read AI settings: ${e.message}`, 'err');
   }
@@ -416,6 +435,7 @@ $('aibackend').onchange = () => {
   if ($('aibackend').value === 'openai' && !$('aibaseurl').value) {
     $('aibaseurl').value = aiDefaults.cliproxy || '';
   }
+  aiFields();
 };
 
 loadAiSettings();

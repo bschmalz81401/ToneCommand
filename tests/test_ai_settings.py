@@ -54,14 +54,14 @@ def test_the_endpoint_never_returns_the_key(client):
 def test_a_blank_key_keeps_the_stored_one(store):
     ai_settings.save({"backend": "openai", "apiKey": "sk-keep"})
     assert ai_settings.save({"backend": "openai", "baseUrl": "http://new/v1"}) \
-        .api_key == "sk-keep"
-    assert ai_settings.save({"backend": "openai", "apiKey": ""}).api_key == "sk-keep"
+        .key_for() == "sk-keep"
+    assert ai_settings.save({"backend": "openai", "apiKey": ""}).key_for() == "sk-keep"
 
 
 def test_clearing_takes_an_explicit_flag(store):
     ai_settings.save({"backend": "openai", "apiKey": "sk-drop"})
-    assert ai_settings.save({"backend": "openai", "clearKey": True}).api_key == ""
-    assert ai_settings.load().api_key == ""
+    assert ai_settings.save({"backend": "openai", "clearKey": True}).key_for() == ""
+    assert ai_settings.load().key_for() == ""
 
 
 def test_the_stored_file_is_gitignored():
@@ -88,7 +88,7 @@ def test_the_environment_is_the_fallback_when_no_file_exists(store, monkeypatch)
 def test_a_choice_survives_a_restart(store):
     ai_settings.save({"backend": "grok", "model": "grok-4.6-build"})
     reloaded = ai_settings.load()           # a fresh read, as a new process would
-    assert (reloaded.backend, reloaded.model) == ("grok", "grok-4.6-build")
+    assert (reloaded.backend, reloaded.model_for()) == ("grok", "grok-4.6-build")
 
 
 def test_a_corrupt_file_does_not_break_startup(store, monkeypatch):
@@ -108,8 +108,9 @@ def test_saving_makes_the_choice_effective_for_the_next_prompt(store):
 def test_apply_to_env_clears_what_is_no_longer_set(store, monkeypatch):
     ai_settings.save({"backend": "openai", "baseUrl": "http://h/v1"})
     assert planner._openai_base_url() == "http://h/v1"
-    ai_settings.save({"backend": "cli", "baseUrl": ""})
-    assert planner._openai_base_url() == ""
+    ai_settings.save({"backend": "cli"})
+    assert planner._openai_base_url() == "", \
+        "a base URL must not steer a backend that never reads it"
 
 
 def test_an_unknown_backend_is_refused(store, client):
@@ -129,15 +130,21 @@ def test_unavailable_backends_are_reported_with_a_reason(store, monkeypatch):
     assert by_name["cli"]["available"] is False
 
 
-def test_availability_follows_the_planner_order(store):
+def test_availability_lists_auto_first_then_the_planner_order(store):
+    """Auto is what a fresh install does, so it heads the list and is always
+    available; the rest follow the planner's own candidate order."""
     order = [b["backend"] for b in ai_settings.available_backends()]
-    assert order == list(planner.BACKENDS)
+    assert order == [""] + list(planner.BACKENDS)
+    assert ai_settings.available_backends()[0]["available"] is True
 
 
 def test_a_configured_base_url_makes_the_openai_choice_available(store):
-    assert ai_settings.available_backends()[0]["available"] is False
+    def openai_entry():
+        return [b for b in ai_settings.available_backends()
+                if b["backend"] == "openai"][0]
+    assert openai_entry()["available"] is False
     ai_settings.save({"backend": "", "baseUrl": "http://127.0.0.1:8317/v1"})
-    assert ai_settings.available_backends()[0]["available"] is True
+    assert openai_entry()["available"] is True
 
 
 # --- the UI surfaces which backend answered ---
@@ -154,3 +161,66 @@ def test_no_em_dashes_in_the_ui_or_the_settings_module():
     root = Path(__file__).resolve().parent.parent
     for rel in ("ui/index.html", "fm9/ai_settings.py"):
         assert "—" not in (root / rel).read_text(), f"em dash in {rel}"
+
+
+# --- every control must map to a variable the chosen backend actually reads ---
+
+def test_each_backend_declares_only_the_controls_it_honours(store):
+    by_name = {b["backend"]: b for b in ai_settings.available_backends()}
+    # the Claude CLI reads nothing: its model is a constant in the planner
+    assert (by_name["cli"]["needsBaseUrl"], by_name["cli"]["needsModel"],
+            by_name["cli"]["needsKey"]) == (False, False, False)
+    # the Claude API needs a key; its model is a constant too
+    assert by_name["api"]["needsKey"] and not by_name["api"]["needsModel"]
+    # the Grok CLI takes a model but no key
+    assert by_name["grok"]["needsModel"] and not by_name["grok"]["needsKey"]
+    assert by_name["openai"]["needsBaseUrl"] and by_name["openai"]["needsModel"]
+
+
+def test_the_grok_model_lands_in_the_variable_grok_reads(store):
+    """It reads GROK_CLI_MODEL, not PLANNER_MODEL, so a shared box would have
+    done nothing at all."""
+    import os
+    ai_settings.save({"backend": "grok", "model": "grok-4.6-build"})
+    assert os.environ.get("GROK_CLI_MODEL") == "grok-4.6-build"
+    assert "PLANNER_MODEL" not in os.environ
+
+
+def test_the_claude_api_key_lands_in_anthropic_api_key(store):
+    """The Claude API path reads ANTHROPIC_API_KEY. Storing it as
+    PLANNER_API_KEY left that backend permanently unselectable."""
+    import os
+    ai_settings.save({"backend": "api", "apiKey": "sk-ant-real"})
+    assert os.environ.get("ANTHROPIC_API_KEY") == "sk-ant-real"
+    assert "PLANNER_API_KEY" not in os.environ
+    assert planner._api_available() is True
+    assert [b for b in ai_settings.available_backends()
+            if b["backend"] == "api"][0]["available"] is True
+
+
+def test_keys_are_stored_per_backend_not_shared(store):
+    """An OpenAI router key must never quietly become an Anthropic one."""
+    ai_settings.save({"backend": "openai", "baseUrl": "http://h/v1",
+                      "apiKey": "sk-router"})
+    ai_settings.save({"backend": "api", "apiKey": "sk-ant"})
+    stored = ai_settings.load()
+    assert stored.keys["openai"] == "sk-router"
+    assert stored.keys["api"] == "sk-ant"
+
+
+def test_a_stale_value_cannot_steer_a_backend_that_ignores_it(store):
+    import os
+    ai_settings.save({"backend": "openai", "baseUrl": "http://h/v1",
+                      "model": "llama3.3"})
+    ai_settings.save({"backend": "grok"})
+    assert "PLANNER_BASE_URL" not in os.environ
+    assert "PLANNER_MODEL" not in os.environ
+
+
+def test_auto_mode_still_honours_a_configured_endpoint(store):
+    """In auto the planner tries a configured router first (#21), so a base
+    URL is meaningful there even with no backend pinned."""
+    import os
+    ai_settings.save({"backend": "", "baseUrl": "http://127.0.0.1:8317/v1"})
+    assert os.environ.get("PLANNER_BASE_URL") == "http://127.0.0.1:8317/v1"
+    assert planner.candidates()[0] == "openai"
