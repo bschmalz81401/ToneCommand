@@ -54,12 +54,33 @@ Notable changes to ToneCommand. Dates are UTC.
 - The choice persists in a gitignored `ai_settings.json`, with the
   environment as the fallback when the file is absent. Precedence, highest
   first: the file, the environment including `.env`, the built-in default.
+  Outranking is not erasing: applying a choice now releases the variables it
+  is not setting, restoring whatever the user had, and only ever removes a
+  value this module wrote. Clearing them meant that anyone with
+  `ANTHROPIC_API_KEY` exported lost the Claude API backend the moment the
+  server started, having changed nothing and been told nothing, and that the
+  key was stripped from the environment handed to the `claude` subprocess
+  even though the allowlist passes it deliberately.
+- Only what the user typed into the panel is written to the file. A save
+  used to be seeded from the merged view, so an exported key or a model id
+  from `.env` was copied into `ai_settings.json` on a save that had nothing
+  to do with either. Since the file outranks both, that also turned a later
+  edit of `.env` into a silent no-op, which is a genuinely horrible thing to
+  debug.
 - The API key never reaches the browser. `GET` returns a `hasKey` boolean
   and nothing more; a blank or absent key on `POST` keeps whatever is
   stored, and removing one takes an explicit `clearKey`.
-- Only backends the host can actually run are selectable. The rest are
-  shown disabled with the reason, because a dead option that silently falls
-  through to something else is worse than no option.
+- Backends the host cannot run are shown disabled with the reason, because
+  a dead option that silently falls through to something else is worse than
+  no option. Disabled now means only "you cannot fix this from this panel":
+  a missing `claude` or `grok` binary is a fact about the host, while a
+  missing key or base URL is a box on the same form, so those backends stay
+  selectable and say what they still need. Disabling them was a closed loop
+  (@Triumph1701 on #25): the Claude API option needed a key to be
+  selectable, and needed to be selected for the key box to appear, which
+  made the one backend a new user reaches for first unreachable. Saving a
+  pinned backend that still cannot run is refused in a sentence instead,
+  since pinning disables fallthrough by design.
 - Only the controls a backend actually reads are shown, for the same reason.
   The four backends read different variables and two read none at all: the
   Claude CLI has nothing to configure and its model is a planner constant;
@@ -68,6 +89,15 @@ Notable changes to ToneCommand. Dates are UTC.
   OpenAI-compatible path takes all three. Auto carries the same three as
   the OpenAI path, since a configured endpoint is the planner's first
   candidate.
+- Model strings are treated as untrusted input, because this release invites
+  people to point the tool at endpoints they do not control. The answering
+  model is written with `textContent`, `/models` ids are set as option
+  properties rather than interpolated into a `value=""` attribute, and every
+  string on a plan card (all of it model output) is escaped.
+- Listing Anthropic models is bounded at 10s with one retry, like the grok
+  and endpoint listers. Without a timeout a hung network pinned a threadpool
+  worker for the SDK default plus its retries, and the panel looked frozen
+  rather than slow.
 - Keys and models are stored per backend, so a router key cannot quietly
   become an Anthropic one, and a value cannot steer a backend that never
   reads it.

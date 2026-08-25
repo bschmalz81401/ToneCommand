@@ -11,6 +11,13 @@ by hand. Precedence therefore falls out for free, highest first:
 
     the settings file  >  the environment (including .env)  >  built-in default
 
+Outranking is not erasing. This module only ever removes a variable it put
+there itself, restoring whatever the user had; a setup that worked before the
+panel existed still works after it (@Triumph1701 on #25). For the same reason
+only values the user actually typed into the panel are persisted, never ones
+read out of their shell or .env: the file outranks both, so copying a key or
+a model id into it turns a later edit of .env into a silent no-op.
+
 Each backend reads DIFFERENT variables, and two of them read none at all, so
 settings are stored per backend and the UI is told which fields a backend
 actually uses. Offering a box that silently does nothing is the same sin as
@@ -71,8 +78,8 @@ BACKEND_NOTES = {
         "Claude API. Leave the endpoint blank to use the CLI.",
     "cli": "Runs on your Claude subscription. Model optional; blank uses "
            "the planner default.",
-    "api": "Needs an Anthropic API key. Model optional; blank uses the "
-           "planner default.",
+    "api": "Runs on your Anthropic account, billed per request. Model "
+           "optional; blank uses the planner default.",
     "grok": "Runs on your Grok subscription. Model optional; blank uses the "
             "CLI's own default.",
     "openai": "Any OpenAI-compatible server, including CLIProxyAPI and local "
@@ -129,9 +136,16 @@ def _from_env() -> AiSettings:
     )
 
 
-def load() -> AiSettings:
-    """The stored choice, falling back to the environment then the default."""
-    settings = _from_env()
+def _from_file() -> AiSettings:
+    """Only what is actually stored, with nothing underneath it.
+
+    Anything written BACK to the file has to be seeded from here rather than
+    from the merged view. Seeding a save from load() copies the user's shell
+    and .env values into the file, and since the file outranks both, a later
+    edit of .env silently stops taking effect - which for an API key is a
+    genuinely horrible thing to debug.
+    """
+    settings = AiSettings()
     path = settings_path()
     if not path.exists():
         return settings
@@ -141,17 +155,30 @@ def load() -> AiSettings:
         return settings                   # a corrupt file must not brick startup
     if not isinstance(stored, dict):
         return settings
-    if isinstance(stored.get("backend"), str) and stored["backend"]:
+    if isinstance(stored.get("backend"), str):
         settings.backend = stored["backend"].lower()
-    if isinstance(stored.get("baseUrl"), str) and stored["baseUrl"]:
+    if isinstance(stored.get("baseUrl"), str):
         settings.base_url = stored["baseUrl"]
-    for attr, key in (("models", "models"), ("keys", "keys")):
-        blob = stored.get(key)
+    for attr in ("models", "keys"):
+        blob = stored.get(attr)
         if isinstance(blob, dict):
-            merged = dict(getattr(settings, attr))
-            merged.update({k: v for k, v in blob.items()
-                           if isinstance(v, str) and v})
-            setattr(settings, attr, merged)
+            setattr(settings, attr, {k: v for k, v in blob.items()
+                                     if isinstance(v, str) and v})
+    return settings
+
+
+def load() -> AiSettings:
+    """The stored choice, falling back to the environment then the default."""
+    settings = _from_env()
+    stored = _from_file()
+    if stored.backend:
+        settings.backend = stored.backend
+    if stored.base_url:
+        settings.base_url = stored.base_url
+    for attr in ("models", "keys"):
+        merged = dict(getattr(settings, attr))
+        merged.update(getattr(stored, attr))
+        setattr(settings, attr, merged)
     return settings
 
 
@@ -162,15 +189,21 @@ def save(patch: dict) -> AiSettings:
     one takes an explicit clearKey. Anything else and a user who edits the base
     URL loses their key without being told. Values are stored per backend, so
     an OpenAI router key can never quietly become an Anthropic one.
+
+    Only what the panel sent is persisted. The file is seeded from the file,
+    never from load(), because load() has the shell and .env merged into it
+    and the file outranks both: seeding from the merged view copied an
+    exported ANTHROPIC_API_KEY into ai_settings.json on a save that had
+    nothing to do with keys, and then pinned it there.
     """
-    current = load()
-    backend = str(patch.get("backend", current.backend) or "").lower()
+    stored = _from_file()
+    backend = str(patch.get("backend", stored.backend) or "").lower()
     if backend and backend not in planner.BACKENDS:
         raise ValueError(f"unknown backend {backend!r}; "
                          f"expected one of {', '.join(planner.BACKENDS)}")
     fields = BACKEND_FIELDS.get(backend, {})
     slot = backend or "openai"          # auto shares openai's variables
-    models, keys = dict(current.models), dict(current.keys)
+    models, keys = dict(stored.models), dict(stored.keys)
 
     if fields.get("model"):
         if "model" in patch:
@@ -184,10 +217,11 @@ def save(patch: dict) -> AiSettings:
         elif str(patch.get("apiKey") or ""):
             keys[slot] = str(patch["apiKey"])
 
-    base_url = (str(patch.get("baseUrl", current.base_url) or "")
-                if fields.get("baseUrl") else current.base_url)
+    base_url = (str(patch.get("baseUrl", stored.base_url) or "")
+                if fields.get("baseUrl") else stored.base_url)
     updated = AiSettings(backend=backend, base_url=base_url,
                          models=models, keys=keys)
+    _check_runnable(backend, updated)
     path = settings_path()
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(
@@ -197,13 +231,80 @@ def save(patch: dict) -> AiSettings:
     return updated
 
 
+def missing_setup(backend: str, settings: AiSettings | None = None) -> str:
+    """What a backend still needs before it can run, in the user's words.
+
+    Only about things the panel itself can fix. Whether a binary is on the
+    machine is not in here; that is a fact about the host.
+    """
+    settings = load() if settings is None else settings
+    if backend == "api" and not settings.key_for("api"):
+        return "an Anthropic API key, in the key box"
+    if backend == "openai" and not settings.base_url:
+        return "a base URL, for example " + CLIPROXY_DEFAULT_URL
+    return ""
+
+
+def _check_runnable(backend: str, updated: AiSettings) -> None:
+    """Refuse a pinned backend that cannot answer, at the moment it is chosen.
+
+    A pinned backend disables fallthrough by design (#21), so saving one that
+    is not configured buys a failed prompt later instead of a sentence now.
+    Checked against what will be in effect: the environment underneath, the
+    about-to-be-written file on top. Not against load(), whose file layer is
+    the one being replaced - a key just cleared would still be counted.
+    """
+    if not backend:
+        return
+    env = _from_env()
+    merged = AiSettings(
+        backend=backend, base_url=updated.base_url or env.base_url,
+        models=updated.models,
+        keys={**env.keys, **updated.keys})
+    problem = missing_setup(backend, merged)
+    if problem:
+        raise ValueError(f"{BACKEND_LABELS[backend]} needs {problem}")
+
+
+#: What this module has written into os.environ, and what stood there before
+#: each write. Releasing a variable restores the user's own value instead of
+#: deleting it, which is the difference between outranking and erasing.
+_APPLIED: dict[str, tuple[str, str | None]] = {}
+
+
+def _inject(name: str, value: str) -> None:
+    prior = _APPLIED[name][1] if name in _APPLIED else os.environ.get(name)
+    _APPLIED[name] = (value, prior)
+    os.environ[name] = value
+
+
+def _release(name: str) -> None:
+    """Undo our own write, if it is still ours to undo."""
+    written, prior = _APPLIED.pop(name, (None, None))
+    if written is None or os.environ.get(name) != written:
+        return                  # never ours, or changed by someone else since
+    if prior is None:
+        os.environ.pop(name, None)
+    else:
+        os.environ[name] = prior
+
+
 def apply_to_env(settings: AiSettings | None = None) -> AiSettings:
     """Push the choice onto the planner's existing configuration surface.
 
     This is what makes a UI change take effect on the next prompt with no
     restart, without the planner needing to know this module exists. Only the
-    variables the chosen backend reads are set; the rest are cleared, so a
-    stale value cannot steer a backend it was never meant for.
+    variables the chosen backend reads are set.
+
+    The rest are RELEASED, not cleared. Clearing them meant that a user with
+    ANTHROPIC_API_KEY exported lost the Claude API backend the moment the
+    server started, having changed nothing and been told nothing - and it
+    stripped the key out of the environment handed to the claude CLI
+    subprocess, which the allowlist deliberately passes through
+    (@Triumph1701 on #25). Releasing removes only what this module put there
+    and puts back what it displaced, so a value the panel never set survives
+    untouched and the documented precedence holds: file, then environment,
+    then default.
     """
     settings = load() if settings is None else settings
     wanted = {}
@@ -218,9 +319,9 @@ def apply_to_env(settings: AiSettings | None = None) -> AiSettings:
         wanted[fields["key"]] = settings.key_for()
     for name in _MANAGED:
         if name in wanted:
-            os.environ[name] = wanted[name]
+            _inject(name, wanted[name])
         else:
-            os.environ.pop(name, None)
+            _release(name)
     return settings
 
 
@@ -261,7 +362,12 @@ def _anthropic_models() -> tuple[list[str], str]:
         return [planner.MODEL], "the planner default; add a key to list models"
     try:
         import anthropic
-        listing = anthropic.Anthropic(api_key=key).models.list(limit=20)
+        # Bounded like the other two listers (20s for grok, 10s here). The
+        # SDK's default is generous and it retries on top of it, so a hung
+        # network otherwise pins a threadpool worker and the panel looks
+        # frozen rather than slow.
+        client = anthropic.Anthropic(api_key=key, timeout=10.0, max_retries=1)
+        listing = client.models.list(limit=20)
         found = [m.id for m in listing.data if getattr(m, "id", None)]
     except Exception as exc:                    # offline, bad key, old SDK
         return ([planner.MODEL],
@@ -325,17 +431,21 @@ def available_backends() -> list[dict]:
     no option, and so is a control that silently does nothing.
     """
     settings = load()
+    # Disabled means "you cannot fix this from this panel". A missing binary
+    # is a fact about the host. A missing key or base URL is a box on this
+    # very form, and disabling the option that reveals the box is a closed
+    # loop: you need the key to pick Claude API, and you need Claude API
+    # picked to enter the key (@Triumph1701 on #25). Those are selectable and
+    # say what they still need; save() refuses if it is still missing.
     usable = {
-        "openai": bool(settings.base_url),
+        "openai": True,
         "cli": planner.find_claude_cli() is not None,
         "grok": planner.find_grok_cli() is not None,
-        "api": bool(settings.keys.get("api")),
+        "api": True,
     }
     reasons = {
-        "openai": "set a base URL to enable",
         "cli": "the claude binary is not on this machine",
         "grok": "the grok binary is not on this machine",
-        "api": "needs an Anthropic API key",
     }
     out = []
     # "" (auto) is listed first and is always available: it is the behaviour a
@@ -348,6 +458,7 @@ def available_backends() -> list[dict]:
             "available": usable.get(name, True),
             "why": "" if usable.get(name, True) else reasons[name],
             "note": BACKEND_NOTES[name],
+            "needs": missing_setup(name, settings),
             "needsBaseUrl": bool(fields["baseUrl"]),
             "needsModel": bool(fields["model"]),
             "needsKey": bool(fields["key"]),
