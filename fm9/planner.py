@@ -262,12 +262,55 @@ def timeout_s() -> int:
 
 
 
+def _json_objects(text: str):
+    """Yield each balanced {...} span in order, ignoring braces inside strings."""
+    depth, start, in_string, escaped = 0, None, False, False
+    for i, ch in enumerate(text):
+        if in_string:
+            if escaped:
+                escaped = False
+            elif ch == "\\":
+                escaped = True
+            elif ch == '"':
+                in_string = False
+            continue
+        if ch == '"':
+            in_string = True
+        elif ch == "{":
+            if depth == 0:
+                start = i
+            depth += 1
+        elif ch == "}" and depth:
+            depth -= 1
+            if depth == 0 and start is not None:
+                yield text[start:i + 1]
+
+
 def _extract_json(text: str) -> dict:
-    start = text.find("{")
-    end = text.rfind("}")
-    if start == -1 or end == -1:
+    """The plan object out of whatever the model said around it.
+
+    Slicing from the first brace to the last one fails on real local-model
+    output: a reasoning model will draft one object and then emit its final
+    answer, and that span covers both ("Extra data: line 2 column 1",
+    observed against LM Studio on 2026-08-25). So scan for BALANCED objects
+    and prefer the last plan-shaped one, since the answer comes last.
+    """
+    candidates = list(_json_objects(text))
+    if not candidates:
         raise ValueError(f"no JSON object in model output: {text[:200]}")
-    return json.loads(text[start:end + 1])
+    fallback = None
+    for chunk in reversed(candidates):
+        try:
+            obj = json.loads(chunk)
+        except (json.JSONDecodeError, ValueError):
+            continue
+        if isinstance(obj, dict) and ("actions" in obj or "summary" in obj):
+            return obj
+        if fallback is None and isinstance(obj, dict):
+            fallback = obj
+    if fallback is not None:
+        return fallback
+    raise ValueError(f"no parseable JSON object in model output: {text[:200]}")
 
 
 def _validate(plan_obj: dict) -> dict:

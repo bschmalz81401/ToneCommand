@@ -171,3 +171,41 @@ def test_a_configured_but_dead_router_fails_fast_and_names_itself(monkeypatch):
         ask(monkeypatch, dead)
     assert err.value.failure_class == "transport"
     assert err.value.target == dead
+
+
+# --- what real local models actually emit ---
+
+def test_two_json_objects_take_the_last_plan_shaped_one(monkeypatch):
+    """A reasoning model drafts an object and then emits its final answer.
+    Slicing first-brace-to-last-brace spans both and dies with
+    "Extra data: line 2 column 1" - observed against LM Studio, 2026-08-25."""
+    draft = json.dumps({"summary": "draft", "actions": []})
+    final = json.dumps({"summary": "final", "actions": [
+        {"kind": "set_param", "block": "amp", "param": "DISTORT_DRIVE",
+         "value": 5.4}]})
+    with Stub(body=reply(f"{draft}\n{final}")) as stub:
+        got, _ = ask(monkeypatch, stub.url)
+    assert got["summary"] == "final"
+    assert got["actions"][0]["value"] == 5.4
+
+
+def test_thinking_out_loud_with_braces_before_the_answer(monkeypatch):
+    body = reply('Let me consider {maybe: 1} and settle on\n'
+                 + json.dumps({"summary": "ok", "actions": []}))
+    with Stub(body=body) as stub:
+        got, _ = ask(monkeypatch, stub.url)
+    assert got["summary"] == "ok"
+
+
+def test_braces_inside_strings_do_not_confuse_the_scan(monkeypatch):
+    payload = {"summary": "mind the { and } here", "actions": []}
+    with Stub(body=reply(json.dumps(payload))) as stub:
+        got, _ = ask(monkeypatch, stub.url)
+    assert got["summary"] == "mind the { and } here"
+
+
+def test_a_reply_with_only_unparseable_braces_is_still_refused(monkeypatch):
+    with Stub(body=reply("{not: valid json at all")) as stub:
+        with pytest.raises(planner.BackendFailure) as err:
+            ask(monkeypatch, stub.url)
+    assert err.value.failure_class == "unreadable_output"

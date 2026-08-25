@@ -89,6 +89,12 @@ Notable changes to ToneCommand. Dates are UTC.
   timeout bounds each socket operation, not the attempt, so a router that
   trickles its body never tripped it and `/api/plan` hung with no timeout
   failure and no fall-through.
+- JSON extraction scans for BALANCED objects and prefers the last
+  plan-shaped one. Slicing from the first brace to the last one broke on
+  real local-model output: a reasoning model drafts an object and then
+  emits its final answer, and that span covers both, failing with "Extra
+  data: line 2 column 1". Found by pointing the OpenAI-compatible backend
+  at LM Studio, which is what issue #7 asked for.
 - `.env` values are unquoted. `PLANNER_API_KEY="sk-local"` was sending
   `Bearer "sk-local"`, and a quoted base URL failed as an unknown url type.
 - Plan validation runs inside the per-backend try, so a reply that parses
