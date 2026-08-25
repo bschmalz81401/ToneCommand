@@ -502,7 +502,11 @@ class _SimOut:
             hit = SimFM9Core._cable_lut().get(tuple(body[15:18]))
             if hit:
                 sr, sc, dr = hit
-                verified = (dr == sr and sr in (2, 5)) or abs(dr - sr) == 1
+                # same-row runs confirmed on hardware for rows 2-5: row 2 by
+                # its own encoding (finding 6), rows 4 and 5 in the 2026-08-21
+                # session, row 3 while building a preset from scratch
+                # (finding 20). Rows 1 and 6 are untried.
+                verified = (dr == sr and sr in (2, 3, 4, 5)) or abs(dr - sr) == 1
                 if not verified:
                     self.core.undecoded.add(
                         f"cable r{sr}c{sc}->r{dr}c{sc + 1}: geometry not "

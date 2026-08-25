@@ -297,9 +297,9 @@ project's regression runs; nothing below is assumed.
 | Block insert and cable drawing | Verified | Verified (contributor) | Modeled, incl. known encoding quirks |
 | Store to whitelisted slots | Verified | Untested | Modeled |
 | Tone library harvest (all 512 slots) | Verified | Untested | Modeled |
-| Slot name read by number, no select | Verified | Verified (contributor) | Modeled |
-| Empty-slot detection (`<EMPTY>` marker) | Untested | Verified (contributor) | Modeled |
-| Preset built from scratch in an empty slot | Untested | Verified (contributor) | Modeled |
+| Slot name read by number, no select | Verified | Verified | Modeled |
+| Empty-slot detection (`<EMPTY>` marker) | Untested | Verified | Modeled |
+| Preset built from scratch in an empty slot | Untested | Verified | Modeled |
 
 Hardware: developed and regression-tested on an FM9 Mk II Turbo. Other
 FM9 variants share the model byte and should behave identically, but are

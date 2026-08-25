@@ -54,7 +54,7 @@ def test_it_picks_an_empty_slot_by_itself(sim, capsys):
     assert main([]) == 0
     out = capsys.readouterr().out
     assert "target: slot 386" in out and "'<EMPTY>'" in out
-    assert "chain is continuous" in out
+    assert "live signal path confirmed" in out
 
 
 def test_it_refuses_when_the_range_holds_no_empty_slot(sim, capsys):
@@ -99,13 +99,61 @@ def test_every_block_lands_and_the_chain_is_continuous():
             assert cells[col].cable_in_mask != 0, f"col {col} has no input cable"
 
 
-def test_the_build_stores_nothing(sim, capsys):
-    """The slot's flash name must still read <EMPTY> afterwards."""
-    main([])
+def test_the_build_stores_nothing(sim, capsys, monkeypatch):
+    """Watch the instance the tool actually uses: asserting against a fresh
+    SimFM9 would pass even if the tool called store_preset."""
+    from fm9.device import FM9
+    calls = []
+    monkeypatch.setattr(FM9, "store_preset",
+                        lambda self, slot: calls.append(slot))
+    assert main([]) == 0
+    assert calls == [], f"the build must not persist anything, stored: {calls}"
     with dev() as d:
         assert d.slot_name(386).name == "<EMPTY>"
-        assert d.is_slot_empty(386) is True
     assert "nothing stored" in capsys.readouterr().out
+
+
+def test_it_refuses_when_the_select_lands_somewhere_else(sim, capsys, monkeypatch):
+    """The select decides which preset every later insert edits. If it is
+    dropped, the tool would edit the owner's loaded preset and still report
+    success, because verification reads back the buffer it just wrote."""
+    from fm9.device import FM9
+    inserts = []
+    monkeypatch.setattr(FM9, "select_preset", lambda self, n: (n + 1, "somewhere else"))
+    monkeypatch.setattr(FM9, "place_block",
+                        lambda self, r, c, e: inserts.append((r, c, e)))
+    assert main([]) == 1
+    assert inserts == [], "nothing may be edited once the slot is in doubt"
+    assert "refusing to build" in capsys.readouterr().out
+
+
+def test_a_present_but_stranded_block_is_not_a_live_path():
+    """Membership is not a path. A block on the cursor cell at row 1 col 1 is
+    present and un-starved while being nowhere near the signal - the class of
+    silent preset this project has been bitten by repeatedly."""
+    from tools.path_audit import scene_alive
+    reg = Registry()
+    with dev() as d:
+        d.select_preset(386)
+        for col, (eid, _) in enumerate(CHAIN, start=1):
+            d.place_block(ROW, col, eid)
+        for col in range(1, len(CHAIN)):
+            d.connect_cells(ROW, col, ROW)
+        cells = d.read_grid() or []
+        blocks = {b.effect_id: b for b in d.status_dump() or []}
+        alive, why = scene_alive(cells, blocks, reg)
+        assert alive, f"the built chain should be alive: {why}"
+
+        # now strand the input: present, un-starved, off the path
+        d.place_block(ROW, 1, 0)
+        d.place_block(1, 1, 37)
+        cells = d.read_grid() or []
+        blocks = {b.effect_id: b for b in d.status_dump() or []}
+        present = {c.effect_id for c in cells}
+        assert all(eid in present for eid, _ in CHAIN), \
+            "membership alone still looks fine, which is the trap"
+        alive, why = scene_alive(cells, blocks, reg)
+        assert not alive, "a stranded input must not read as a live path"
 
 
 def test_the_tool_prints_the_editor_number_too(sim, capsys):
@@ -114,3 +162,17 @@ def test_the_tool_prints_the_editor_number_too(sim, capsys):
     assert main([]) == 0
     out = capsys.readouterr().out
     assert "386 (FM9-Edit 387)" in out
+
+
+def test_the_build_leaves_no_undecoded_geometry_on_the_sim():
+    """This PR declares row-3 same-row draws hardware-verified (finding 20),
+    so the simulator must stop flagging them. Otherwise a sim run of the tool
+    reports geometry as unverified that the ledger already records."""
+    with dev() as d:
+        d.select_preset(386)
+        for col, (eid, _) in enumerate(CHAIN, start=1):
+            d.place_block(ROW, col, eid)
+        for col in range(1, len(CHAIN)):
+            d.connect_cells(ROW, col, ROW)
+        cable_notes = [u for u in d.sim_core.undecoded if "cable" in u]
+        assert cable_notes == [], f"unexpected undecoded report: {cable_notes}"

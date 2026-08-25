@@ -257,12 +257,15 @@ class FM9:
         Yields SlotName per answering slot, skipping any that stays silent
         after one retry. Read-only by construction: no select, no write.
         """
-        _check_preset_range(start)
-        _check_preset_range(end)
-        for n in range(start, end + 1):
-            got = self.slot_name(n) or self.slot_name(n)
-            if got is not None:
-                yield got
+        _check_preset_range(start)      # eagerly: a generator body would not
+        _check_preset_range(end)        # raise until the first iteration
+
+        def walk():
+            for n in range(start, end + 1):
+                got = self.slot_name(n) or self.slot_name(n)
+                if got is not None:
+                    yield got
+        return walk()
 
     def first_empty_slot(self, start: int = 0, end: int = 511) -> p.SlotName:
         """The lowest-numbered empty slot in the range.
@@ -291,7 +294,8 @@ class FM9:
         """
         got = self.slot_name(preset)
         if got is None:
-            raise FM9NotFound(f"preset {preset} did not answer a name query")
+            raise FM9NotFound(
+                f"preset {p.slot_label(preset)} did not answer a name query")
         if not got.empty:
             raise ValueError(
                 f"preset {p.slot_label(preset)} holds {got.name!r}; building "
@@ -435,13 +439,15 @@ class FM9:
             raise PermissionError(
                 "storing is disabled: no store slots configured. Set "
                 "TONECOMMAND_STORE_SLOTS (env or .env), e.g. "
-                "TONECOMMAND_STORE_SLOTS=133-148, choosing slots on YOUR unit "
-                "that are safe to overwrite")
+                "TONECOMMAND_STORE_SLOTS=133-148 (WIRE numbers, which FM9-Edit "
+                "shows as 134-149), choosing slots on YOUR unit that are safe "
+                "to overwrite")
         if slot not in allowed:
+            lo, hi = sorted(allowed)[0], sorted(allowed)[-1]
             raise PermissionError(
-                f"store to slot {slot} refused: configured store slots are "
-                f"{sorted(allowed)[0]}-{sorted(allowed)[-1]}"
-                if allowed else f"store to slot {slot} refused")
+                f"store to slot {p.slot_label(slot)} refused: configured store "
+                f"slots are {lo}-{hi} (FM9-Edit {p.editor_number(lo)}-"
+                f"{p.editor_number(hi)})")
         self._drain()
         self._send(p.build_store_preset(slot))
         time.sleep(1.5)

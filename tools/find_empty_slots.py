@@ -52,7 +52,13 @@ def main(start: int, end: int) -> int:
         dev = FM9(reg)
     with dev:
         held = dev.current_preset()
-        found = list(dev.scan_slots(start, end))
+        try:
+            found = list(dev.scan_slots(start, end))
+        except ValueError as exc:
+            # `find_empty_slots.py 1 512` is the wire-versus-editor confusion
+            # this tool exists to prevent; it should say so, not traceback.
+            print(f"refusing to scan: {exc}")
+            return 2
         empty = [s for s in found if s.empty]
         silent = (end - start + 1) - len(found)
 
