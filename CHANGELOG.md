@@ -89,6 +89,13 @@ Notable changes to ToneCommand. Dates are UTC.
   timeout bounds each socket operation, not the attempt, so a router that
   trickles its body never tripped it and `/api/plan` hung with no timeout
   failure and no fall-through.
+- The two Claude models are configurable instead of hard-coded:
+  `CLAUDE_CLI_MODEL` and `CLAUDE_API_MODEL`, defaulting to the previous
+  constants (`sonnet` and `claude-opus-5`). The CLI has always taken
+  `--model` and the SDK a model id, so neither needed to be fixed, and
+  wanting Opus on the CLI path is a reasonable thing to want. Read per call,
+  so a change does not wait for a restart, and passed through the subprocess
+  allowlist.
 - JSON extraction scans for BALANCED objects and prefers the last
   plan-shaped one. Slicing from the first brace to the last one broke on
   real local-model output: a reasoning model drafts an object and then

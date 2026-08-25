@@ -38,8 +38,8 @@ from pathlib import Path
 
 log = logging.getLogger(__name__)
 
-MODEL = "claude-opus-5"   # API backend model
-CLI_MODEL = "sonnet"      # CLI backend model: light on subscription usage
+MODEL = "claude-opus-5"   # API backend default
+CLI_MODEL = "sonnet"      # CLI backend default: light on subscription usage
 
 
 def find_claude_cli() -> str | None:
@@ -261,6 +261,18 @@ def timeout_s() -> int:
     return _env_int("PLANNER_TIMEOUT", 180)
 
 
+def cli_model() -> str:
+    """Model for the Claude CLI backend. The CLI takes --model, so this is
+    configurable rather than fixed; read per call so a change does not wait
+    for a restart."""
+    return _env("CLAUDE_CLI_MODEL", CLI_MODEL)
+
+
+def api_model() -> str:
+    """Model for the Claude API backend."""
+    return _env("CLAUDE_API_MODEL", MODEL)
+
+
 
 def _json_objects(text: str):
     """Yield each balanced {...} span in order, ignoring braces inside strings."""
@@ -360,6 +372,7 @@ NETWORK_ENV_KEYS = ("HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY",
 CLAUDE_ENV_KEYS = NETWORK_ENV_KEYS + (
     "ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_BASE_URL",
     "CLAUDE_CODE_OAUTH_TOKEN", "CLAUDE_CONFIG_DIR", "XDG_CONFIG_HOME",
+    "CLAUDE_CLI_MODEL", "CLAUDE_API_MODEL",
     "CLAUDE_CODE_USE_BEDROCK", "CLAUDE_CODE_USE_VERTEX",
     "AWS_REGION", "AWS_DEFAULT_REGION", "AWS_PROFILE",
     "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_SESSION_TOKEN",
@@ -437,7 +450,7 @@ def _full_prompt(prompt: str, device_state: str, param_reference: str) -> str:
     )
 
 
-def cli_envelope_model(envelope: dict, fallback: str = CLI_MODEL) -> str:
+def cli_envelope_model(envelope: dict, fallback: str = "") -> str:
     """Which model the claude CLI actually used.
 
     Verified against a real envelope: there is no top-level `model` key, and
@@ -449,7 +462,7 @@ def cli_envelope_model(envelope: dict, fallback: str = CLI_MODEL) -> str:
     if isinstance(usage, dict) and usage:
         return next(iter(usage))
     model = envelope.get("model")
-    return model if isinstance(model, str) and model else fallback
+    return model if isinstance(model, str) and model else (fallback or cli_model())
 
 
 def _plan_via_cli(prompt: str, device_state: str,
@@ -461,7 +474,7 @@ def _plan_via_cli(prompt: str, device_state: str,
     try:
         proc = subprocess.run(
             [cli, "-p", full_prompt, "--output-format", "json",
-             "--model", CLI_MODEL],
+             "--model", cli_model()],
             capture_output=True, text=True, timeout=timeout_s(),
             cwd="/tmp",
             env={**cli_env(CLAUDE_ENV_KEYS),
@@ -718,7 +731,7 @@ def _plan_via_api(prompt: str, device_state: str,
             os.environ["ANTHROPIC_API_KEY"] = key
     client = anthropic.Anthropic()
     response = client.messages.create(
-        model=MODEL,
+        model=api_model(),
         max_tokens=2048,
         system=[
             {"type": "text", "text": SYSTEM, "cache_control": {"type": "ephemeral"}},
@@ -734,17 +747,17 @@ def _plan_via_api(prompt: str, device_state: str,
     if response.stop_reason == "refusal":
         return ({"summary": "Request declined by the model.", "actions": [],
                  "clarification": "The model declined this request. "
-                                  "Try rephrasing."}, MODEL)
+                                  "Try rephrasing."}, api_model())
     try:
         text = next(b.text for b in response.content if b.type == "text")
     except StopIteration:
         raise BackendFailure("api", "empty_output", "no text block in reply",
-                             target="sdk", model=MODEL)
+                             target="sdk", model=api_model())
     try:
-        return json.loads(text), getattr(response, "model", MODEL)
+        return json.loads(text), getattr(response, "model", api_model())
     except (json.JSONDecodeError, ValueError):
         raise BackendFailure("api", "unreadable_output", text.strip()[:200],
-                             target="sdk", model=MODEL)
+                             target="sdk", model=api_model())
 
 
 def _api_available() -> bool:

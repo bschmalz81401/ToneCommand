@@ -291,3 +291,33 @@ def test_quotes_and_a_trailing_comment_together(isolated_env):
                             'PLANNER_BASE_URL="http://127.0.0.1:8317/v1"  # mine\n')
     assert planner.timeout_s() == 240
     assert planner._openai_base_url() == "http://127.0.0.1:8317/v1"
+
+
+def test_the_claude_models_are_configurable(isolated_env):
+    """Both were hard-coded constants. The CLI takes --model and the SDK takes
+    a model id, so neither had to be fixed."""
+    assert planner.cli_model() == planner.CLI_MODEL
+    assert planner.api_model() == planner.MODEL
+    isolated_env.write_text("CLAUDE_CLI_MODEL=opus\n"
+                            "CLAUDE_API_MODEL=claude-sonnet-5\n")
+    assert planner.cli_model() == "opus"
+    assert planner.api_model() == "claude-sonnet-5"
+
+
+def test_the_chosen_cli_model_reaches_the_subprocess(isolated_env, monkeypatch):
+    isolated_env.write_text("CLAUDE_CLI_MODEL=opus\n")
+    seen = {}
+
+    def fake_run(args, **kwargs):
+        seen["argv"] = args
+        seen["env"] = kwargs.get("env") or {}
+        raise planner.subprocess.TimeoutExpired(args, 1)
+
+    monkeypatch.setattr(planner, "find_claude_cli", lambda: "/bin/claude")
+    monkeypatch.setattr(planner.subprocess, "run", fake_run)
+    with pytest.raises(planner.BackendFailure):
+        planner._plan_via_cli("p", "s", "r")
+    argv = seen["argv"]
+    assert argv[argv.index("--model") + 1] == "opus"
+    assert "CLAUDE_CLI_MODEL" in planner.CLAUDE_ENV_KEYS, \
+        "the subprocess allowlist must pass the model choice through"
