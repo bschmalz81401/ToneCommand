@@ -71,10 +71,12 @@ Notable changes to ToneCommand. Dates are UTC.
 - Keys and models are stored per backend, so a router key cannot quietly
   become an Anthropic one, and a value cannot steer a backend that never
   reads it.
-- Boxes that can be left blank say so: "model (optional)" and "API key
-  (optional)", so nobody goes hunting for a key an OAuth router never
-  wanted. The Claude API key is labelled required instead, because without
-  it that backend cannot run at all.
+- Boxes that can be left blank say so. Model boxes read "model (optional)",
+  since every backend has a default. The key box states the whole rule,
+  "API key (required for Claude API but optional for others)", rather than
+  a per-backend word: the Claude API cannot run without one, an OAuth
+  router wants none, and nobody should go hunting for a credential nothing
+  asked for.
 - Every backend now has a model box, since the two Claude models became
   configurable, and each box offers suggestions from whatever can actually
   answer: `grok models` for the Grok CLI, `GET /models` for an

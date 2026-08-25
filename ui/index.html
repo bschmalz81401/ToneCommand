@@ -145,6 +145,7 @@
   font: inherit; padding: 6px 8px; border-radius: 3px;
 }
 .airow input { flex: 1 1 140px; min-width: 120px; }
+.airow #aikey { flex: 3 1 340px; }
 .airow select, .airow button { flex: 0 0 auto; }
 .answered { color: var(--dim); font-size: 11px; letter-spacing: .04em; margin-top: 6px; }
 </style>
@@ -196,11 +197,13 @@
       <input id="aimodel" autocomplete="off" spellcheck="false"
              list="aimodels" placeholder="model (optional)">
       <datalist id="aimodels"></datalist>
-      <input id="aikey" type="password" autocomplete="off" placeholder="API key (optional)">
+      <input id="aikey" type="password" autocomplete="off"
+             placeholder="API key (required for Claude API but optional for others)">
       <button id="aisave">SAVE</button>
       <button id="aiclearkey" class="danger">CLEAR KEY</button>
     </div>
     <div class="hint" id="ainote"></div>
+    <div class="hint" id="aisrc"></div>
     <div class="hint">Takes effect on the next prompt, no restart. Keys are stored on this machine and never sent to the browser. Only the boxes a backend actually reads are shown.</div>
   </div>
 
@@ -344,10 +347,11 @@ function aiFields() {
     loadAiModels(b.backend);
     $('aimodel').placeholder = b.modelOptional ? 'model (optional)' : 'model';
     $('aikey').value = '';
-    // say which boxes can be left blank: an OAuth router wants no key at all,
-    // and hunting for one you do not need is a waste of an afternoon
+    // Spell out the whole rule rather than a per-backend word: the Claude API
+    // cannot run without a key, and an OAuth router wants none at all, so
+    // hunting for one you do not need is a waste of an afternoon.
     $('aikey').placeholder = b.hasKey ? 'key stored (blank keeps it)'
-      : (b.keyOptional ? 'API key (optional)' : 'API key (required)');
+      : 'API key (required for Claude API but optional for others)';
   }
 }
 
@@ -373,14 +377,17 @@ async function loadAiSettings() {
 // Pick or type: the list is a convenience, never a constraint.
 async function loadAiModels(backend) {
   $('aimodels').innerHTML = '';
+  $('aisrc').textContent = '';
   try {
     const d = await (await fetch(
       `/api/ai-settings/models?backend=${encodeURIComponent(backend)}`)).json();
+    // the listing can be slow (a subprocess, or a request over the network),
+    // so drop the answer if the user has moved on: appending it would stack
+    // one backend's source line under another's
+    if ($('aibackend').value !== backend) return;
     $('aimodels').innerHTML = (d.models || [])
       .map(m => `<option value="${m}"></option>`).join('');
-    if (d.source) {
-      $('ainote').textContent += `  Models from ${d.source}.`;
-    }
+    $('aisrc').textContent = d.source ? `Models from ${d.source}.` : '';
   } catch (e) {
     // a missing list is a lost convenience, not a broken panel
   }

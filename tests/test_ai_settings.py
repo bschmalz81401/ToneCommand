@@ -254,22 +254,29 @@ def test_auto_mode_still_honours_a_configured_endpoint(store):
     assert planner.candidates()[0] == "openai"
 
 
-def test_optional_controls_say_so_and_the_required_one_does_not(store):
-    """A key an OAuth router never wanted should not send anyone hunting; a
-    key the Claude API genuinely needs must not claim to be optional."""
-    by_name = {b["backend"]: b for b in ai_settings.available_backends()}
-    assert by_name["grok"]["modelOptional"] is True
-    assert by_name["openai"]["modelOptional"] is True
-    assert by_name["openai"]["keyOptional"] is True
-    assert by_name[""]["keyOptional"] is True
-    # the one exception: without this key the backend cannot run at all
-    assert by_name["api"]["keyOptional"] is False
-    assert by_name["api"]["available"] is False
+def test_every_model_box_is_optional(store):
+    """Each backend has a default model, so a blank box is always valid."""
+    for entry in ai_settings.available_backends():
+        assert entry["modelOptional"] is True
 
 
-def test_the_ui_labels_both_optional_boxes(store):
+def test_the_key_field_states_the_whole_rule(store):
+    """A key an OAuth router never wanted should not send anyone hunting, and
+    a key the Claude API cannot run without must not read as optional. One
+    label covers both rather than trusting a per-backend word."""
     from pathlib import Path
     ui = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text()
     assert "model (optional)" in ui
-    assert "API key (optional)" in ui
-    assert "API key (required)" in ui
+    assert "API key (required for Claude API but optional for others)" in ui
+    assert "keyOptional" not in ui, "that flag drove the old per-backend label"
+
+
+def test_the_model_source_line_is_set_not_appended(store):
+    """It used to append to the note, so switching backends a few times
+    stacked "Models from ..." several deep in one line."""
+    from pathlib import Path
+    ui = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text()
+    assert "$('ainote').textContent +=" not in ui
+    assert "aisrc" in ui, "the source line needs its own element"
+    assert "if ($('aibackend').value !== backend) return;" in ui, \
+        "a slow listing must not land under a different backend"
