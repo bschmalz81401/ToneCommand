@@ -4,6 +4,15 @@ The maintainer's condition for wiring this into the planner: the column slide
 is reversible by re-selecting the preset, spending a pass-through cell is not,
 and one approval covering both with nothing to tell them apart is not informed
 consent. So the two are reported and displayed separately.
+
+The FIRST wording of that distinction was wrong, and hardware said so. It
+claimed the spent cell "does not come back, even after re-selecting the
+preset". Re-selecting reloads from flash, so it does come back, along with
+everything else the edit buffer held. What is actually one-way is that
+nothing can put the cell back on its own: the only route is to discard the
+whole edit, and a store makes the loss permanent. The tests below pin the
+corrected claim, since a confirmation that overstates is not better than one
+that understates - both teach the reader to stop believing it.
 """
 from pathlib import Path
 
@@ -45,17 +54,28 @@ def test_refusals_name_themselves():
 
 def test_the_ui_shows_the_two_consequences_differently():
     assert "spliceNote" in UI
-    assert "undone by re-selecting the preset" in UI
-    assert "does not come back" in UI
+    assert "re-selecting the preset puts them back" in UI
+    assert "nothing here puts" in UI
     assert ".splice .oneway" in UI, "the one-way step needs its own styling"
     assert "ONE WAY" in UI
+
+
+def test_the_one_way_claim_is_the_one_hardware_supports():
+    """Verified on fw 12.00, preset wire 1: after the splice the shunt was
+    gone from the grid read, and after re-selecting the preset it was back
+    along with every other block. So the cell is unrecoverable ON ITS OWN,
+    not unrecoverable full stop, and the copy says exactly that."""
+    assert "does not come back, even after re-selecting" not in UI
+    assert "throws away " in UI and "every other change too" in UI
+    assert "Store the preset and it is gone for good" in UI
 
 
 def test_transmit_asks_before_spending_a_shunt():
     """Distinct from the existing store confirmation, and it must name what
     is reversible so the two are not conflated."""
     assert "spends a pass-through cell" in UI
-    assert "The column slide itself is reversible." in UI
+    assert "Moving the blocks one column" in UI and "is reversible" in UI
+    assert "storing the preset makes it permanent" in UI
     assert "splice not confirmed; transmit cancelled" in UI
 
 

@@ -2126,12 +2126,13 @@ function spliceNote(a) {
   const lines = [];
   if (moves) {
     lines.push(`<div class="slide">moves ${moves} one column right `
-      + `(undone by re-selecting the preset)</div>`);
+      + `(re-selecting the preset puts them back)</div>`);
   }
   if (sp.spends_shunt) {
-    lines.push('<div class="oneway">spends a pass-through cell at column '
-      + `${sp.slack_col}. Shunts cannot be re-inserted, so this one does not `
-      + 'come back, even after re-selecting the preset</div>');
+    lines.push('<div class="oneway">spends the pass-through cell at column '
+      + `${sp.slack_col}. Shunts cannot be re-inserted, so nothing here puts `
+      + 'it back: the only way is to re-select the preset, which throws away '
+      + 'every other change too. Store the preset and it is gone for good</div>');
   }
   return lines.length ? `<div class="splice">${lines.join('')}</div>` : '';
 }
@@ -2305,9 +2306,10 @@ async function apply() {
     const where = spends.map(a => `column ${a.splice.slack_col}`).join(', ');
     if (!window.confirm(
         `This plan spends a pass-through cell (${where}) to make room. Shunts `
-        + `cannot be re-inserted, so that cell does not come back, even after `
-        + `re-selecting the preset. The column slide itself is reversible. `
-        + `Continue?`)) {
+        + `cannot be re-inserted, so nothing here puts it back: the only way `
+        + `is to re-select the preset and lose every other change with it, and `
+        + `storing the preset makes it permanent. Moving the blocks one column `
+        + `right is reversible. Continue?`)) {
       log('splice not confirmed; transmit cancelled', 'err');
       return;
     }

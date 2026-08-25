@@ -567,11 +567,13 @@ class FM9:
         """What a splice at this cell WOULD do, without doing any of it.
 
         Split out of splice_block because the answer has to be shown before
-        anyone approves it. Two of the consequences are not equivalent: the
-        column slide is undone by re-selecting the preset, while spending a
-        pass-through cell is not, since shunts cannot be re-inserted (finding
-        8). A confirmation that shows both the same way is not informed
-        consent, so they are reported separately.
+        anyone approves it. Two of the consequences are not equivalent:
+        re-selecting the preset puts the slid blocks back, while nothing puts
+        a spent pass-through cell back on its own, since shunts cannot be
+        re-inserted (finding 8). Discarding the whole edit is the only route,
+        and a store makes the loss permanent (finding 27). A confirmation
+        that shows both the same way is not informed consent, so they are
+        reported separately.
 
         Refusals carry a `reason` as well as prose, so a caller can say which
         wall it hit rather than a generic no.
