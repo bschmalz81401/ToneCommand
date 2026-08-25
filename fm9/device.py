@@ -16,6 +16,7 @@ from . import protocol as p
 from .adapter import Capabilities, ReadPath
 from .registry import Registry, ParamSpec
 from .safety import sysex_guard
+from .signal_path import scene_alive
 
 RESULT_CODES = {
     0x00: "ok",
@@ -643,20 +644,27 @@ class FM9:
                 self.connect_cells(row, a, row)
                 time.sleep(settle)
 
-        final = {(c.row + 1, c.col + 1): c for c in (self.read_grid() or [])}
+        cells_after = self.read_grid() or []
+        final = {(c.row + 1, c.col + 1): c for c in cells_after}
         placed = final.get((row, at_col))
-        starved = [c for (r, c), cell in sorted(final.items())
-                   if r == row and c > min(sorted(cc for (rr, cc) in final if rr == row))
-                   and cell.cable_in_mask == 0]
+        # "nothing breaks" has to be proven by walking Input to Output over the
+        # real cable masks. Counting members, or even counting cells with no
+        # input cable, passes for a block that is present and stranded off the
+        # path - the silent-preset class this project keeps meeting.
+        st = {b.effect_id: b for b in self.status_dump() or []}
+        alive, why = scene_alive(cells_after, st, self.reg)
+        landed = placed is not None and placed.effect_id == effect_id
         return {
-            "ok": placed is not None and placed.effect_id == effect_id and not starved,
+            "ok": landed and alive,
             "placed_at": (row, at_col),
             "moved": moved,
             "slack_col": slack,
             "spent_a_shunt": spent_shunt,
-            "starved": starved,
-            "detail": ("spliced in, chain continuous" if not starved else
-                       f"cells with no input cable after splice: {starved}"),
+            "alive": alive,
+            "detail": (f"spliced in, live signal path confirmed: {why}"
+                       if landed and alive else
+                       f"block did not land at row {row} col {at_col}" if not landed
+                       else f"NO LIVE SIGNAL PATH after splice: {why}"),
         }
 
     def connect_cells(self, src_row: int, src_col: int, dest_row: int,

@@ -220,7 +220,8 @@ float32), 0x32 grid insert, 0x35 cable draw.
     Verified end to end on fw 12.00: a GEQ spliced ahead of the amp in a
     packed lane (INPUT, drive, comp, amp, cab), the amp and cab each shifted
     one column right with the amp's parameters identical afterwards, the
-    span re-cabled, and the chain continuous. The shift needs a free cell or
+    span re-cabled, and a live Input-to-Output path confirmed by walking the
+    cable masks rather than by checking the blocks are still present. The shift needs a free cell or
     a shunt to its right to absorb it; shunts cannot be re-inserted
     (finding 8), so spending one is one-way, and a row with neither must be
     refused rather than pushing a block off the end of the grid.

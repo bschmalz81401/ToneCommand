@@ -4,10 +4,18 @@ Notable changes to ToneCommand. Dates are UTC.
 
 ## Unreleased
 
+
+
 ### Added (splice, 2026-08-24)
 - `FM9.splice_block()`: insert a block into a packed row by displacing its
   neighbours right and re-cabling the span, for the case add_block cannot
-  serve - a pre-amp lane with no free pass-through cell (issue #10).
+  serve - a pre-amp lane with no free pass-through cell (issue #10). Success
+  means a live signal path proven by walking Input to Output, not that the
+  expected blocks are present.
+- `fm9/signal_path.py`: the grid walk, lifted out of tools/path_audit.py so
+  the library can use it. tools/ is not a shipped package, so the device
+  layer could not have imported it there without breaking an installed copy.
+  path_audit re-exports the names it always had.
   Refuses, rather than guessing, when the row has no slack to the right,
   when the target column is already free, or when the span is fed from
   another row.
@@ -15,21 +23,12 @@ Notable changes to ToneCommand. Dates are UTC.
   whole parameter array, channel and bypass state; splicing into a packed
   row works and needs slack to the right.
 
-### Fixed (cable removal, 2026-08-24)
-- Cable removal is decoded, and always was: the routing message (sub 0x35)
-  carries an op byte, `ROUTING_DISCONNECT = 0x02` has sat beside
-  `ROUTING_CONNECT` in the codec since the beginning, and nothing had ever
-  sent it. Hardware-verified on fw 12.00 - it clears the mask, is
-  repeatable, is idempotent rather than a toggle, and is SELECTIVE on a
-  cell with several feeds, which is the property issue #10's splice needs.
-  The planned MIDI Monitor sniff session is unnecessary.
-- The simulator's undecoded report no longer flags same-row cable draws on
-  rows 3 and 4 as unverified; both are hardware-confirmed (row 4 in the
-  2026-08-21 session, row 3 while building a preset from scratch). It was
-  telling users to go and confirm something the ledger already recorded.
-- docs/PROTOCOL.md finding 24, with finding 6's "the removal message is
-  UNKNOWN" marked superseded, and cable removal struck from the undecoded
-  territory list.
+- `resolve_aliases`, `scene_alive` and `walk` moved from `tools/path_audit.py`
+  to `fm9/signal_path.py`, with `path_audit` re-exporting all three so every
+  existing import keeps working. `pyproject` ships `fm9` and `server`, not
+  `tools`, and 0.3.1's `fm9/health.py` imports the walk from `tools`, so a
+  packaged install would not have found it. `health.py` now imports from the
+  shipped module.
 
 ### Fixed (cable removal, 2026-08-24)
 - Cable removal is decoded, and always was: the routing message (sub 0x35)

@@ -21,7 +21,7 @@ The scene it started from is restored when it finishes.
 
 WHAT IT CHECKS
 --------------
-alive     Reuses path_audit.scene_alive, which walks the real cable grid from
+alive     Reuses signal_path.scene_alive, which walks the real cable grid from
           Input to Output. This is the check that distinguishes "the write
           landed" from "the scene makes sound", written after five different
           silent-scene classes each passed write-level verification.
@@ -60,7 +60,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from tools.conventions import load as _load_conventions   # noqa: E402
-from tools.path_audit import scene_alive                  # noqa: E402
+from fm9.signal_path import scene_alive
 
 #: Let the unit land on the scene before reading it. path_audit uses the same
 #: figure, arrived at on hardware; reading sooner returns the previous scene.

@@ -40,15 +40,32 @@ def test_a_block_lands_where_asked_and_neighbours_move_right():
         assert after[4] == was_at_3, "the displaced block moved one column right"
 
 
-def test_the_chain_stays_continuous():
+def test_continuity_is_proven_by_walking_the_path():
+    """Not by counting members, and not by counting cells with no input
+    cable: a block can be present, un-starved, and stranded off the signal."""
+    from fm9.signal_path import scene_alive
+    with dev() as d:
+        d.select_preset(0)
+        r = d.splice_block(ROW, 3, GEQ)
+        assert r["ok"] and r["alive"], r["detail"]
+        assert "live signal path confirmed" in r["detail"]
+        st = {b.effect_id: b for b in d.status_dump() or []}
+        alive, _ = scene_alive(d.read_grid() or [], st, Registry())
+        assert alive
+
+
+def test_a_splice_that_strands_the_signal_is_not_ok():
+    """If the redraw failed to reconnect the span, the report must say so
+    rather than counting the new block as placed and calling it done."""
     with dev() as d:
         d.select_preset(0)
         d.splice_block(ROW, 3, GEQ)
-        cells = sorted((c for c in (d.read_grid() or []) if c.row == ROW - 1),
-                       key=lambda c: c.col)
-        first = cells[0].col
-        starved = [c.col + 1 for c in cells if c.col > first and c.cable_in_mask == 0]
-        assert starved == [], f"cells with no input cable: {starved}"
+        # sever the feed into the spliced block: the path dies downstream
+        d.connect_cells(ROW, 2, ROW, disconnect=True)
+        st = {b.effect_id: b for b in d.status_dump() or []}
+        from fm9.signal_path import scene_alive
+        alive, why = scene_alive(d.read_grid() or [], st, Registry())
+        assert not alive, "a severed span must not read as a live path"
 
 
 def test_displaced_blocks_keep_their_parameters():
