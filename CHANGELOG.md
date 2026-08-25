@@ -96,12 +96,17 @@ Notable changes to ToneCommand. Dates are UTC.
   wanting Opus on the CLI path is a reasonable thing to want. Read per call,
   so a change does not wait for a restart, and passed through the subprocess
   allowlist.
-- JSON extraction scans for BALANCED objects and prefers the last
-  plan-shaped one. Slicing from the first brace to the last one broke on
-  real local-model output: a reasoning model drafts an object and then
-  emits its final answer, and that span covers both, failing with "Extra
-  data: line 2 column 1". Found by pointing the OpenAI-compatible backend
-  at LM Studio, which is what issue #7 asked for.
+- JSON extraction tries each `{` with the stdlib decoder and prefers the
+  last plan-shaped object. Slicing from the first brace to the last one
+  broke on real local-model output: a reasoning model drafts an object and
+  then emits its final answer, and that span covers both, failing with
+  "Extra data: line 2 column 1". Found by pointing the OpenAI-compatible
+  backend at LM Studio, which is what issue #7 asked for. Counting braces
+  in one pass is not enough either, as @Triumph1701 pointed out on #21: a
+  model that abandons a draft part way leaves an unclosed brace and an
+  unterminated quote behind, which pin the depth and swallow the rest of
+  the reply, losing the real answer that follows. Trying each start in turn
+  costs a bad start only that start.
 - `.env` values are unquoted. `PLANNER_API_KEY="sk-local"` was sending
   `Bearer "sk-local"`, and a quoted base URL failed as an unknown url type.
 - Plan validation runs inside the per-backend try, so a reply that parses

@@ -209,3 +209,46 @@ def test_a_reply_with_only_unparseable_braces_is_still_refused(monkeypatch):
         with pytest.raises(planner.BackendFailure) as err:
             ask(monkeypatch, stub.url)
     assert err.value.failure_class == "unreadable_output"
+
+
+def test_an_abandoned_draft_does_not_take_the_answer_with_it(monkeypatch):
+    """The other thing reasoning models do: start an object, give up part
+    way, and restart. Raised on #21. A brace counter never recovers - the
+    unclosed "{" pins the depth above zero and the unterminated quote eats
+    the rest of the input, so the valid answer sitting right there is lost.
+    """
+    body = reply('Let me draft this.\n'
+                 '{"summary": "wait, I need the amp first\n'
+                 'Actually, starting over:\n'
+                 + json.dumps({"summary": "final", "actions": []}))
+    with Stub(body=body) as stub:
+        got, _ = ask(monkeypatch, stub.url)
+    assert got["summary"] == "final"
+
+
+def test_an_unbalanced_opening_brace_in_prose_is_survivable(monkeypatch):
+    """The milder version of the same fault: a model writing code aloud."""
+    body = reply('Thinking: if (gain > 5) { back it off\n'
+                 + json.dumps({"summary": "backed off", "actions": []}))
+    with Stub(body=body) as stub:
+        got, _ = ask(monkeypatch, stub.url)
+    assert got["summary"] == "backed off"
+
+
+def test_nested_action_objects_are_not_candidates_of_their_own(monkeypatch):
+    """Trying every brace would offer each action as a candidate too. The
+    scan resumes past what it consumed, so the outer object still wins even
+    when it carries no summary."""
+    payload = {"actions": [
+        {"kind": "set_param", "block": "amp", "param": "DISTORT_DRIVE",
+         "value": 7.0}]}
+    with Stub(body=reply(json.dumps(payload))) as stub:
+        got, _ = ask(monkeypatch, stub.url)
+    assert got["actions"][0]["value"] == 7.0
+
+
+def test_the_last_object_wins_when_none_of_them_are_plan_shaped():
+    """No plan-shaped object anywhere still prefers the final one, since
+    that is the answer even when it is the wrong answer."""
+    got = planner._extract_json('{"a": 1}\nno wait\n{"b": 2}')
+    assert got == {"b": 2}
