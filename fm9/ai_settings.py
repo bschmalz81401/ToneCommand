@@ -16,8 +16,8 @@ settings are stored per backend and the UI is told which fields a backend
 actually uses. Offering a box that silently does nothing is the same sin as
 offering a backend that silently falls through to another one:
 
-    cli     nothing to configure. Its model is the CLI_MODEL constant.
-    api     ANTHROPIC_API_KEY. Its model is the MODEL constant.
+    cli     CLAUDE_CLI_MODEL.
+    api     ANTHROPIC_API_KEY, CLAUDE_API_MODEL.
     grok    GROK_CLI_MODEL.
     openai  PLANNER_BASE_URL, PLANNER_MODEL, PLANNER_API_KEY (key optional).
 
@@ -51,8 +51,9 @@ BACKEND_FIELDS = {
     # candidate the planner tries (#21), so a base URL still matters here.
     "": {"baseUrl": "PLANNER_BASE_URL", "model": "PLANNER_MODEL",
          "key": "PLANNER_API_KEY"},
-    "cli": {"baseUrl": None, "model": None, "key": None},
-    "api": {"baseUrl": None, "model": None, "key": "ANTHROPIC_API_KEY"},
+    "cli": {"baseUrl": None, "model": "CLAUDE_CLI_MODEL", "key": None},
+    "api": {"baseUrl": None, "model": "CLAUDE_API_MODEL",
+            "key": "ANTHROPIC_API_KEY"},
     "grok": {"baseUrl": None, "model": "GROK_CLI_MODEL", "key": None},
     "openai": {"baseUrl": "PLANNER_BASE_URL", "model": "PLANNER_MODEL",
                "key": "PLANNER_API_KEY"},
@@ -68,9 +69,10 @@ REQUIRED_FIELDS = {"api": ("key",)}
 BACKEND_NOTES = {
     "": "A configured endpoint is tried first, then the Claude CLI, then the "
         "Claude API. Leave the endpoint blank to use the CLI.",
-    "cli": "Nothing to configure. Runs on your Claude subscription, "
-           "and its model is fixed in the planner.",
-    "api": "Needs an Anthropic API key. Its model is fixed in the planner.",
+    "cli": "Runs on your Claude subscription. Model optional; blank uses "
+           "the planner default.",
+    "api": "Needs an Anthropic API key. Model optional; blank uses the "
+           "planner default.",
     "grok": "Runs on your Grok subscription. Model optional; blank uses the "
             "CLI's own default.",
     "openai": "Any OpenAI-compatible server, including CLIProxyAPI and local "
@@ -78,7 +80,8 @@ BACKEND_NOTES = {
 }
 
 _MANAGED = ("PLANNER_BACKEND", "PLANNER_BASE_URL", "PLANNER_MODEL",
-            "PLANNER_API_KEY", "GROK_CLI_MODEL", "ANTHROPIC_API_KEY")
+            "PLANNER_API_KEY", "GROK_CLI_MODEL", "ANTHROPIC_API_KEY",
+            "CLAUDE_CLI_MODEL", "CLAUDE_API_MODEL")
 
 
 def settings_path() -> Path:
@@ -117,7 +120,9 @@ def _from_env() -> AiSettings:
         base_url=planner._env("PLANNER_BASE_URL"),
         models={k: v for k, v in
                 (("openai", planner._env("PLANNER_MODEL")),
-                 ("grok", planner._env("GROK_CLI_MODEL"))) if v},
+                 ("grok", planner._env("GROK_CLI_MODEL")),
+                 ("cli", planner._env("CLAUDE_CLI_MODEL")),
+                 ("api", planner._env("CLAUDE_API_MODEL"))) if v},
         keys={k: v for k, v in
               (("openai", planner._env("PLANNER_API_KEY")),
                ("api", planner._env("ANTHROPIC_API_KEY"))) if v},
@@ -217,6 +222,99 @@ def apply_to_env(settings: AiSettings | None = None) -> AiSettings:
         else:
             os.environ.pop(name, None)
     return settings
+
+
+#: Aliases the Claude CLI documents for --model. Suggestions, not a whitelist:
+#: full ids like claude-fable-5 are accepted too, so the box stays free text.
+CLAUDE_CLI_ALIASES = ("sonnet", "opus", "haiku", "fable")
+
+
+def list_models(backend: str) -> dict:
+    """Model ids to offer for a backend, and where they came from.
+
+    Suggestions only. Every model box stays typeable, because a list that
+    cannot be overridden is worse than no list the moment it goes stale.
+    """
+    backend = (backend or "openai").lower()
+    if backend == "grok":
+        found, why = _grok_models()
+    elif backend == "openai":
+        found, why = _endpoint_models()
+    elif backend == "cli":
+        found, why = list(CLAUDE_CLI_ALIASES), "aliases the claude CLI documents"
+    elif backend == "api":
+        found, why = _anthropic_models()
+    else:
+        found, why = [], ""
+    return {"backend": backend, "models": found, "source": why}
+
+
+def _anthropic_models() -> tuple[list[str], str]:
+    """Ask Anthropic, rather than shipping a list of ids that will age.
+
+    That backend needs a key to run at all, so when one is configured there
+    is nothing to save by guessing. With no key, offer the planner default
+    and say that is what it is.
+    """
+    key = load().key_for("api") or planner._env("ANTHROPIC_API_KEY")
+    if not key:
+        return [planner.MODEL], "the planner default; add a key to list models"
+    try:
+        import anthropic
+        listing = anthropic.Anthropic(api_key=key).models.list(limit=20)
+        found = [m.id for m in listing.data if getattr(m, "id", None)]
+    except Exception as exc:                    # offline, bad key, old SDK
+        return ([planner.MODEL],
+                f"could not list models ({type(exc).__name__}); showing the default")
+    return (found, "the Anthropic models API") if found else (
+        [planner.MODEL], "the API listed nothing; showing the default")
+
+
+def _grok_models() -> tuple[list[str], str]:
+    """Ask the grok CLI. It has a `models` subcommand for exactly this."""
+    import subprocess
+    binary = planner.find_grok_cli()
+    if not binary:
+        return [], "the grok binary is not on this machine"
+    try:
+        proc = subprocess.run([binary, "models"], capture_output=True,
+                              text=True, timeout=20, cwd="/tmp",
+                              env=planner.cli_env(planner.GROK_ENV_KEYS))
+    except (subprocess.TimeoutExpired, OSError) as exc:
+        return [], f"grok models failed: {exc}"
+    found = []
+    for line in proc.stdout.splitlines():
+        stripped = line.strip()
+        if stripped.startswith(("*", "-")):
+            name = stripped.lstrip("*- ").split(" ")[0].strip()
+            if name:
+                found.append(name)
+    return found, "grok models" if found else (
+        [], "grok models listed nothing")[1]
+
+
+def _endpoint_models() -> tuple[list[str], str]:
+    """Ask the configured endpoint. /models is part of the OpenAI shape."""
+    import json as _json
+    import urllib.error
+    import urllib.request
+    base = load().base_url or planner._openai_base_url()
+    if not base:
+        return [], "set a base URL first"
+    req = urllib.request.Request(f"{base.rstrip('/')}/models", method="GET")
+    key = load().key_for("openai")
+    if key:
+        req.add_header("authorization", f"Bearer {key}")
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = _json.loads(resp.read().decode("utf-8", "replace"))
+    except (urllib.error.URLError, TimeoutError, ValueError,
+            _json.JSONDecodeError) as exc:
+        return [], f"could not reach {base}: {exc}"
+    entries = data.get("data") if isinstance(data, dict) else None
+    found = [e["id"] for e in entries or []
+             if isinstance(e, dict) and isinstance(e.get("id"), str)]
+    return found, f"{base}/models" if found else "the endpoint listed no models"
 
 
 def available_backends() -> list[dict]:

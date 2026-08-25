@@ -610,6 +610,16 @@ def api_ai_settings_state():
                          "localLlm": ai_settings.LOCAL_LLM_DEFAULT_URL}}
 
 
+@app.get("/api/ai-settings/models")
+def api_ai_models(backend: str = ""):
+    """Model ids to offer for a backend, and where the list came from.
+
+    Suggestions only: every model box stays typeable, because a list that
+    cannot be overridden is worse than no list once it goes stale.
+    """
+    return ai_settings.list_models(backend)
+
+
 @app.post("/api/ai-settings")
 def api_ai_settings(body: dict):
     """Save the choice and make it effective for the next prompt.

@@ -167,14 +167,42 @@ def test_no_em_dashes_in_the_ui_or_the_settings_module():
 
 def test_each_backend_declares_only_the_controls_it_honours(store):
     by_name = {b["backend"]: b for b in ai_settings.available_backends()}
-    # the Claude CLI reads nothing: its model is a constant in the planner
-    assert (by_name["cli"]["needsBaseUrl"], by_name["cli"]["needsModel"],
-            by_name["cli"]["needsKey"]) == (False, False, False)
-    # the Claude API needs a key; its model is a constant too
-    assert by_name["api"]["needsKey"] and not by_name["api"]["needsModel"]
-    # the Grok CLI takes a model but no key
+    # every backend takes a model now that the Claude ones are configurable,
+    # but only two of them take a key and only one takes a base URL
+    assert by_name["cli"]["needsModel"] and not by_name["cli"]["needsKey"]
+    assert not by_name["cli"]["needsBaseUrl"]
+    assert by_name["api"]["needsKey"] and by_name["api"]["needsModel"]
+    assert not by_name["api"]["needsBaseUrl"]
     assert by_name["grok"]["needsModel"] and not by_name["grok"]["needsKey"]
     assert by_name["openai"]["needsBaseUrl"] and by_name["openai"]["needsModel"]
+
+
+def test_the_claude_models_land_in_the_variables_the_planner_reads(store):
+    import os
+    ai_settings.save({"backend": "cli", "model": "opus"})
+    assert os.environ.get("CLAUDE_CLI_MODEL") == "opus"
+    assert planner.cli_model() == "opus"
+    ai_settings.save({"backend": "api", "model": "claude-sonnet-5",
+                      "apiKey": "sk-ant-x"})
+    assert planner.api_model() == "claude-sonnet-5"
+    assert "CLAUDE_CLI_MODEL" not in os.environ, \
+        "a model for one backend must not leak into another"
+
+
+def test_model_suggestions_come_with_their_source(store):
+    """A list that cannot be overridden is worse than no list once it goes
+    stale, so these are suggestions and say where they came from."""
+    cli = ai_settings.list_models("cli")
+    assert "sonnet" in cli["models"] and "opus" in cli["models"]
+    assert cli["source"]
+    assert ai_settings.list_models("openai")["source"] == "set a base URL first"
+
+
+def test_grok_model_suggestions_survive_a_missing_binary(store, monkeypatch):
+    monkeypatch.setattr(planner, "find_grok_cli", lambda: None)
+    got = ai_settings.list_models("grok")
+    assert got["models"] == []
+    assert "not on this machine" in got["source"]
 
 
 def test_the_grok_model_lands_in_the_variable_grok_reads(store):

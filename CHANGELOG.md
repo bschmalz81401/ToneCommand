@@ -75,6 +75,14 @@ Notable changes to ToneCommand. Dates are UTC.
   (optional)", so nobody goes hunting for a key an OAuth router never
   wanted. The Claude API key is labelled required instead, because without
   it that backend cannot run at all.
+- Every backend now has a model box, since the two Claude models became
+  configurable, and each box offers suggestions from whatever can actually
+  answer: `grok models` for the Grok CLI, `GET /models` for an
+  OpenAI-compatible endpoint, the Anthropic models API when a key is
+  configured, and the aliases the claude CLI documents. The panel says
+  where each list came from, and every box stays typeable, because a list
+  that cannot be overridden is worse than no list once it goes stale.
+- `GET /api/ai-settings/models?backend=` exposes that listing.
 - A finished plan says which backend and model produced it, so a
   wrong-sounding plan is attributable to the model rather than the tool.
 - `fm9/ai_settings.py` deliberately changes no planner behaviour: it writes

@@ -193,7 +193,9 @@
       <select id="aibackend"></select>
       <input id="aibaseurl" autocomplete="off" spellcheck="false"
              placeholder="http://127.0.0.1:8317/v1">
-      <input id="aimodel" autocomplete="off" spellcheck="false" placeholder="model (optional)">
+      <input id="aimodel" autocomplete="off" spellcheck="false"
+             list="aimodels" placeholder="model (optional)">
+      <datalist id="aimodels"></datalist>
       <input id="aikey" type="password" autocomplete="off" placeholder="API key (optional)">
       <button id="aisave">SAVE</button>
       <button id="aiclearkey" class="danger">CLEAR KEY</button>
@@ -339,6 +341,7 @@ function aiFields() {
   $('ainote').textContent = b ? b.note : '';
   if (b) {
     $('aimodel').value = b.model || '';
+    loadAiModels(b.backend);
     $('aimodel').placeholder = b.modelOptional ? 'model (optional)' : 'model';
     $('aikey').value = '';
     // say which boxes can be left blank: an OAuth router wants no key at all,
@@ -364,6 +367,22 @@ async function loadAiSettings() {
     aiFields();
   } catch (e) {
     log(`could not read AI settings: ${e.message}`, 'err');
+  }
+}
+
+// Pick or type: the list is a convenience, never a constraint.
+async function loadAiModels(backend) {
+  $('aimodels').innerHTML = '';
+  try {
+    const d = await (await fetch(
+      `/api/ai-settings/models?backend=${encodeURIComponent(backend)}`)).json();
+    $('aimodels').innerHTML = (d.models || [])
+      .map(m => `<option value="${m}"></option>`).join('');
+    if (d.source) {
+      $('ainote').textContent += `  Models from ${d.source}.`;
+    }
+  } catch (e) {
+    // a missing list is a lost convenience, not a broken panel
   }
 }
 
