@@ -69,6 +69,28 @@ Notable changes to ToneCommand. Dates are UTC.
   vendored and not a dependency.
 
 ### Fixed (planner backends, 2026-08-24)
+- `_env` distinguishes a variable that is ABSENT from one that is PRESENT and
+  empty. Only an absent one falls through to `.env`; a blank means
+  deliberately blank and stops the search, resolving to the built-in default.
+  Treating them the same left no way for a layer above to say "not set", so
+  the settings panel selecting Auto could not clear a `PLANNER_BACKEND` pin
+  written into `.env` (@Triumph1701 on #25). A blank still resolves to the
+  default, so an empty `CLAUDE_CLI_MODEL` means the built-in model rather
+  than `--model ""`.
+- The Claude API backend is bounded by `PLANNER_TIMEOUT` like every other
+  backend, with timeouts and connection errors mapped to `timeout` and
+  `transport` failures. It was the one backend not honouring the contract
+  this work introduced: the SDK default plus its retries applied, so a stuck
+  call hung `/api/plan` with no failure and no fall-through.
+- `GROK_ENV_KEYS` includes `NETWORK_ENV_KEYS`. Withholding the proxy and CA
+  variables from the grok CLI reproduced exactly the failure that set exists
+  to prevent, and the test asserted the broken behaviour. Narrowing per tool
+  means narrowing which credentials it sees, not starving it of the shell:
+  no Anthropic or cloud keys reach it, which the test now checks explicitly.
+- The test isolation fixture clears `CLAUDE_CLI_MODEL` and
+  `CLAUDE_API_MODEL`. Both are new here and were left out, so a developer
+  with either exported got a false failure from the test asserting the
+  built-in default.
 - Planner subprocesses get an environment allowlist instead of
   `os.environ`. The `claude` binary had been receiving every secret in the
   process; with a second vendor's CLI in play an xAI binary would have

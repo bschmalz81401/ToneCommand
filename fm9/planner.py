@@ -221,15 +221,25 @@ def _env(name: str, default: str = "") -> str:
 
     Same sourcing convention as device.get_store_slots(), so planner config
     can live in the .env file the store whitelist already uses.
+
+    A variable PRESENT in the environment and empty means deliberately blank
+    and stops the search; only an ABSENT one falls through to .env. Treating
+    the two the same left a layer above with no way to say "not set": the
+    settings panel selecting Auto could not clear a PLANNER_BACKEND pin
+    written into .env, because every value it could write was either a pin or
+    indistinguishable from having written nothing (@Triumph1701 on #25). A
+    blank still resolves to `default`, so an empty CLAUDE_CLI_MODEL means the
+    built-in model rather than passing --model "" to the CLI.
     """
-    val = _unquote(os.environ.get(name, ""))
-    if not val:
-        env_file = _env_path()
-        if env_file.exists():
-            for line in env_file.read_text().splitlines():
-                if line.strip().startswith(f"{name}="):
-                    val = _unquote(line.split("=", 1)[1])
-                    break
+    if name in os.environ:
+        return _unquote(os.environ[name]) or default
+    val = ""
+    env_file = _env_path()
+    if env_file.exists():
+        for line in env_file.read_text().splitlines():
+            if line.strip().startswith(f"{name}="):
+                val = _unquote(line.split("=", 1)[1])
+                break
     return val or default
 
 
@@ -376,7 +386,12 @@ CLAUDE_ENV_KEYS = NETWORK_ENV_KEYS + (
 )
 
 # The Grok CLI needs none of the above: its own keys, and that is all.
-GROK_ENV_KEYS = ("XAI_API_KEY", "GROK_API_KEY")
+# Same reasoning as CLAUDE_ENV_KEYS, which is the point: narrowing per tool
+# means narrowing which CREDENTIALS it sees, not starving it of the shell.
+# Withholding the proxy variables from grok reproduced the exact failure
+# NETWORK_ENV_KEYS exists to prevent (@Triumph1701 on #25). No Anthropic or
+# cloud keys here: a second vendor's binary has no business with them.
+GROK_ENV_KEYS = NETWORK_ENV_KEYS + ("XAI_API_KEY", "GROK_API_KEY")
 
 
 def cli_env(binary_keys: tuple[str, ...] = (),
@@ -723,21 +738,35 @@ def _plan_via_api(prompt: str, device_state: str,
         key = _env("ANTHROPIC_API_KEY")      # shared parser: quotes stripped
         if key:
             os.environ["ANTHROPIC_API_KEY"] = key
-    client = anthropic.Anthropic()
-    response = client.messages.create(
-        model=api_model(),
-        max_tokens=2048,
-        system=[
-            {"type": "text", "text": SYSTEM, "cache_control": {"type": "ephemeral"}},
-            {"type": "text", "text": f"Controllable parameter reference:\n{param_reference}",
-             "cache_control": {"type": "ephemeral"}},
-        ],
-        output_config={"format": {"type": "json_schema", "schema": PLAN_SCHEMA}},
-        messages=[{
-            "role": "user",
-            "content": f"Current device state:\n{device_state}\n\nRequest: {prompt}",
-        }],
-    )
+    # Bounded like every other backend. Without this the SDK default plus its
+    # retries applies, so a stuck call hangs /api/plan with no timeout failure
+    # and no fall-through - the contract this module introduced for the others.
+    client = anthropic.Anthropic(timeout=float(timeout_s()), max_retries=1)
+    try:
+        response = client.messages.create(
+            model=api_model(),
+            max_tokens=2048,
+            system=[
+                {"type": "text", "text": SYSTEM,
+                 "cache_control": {"type": "ephemeral"}},
+                {"type": "text",
+                 "text": f"Controllable parameter reference:\n{param_reference}",
+                 "cache_control": {"type": "ephemeral"}},
+            ],
+            output_config={"format": {"type": "json_schema",
+                                      "schema": PLAN_SCHEMA}},
+            messages=[{
+                "role": "user",
+                "content": f"Current device state:\n{device_state}\n\nRequest: {prompt}",
+            }],
+        )
+    except anthropic.APITimeoutError as exc:
+        raise BackendFailure("api", "timeout",
+                             f"no reply within {timeout_s()}s ({exc})",
+                             target="sdk", model=api_model())
+    except anthropic.APIConnectionError as exc:
+        raise BackendFailure("api", "transport", str(exc),
+                             target="sdk", model=api_model())
     if response.stop_reason == "refusal":
         return ({"summary": "Request declined by the model.", "actions": [],
                  "clarification": "The model declined this request. "

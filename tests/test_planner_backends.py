@@ -264,11 +264,23 @@ def test_the_claude_path_keeps_proxy_and_enterprise_configuration():
     assert "XAI_API_KEY" not in env and "DATABASE_URL" not in env
 
 
-def test_the_grok_path_stays_narrow():
+def test_the_grok_path_is_narrow_about_secrets_not_about_the_network():
+    """This test used to ASSERT the bug: it required HTTPS_PROXY to be
+    dropped, which is the exact failure NETWORK_ENV_KEYS exists to prevent,
+    and the reasoning for widening the Claude path applied here unchanged
+    (@Triumph1701 on #25). Narrowing per tool means narrowing which
+    CREDENTIALS it sees."""
     source = {"PATH": "/bin", "XAI_API_KEY": "xai", "ANTHROPIC_API_KEY": "sk",
-              "AWS_REGION": "us-east-1", "HTTPS_PROXY": "http://p:8080"}
+              "AWS_REGION": "us-east-1", "AWS_ACCESS_KEY_ID": "akid",
+              "HTTPS_PROXY": "http://p:8080", "NODE_EXTRA_CA_CERTS": "/ca.pem",
+              "DATABASE_URL": "pg://x"}
     env = planner.cli_env(planner.GROK_ENV_KEYS, source)
-    assert env == {"PATH": "/bin", "XAI_API_KEY": "xai"}
+    assert env["HTTPS_PROXY"] == "http://p:8080"
+    assert env["NODE_EXTRA_CA_CERTS"] == "/ca.pem"
+    assert env["XAI_API_KEY"] == "xai"
+    for forbidden in ("ANTHROPIC_API_KEY", "AWS_REGION", "AWS_ACCESS_KEY_ID",
+                      "DATABASE_URL"):
+        assert forbidden not in env, f"grok has no business with {forbidden}"
 
 
 def test_the_cli_model_comes_from_modelusage():
@@ -321,3 +333,101 @@ def test_the_chosen_cli_model_reaches_the_subprocess(isolated_env, monkeypatch):
     assert argv[argv.index("--model") + 1] == "opus"
     assert "CLAUDE_CLI_MODEL" in planner.CLAUDE_ENV_KEYS, \
         "the subprocess allowlist must pass the model choice through"
+
+
+# --- absent is not deliberately blank (#25 review) ---
+
+def test_an_explicit_blank_does_not_fall_through_to_dot_env(isolated_env,
+                                                            monkeypatch):
+    """The channel problem behind "Auto cannot unpin": with unset and blank
+    treated the same, no value could mean "not set" and a .env pin always
+    won."""
+    isolated_env.write_text("PLANNER_BACKEND=grok\n")
+    assert planner._env("PLANNER_BACKEND") == "grok"
+    monkeypatch.setenv("PLANNER_BACKEND", "")
+    assert planner._env("PLANNER_BACKEND") == ""
+    assert planner.candidates() != ["grok"]
+
+
+def test_an_absent_variable_still_reads_dot_env(isolated_env, monkeypatch):
+    """The fallback is the whole point of .env support; only the blank case
+    changed."""
+    isolated_env.write_text("PLANNER_MODEL=from-the-file\n")
+    monkeypatch.delenv("PLANNER_MODEL", raising=False)
+    assert planner._env("PLANNER_MODEL") == "from-the-file"
+
+
+def test_an_explicit_blank_resolves_to_the_default_not_to_nothing(monkeypatch):
+    """So a blank CLAUDE_CLI_MODEL means the built-in model rather than
+    passing --model "" to the CLI."""
+    monkeypatch.setenv("CLAUDE_CLI_MODEL", "")
+    assert planner.cli_model() == planner.CLI_MODEL
+
+
+# --- the api backend honours the contract this module introduced (#25) ---
+
+def _fake_anthropic(raise_exc=None, seen=None):
+    """A stand-in SDK: records client kwargs, optionally fails the call."""
+    import sys
+    mod = type(sys)("anthropic")
+
+    class APITimeoutError(Exception):
+        pass
+
+    class APIConnectionError(Exception):
+        pass
+
+    class Anthropic:
+        def __init__(self, **kwargs):
+            if seen is not None:
+                seen.update(kwargs)
+            self.messages = self
+
+        def create(self, **_):
+            raise raise_exc if raise_exc is not None else APITimeoutError("stub")
+
+    mod.APITimeoutError = APITimeoutError
+    mod.APIConnectionError = APIConnectionError
+    mod.Anthropic = Anthropic
+    return mod
+
+
+def test_the_api_backend_is_bounded_by_the_same_timeout(monkeypatch):
+    """Every other backend bounds its attempt. This one used the SDK default
+    plus its retries, so a stuck call hung /api/plan with no timeout failure
+    and no fall-through."""
+    import sys
+    seen = {}
+    mod = _fake_anthropic(seen=seen)
+    monkeypatch.setitem(sys.modules, "anthropic", mod)
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test")
+    monkeypatch.setenv("PLANNER_TIMEOUT", "42")
+    with pytest.raises(planner.BackendFailure):
+        planner._plan_via_api("more gain", "state", "params")
+    assert seen["timeout"] == 42.0, "the client is built without a timeout"
+    assert seen["max_retries"] == 1
+
+
+def test_an_api_timeout_is_a_timeout_failure_not_a_traceback(monkeypatch):
+    import sys
+    mod = _fake_anthropic()
+    mod.Anthropic.create = lambda self, **_: (_ for _ in ()).throw(
+        mod.APITimeoutError("timed out"))
+    monkeypatch.setitem(sys.modules, "anthropic", mod)
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test")
+    with pytest.raises(planner.BackendFailure) as err:
+        planner._plan_via_api("more gain", "state", "params")
+    assert err.value.failure_class == "timeout"
+    assert err.value.backend == "api"
+
+
+def test_an_api_connection_error_is_a_transport_failure(monkeypatch):
+    import sys
+    mod = _fake_anthropic()
+    mod.Anthropic.create = lambda self, **_: (_ for _ in ()).throw(
+        mod.APIConnectionError("no route"))
+    monkeypatch.setitem(sys.modules, "anthropic", mod)
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test")
+    with pytest.raises(planner.BackendFailure) as err:
+        planner._plan_via_api("more gain", "state", "params")
+    assert err.value.failure_class == "transport"
