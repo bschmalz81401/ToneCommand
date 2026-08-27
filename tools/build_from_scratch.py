@@ -74,13 +74,16 @@ def main(argv=None) -> int:
         from fm9.device import FM9
         dev = FM9(reg)
 
-    from fm9.device import FM9NotFound, NoEmptySlot
     with dev:
         held = dev.current_preset()
         try:
             target = (dev.require_empty_slot(args.slot) if args.slot is not None
                       else dev.first_empty_slot(*args.range))
-        except (NoEmptySlot, ValueError, FM9NotFound) as exc:
+        # RuntimeError, not its subclasses: NoEmptySlot and FM9NotFound are
+        # both RuntimeError, but _request raises the bare parent on a device
+        # NACK, and naming only the children let that escape as a traceback
+        # where a refusal line belongs.
+        except (RuntimeError, ValueError) as exc:
             print(f"refusing to build: {exc}")
             return 1
         print(f"target: slot {target.label}, reported {target.name!r} by the "

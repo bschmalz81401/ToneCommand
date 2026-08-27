@@ -18,6 +18,7 @@ from pydantic import BaseModel
 from fm9.device import FM9, FM9NotFound
 from fm9.registry import Registry
 from fm9 import planner
+from fm9 import protocol as proto
 
 ROOT = Path(__file__).resolve().parent
 app = FastAPI(title="FM9 Tone Control")
@@ -169,7 +170,11 @@ def snapshot(fm9: FM9) -> dict:
                             normalized_to_display(vals[idx] / 65534, s.dmin, s.dmax, s.scale), 2)
     return {
         "connected": True,
-        "preset": {"number": preset[0], "name": preset[1]} if preset else None,
+        # label, not just number: the wire numbers presets 0-511 and every
+        # tool the owner cross-checks against numbers them 1-512.
+        "preset": ({"number": preset[0], "editor": proto.editor_number(preset[0]),
+                    "label": proto.slot_label(preset[0]), "name": preset[1]}
+                   if preset else None),
         "scene": {"number": scene[0], "name": scene[1]} if scene else None,
         "blocks": out_blocks,
         "values": values,
@@ -180,7 +185,7 @@ def state_text(snap: dict) -> str:
     p, s = snap.get("preset"), snap.get("scene")
     lines = []
     if p:
-        lines.append(f"Preset {p['number']}: \"{p['name']}\"")
+        lines.append(f"Preset {p.get('label', p['number'])}: \"{p['name']}\"")
     if s:
         lines.append(f"Scene {s['number']}: \"{s['name']}\"")
     lines.append("Blocks in preset: " + ", ".join(
@@ -285,6 +290,12 @@ def api_plan(body: PromptBody):
             errs, warns = validate_action(Action(**a))
             a["validation_errors"] = errs
             a["validation_warnings"] = warns
+            # The store confirmation is the one destructive prompt in the
+            # product, so the slot it names has to match what the owner sees
+            # in FM9-Edit. Rendered here rather than in the browser, so the
+            # numbering rule stays in protocol.py alone.
+            if a.get("kind") == "store" and isinstance(a.get("value"), (int, float)):
+                a["slot_label"] = proto.slot_label(int(a["value"]))
         return result
     except Exception as e:
         return JSONResponse({"error": f"planner failed: {e}"}, status_code=502)

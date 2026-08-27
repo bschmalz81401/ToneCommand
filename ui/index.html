@@ -207,7 +207,10 @@ async function refresh() {
     const s = await r.json();
     if (!s.connected) throw new Error(s.error || 'no link');
     $('link').className = 'pill on';
-    if (s.preset) $('preset').innerHTML = `PRESET ${s.preset.number} <b>${s.preset.name}</b>`;
+    // the label carries both numbers: the wire number this tool sends and the
+    // one the front panel and FM9-Edit show, which differ by one
+    if (s.preset) $('preset').innerHTML =
+      `PRESET ${s.preset.label || s.preset.number} <b>${s.preset.name}</b>`;
     if (s.scene) $('scene').innerHTML = `SCENE ${s.scene.number} <b>${s.scene.name}</b>`;
     $('blocks').innerHTML = s.blocks.map(b =>
       `<span class="block ${b.bypassed ? 'byp' : ''}">${b.label}<span class="ch">${b.channel}</span></span>`
@@ -239,7 +242,9 @@ function describe(a) {
   if (a.kind === 'bind_pedal') return `Pedal 2 → ${a.block} ${a.instance} ${a.param}${a.value ? ' (floor ' + a.value + '%)' : ''}`;
   if (a.kind === 'rename_preset') return `Rename preset → "${a.type_name}"`;
   if (a.kind === 'rename_scene') return `Rename scene ${a.value} → "${a.type_name}"`;
-  if (a.kind === 'store') return `STORE to slot ${a.value} (overwrites!)`;
+  // danger first, and one parenthetical rather than two: the slot label
+  // already carries "(FM9-Edit n)"
+  if (a.kind === 'store') return `OVERWRITES slot ${a.slot_label || a.value}`;
   return `${a.block} ${a.instance} / ${a.param}: set to ${a.value}`;
 }
 
@@ -291,7 +296,7 @@ async function apply() {
   if (!currentPlan) return;
   const stores = currentPlan.actions.filter(a => a.kind === 'store');
   if (stores.length) {
-    const slots = stores.map(a => a.value).join(', ');
+    const slots = stores.map(a => a.slot_label || a.value).join(', ');
     if (!window.confirm(`This plan STORES to preset slot(s) ${slots}, permanently overwriting whatever is saved there. Continue?`)) {
       log('store not confirmed; transmit cancelled', 'err');
       return;

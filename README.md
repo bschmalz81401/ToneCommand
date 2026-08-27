@@ -294,7 +294,7 @@ project's regression runs; nothing below is assumed.
 | Scene, bypass, channel control | Verified | Verified (contributor) | Modeled |
 | Parameter set with read-back verify | Verified | Verified (contributor) | Modeled |
 | Expression pedal (modifier) binding | Verified | Untested | Modeled |
-| Block insert and cable drawing | Verified | Verified (contributor) | Modeled, incl. known encoding quirks |
+| Block insert and cable drawing | Verified | Verified | Modeled, incl. known encoding quirks |
 | Store to whitelisted slots | Verified | Untested | Modeled |
 | Tone library harvest (all 512 slots) | Verified | Untested | Modeled |
 | Slot name read by number, no select | Verified | Verified | Modeled |

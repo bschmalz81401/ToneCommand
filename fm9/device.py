@@ -259,6 +259,12 @@ class FM9:
         """
         _check_preset_range(start)      # eagerly: a generator body would not
         _check_preset_range(end)        # raise until the first iteration
+        if start > end:
+            # Scanning nothing and reporting "every slot holds a preset" tells
+            # the owner their unit is full when it may be empty.
+            raise ValueError(
+                f"range {start}-{end} runs backwards: start must not be "
+                f"greater than end")
 
         def walk():
             for n in range(start, end + 1):
@@ -443,11 +449,9 @@ class FM9:
                 "shows as 134-149), choosing slots on YOUR unit that are safe "
                 "to overwrite")
         if slot not in allowed:
-            lo, hi = sorted(allowed)[0], sorted(allowed)[-1]
             raise PermissionError(
                 f"store to slot {p.slot_label(slot)} refused: configured store "
-                f"slots are {lo}-{hi} (FM9-Edit {p.editor_number(lo)}-"
-                f"{p.editor_number(hi)})")
+                f"slots are {p.slot_set_label(allowed)}")
         self._drain()
         self._send(p.build_store_preset(slot))
         time.sleep(1.5)

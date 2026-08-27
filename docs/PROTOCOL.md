@@ -65,10 +65,12 @@ float32), 0x32 grid insert, 0x35 cable draw.
    block" claim was a misread.
 6. **Cable drawing (sub 0x35).** The community 6-row encoding formula
    draws correct cables for: adjacent-row diagonals (verified
-   repeatedly), row-4 and row-5 same-row runs. Row-2 same-row runs use
-   their OWN encoding (odd source column: dest_sign 0 / b23 3; even:
-   dest_sign 1 / b23 1), decoded by probe. UNDECODED: draws from row 1
-   of even columns; 2-row-plus diagonals (they do not register at all).
+   repeatedly), and row-3, row-4 and row-5 same-row runs. Row 3 was added
+   by finding 20 and is what the simulator's row-3 handling relies on.
+   Row-2 same-row runs use their OWN encoding (odd source column:
+   dest_sign 0 / b23 3; even: dest_sign 1 / b23 1), decoded by probe.
+   UNDECODED: draws from row 1 of even columns; 2-row-plus diagonals
+   (they do not register at all).
    Cable draw is IDEMPOTENT: re-sending does not remove a cable; the
    removal message is UNKNOWN.
 7. **Shunt-replacement inheritance is IN-side only.** Placing a block on

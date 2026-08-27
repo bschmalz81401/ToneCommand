@@ -526,6 +526,29 @@ def slot_label(wire_preset: int) -> str:
     return f"{wire_preset} (FM9-Edit {editor_number(wire_preset)})"
 
 
+def slot_set_label(slots) -> str:
+    """A configured slot whitelist as it actually is, runs collapsed.
+
+    Printing lowest-to-highest describes a contiguous set that may not be
+    one: with 133,150-155 configured, "133-155" names every refused slot in
+    between as allowed, which sends the reader off to fix the wrong thing.
+    """
+    runs: list[list[int]] = []
+    for slot in sorted(set(slots)):
+        if runs and slot == runs[-1][-1] + 1:
+            runs[-1].append(slot)
+        else:
+            runs.append([slot])
+    parts = []
+    for run in runs:
+        if len(run) == 1:
+            parts.append(slot_label(run[0]))
+        else:
+            parts.append(f"{run[0]}-{run[-1]} (FM9-Edit "
+                         f"{editor_number(run[0])}-{editor_number(run[-1])})")
+    return ", ".join(parts)
+
+
 def is_empty_slot_name(name: str) -> bool:
     """True for the marker the FM9 itself writes into a cleared slot."""
     return name.strip() == EMPTY_SLOT_NAME

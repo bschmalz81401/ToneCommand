@@ -60,7 +60,37 @@ Notable changes to ToneCommand. Dates are UTC.
   wrong direction for code choosing where to write.
 - `TONECOMMAND_STORE_SLOTS` is documented as wire-numbered: `133-148` is
   what the editor shows as 134-149.
+- The two surfaces where being wrong actually costs something now print both
+  numbers too, which the first pass missed (@Triumph1701 on #22). The store
+  confirmation is the only destructive prompt in the product, and it named a
+  slot the owner's own editor disagreed with, so reading the dialog and
+  checking FM9-Edit was how a correct operation got aborted or a wrong one
+  approved. The live preset readout had the same fault with less at stake.
+  Both labels are rendered server side from `protocol.slot_label`, so the
+  numbering rule stays in one place instead of being recomputed in the
+  browser.
+- A store refusal describes the whitelist it is enforcing rather than its
+  endpoints. With `TONECOMMAND_STORE_SLOTS=133,150-155`, refusing slot 140
+  used to print "configured store slots are 133-155", naming the refused
+  slot as allowed and sending the owner off to fix the wrong thing. Runs are
+  collapsed, so a contiguous whitelist still reads as one range.
 - docs/PROTOCOL.md findings 21-22.
+
+### Fixed (from-scratch tool, 2026-08-24)
+- A device NACK during slot selection prints a refusal instead of a
+  traceback. `NoEmptySlot` and `FM9NotFound` are both `RuntimeError`, but
+  `_request` raises the bare parent, and naming only the children let it
+  escape the handler.
+- An inverted `--range 449 386` is refused rather than scanning nothing and
+  announcing that every slot holds a preset, which told the owner their unit
+  was full when it may have been empty. Checked in `scan_slots`, so every
+  caller is covered rather than just the tool.
+- docs/PROTOCOL.md finding 6 lists row 3 among the verified same-row cable
+  runs. Finding 20 added it and the simulator already relies on it, so the
+  ledger entry the cable code cites was out of step with the code.
+- The fw 12.00 compatibility row for block insert reads plain "Verified":
+  this work verified it firsthand on the owner's unit, not via a
+  contributor report.
 
 ### Added (from-scratch builds, 2026-08-24)
 - `tools/build_from_scratch.py`: builds INPUT -> amp -> cab -> OUTPUT into

@@ -176,3 +176,39 @@ def test_the_build_leaves_no_undecoded_geometry_on_the_sim():
             d.connect_cells(ROW, col, ROW)
         cable_notes = [u for u in d.sim_core.undecoded if "cable" in u]
         assert cable_notes == [], f"unexpected undecoded report: {cable_notes}"
+
+
+# --- the refusal path has to actually be reachable (#22 review) ---
+
+def test_a_device_nack_prints_a_refusal_rather_than_a_traceback(sim, capsys,
+                                                                monkeypatch):
+    """NoEmptySlot and FM9NotFound are both RuntimeError, but _request raises
+    the BARE parent on a device NACK. Naming only the children let that escape
+    as a traceback where a refusal line belongs."""
+    from fm9.device import FM9
+    def nack(self, n=None):
+        raise RuntimeError("device NACK: rejected (invalid function)")
+    monkeypatch.setattr(FM9, "slot_name", nack)
+    assert main(["--slot", "386"]) == 1
+    out = capsys.readouterr().out
+    assert "refusing to build" in out
+    assert "device NACK" in out
+
+
+def test_an_inverted_range_is_refused_not_reported_as_a_full_unit(sim, capsys):
+    """--range 449 386 scanned nothing and announced that every slot in
+    449-386 holds a preset, which tells the owner their unit is full when it
+    may be empty."""
+    assert main(["--range", "449", "386"]) == 1
+    out = capsys.readouterr().out
+    assert "refusing to build" in out
+    assert "runs backwards" in out
+    assert "holds a preset" not in out
+
+
+def test_scan_slots_refuses_an_inverted_range_for_every_caller():
+    with dev() as d:
+        with pytest.raises(ValueError, match="runs backwards"):
+            list(d.scan_slots(449, 386))
+        with pytest.raises(ValueError, match="runs backwards"):
+            d.first_empty_slot(449, 386)
