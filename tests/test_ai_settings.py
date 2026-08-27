@@ -468,3 +468,134 @@ def test_listing_anthropic_models_is_bounded(store, monkeypatch):
     assert seen.get("timeout"), "no timeout on the Anthropic client"
     assert seen["timeout"] <= 30
     assert seen.get("max_retries") is not None
+
+
+# --- Auto is a choice, not the absence of one (#25 review) ---
+
+def test_selecting_auto_clears_a_pin_from_the_environment(store, monkeypatch):
+    """The defect that made the panel unable to honour its own setting: with
+    PLANNER_BACKEND=grok exported and Auto selected, the file stored 'grok',
+    the variable stayed 'grok', and candidates() stayed pinned."""
+    monkeypatch.setenv("PLANNER_BACKEND", "grok")
+    assert planner.candidates() == ["grok"]
+    saved = ai_settings.save({"backend": ""})
+    assert saved.backend == ""
+    assert json.loads(store.read_text())["backend"] == ""
+    assert planner.candidates() != ["grok"]
+
+
+def test_selecting_auto_clears_a_pin_from_dot_env(store, isolated_env):
+    """The harder half: .env is read on every lookup, so an unset variable is
+    not enough. A present blank is what says "no pin" on that channel."""
+    isolated_env.write_text("PLANNER_BACKEND=grok\n")
+    assert planner.candidates() == ["grok"]
+    ai_settings.save({"backend": ""})
+    assert planner.candidates() != ["grok"]
+    assert ai_settings.load().backend == ""
+
+
+def test_auto_survives_a_reload_rather_than_snapping_back(store, monkeypatch):
+    """GET used to report the env pin again, so the dropdown snapped back
+    after a successful save."""
+    monkeypatch.setenv("PLANNER_BACKEND", "grok")
+    ai_settings.save({"backend": ""})
+    assert ai_settings.load().backend == ""
+    assert ai_settings.panel_state()["backend"] == ""
+
+
+def test_never_having_chosen_still_defers_to_the_environment(store, monkeypatch):
+    """Auto must win, but only when it was actually picked. A file with no
+    backend key at all is not a vote for anything."""
+    store.write_text(json.dumps({"baseUrl": "http://h/v1"}))
+    monkeypatch.setenv("PLANNER_BACKEND", "grok")
+    assert ai_settings.load().backend == "grok"
+    ai_settings.apply_to_env()
+    assert planner.candidates() == ["grok"]
+
+
+# --- the boxes hold what is stored, not what the environment provides ---
+
+def test_a_save_does_not_pin_a_base_url_that_came_from_the_environment(
+        store, monkeypatch):
+    """The panel prefilled the box from the merged view and posted it back, so
+    opening the panel and clicking SAVE pinned a .env value in the file. The
+    file outranks .env, so editing .env afterwards silently did nothing."""
+    monkeypatch.setenv("PLANNER_BASE_URL", "http://from-env/v1")
+    state = ai_settings.panel_state()
+    assert state["baseUrl"] == "", "the box shows only what is stored"
+    assert state["baseUrlFallback"] == "http://from-env/v1"
+
+    ai_settings.save({"backend": "", "baseUrl": state["baseUrl"]})
+    assert json.loads(store.read_text())["baseUrl"] == ""
+    monkeypatch.setenv("PLANNER_BASE_URL", "http://rotated/v1")
+    assert ai_settings.load().base_url == "http://rotated/v1"
+
+
+def test_a_save_does_not_pin_a_model_that_came_from_the_environment(
+        store, monkeypatch):
+    monkeypatch.setenv("GROK_CLI_MODEL", "grok-from-env")
+    entry = [b for b in ai_settings.available_backends()
+             if b["backend"] == "grok"][0]
+    assert entry["model"] == ""
+    assert entry["modelFallback"] == "grok-from-env"
+
+    ai_settings.save({"backend": "grok", "model": entry["model"]})
+    assert "grok" not in json.loads(store.read_text())["models"]
+    monkeypatch.setenv("GROK_CLI_MODEL", "grok-rotated")
+    assert ai_settings.load().models["grok"] == "grok-rotated"
+
+
+def test_the_panel_shows_the_environment_value_as_a_hint():
+    ui = _ui()
+    assert "baseUrlFallback" in ui and "modelFallback" in ui
+    assert ".env says" in ui, "a blank box that works needs to say why"
+
+
+def test_the_openai_default_does_not_overwrite_an_env_base_url():
+    ui = _ui()
+    assert "&& !aiEnvBaseUrl" in ui
+
+
+# --- the file holds a key, so only its owner may read it ---
+
+def test_the_settings_file_is_not_world_readable(store):
+    """Path.write_text uses the process umask, commonly 0644. Patch from
+    @Triumph1701 on #25."""
+    import stat
+    ai_settings.save({"backend": "cli"})
+    mode = store.stat().st_mode
+    assert not mode & stat.S_IROTH, "world-readable"
+    assert not mode & stat.S_IRGRP, "group-readable"
+    assert stat.S_IMODE(mode) == 0o600
+
+    # a file predating the fix is tightened rather than left as found
+    os.chmod(store, 0o644)
+    ai_settings.save({"backend": "cli"})
+    assert stat.S_IMODE(store.stat().st_mode) == 0o600
+
+
+# --- the log line was the last raw sink for model output ---
+
+def test_log_lines_are_escaped():
+    ui = _ui()
+    assert "esc(msg)" in ui, "clarifications and planner errors reach here"
+
+
+# --- a save cannot land in the middle of a plan ---
+
+def test_a_save_during_a_plan_is_refused_rather_than_torn(client, store):
+    """candidates() has already chosen a backend by then, and the runner
+    rereads the base URL and key, so a half-applied save sends the new key at
+    the old URL."""
+    import server
+    server._settings_lock.acquire()
+    try:
+        r = client.post("/api/ai-settings", json={"backend": "cli"})
+    finally:
+        server._settings_lock.release()
+    assert r.status_code == 409
+    assert "plan is in flight" in r.json()["error"]
+    assert not store.exists(), "a refused save must not persist"
+
+    assert client.post("/api/ai-settings",
+                       json={"backend": "cli"}).status_code == 200

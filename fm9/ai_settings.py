@@ -11,12 +11,10 @@ by hand. Precedence therefore falls out for free, highest first:
 
     the settings file  >  the environment (including .env)  >  built-in default
 
-Outranking is not erasing. This module only ever removes a variable it put
-there itself, restoring whatever the user had; a setup that worked before the
-panel existed still works after it (@Triumph1701 on #25). For the same reason
-only values the user actually typed into the panel are persisted, never ones
-read out of their shell or .env: the file outranks both, so copying a key or
-a model id into it turns a later edit of .env into a silent no-op.
+Two rules make that precedence real rather than nominal. This module only
+removes a variable it put there itself, and it only persists what the user
+typed into the panel. Anything else and the file quietly absorbs the
+environment it was supposed to sit above.
 
 Each backend reads DIFFERENT variables, and two of them read none at all, so
 settings are stored per backend and the UI is told which fields a backend
@@ -105,6 +103,11 @@ class AiSettings:
     base_url: str = ""
     models: dict = field(default_factory=dict)   # backend -> model
     keys: dict = field(default_factory=dict)     # backend -> key
+    #: Whether `backend` is a CHOICE or merely the absence of one. Auto is a
+    #: choice, and an empty string cannot carry that on its own: without this
+    #: flag, picking Auto was indistinguishable from never having opened the
+    #: panel, so a PLANNER_BACKEND pin in .env could not be cleared from here.
+    backend_explicit: bool = False
 
     def model_for(self, backend: str | None = None) -> str:
         want = self.backend if backend is None else backend
@@ -157,6 +160,7 @@ def _from_file() -> AiSettings:
         return settings
     if isinstance(stored.get("backend"), str):
         settings.backend = stored["backend"].lower()
+        settings.backend_explicit = True
     if isinstance(stored.get("baseUrl"), str):
         settings.base_url = stored["baseUrl"]
     for attr in ("models", "keys"):
@@ -171,8 +175,9 @@ def load() -> AiSettings:
     """The stored choice, falling back to the environment then the default."""
     settings = _from_env()
     stored = _from_file()
-    if stored.backend:
-        settings.backend = stored.backend
+    if stored.backend_explicit:
+        settings.backend = stored.backend        # including "" for Auto
+        settings.backend_explicit = True
     if stored.base_url:
         settings.base_url = stored.base_url
     for attr in ("models", "keys"):
@@ -180,6 +185,24 @@ def load() -> AiSettings:
         merged.update(getattr(stored, attr))
         setattr(settings, attr, merged)
     return settings
+
+
+def _write_private(path: Path, text: str) -> None:
+    """Write a file only its owner can read.
+
+    This file holds an API key. `Path.write_text` creates with the process
+    umask, commonly 0644, so on a shared machine every other local account
+    could read it. Unlike `.env`, which the user creates and chmods
+    themselves, this one is created by the app, so the mode is ours to get
+    right. An existing world-readable file is tightened on the next save
+    rather than left as found. (Patch from @Triumph1701 on #25.)
+    """
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    try:
+        os.write(fd, text.encode())
+    finally:
+        os.close(fd)
+    os.chmod(path, 0o600)          # a pre-existing file keeps its old mode
 
 
 def save(patch: dict) -> AiSettings:
@@ -198,6 +221,8 @@ def save(patch: dict) -> AiSettings:
     """
     stored = _from_file()
     backend = str(patch.get("backend", stored.backend) or "").lower()
+    # Sending the field at all is a choice, Auto included.
+    explicit = "backend" in patch or stored.backend_explicit
     if backend and backend not in planner.BACKENDS:
         raise ValueError(f"unknown backend {backend!r}; "
                          f"expected one of {', '.join(planner.BACKENDS)}")
@@ -220,11 +245,11 @@ def save(patch: dict) -> AiSettings:
     base_url = (str(patch.get("baseUrl", stored.base_url) or "")
                 if fields.get("baseUrl") else stored.base_url)
     updated = AiSettings(backend=backend, base_url=base_url,
-                         models=models, keys=keys)
+                         models=models, keys=keys, backend_explicit=explicit)
     _check_runnable(backend, updated)
     path = settings_path()
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(
+    _write_private(path, json.dumps(
         {"backend": updated.backend, "baseUrl": updated.base_url,
          "models": updated.models, "keys": updated.keys}, indent=2) + "\n")
     apply_to_env(updated)
@@ -296,20 +321,20 @@ def apply_to_env(settings: AiSettings | None = None) -> AiSettings:
     restart, without the planner needing to know this module exists. Only the
     variables the chosen backend reads are set.
 
-    The rest are RELEASED, not cleared. Clearing them meant that a user with
-    ANTHROPIC_API_KEY exported lost the Claude API backend the moment the
-    server started, having changed nothing and been told nothing - and it
-    stripped the key out of the environment handed to the claude CLI
-    subprocess, which the allowlist deliberately passes through
-    (@Triumph1701 on #25). Releasing removes only what this module put there
-    and puts back what it displaced, so a value the panel never set survives
-    untouched and the documented precedence holds: file, then environment,
-    then default.
+    The rest are RELEASED, not cleared: only what this module wrote is
+    removed, and what it displaced is put back. Clearing them took away
+    configuration the user had set by hand, including the key the subprocess
+    allowlist deliberately passes through.
     """
     settings = load() if settings is None else settings
     wanted = {}
     if settings.backend:
         wanted["PLANNER_BACKEND"] = settings.backend
+    elif settings.backend_explicit:
+        # Auto, chosen on purpose. Releasing the variable would re-expose a
+        # pin in .env, and planner._env reads a PRESENT blank as deliberately
+        # blank, so this is what "no pin" looks like on that channel.
+        wanted["PLANNER_BACKEND"] = ""
     fields = BACKEND_FIELDS.get(settings.backend, {})
     if fields.get("baseUrl") and settings.base_url:
         wanted[fields["baseUrl"]] = settings.base_url
@@ -423,6 +448,21 @@ def _endpoint_models() -> tuple[list[str], str]:
     return found, f"{base}/models" if found else "the endpoint listed no models"
 
 
+def panel_state() -> dict:
+    """What the panel shows: stored values in the boxes, the environment's as
+    placeholders, and the effective backend selected.
+
+    The key box already had this shape: empty, with `hasKey` reporting that
+    one exists. The base URL and model boxes need it for the same reason, so
+    that saving cannot pin a value the user never typed.
+    """
+    effective, stored, env = load(), _from_file(), _from_env()
+    return {"backend": effective.backend,
+            "baseUrl": stored.base_url,
+            "baseUrlFallback": env.base_url,
+            "hasKey": bool(effective.key_for())}
+
+
 def available_backends() -> list[dict]:
     """Which backends this host can run, which controls each one honours, and
     why an unusable one is unusable.
@@ -431,6 +471,7 @@ def available_backends() -> list[dict]:
     no option, and so is a control that silently does nothing.
     """
     settings = load()
+    stored, env = _from_file(), _from_env()
     # Disabled means "you cannot fix this from this panel". A missing binary
     # is a fact about the host. A missing key or base URL is a box on this
     # very form, and disabling the option that reveals the box is a closed
@@ -463,7 +504,11 @@ def available_backends() -> list[dict]:
             "needsModel": bool(fields["model"]),
             "needsKey": bool(fields["key"]),
             "modelOptional": MODEL_ALWAYS_OPTIONAL,
-            "model": settings.models.get(name or "openai", ""),
+            # Stored value in the box, environment value as a placeholder:
+            # prefilling from the merged view and then saving the box pins
+            # what .env provided.
+            "model": stored.models.get(name or "openai", ""),
+            "modelFallback": env.models.get(name or "openai", ""),
             "hasKey": bool(settings.keys.get(name or "openai")),
         })
     return out

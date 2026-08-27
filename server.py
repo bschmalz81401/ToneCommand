@@ -25,6 +25,13 @@ app = FastAPI(title="FM9 Tone Control")
 
 reg = Registry()
 _lock = threading.Lock()
+# Planner configuration lives in os.environ, which the settings panel rewrites
+# and the planner rereads inside each backend runner. A save landing mid-plan
+# could therefore tear the view: candidates() has already chosen a backend,
+# then the runner picks up the new key and the old URL (@Triumph1701 on #25).
+# Held for the whole planner call, and a save that cannot get it says so
+# rather than hanging for the length of a plan.
+_settings_lock = threading.Lock()
 _fm9: FM9 | None = None
 
 FRIENDLY = {"DISTORT": "Amp", "CABINET": "Cab", "FUZZ": "Drive", "GATE": "Gate",
@@ -284,7 +291,8 @@ def api_plan(body: PromptBody):
             drop_fm9()
             return JSONResponse({"error": "FM9 not connected"}, status_code=503)
     try:
-        result = planner.plan(body.prompt, state_text(snap), PARAM_REFERENCE)
+        with _settings_lock:
+            result = planner.plan(body.prompt, state_text(snap), PARAM_REFERENCE)
         result["device"] = {"preset": snap["preset"], "scene": snap["scene"]}
         for a in result.get("actions", []):
             errs, warns = validate_action(Action(**a))
@@ -604,7 +612,7 @@ def api_ai_settings_state():
     Never returns the API key in any form: `hasKey` says whether one is
     stored and nothing more.
     """
-    return {"settings": ai_settings.load().public(),
+    return {"settings": ai_settings.panel_state(),
             "backends": ai_settings.available_backends(),
             "defaults": {"cliproxy": ai_settings.CLIPROXY_DEFAULT_URL,
                          "localLlm": ai_settings.LOCAL_LLM_DEFAULT_URL}}
@@ -626,10 +634,18 @@ def api_ai_settings(body: dict):
 
     A blank or absent apiKey keeps whatever is stored; clearKey removes it.
     """
+    if not _settings_lock.acquire(timeout=2):
+        return JSONResponse(
+            {"error": "a plan is in flight, so nothing was saved. Try again "
+                      "once it finishes: changing the backend underneath a "
+                      "running plan would send it half of each setting."},
+            status_code=409)
     try:
         saved = ai_settings.save(body)
     except ValueError as exc:
         return JSONResponse({"error": str(exc)}, status_code=400)
+    finally:
+        _settings_lock.release()
     return {"settings": saved.public(),
             "backends": ai_settings.available_backends()}
 

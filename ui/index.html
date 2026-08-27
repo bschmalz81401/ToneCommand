@@ -216,16 +216,17 @@
 const $ = id => document.getElementById(id);
 let currentPlan = null;
 
-// Every string a plan card shows came from a model, and a model can now be
-// anything the user pointed the endpoint at. Templates below build HTML, so
-// what goes into them gets escaped first.
+// Model output reaches HTML templates below, and the model can be any
+// endpoint the user configured.
 const esc = s => String(s ?? '').replace(/[&<>"']/g,
   c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
 
 function log(msg, cls) {
   const t = new Date().toLocaleTimeString();
+  // esc: clarifications and planner errors are model output, or a remote
+  // body, and this was the last place either reached innerHTML raw
   $('log').insertAdjacentHTML('afterbegin',
-    `<div><span class="t">${t}</span><span class="${cls || ''}">${msg}</span></div>`);
+    `<div><span class="t">${t}</span><span class="${cls || ''}">${esc(msg)}</span></div>`);
 }
 
 const KNOB_LABELS = {
@@ -305,10 +306,7 @@ async function engage() {
     // half the value of the settings panel: a wrong-sounding plan should be
     // attributable to the model that produced it, not to the tool
     if (plan.backend) {
-      // textContent, not insertAdjacentHTML: on the OpenAI-compatible path
-      // plan.model is whatever the configured endpoint put in its response
-      // body, and this release invites people to point the tool at endpoints
-      // they do not control
+      // plan.model is whatever the configured endpoint reported, so text
       const by = document.createElement('div');
       by.className = 'answered';
       by.id = 'planby';
@@ -342,6 +340,7 @@ async function engage() {
 
 let aiDefaults = {};
 let aiBackends = [];
+let aiEnvBaseUrl = '';        // what .env or the shell already provides
 
 // Each backend reads different variables, and two of them read none at all.
 // Showing a box a backend ignores is the same sin as offering a backend that
@@ -362,7 +361,12 @@ function aiFields() {
   if (b) {
     $('aimodel').value = b.model || '';
     loadAiModels(b.backend);
-    $('aimodel').placeholder = b.modelOptional ? 'model (optional)' : 'model';
+    $('aimodel').placeholder = b.modelFallback
+      ? `model (optional, .env says ${b.modelFallback})`
+      : (b.modelOptional ? 'model (optional)' : 'model');
+    $('aibaseurl').placeholder = aiEnvBaseUrl
+      ? `base URL (.env says ${aiEnvBaseUrl})`
+      : (aiDefaults.cliproxy || 'base URL');
     $('aikey').value = '';
     // Spell out the whole rule rather than a per-backend word: the Claude API
     // cannot run without a key, and an OAuth router wants none at all, so
@@ -384,7 +388,11 @@ async function loadAiSettings() {
       `<option value="${b.backend}"${b.available ? '' : ' disabled'}>` +
       `${b.label}${b.available ? '' : ' (' + b.why + ')'}</option>`).join('');
     $('aibackend').value = d.settings.backend || '';
+    // stored value in the box, environment value as a placeholder: filling
+    // the box from the merged view and then saving pinned a .env value into
+    // the settings file, which then outranked .env for good
     $('aibaseurl').value = d.settings.baseUrl || '';
+    aiEnvBaseUrl = d.settings.baseUrlFallback || '';
     aiFields();
   } catch (e) {
     log(`could not read AI settings: ${e.message}`, 'err');
@@ -402,9 +410,8 @@ async function loadAiModels(backend) {
     // so drop the answer if the user has moved on: appending it would stack
     // one backend's source line under another's
     if ($('aibackend').value !== backend) return;
-    // property assignment, not an interpolated value="" attribute: these ids
-    // come from whatever endpoint is configured, and one containing a double
-    // quote would break out of the attribute
+    // property, not an interpolated value="" attribute: an id containing a
+    // double quote would break out of it
     const dl = $('aimodels');
     dl.innerHTML = '';
     for (const m of (d.models || [])) {
@@ -487,7 +494,10 @@ $('discard').onclick = () => { $('planbox').style.display = 'none'; currentPlan 
 $('aisave').onclick = () => saveAiSettings();
 $('aiclearkey').onclick = () => saveAiSettings({clearKey: true});
 $('aibackend').onchange = () => {
-  if ($('aibackend').value === 'openai' && !$('aibaseurl').value) {
+  // only when nothing already provides one: filling the box over a .env
+  // value would pin this default on the next save
+  if ($('aibackend').value === 'openai' && !$('aibaseurl').value
+      && !aiEnvBaseUrl) {
     $('aibaseurl').value = aiDefaults.cliproxy || '';
   }
   aiFields();

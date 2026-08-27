@@ -45,6 +45,36 @@ Notable changes to ToneCommand. Dates are UTC.
   Control Change by the shared SendGuard, and the pedal's serial
   control port is opened read-only, since firmware and bootloader
   traffic travels over that kind of channel on an undecoded device.
+### Fixed (AI settings review round two, 2026-08-24)
+- Selecting Auto clears a `PLANNER_BACKEND` pin instead of being unable to
+  override one. A stored backend of `""` used to be indistinguishable from
+  never having chosen, so the panel could not honour its own Auto setting:
+  GET reported the pin again, the dropdown snapped back after a successful
+  save, and `candidates()` stayed pinned. The choice is now recorded as a
+  choice, and applying it writes an explicit blank, which `planner._env`
+  reads as deliberately unset. A file with no backend key at all still
+  defers to the environment, because that is not a vote for anything.
+- A save no longer pins base URL or model values that came from the
+  environment. Both boxes were prefilled from the merged view and posted
+  back, so opening the panel and clicking SAVE wrote a `.env` value into the
+  file, and since the file outranks `.env`, editing it there afterwards
+  silently did nothing. The boxes now carry only what is stored, with the
+  environment's value shown as a placeholder, which is the shape the key box
+  already had. Found by an independent review; the key half was fixed one
+  round earlier and not generalised.
+- `ai_settings.json` is written `0600`. It holds an API key and was created
+  with the process umask, commonly `0644`, so on a shared machine any other
+  local account could read it. A file predating the fix is tightened on the
+  next save. Patch supplied by @Triumph1701 on #25.
+- Log lines are escaped. It was the last place model output reached
+  `innerHTML` raw, including `plan.clarification` and planner error text.
+- A save cannot land in the middle of a plan. Planner configuration lives in
+  `os.environ` and is reread inside each backend runner, so a save arriving
+  after `candidates()` chose a backend could send the new key at the old
+  URL. The planner call holds a settings lock, and a save that cannot take it
+  is refused with a sentence rather than left to hang for the length of a
+  plan.
+
 ### Added (AI settings in the UI, 2026-08-24)
 - `GET`/`POST /api/ai-settings`, following the existing `/api/gig` pair, and
   an AI SETTINGS panel in the UI: pick Claude Code CLI, Claude API, Grok CLI
