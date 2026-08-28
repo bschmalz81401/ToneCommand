@@ -11,6 +11,11 @@ number straight out of flash, so nothing is selected, the edit buffer is
 not discarded, and the preset you are playing keeps playing. Safe to run
 mid-session.
 
+Slot numbers are reported both ways: the WIRE number this tool and the MIDI
+protocol use (0-511) and the number FM9-Edit and the front panel show for the
+same slot (1-512). They differ by one, and confusing them is how the wrong
+preset gets cleared.
+
 A slot is empty when the FM9 names it "<EMPTY>" - the device's own marker,
 not a guess. Cleared slots usually carry a ghost: the tail of the name that
 used to be there, left in the name field. Ghosts are reported because they
@@ -22,6 +27,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
+from fm9 import protocol as p  # noqa: E402
 from fm9.registry import Registry  # noqa: E402
 
 
@@ -46,7 +52,13 @@ def main(start: int, end: int) -> int:
         dev = FM9(reg)
     with dev:
         held = dev.current_preset()
-        found = list(dev.scan_slots(start, end))
+        try:
+            found = list(dev.scan_slots(start, end))
+        except ValueError as exc:
+            # `find_empty_slots.py 1 512` is the wire-versus-editor confusion
+            # this tool exists to prevent; it should say so, not traceback.
+            print(f"refusing to scan: {exc}")
+            return 2
         empty = [s for s in found if s.empty]
         silent = (end - start + 1) - len(found)
 
@@ -57,11 +69,13 @@ def main(start: int, end: int) -> int:
         print(f"  EMPTY    {len(empty)}")
         print(f"  OCCUPIED {len(found) - len(empty)}")
 
-        print("\nempty ranges:")
+        print("\nempty ranges (wire, and as FM9-Edit shows them):")
         for a, b in runs([s.number for s in empty]) or []:
             span = f"{b - a + 1} slots" if b > a else "1 slot"
-            print(f"  {a}-{b}  ({span})" if b > a
-                  else f"  {a}  ({span})")
+            ed = (f"FM9-Edit {p.editor_number(a)}-{p.editor_number(b)}"
+                  if b > a else f"FM9-Edit {p.editor_number(a)}")
+            print(f"  {a}-{b}  ({ed}, {span})" if b > a
+                  else f"  {a}  ({ed}, {span})")
         if not empty:
             print("  none - every slot in this range holds a preset")
 
@@ -69,15 +83,16 @@ def main(start: int, end: int) -> int:
         if ghosts:
             print(f"\n{len(ghosts)} empty slot(s) carry a ghost of an old name:")
             for s in ghosts[:20]:
-                print(f"  {s.number}: {s.ghost!r}")
+                print(f"  {s.label}: {s.ghost!r}")
             if len(ghosts) > 20:
                 print(f"  ... and {len(ghosts) - 20} more")
 
         if empty:
             widest = max(runs([s.number for s in empty]),
                          key=lambda r: r[1] - r[0])
-            print(f"\nsuggested from-scratch target: {empty[0].number} "
-                  f"(widest free run {widest[0]}-{widest[1]})")
+            print(f"\nsuggested from-scratch target: {empty[0].label} "
+                  f"(widest free run {widest[0]}-{widest[1]}, FM9-Edit "
+                  f"{p.editor_number(widest[0])}-{p.editor_number(widest[1])})")
         after = dev.current_preset()
         print(f"loaded preset: {held} -> {after}"
               f"{'  UNCHANGED' if held == after else '  DISTURBED'}")

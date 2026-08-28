@@ -1,5 +1,26 @@
 # Hardware Validation Report: FM9 editor-protocol feasibility
 
+> **A preserved snapshot, not current documentation.** This is the
+> feasibility report as written on 2026-08-16, kept because it records the
+> exact commands and responses first observed on hardware and the reasoning
+> that authorised Phase 2. It is deliberately not updated. The living
+> record of what the protocol does is [PROTOCOL.md](PROTOCOL.md); what is
+> verified on which firmware is the Compatibility table in the README.
+>
+> Superseded since, so nobody reads them as current policy:
+> - **"pin to firmware 11.x"** - the project now covers 11.x and 12.00,
+>   with the firmware column in the README's Compatibility table saying
+>   which capability is proven where.
+> - **"the store command (sub 0x26) will not be implemented in the write
+>   path"** - store IS implemented, but only to slots the owner whitelists
+>   for their own unit, refused at the transport layer everywhere else.
+>   The intent behind the original line survives: nothing persists by
+>   accident.
+> - **"Proceed to Phase 2"** and the Phase 2 plan below were decisions of
+>   the moment; both are long done.
+> - Preset numbers here are WIRE numbers, 0-511. "preset 510" is what
+>   FM9-Edit shows as 511 (PROTOCOL.md finding 21).
+
 Date: 2026-08-16. Hardware: Fractal FM9, firmware 11.00 (build Jan 19 2026), USB MIDI on macOS (Apple Silicon). Test stack: Python 3.12, mido + python-rtmidi.
 
 ## Verdict

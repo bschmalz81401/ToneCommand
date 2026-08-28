@@ -25,6 +25,26 @@ RESULT_CODES = {
 }
 
 
+def _check_preset_range(preset: int) -> None:
+    """Refuse an out-of-range slot rather than believe the answer.
+
+    The unit ANSWERS a query for a nonexistent preset (512 and up) with a
+    blank name field and the requested number echoed back. A blank is not
+    the <EMPTY> marker, so an unguarded read reports such a slot as
+    OCCUPIED - the exact wrong direction for anything that then decides
+    where to write.
+    """
+    if not 0 <= preset < p.PRESET_COUNT:
+        raise ValueError(
+            f"preset {preset} is out of range: the wire numbers presets "
+            f"0-{p.PRESET_COUNT - 1}, which FM9-Edit shows as "
+            f"1-{p.PRESET_COUNT}")
+
+
+class NoEmptySlot(RuntimeError):
+    """Nothing free to build into. A build refuses rather than pick a victim."""
+
+
 class FM9NotFound(RuntimeError):
     pass
 
@@ -36,9 +56,14 @@ def get_store_slots() -> set[int]:
       1. env var  TONECOMMAND_STORE_SLOTS
       2. a TONECOMMAND_STORE_SLOTS= line in .env at the repo root
 
-    Format: "133-148" or "133,140,150-155". DEFAULT IS EMPTY: storing is
-    disabled until the owner designates disposable slots, because nobody
-    but the owner knows what lives in their banks."""
+    Format: "133-148" or "133,140,150-155". These are WIRE numbers, 0-511.
+    FM9-Edit and the front panel number the same slots 1-512, so "133-148"
+    here is what the editor shows as 134-149. Read the range off the wire,
+    not off the editor, or the whitelist is one slot out.
+
+    DEFAULT IS EMPTY: storing is disabled until the owner designates
+    disposable slots, because nobody but the owner knows what lives in
+    their banks."""
     import os
     raw = os.environ.get("TONECOMMAND_STORE_SLOTS", "")
     if not raw:
@@ -214,6 +239,8 @@ class FM9:
         requested number back, so a stale or current-preset reply is rejected
         rather than misattributed.
         """
+        _check_preset_range(preset)
+
         def want(d):
             got = p.parse_patch_name_full(d)
             return got if got is not None and got.number == preset else None
@@ -230,10 +257,38 @@ class FM9:
         Yields SlotName per answering slot, skipping any that stays silent
         after one retry. Read-only by construction: no select, no write.
         """
-        for n in range(start, end + 1):
-            got = self.slot_name(n) or self.slot_name(n)
-            if got is not None:
-                yield got
+        _check_preset_range(start)      # eagerly: a generator body would not
+        _check_preset_range(end)        # raise until the first iteration
+        if start > end:
+            # Scanning nothing and reporting "every slot holds a preset" tells
+            # the owner their unit is full when it may be empty.
+            raise ValueError(
+                f"range {start}-{end} runs backwards: start must not be "
+                f"greater than end")
+
+        def walk():
+            for n in range(start, end + 1):
+                got = self.slot_name(n) or self.slot_name(n)
+                if got is not None:
+                    yield got
+        return walk()
+
+    def first_empty_slot(self, start: int = 0, end: int = 511) -> p.SlotName:
+        """The lowest-numbered empty slot in the range.
+
+        A from-scratch build must land somewhere free, and choosing the slot
+        is not the caller's problem: this finds one or refuses. Raises
+        NoEmptySlot when every slot that answered holds a preset, because
+        overwriting someone's work is never the safe fallback.
+        """
+        for got in self.scan_slots(start, end):
+            if got.empty:
+                return got
+        raise NoEmptySlot(
+            f"no empty presets to build on: every slot in {start}-{end} "
+            f"(FM9-Edit {p.editor_number(start)}-{p.editor_number(end)}) that "
+            "answered holds a preset. Clear one on the unit (or widen the "
+            "range) and try again; tools/find_empty_slots.py shows the map.")
 
     def require_empty_slot(self, preset: int) -> p.SlotName:
         """Gate for building a preset from scratch into a slot.
@@ -245,11 +300,12 @@ class FM9:
         """
         got = self.slot_name(preset)
         if got is None:
-            raise FM9NotFound(f"preset {preset} did not answer a name query")
+            raise FM9NotFound(
+                f"preset {p.slot_label(preset)} did not answer a name query")
         if not got.empty:
             raise ValueError(
-                f"preset {preset} holds {got.name!r}; building from scratch "
-                "requires a slot the device reports as <EMPTY>")
+                f"preset {p.slot_label(preset)} holds {got.name!r}; building "
+                "from scratch requires a slot the device reports as <EMPTY>")
         return got
 
     def current_scene(self) -> int | None:
@@ -389,13 +445,13 @@ class FM9:
             raise PermissionError(
                 "storing is disabled: no store slots configured. Set "
                 "TONECOMMAND_STORE_SLOTS (env or .env), e.g. "
-                "TONECOMMAND_STORE_SLOTS=133-148, choosing slots on YOUR unit "
-                "that are safe to overwrite")
+                "TONECOMMAND_STORE_SLOTS=133-148 (WIRE numbers, which FM9-Edit "
+                "shows as 134-149), choosing slots on YOUR unit that are safe "
+                "to overwrite")
         if slot not in allowed:
             raise PermissionError(
-                f"store to slot {slot} refused: configured store slots are "
-                f"{sorted(allowed)[0]}-{sorted(allowed)[-1]}"
-                if allowed else f"store to slot {slot} refused")
+                f"store to slot {p.slot_label(slot)} refused: configured store "
+                f"slots are {p.slot_set_label(allowed)}")
         self._drain()
         self._send(p.build_store_preset(slot))
         time.sleep(1.5)

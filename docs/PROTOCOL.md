@@ -65,10 +65,12 @@ float32), 0x32 grid insert, 0x35 cable draw.
    block" claim was a misread.
 6. **Cable drawing (sub 0x35).** The community 6-row encoding formula
    draws correct cables for: adjacent-row diagonals (verified
-   repeatedly), row-4 and row-5 same-row runs. Row-2 same-row runs use
-   their OWN encoding (odd source column: dest_sign 0 / b23 3; even:
-   dest_sign 1 / b23 1), decoded by probe. UNDECODED: draws from row 1
-   of even columns; 2-row-plus diagonals (they do not register at all).
+   repeatedly), and row-3, row-4 and row-5 same-row runs. Row 3 was added
+   by finding 20 and is what the simulator's row-3 handling relies on.
+   Row-2 same-row runs use their OWN encoding (odd source column:
+   dest_sign 0 / b23 3; even: dest_sign 1 / b23 1), decoded by probe.
+   UNDECODED: draws from row 1 of even columns; 2-row-plus diagonals
+   (they do not register at all).
    Cable draw is IDEMPOTENT: re-sending does not remove a cable; the
    removal message is UNKNOWN.
 7. **Shunt-replacement inheritance is IN-side only.** Placing a block on
@@ -136,6 +138,54 @@ float32), 0x32 grid insert, 0x35 cable draw.
     byte-identical to a live one, so field reads alone can never certify
     a binding; physical verification (or the finding-16 reload test for
     structure) is required.
+18. **An empty slot is emptier than it looks.** A slot the device names
+    `<EMPTY>` has NO grid cells at all - not even Input or Output - and its
+    status dump carries only effect ids 200 and 201, which are present in
+    every preset and are not in the registry's roster. A hand-built preset
+    has INPUT (37) and OUTPUT (42) as real blocks and shunts filling the
+    row; an empty one has none of it. The grid read still answers normally
+    (746 payload bytes, 47 non-zero against 341 for an occupied preset), so
+    zero cells is a true reading, not a decode failure.
+19. **Placing blocks into a blank grid works, Input and Output included.**
+    Cell-select plus insert lands each block exactly where targeted with no
+    cable inheritance to rely on, because there is nothing to inherit from.
+    Every cell arrives with `cable_in_mask` 0: placed and silent until
+    cabled. This is the easy case of #10 rather than an instance of it -
+    that issue is about splicing into an existing cable, and here there is
+    no cable to splice.
+20. **Row-3 same-row cable draws work with the general formula.** Verified
+    on fw 12.00 by building INPUT -> amp -> cab -> OUTPUT across columns
+    1-4 of display row 3 in an empty preset: each draw set the downstream
+    cell's `cable_in_mask` to 0b1000, matching a hand-built preset on the
+    same row, and the result was **confirmed audible by the owner**.
+    Previously only rows 4 and 5 were verified for same-row runs (row 2 has
+    its own encoding, finding 6). Cables only ever run to the NEXT column,
+    and shunts cannot be inserted (finding 8), so a from-scratch chain must
+    occupy consecutive columns or hop through a unity Volume block.
+21. **Preset numbering is 0-based on the wire, 1-based everywhere a human
+    looks.** The wire numbers the 512 slots 0-511; FM9-Edit and the front
+    panel number the same slots 1-512. Wire 0 is `59 Bassguy`, which the
+    editor lists as 001; a chain built at wire 386 appears in FM9-Edit as
+    387. Anything an owner reads has to say which it means, or the wrong
+    preset gets cleared. Note `TONECOMMAND_STORE_SLOTS` is WIRE-numbered:
+    `133-148` is what the editor shows as 134-149.
+22. **Out-of-range preset queries are ANSWERED, not refused.** fn 0x0D for
+    preset 512 or beyond echoes the requested number back with a blank
+    (all-NUL) name field rather than staying silent. A blank is not the
+    `<EMPTY>` marker, so a naive reader concludes the slot is OCCUPIED -
+    the wrong direction for any code deciding where it is safe to write.
+    Validate the range before trusting the reply.
+23. **FM9-Edit coexists with a third-party client; connecting does not
+    clear the edit buffer.** Tested with FM9-Edit 1.03.21 against fw 12.00:
+    an unsaved chain built over MIDI survived the editor connecting to the
+    same unit, and 12 consecutive rounds of `current_preset`, by-number
+    slot name, grid read and bulk read all returned identical correct
+    values while the editor polled fn 0x01 at ~61 messages/second on the
+    shared CoreMIDI port. Buffer edits are lost to a PRESET LOAD from
+    either side, which is the documented mechanism and not editor-specific.
+    UNTESTED: simultaneous writes from both clients, older editor versions,
+    and fw 11.00. This corrects a longstanding note in the README that
+    connecting resets the buffer.
 
 ## Undecoded territory (help welcome)
 

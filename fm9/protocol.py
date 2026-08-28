@@ -504,6 +504,50 @@ def parse_multipurpose(data: list[int]) -> tuple[int, int] | None:
 NAME_FIELD_LEN = 32
 EMPTY_SLOT_NAME = "<EMPTY>"     # the FM9's own marker for an unused slot
 
+# The wire numbers presets 0..511. FM9-Edit and the unit's front panel number
+# the same 512 slots 1..512, so anything a human reads needs +1. Verified on
+# hardware: wire 0 is '59 Bassguy', which FM9-Edit lists as 001, and a chain
+# built at wire 386 appears in FM9-Edit as 387.
+PRESET_COUNT = 512
+
+
+def editor_number(wire_preset: int) -> int:
+    """Wire preset number as FM9-Edit and the front panel show it."""
+    return wire_preset + 1
+
+
+def slot_label(wire_preset: int) -> str:
+    """Both numbers, for anything a person reads.
+
+    Printing the wire number alone invites clearing the wrong preset: the
+    owner checks the editor, sees a different number, and has to work out
+    which of us is off by one.
+    """
+    return f"{wire_preset} (FM9-Edit {editor_number(wire_preset)})"
+
+
+def slot_set_label(slots) -> str:
+    """A configured slot whitelist as it actually is, runs collapsed.
+
+    Printing lowest-to-highest describes a contiguous set that may not be
+    one: with 133,150-155 configured, "133-155" names every refused slot in
+    between as allowed, which sends the reader off to fix the wrong thing.
+    """
+    runs: list[list[int]] = []
+    for slot in sorted(set(slots)):
+        if runs and slot == runs[-1][-1] + 1:
+            runs[-1].append(slot)
+        else:
+            runs.append([slot])
+    parts = []
+    for run in runs:
+        if len(run) == 1:
+            parts.append(slot_label(run[0]))
+        else:
+            parts.append(f"{run[0]}-{run[-1]} (FM9-Edit "
+                         f"{editor_number(run[0])}-{editor_number(run[-1])})")
+    return ", ".join(parts)
+
 
 def is_empty_slot_name(name: str) -> bool:
     """True for the marker the FM9 itself writes into a cleared slot."""
@@ -535,6 +579,15 @@ class SlotName:
     @property
     def empty(self) -> bool:
         return is_empty_slot_name(self.name)
+
+    @property
+    def editor(self) -> int:
+        """This slot's number as FM9-Edit and the front panel show it."""
+        return editor_number(self.number)
+
+    @property
+    def label(self) -> str:
+        return slot_label(self.number)
 
 
 def parse_patch_name_full(data: list[int]) -> SlotName | None:

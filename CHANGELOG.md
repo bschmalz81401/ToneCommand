@@ -45,6 +45,80 @@ Notable changes to ToneCommand. Dates are UTC.
   Control Change by the shared SendGuard, and the pedal's serial
   control port is opened read-only, since firmware and bootloader
   traffic travels over that kind of channel on an undecoded device.
+### Fixed (docs, 2026-08-24)
+- docs/HARDWARE-VALIDATION.md is marked as a preserved 2026-08-16 snapshot
+  rather than current documentation, listing what has been superseded since
+  - the firmware 11.x pin, and its statement that the store command would
+  never be implemented in the write path (it is, whitelisted). The body is
+  left as written; a dated report is worth more as a record than as a
+  document quietly edited to stay true.
+- The README's claim that FM9-Edit resets the edit buffer when it connects
+  was wrong. Tested with FM9-Edit 1.03.21 on fw 12.00: unsaved edits
+  survived the editor connecting, and reads stayed correct while it polled
+  the shared port at ~60 msg/s. Buffer edits are lost to a preset load from
+  either side, which is ordinary behaviour. Concurrent writes, older editor
+  versions and fw 11.00 remain untested and are marked as such.
+  docs/PROTOCOL.md finding 23.
+- README compatibility table and Protocol Contributions brought current
+  with what fw 12.00 has actually proven.
+
+### Fixed (preset numbering, 2026-08-24)
+- Tools now print preset numbers both ways: the wire number (0-511) and the
+  number FM9-Edit and the front panel show for the same slot (1-512). They
+  differ by one, and a bare wire number is how the wrong preset gets
+  cleared. Found by the owner cross-checking a built chain against
+  FM9-Edit.
+- Out-of-range preset numbers are refused instead of believed. The unit
+  answers a query for preset 512 with a blank name, and a blank is not the
+  `<EMPTY>` marker, so an unguarded read called such a slot OCCUPIED - the
+  wrong direction for code choosing where to write.
+- `TONECOMMAND_STORE_SLOTS` is documented as wire-numbered: `133-148` is
+  what the editor shows as 134-149.
+- The two surfaces where being wrong actually costs something now print both
+  numbers too, which the first pass missed (@Triumph1701 on #22). The store
+  confirmation is the only destructive prompt in the product, and it named a
+  slot the owner's own editor disagreed with, so reading the dialog and
+  checking FM9-Edit was how a correct operation got aborted or a wrong one
+  approved. The live preset readout had the same fault with less at stake.
+  Both labels are rendered server side from `protocol.slot_label`, so the
+  numbering rule stays in one place instead of being recomputed in the
+  browser.
+- A store refusal describes the whitelist it is enforcing rather than its
+  endpoints. With `TONECOMMAND_STORE_SLOTS=133,150-155`, refusing slot 140
+  used to print "configured store slots are 133-155", naming the refused
+  slot as allowed and sending the owner off to fix the wrong thing. Runs are
+  collapsed, so a contiguous whitelist still reads as one range.
+- docs/PROTOCOL.md findings 21-22.
+
+### Fixed (from-scratch tool, 2026-08-24)
+- A device NACK during slot selection prints a refusal instead of a
+  traceback. `NoEmptySlot` and `FM9NotFound` are both `RuntimeError`, but
+  `_request` raises the bare parent, and naming only the children let it
+  escape the handler.
+- An inverted `--range 449 386` is refused rather than scanning nothing and
+  announcing that every slot holds a preset, which told the owner their unit
+  was full when it may have been empty. Checked in `scan_slots`, so every
+  caller is covered rather than just the tool.
+- docs/PROTOCOL.md finding 6 lists row 3 among the verified same-row cable
+  runs. Finding 20 added it and the simulator already relies on it, so the
+  ledger entry the cable code cites was out of step with the code.
+- The fw 12.00 compatibility row for block insert reads plain "Verified":
+  this work verified it firsthand on the owner's unit, not via a
+  contributor report.
+
+### Added (from-scratch builds, 2026-08-24)
+- `tools/build_from_scratch.py`: builds INPUT -> amp -> cab -> OUTPUT into
+  an empty preset slot, placing every block and drawing every cable, then
+  verifying the chain is continuous. Edit buffer only; nothing is stored.
+- `FM9.first_empty_slot()`: finds a free slot, or raises `NoEmptySlot`. The
+  build always lands on a slot the device itself reports as `<EMPTY>` and
+  refuses when there is none - there is no `--force`, because overwriting a
+  preset someone owns should not be one flag away.
+- docs/PROTOCOL.md findings 18-20: an empty slot has no grid cells and no
+  Input/Output blocks (only the ever-present ids 200/201); placing into a
+  blank grid works, arriving uncabled; row-3 same-row cable draws work with
+  the general formula, owner-confirmed audible.
+
 
 ### Added (2026-08-23 session)
 - tools/apply_template.py: apply any owner-defined 8-scene layout to a
