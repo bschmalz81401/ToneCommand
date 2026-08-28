@@ -1,9 +1,24 @@
 """Natural-language layer: prompt -> concrete FM9 parameter plan.
 
-Backend order:
-1. Claude Code CLI in headless mode (uses the existing Claude subscription,
+Backend order, when nothing is pinned:
+1. An OpenAI-compatible HTTP endpoint, when PLANNER_BASE_URL is set. A
+   configured router wins over a `claude` binary that merely happens to be on
+   PATH: setting a base URL is deliberate, and a router that gets silently
+   shadowed is undebuggable.
+2. Claude Code CLI in headless mode (uses the existing Claude subscription,
    no API key needed) when the `claude` binary is available.
-2. Claude API with structured outputs, if ANTHROPIC_API_KEY is set.
+3. Claude API with structured outputs, if ANTHROPIC_API_KEY is set.
+
+PLANNER_BACKEND pins one backend and disables fallthrough, because a
+deliberate choice must not quietly resolve to a different vendor's model.
+The Grok CLI is only ever reached that way, never auto-selected.
+
+Failure taxonomy (design by @Triumph1701, issue #7):
+- transport or malformed output is a BACKEND failure: record the attempt and
+  try the next candidate.
+- a reply that parses but describes no usable actions is a PLANNER RESULT:
+  return it, do not fall through, and do not blame the backend.
+- an aggregate error is raised only after every candidate is exhausted.
 
 The plan is only a proposal; nothing is sent to the FM9 until the user
 confirms in the UI.
@@ -11,13 +26,20 @@ confirms in the UI.
 from __future__ import annotations
 
 import json
+import logging
 import os
 import shutil
 import subprocess
+import time
+import urllib.error
+import urllib.request
+from dataclasses import dataclass
 from pathlib import Path
 
-MODEL = "claude-opus-5"   # API backend model
-CLI_MODEL = "sonnet"      # CLI backend model: light on subscription usage
+log = logging.getLogger(__name__)
+
+MODEL = "claude-opus-5"   # API backend default
+CLI_MODEL = "sonnet"      # CLI backend default: light on subscription usage
 
 
 def find_claude_cli() -> str | None:
@@ -30,6 +52,15 @@ def find_claude_cli() -> str | None:
             "Library/Application Support/Claude/claude-code/*/claude.app/Contents/MacOS/claude"),
         key=lambda p: p.parent.parent.parent.name)
     return str(bundles[-1]) if bundles else None
+
+def find_grok_cli() -> str | None:
+    """Locate the grok CLI: PATH first, then the standard install location."""
+    path = shutil.which("grok")
+    if path:
+        return path
+    bundled = Path.home() / ".grok" / "bin" / "grok"
+    return str(bundled) if bundled.exists() else None
+
 
 PLAN_SCHEMA = {
     "type": "object",
@@ -106,12 +137,196 @@ Scenes and multi-scene requests:
 - If a requested change is impossible, say so in the summary. Never silently substitute a different effect without saying so."""
 
 
+BACKENDS = ("openai", "cli", "grok", "api")
+
+FAILURE_CLASSES = (
+    "unavailable",         # not configured, or its binary is missing
+    "transport",           # could not be reached at all
+    "timeout",
+    "http_status",         # reached it; it refused
+    "backend_error",       # it ran and reported its own failure
+    "unreadable_output",   # replied, but no JSON object in the reply
+    "empty_output",        # replied with nothing
+)
+
+
+class BackendFailure(RuntimeError):
+    """This backend produced no plan, so the next candidate may run.
+
+    Deliberately NOT raised for a reply that parses into JSON but describes
+    no usable actions: that is a planner result, not a transport failure, and
+    falling through on it would burn a working backend for a bad answer.
+    """
+
+    def __init__(self, backend: str, failure_class: str, detail: str,
+                 target: str | None = None, model: str | None = None):
+        if failure_class not in FAILURE_CLASSES:
+            raise ValueError(f"unknown failure class {failure_class!r}")
+        super().__init__(f"{backend} [{failure_class}] {detail}")
+        self.backend = backend
+        self.failure_class = failure_class
+        self.detail = detail
+        self.target = target
+        self.model = model
+
+
+@dataclass
+class Attempt:
+    """One backend's turn: what was tried, and how it went."""
+    backend: str
+    target: str | None = None          # base URL, binary path, or "sdk"
+    model: str | None = None
+    failure_class: str | None = None   # None once it produced the plan
+    detail: str = ""
+
+    def as_dict(self) -> dict:
+        return {"backend": self.backend, "target": self.target,
+                "model": self.model, "failure_class": self.failure_class,
+                "detail": self.detail}
+
+
+def _env_path() -> Path:
+    """The .env file planner config may live in. Indirected so tests can
+    point it somewhere harmless: _env falls back to this file whenever a
+    variable is unset OR empty, so setenv("", ...) cannot mask a real line."""
+    return Path(__file__).resolve().parent.parent / ".env"
+
+
+def _unquote(value: str) -> str:
+    """A dotenv value: quotes off, trailing comment off, in that order.
+
+    Both halves are ordinary dotenv style and they combine, so the quotes
+    have to be found FIRST or `"240"  # five minutes` keeps its quotes -
+    which is silently poisonous in exactly the way an unstripped quote
+    always is: PLANNER_API_KEY sends `Bearer "k"` and 401s, a quoted base
+    URL fails as an unknown url type while the router is up, and a quoted
+    timeout falls back to the default.
+
+    When a value opens with a quote, that quote pair delimits it and
+    anything after the closing quote is comment - which also keeps a `#`
+    that lives INSIDE the quotes, where it is data rather than a comment.
+    """
+    val = value.strip()
+    if val[:1] in ('"', "'"):
+        close = val.find(val[0], 1)
+        if close != -1:
+            return val[1:close]
+    if " #" in val:                      # PLANNER_TIMEOUT=300  # five minutes
+        val = val.split(" #", 1)[0].strip()
+    return val
+
+
+def _env(name: str, default: str = "") -> str:
+    """env var first, then a NAME= line in .env at the repo root.
+
+    Same sourcing convention as device.get_store_slots(), so planner config
+    can live in the .env file the store whitelist already uses.
+
+    A variable PRESENT in the environment and empty means deliberately blank
+    and stops the search; only an ABSENT one falls through to .env. Treating
+    the two the same left a layer above with no way to say "not set": the
+    settings panel selecting Auto could not clear a PLANNER_BACKEND pin
+    written into .env, because every value it could write was either a pin or
+    indistinguishable from having written nothing (@Triumph1701 on #25). A
+    blank still resolves to `default`, so an empty CLAUDE_CLI_MODEL means the
+    built-in model rather than passing --model "" to the CLI.
+    """
+    if name in os.environ:
+        return _unquote(os.environ[name]) or default
+    val = ""
+    env_file = _env_path()
+    if env_file.exists():
+        for line in env_file.read_text().splitlines():
+            if line.strip().startswith(f"{name}="):
+                val = _unquote(line.split("=", 1)[1])
+                break
+    return val or default
+
+
+def _env_int(name: str, default: int) -> int:
+    """An int setting that cannot take the app down.
+
+    device.get_store_slots() tolerates a malformed value; this did not, and
+    it was parsed at import, so `PLANNER_TIMEOUT=300  # comment` in .env
+    crashed `import fm9.planner` - taking server.py with it, for users who
+    never plan anything.
+    """
+    raw = _env(name)
+    if not raw:
+        return default
+    try:
+        val = int(raw)
+    except ValueError:
+        log.warning("%s=%r is not a number; using %d", name, raw, default)
+        return default
+    if val <= 0:
+        log.warning("%s=%d must be positive; using %d", name, val, default)
+        return default
+    return val
+
+
+def timeout_s() -> int:
+    """Wall-clock seconds allowed per backend attempt, read per call so a
+    changed value does not wait for a restart."""
+    return _env_int("PLANNER_TIMEOUT", 180)
+
+
+def cli_model() -> str:
+    """Model for the Claude CLI backend. The CLI takes --model, so this is
+    configurable rather than fixed; read per call so a change does not wait
+    for a restart."""
+    return _env("CLAUDE_CLI_MODEL", CLI_MODEL)
+
+
+def api_model() -> str:
+    """Model for the Claude API backend."""
+    return _env("CLAUDE_API_MODEL", MODEL)
+
+
+
+def _json_objects(text: str):
+    """Yield each top-level JSON object in the text, in order.
+
+    Restartable by design. A single-pass brace counter cannot be: one
+    unclosed "{" leaves the depth pinned above zero and one unterminated
+    quote swallows the rest of the input, so an abandoned draft - which is
+    the other thing a reasoning model does before restarting - takes the
+    real answer with it. Letting the stdlib decoder try each "{" in turn
+    costs a bad start only that start.
+    """
+    decoder = json.JSONDecoder()
+    i, end = 0, len(text)
+    while i < end:
+        if text[i] != "{":
+            i += 1
+            continue
+        try:
+            obj, stop = decoder.raw_decode(text, i)
+        except ValueError:
+            i += 1
+            continue
+        yield obj
+        # Resume past what we just consumed, so the objects inside an
+        # actions list are not offered as candidates in their own right.
+        i = max(stop, i + 1)
+
+
 def _extract_json(text: str) -> dict:
-    start = text.find("{")
-    end = text.rfind("}")
-    if start == -1 or end == -1:
+    """The plan object out of whatever the model said around it.
+
+    Slicing from the first brace to the last one fails on real local-model
+    output: a reasoning model will draft one object and then emit its final
+    answer, and that span covers both ("Extra data: line 2 column 1",
+    observed against LM Studio on 2026-08-25). So take the objects one at a
+    time and prefer the last plan-shaped one, since the answer comes last.
+    """
+    candidates = list(_json_objects(text))
+    if not candidates:
         raise ValueError(f"no JSON object in model output: {text[:200]}")
-    return json.loads(text[start:end + 1])
+    for obj in reversed(candidates):
+        if "actions" in obj or "summary" in obj:
+            return obj
+    return candidates[-1]
 
 
 def _validate(plan_obj: dict) -> dict:
@@ -126,16 +341,76 @@ def _validate(plan_obj: dict) -> dict:
                 "rename_preset", "rename_scene", "store"):
             continue
         a.setdefault("block", None)
-        a.setdefault("instance", 1)
         a.setdefault("param", None)
         a.setdefault("value", None)
         a.setdefault("bypassed", None)
         a.setdefault("type_name", None)
         a.setdefault("position", None)
-        a.setdefault("reason", "")
+        # instance and reason are NOT nullable on the Action model, and the
+        # prompt shows most siblings as nullable - which invites an explicit
+        # null. setdefault only fills ABSENT keys, so a null used to survive
+        # into Action(**a), raise a pydantic error, and cost the whole plan a
+        # 502 with its diagnostics discarded.
+        if a.get("instance") is None:
+            a["instance"] = 1
+        if a.get("reason") is None:
+            a["reason"] = ""
         clean.append(a)
     plan_obj["actions"] = clean
     return plan_obj
+
+
+SHELL_ENV_KEYS = ("PATH", "HOME", "USER", "LOGNAME", "SHELL", "LANG",
+                  "LC_ALL", "TERM", "TMPDIR")
+
+# How a machine reaches the network at all. Stripping these turns a working
+# planner into a backend_error on any host behind a proxy or a TLS-inspecting
+# firewall - and then falls through to a paid API key nobody meant to use.
+NETWORK_ENV_KEYS = ("HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY",
+                    "http_proxy", "https_proxy", "no_proxy",
+                    "NODE_EXTRA_CA_CERTS", "SSL_CERT_FILE")
+
+# Where the Claude CLI keeps its config and how it authenticates, including
+# the enterprise routes. These are configuration, not foreign secrets: the
+# CLI documentedly honours them, and os.environ used to pass them through.
+CLAUDE_ENV_KEYS = NETWORK_ENV_KEYS + (
+    "ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_BASE_URL",
+    "CLAUDE_CODE_OAUTH_TOKEN", "CLAUDE_CONFIG_DIR", "XDG_CONFIG_HOME",
+    "CLAUDE_CLI_MODEL", "CLAUDE_API_MODEL",
+    "CLAUDE_CODE_USE_BEDROCK", "CLAUDE_CODE_USE_VERTEX",
+    "AWS_REGION", "AWS_DEFAULT_REGION", "AWS_PROFILE",
+    "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_SESSION_TOKEN",
+    "AWS_BEARER_TOKEN_BEDROCK",
+    "GOOGLE_APPLICATION_CREDENTIALS", "GOOGLE_CLOUD_PROJECT",
+    "CLOUD_ML_REGION",
+)
+
+# The Grok CLI needs none of the above: its own keys, and that is all.
+# Same reasoning as CLAUDE_ENV_KEYS, which is the point: narrowing per tool
+# means narrowing which CREDENTIALS it sees, not starving it of the shell.
+# Withholding the proxy variables from grok reproduced the exact failure
+# NETWORK_ENV_KEYS exists to prevent (@Triumph1701 on #25). No Anthropic or
+# cloud keys here: a second vendor's binary has no business with them.
+GROK_ENV_KEYS = NETWORK_ENV_KEYS + ("XAI_API_KEY", "GROK_API_KEY")
+
+
+def cli_env(binary_keys: tuple[str, ...] = (),
+            source: dict[str, str] | None = None) -> dict[str, str]:
+    """The environment a planner subprocess gets: an allowlist, not a copy.
+
+    A CLI needs a working shell environment plus its own configuration and
+    credentials. Handing it os.environ wholesale also hands it every other
+    secret in the process - an xAI binary receiving ANTHROPIC_API_KEY, for
+    instance, which it has no business seeing.
+
+    The allowlist has to be wide enough to keep working setups working:
+    proxies, custom CA bundles, a relocated config dir and the Bedrock and
+    Vertex routes are all configuration a user already had, not leakage.
+    Narrow it per tool via binary_keys, not by starving the shell.
+    """
+    src = os.environ if source is None else source
+    allow = SHELL_ENV_KEYS + binary_keys
+    return {k: src[k] for k in allow if src.get(k)}
 
 
 def _cli_error_message(proc: subprocess.CompletedProcess) -> str:
@@ -164,8 +439,13 @@ def _cli_error_message(proc: subprocess.CompletedProcess) -> str:
     return " | ".join(parts)[:300]
 
 
-def _plan_via_cli(prompt: str, device_state: str, param_reference: str) -> dict:
-    full_prompt = (
+def _full_prompt(prompt: str, device_state: str, param_reference: str) -> str:
+    """The one prompt every text-completion backend sends.
+
+    Kept verbatim from the CLI path so the three backends differ only in
+    transport, never in what the model was asked.
+    """
+    return (
         f"{SYSTEM}\n\n"
         f"Controllable parameter reference:\n{param_reference}\n\n"
         f"Current device state:\n{device_state}\n\n"
@@ -177,77 +457,446 @@ def _plan_via_cli(prompt: str, device_state: str, param_reference: str) -> dict:
         '"param": str|null, "value": number|null, "bypassed": bool|null, '
         '"type_name": str|null, "position": str|null, "reason": str}], "clarification": str|null}'
     )
+
+
+def cli_envelope_model(envelope: dict, fallback: str = "") -> str:
+    """Which model the claude CLI actually used.
+
+    Verified against a real envelope: there is no top-level `model` key, and
+    `modelUsage` is where the resolved id appears - the same shape as the
+    grok CLI. Reading `model` alone reports the alias we asked for ("sonnet")
+    dressed up as the model that answered.
+    """
+    usage = envelope.get("modelUsage")
+    if isinstance(usage, dict) and usage:
+        return next(iter(usage))
+    model = envelope.get("model")
+    return model if isinstance(model, str) and model else (fallback or cli_model())
+
+
+def _plan_via_cli(prompt: str, device_state: str,
+                  param_reference: str) -> tuple[dict, str]:
+    full_prompt = _full_prompt(prompt, device_state, param_reference)
     cli = find_claude_cli()
-    proc = subprocess.run(
-        [cli, "-p", full_prompt, "--output-format", "json", "--model", CLI_MODEL],
-        capture_output=True, text=True, timeout=180,
-        cwd="/tmp",
-        env={**os.environ, "CLAUDE_CODE_ENTRYPOINT": "fm9-tone"},
-    )
+    if not cli:
+        raise BackendFailure("cli", "unavailable", "claude binary not found")
+    try:
+        proc = subprocess.run(
+            [cli, "-p", full_prompt, "--output-format", "json",
+             "--model", cli_model()],
+            capture_output=True, text=True, timeout=timeout_s(),
+            cwd="/tmp",
+            env={**cli_env(CLAUDE_ENV_KEYS),
+                 "CLAUDE_CODE_ENTRYPOINT": "fm9-tone"},
+        )
+    except subprocess.TimeoutExpired:
+        raise BackendFailure("cli", "timeout",
+                             f"no reply within {timeout_s()}s", target=cli)
     if proc.returncode != 0:
-        raise RuntimeError(f"claude CLI failed: {_cli_error_message(proc)}")
+        raise BackendFailure("cli", "backend_error", _cli_error_message(proc),
+                             target=cli)
     try:
         envelope = json.loads(proc.stdout)
-    except (json.JSONDecodeError, ValueError) as exc:
-        raise RuntimeError(
-            f"claude CLI returned unreadable output: {proc.stdout.strip()[:200]}") from exc
+    except (json.JSONDecodeError, ValueError):
+        raise BackendFailure("cli", "unreadable_output",
+                             proc.stdout.strip()[:200] or "empty stdout",
+                             target=cli)
     if envelope.get("is_error"):
-        raise RuntimeError(f"claude CLI failed: {_cli_error_message(proc)}")
+        raise BackendFailure("cli", "backend_error", _cli_error_message(proc),
+                             target=cli)
     result_text = envelope.get("result", "")
-    return _extract_json(result_text)
+    if not result_text.strip():
+        raise BackendFailure("cli", "empty_output", "envelope carried no result",
+                             target=cli)
+    try:
+        return _extract_json(result_text), cli_envelope_model(envelope)
+    except ValueError as exc:
+        raise BackendFailure("cli", "unreadable_output", str(exc)[:200],
+                             target=cli)
 
 
-def _plan_via_api(prompt: str, device_state: str, param_reference: str) -> dict:
-    import anthropic
-    env_file = Path(__file__).resolve().parent.parent / ".env"
-    if not os.environ.get("ANTHROPIC_API_KEY") and env_file.exists():
-        for line in env_file.read_text().splitlines():
-            if line.startswith("ANTHROPIC_API_KEY="):
-                os.environ["ANTHROPIC_API_KEY"] = line.split("=", 1)[1].strip()
-    client = anthropic.Anthropic()
-    response = client.messages.create(
-        model=MODEL,
-        max_tokens=2048,
-        system=[
-            {"type": "text", "text": SYSTEM, "cache_control": {"type": "ephemeral"}},
-            {"type": "text", "text": f"Controllable parameter reference:\n{param_reference}",
-             "cache_control": {"type": "ephemeral"}},
+def grok_model(envelope: dict, fallback: str = "") -> str:
+    """Which model actually answered.
+
+    grok 1.0.5 reports no top-level `model`; the model id is the KEY under
+    `modelUsage`. Verified against the real CLI, not assumed.
+    """
+    usage = envelope.get("modelUsage")
+    if isinstance(usage, dict) and usage:
+        return next(iter(usage))
+    model = envelope.get("model")
+    return model if isinstance(model, str) and model else (fallback or "grok")
+
+
+def parse_grok_envelope(stdout: str) -> dict:
+    """The grok headless envelope, tolerating any preamble around it."""
+    trimmed = stdout.strip()
+    try:
+        return json.loads(trimmed)
+    except (json.JSONDecodeError, ValueError):
+        start, end = trimmed.find("{"), trimmed.rfind("}")
+        if start < 0 or end <= start:
+            raise ValueError(f"no JSON envelope: {trimmed[:200]}")
+        return json.loads(trimmed[start:end + 1])
+
+
+def _plan_via_grok_cli(prompt: str, device_state: str,
+                       param_reference: str) -> tuple[dict, str]:
+    """Grok CLI in headless mode, on the user's existing Grok subscription.
+
+    Reached only by PLANNER_BACKEND=grok or through a router - never
+    auto-selected, for the same reason a `claude` binary on PATH does not
+    outrank a configured endpoint.
+
+    Unlike the Claude CLI path this one CONSTRAINS its output: --json-schema
+    binds the reply to PLAN_SCHEMA (verified on grok 1.0.5 with this exact
+    schema, additionalProperties and required arrays included), so malformed
+    JSON is the model's failure to obey a constraint rather than an
+    instruction. --verbatim keeps the prompt as written; plan mode and
+    subagents are off because a planner wants one answer, not an agent
+    session.
+    """
+    grok = find_grok_cli()
+    if not grok:
+        raise BackendFailure("grok", "unavailable", "grok binary not found")
+    model = _env("GROK_CLI_MODEL")
+    args = [grok,
+            "-p", _full_prompt(prompt, device_state, param_reference),
+            "--json-schema", json.dumps(PLAN_SCHEMA),   # implies output json
+            "--verbatim", "--no-subagents", "--no-plan",
+            "--disable-web-search", "--max-turns", "8"]
+    if model:
+        args += ["-m", model]
+    try:
+        proc = subprocess.run(
+            args, capture_output=True, text=True, timeout=timeout_s(),
+            cwd="/tmp", env=cli_env(GROK_ENV_KEYS))
+    except subprocess.TimeoutExpired:
+        raise BackendFailure("grok", "timeout",
+                             f"no reply within {timeout_s()}s", grok, model)
+    stderr = (proc.stderr or "").strip()[:200]
+    try:
+        envelope = parse_grok_envelope(proc.stdout)
+    except (ValueError, json.JSONDecodeError) as exc:
+        detail = f"{exc}" + (f" | {stderr}" if stderr else "")
+        if proc.returncode != 0:
+            raise BackendFailure("grok", "backend_error",
+                                 f"exit {proc.returncode}: {stderr or detail}",
+                                 grok, model)
+        raise BackendFailure("grok", "unreadable_output", detail[:300],
+                             grok, model)
+    if envelope.get("type") == "error" or envelope.get("is_error"):
+        message = envelope.get("message") or envelope.get("error") or "no detail"
+        raise BackendFailure("grok", "backend_error", str(message)[:300],
+                             grok, grok_model(envelope, model))
+    text = envelope.get("text") or ""
+    if not text.strip():
+        raise BackendFailure("grok", "empty_output",
+                             f"envelope carried no text (stopReason "
+                             f"{envelope.get('stopReason')!r})",
+                             grok, grok_model(envelope, model))
+    try:
+        return _extract_json(text), grok_model(envelope, model)
+    except ValueError as exc:
+        raise BackendFailure("grok", "unreadable_output", str(exc)[:200],
+                             grok, grok_model(envelope, model))
+
+
+CLIPROXY_DEFAULT_URL = "http://127.0.0.1:8317/v1"   # CLIProxyAPI's default
+
+JSON_ONLY = ("Respond with a single JSON object only. No markdown fences, no "
+             "preamble, no reasoning.")
+
+
+def _openai_base_url() -> str:
+    """Configured OpenAI-compatible endpoint, or "" when there is none."""
+    return _env("PLANNER_BASE_URL").rstrip("/")
+
+
+def completion_text(choice: dict | None) -> str:
+    """Text out of one chat-completion choice, the tolerant way.
+
+    `content` is a string on most servers and a list of parts on some. Local
+    reasoning models (llama.cpp, LM Studio) routinely spend the whole token
+    budget on `reasoning_content` and leave `content` empty, so that is a
+    fallback rather than a dead end.
+    """
+    message = (choice or {}).get("message") or {}
+    content = message.get("content")
+    if isinstance(content, str) and content.strip():
+        return content
+    if isinstance(content, list):
+        parts = []
+        for part in content:
+            if isinstance(part, str):
+                parts.append(part)
+            elif isinstance(part, dict):
+                parts.append(str(part.get("text") or ""))
+        joined = "".join(parts)
+        if joined.strip():
+            return joined
+    reasoning = message.get("reasoning_content")
+    return reasoning if isinstance(reasoning, str) else ""
+
+
+def _read_until(resp, deadline: float, chunk: int = 65536) -> str:
+    """Read a response body under a WALL-CLOCK deadline.
+
+    urlopen(timeout=...) bounds each socket operation, not the attempt. A
+    wedged router that sends headers promptly and then trickles the body a
+    few bytes at a time never trips it, so /api/plan hangs for minutes with
+    no timeout failure and no fall-through - while the README promises
+    "seconds allowed per backend attempt". Checking the deadline between
+    reads keeps that promise.
+    """
+    parts = []
+    while True:
+        if time.monotonic() > deadline:
+            raise TimeoutError("reply body exceeded the attempt deadline")
+        block = resp.read(chunk)
+        if not block:
+            return b"".join(parts).decode("utf-8", "replace")
+        parts.append(block)
+
+
+def _plan_via_openai(prompt: str, device_state: str,
+                     param_reference: str) -> tuple[dict, str]:
+    """Any OpenAI-compatible chat-completions endpoint.
+
+    This is the path to CLIProxyAPI - and through it to Claude Code, Codex,
+    Grok, Gemini or Kimi over their own OAuth logins - as well as to a local
+    LLM or OpenRouter. PLANNER_API_KEY is optional by design: an OAuth router
+    authenticates upstream and often wants no key at all.
+    """
+    base = _openai_base_url()
+    if not base:
+        raise BackendFailure(
+            "openai", "unavailable",
+            f"PLANNER_BASE_URL is not set (CLIProxyAPI defaults to "
+            f"{CLIPROXY_DEFAULT_URL})")
+    model = _env("PLANNER_MODEL", "local")
+    payload = json.dumps({
+        "model": model,
+        "messages": [
+            {"role": "system", "content": f"{SYSTEM}\n\n{JSON_ONLY}"},
+            {"role": "user",
+             "content": _full_prompt(prompt, device_state, param_reference)},
         ],
-        output_config={"format": {"type": "json_schema", "schema": PLAN_SCHEMA}},
-        messages=[{
-            "role": "user",
-            "content": f"Current device state:\n{device_state}\n\nRequest: {prompt}",
-        }],
-    )
+        "temperature": 0.2,
+        "max_tokens": int(_env("PLANNER_MAX_TOKENS", "8192")),
+    }).encode()
+    headers = {"content-type": "application/json"}
+    key = _env("PLANNER_API_KEY")
+    if key:
+        headers["authorization"] = f"Bearer {key}"
+    req = urllib.request.Request(f"{base}/chat/completions", data=payload,
+                                 headers=headers, method="POST")
+    limit = timeout_s()
+    deadline = time.monotonic() + limit
+    try:
+        with urllib.request.urlopen(req, timeout=limit) as resp:
+            raw = _read_until(resp, deadline)
+    except urllib.error.HTTPError as exc:                   # reached; refused
+        body = exc.read().decode("utf-8", "replace").strip()[:300]
+        raise BackendFailure("openai", "http_status",
+                             f"{exc.code} {body or exc.reason}", base, model)
+    except urllib.error.URLError as exc:                    # never reached
+        if isinstance(exc.reason, TimeoutError):
+            raise BackendFailure("openai", "timeout",
+                                 f"no reply within {timeout_s()}s", base, model)
+        raise BackendFailure("openai", "transport",
+                             f"unreachable: {exc.reason}", base, model)
+    except TimeoutError as exc:
+        raise BackendFailure("openai", "timeout",
+                             f"{exc or f'no reply within {limit}s'}", base, model)
+    try:
+        data = json.loads(raw)
+    except (json.JSONDecodeError, ValueError):
+        raise BackendFailure("openai", "unreadable_output",
+                             raw.strip()[:200] or "empty body", base, model)
+    choices = data.get("choices") or []
+    text = completion_text(choices[0] if choices else None)
+    if not text.strip():
+        raise BackendFailure(
+            "openai", "empty_output",
+            "reply carried no content; a reasoning model needs a larger "
+            "PLANNER_MAX_TOKENS, or check PLANNER_MODEL", base, model)
+    try:
+        return _extract_json(text), data.get("model") or model
+    except ValueError as exc:
+        raise BackendFailure("openai", "unreadable_output", str(exc)[:200],
+                             base, model)
+
+
+def _plan_via_api(prompt: str, device_state: str,
+                  param_reference: str) -> tuple[dict, str]:
+    try:
+        import anthropic
+    except ImportError as exc:
+        raise BackendFailure("api", "unavailable", str(exc))
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        key = _env("ANTHROPIC_API_KEY")      # shared parser: quotes stripped
+        if key:
+            os.environ["ANTHROPIC_API_KEY"] = key
+    # Bounded like every other backend. Without this the SDK default plus its
+    # retries applies, so a stuck call hangs /api/plan with no timeout failure
+    # and no fall-through - the contract this module introduced for the others.
+    client = anthropic.Anthropic(timeout=float(timeout_s()), max_retries=1)
+    try:
+        response = client.messages.create(
+            model=api_model(),
+            max_tokens=2048,
+            system=[
+                {"type": "text", "text": SYSTEM,
+                 "cache_control": {"type": "ephemeral"}},
+                {"type": "text",
+                 "text": f"Controllable parameter reference:\n{param_reference}",
+                 "cache_control": {"type": "ephemeral"}},
+            ],
+            output_config={"format": {"type": "json_schema",
+                                      "schema": PLAN_SCHEMA}},
+            messages=[{
+                "role": "user",
+                "content": f"Current device state:\n{device_state}\n\nRequest: {prompt}",
+            }],
+        )
+    except anthropic.APITimeoutError as exc:
+        raise BackendFailure("api", "timeout",
+                             f"no reply within {timeout_s()}s ({exc})",
+                             target="sdk", model=api_model())
+    except anthropic.APIConnectionError as exc:
+        raise BackendFailure("api", "transport", str(exc),
+                             target="sdk", model=api_model())
     if response.stop_reason == "refusal":
-        return {"summary": "Request declined by the model.", "actions": [],
-                "clarification": "The model declined this request. Try rephrasing."}
-    text = next(b.text for b in response.content if b.type == "text")
-    return json.loads(text)
+        return ({"summary": "Request declined by the model.", "actions": [],
+                 "clarification": "The model declined this request. "
+                                  "Try rephrasing."}, api_model())
+    try:
+        text = next(b.text for b in response.content if b.type == "text")
+    except StopIteration:
+        raise BackendFailure("api", "empty_output", "no text block in reply",
+                             target="sdk", model=api_model())
+    try:
+        return json.loads(text), getattr(response, "model", api_model())
+    except (json.JSONDecodeError, ValueError):
+        raise BackendFailure("api", "unreadable_output", text.strip()[:200],
+                             target="sdk", model=api_model())
 
 
 def _api_available() -> bool:
-    return bool(os.environ.get("ANTHROPIC_API_KEY")) or \
-        (Path(__file__).resolve().parent.parent / ".env").exists()
+    """Whether an Anthropic key is actually configured.
+
+    This used to return True whenever a .env file merely existed. Now that
+    every PLANNER_* setting lives in that same file, a router-only install
+    would always offer a doomed `api` candidate whose authentication noise
+    buries the actionable "openai [transport] unreachable" beside it.
+    """
+    return bool(_env("ANTHROPIC_API_KEY"))
+
+
+_RUNNERS = {
+    "openai": _plan_via_openai,
+    "grok": _plan_via_grok_cli,
+    "cli": _plan_via_cli,
+    "api": _plan_via_api,
+}
+
+# What each backend aims at, for the attempt record. A failure carries its own
+# target; a success has to be resolved the same way the runner resolved it.
+_TARGETS = {
+    "openai": _openai_base_url,
+    "grok": find_grok_cli,
+    "cli": find_claude_cli,
+    "api": lambda: "sdk",
+}
+
+
+def candidates() -> list[str]:
+    """Backends to try, in order.
+
+    PLANNER_BACKEND pins exactly one and disables fallthrough: choosing a
+    backend on purpose must not quietly resolve to a different vendor's
+    model. Unpinned, a configured router outranks a `claude` binary that
+    merely happens to be on PATH, and the Grok CLI is never auto-selected for
+    the same reason - it is reachable by pin or through a router.
+    """
+    pinned = _env("PLANNER_BACKEND").lower()
+    if pinned:
+        if pinned not in BACKENDS:
+            raise RuntimeError(
+                f"PLANNER_BACKEND={pinned!r} is not one of {', '.join(BACKENDS)}")
+        return [pinned]
+    order = []
+    if _openai_base_url():
+        order.append("openai")
+    if find_claude_cli():
+        order.append("cli")
+    if _api_available():
+        order.append("api")
+    return order
+
+
+def _plan_quality(plan_obj: dict) -> str:
+    """Well-formed replies still divide into usable and not.
+
+    A reply carrying neither actions nor a clarification parsed fine but says
+    nothing: a planner-quality signal, not a transport failure. Callers get it
+    labelled rather than retried, so a working backend is not burned for a bad
+    answer.
+    """
+    if plan_obj.get("actions"):
+        return "actions"
+    if (plan_obj.get("clarification") or "").strip():
+        return "clarification"
+    return "empty"
 
 
 def plan(prompt: str, device_state: str, param_reference: str) -> dict:
-    cli_error = None
-    if find_claude_cli():
+    """Ask each candidate backend in turn until one produces a plan.
+
+    Returns the plan with `backend`, `model`, `plan_quality`, and the full
+    `attempts` record attached. Raises only when every candidate failed at the
+    transport level, with one aggregate message naming each attempt.
+    """
+    order = candidates()
+    if not order:
+        raise RuntimeError(
+            "No planner backend: install the claude CLI, set ANTHROPIC_API_KEY, "
+            "or point PLANNER_BASE_URL at an OpenAI-compatible endpoint")
+    attempts: list[Attempt] = []
+    for name in order:
+        runner = _RUNNERS.get(name)
+        if runner is None:                 # BACKENDS and _RUNNERS drifted
+            attempts.append(Attempt(name, None, None, "unavailable",
+                                    "no runner is registered for this backend"))
+            continue
+        model = None
         try:
-            return _validate(_plan_via_cli(prompt, device_state, param_reference))
+            raw, model = runner(prompt, device_state, param_reference)
+            # Validation stays INSIDE the try: a reply that parses as JSON can
+            # still be shaped wrongly enough to raise here ({"actions": 42} is
+            # valid JSON and a truthy non-iterable), and that is this backend
+            # failing to deliver a plan, not a reason to abandon the rest.
+            plan_obj = _validate(raw)
+        except BackendFailure as exc:
+            attempts.append(Attempt(exc.backend, exc.target, exc.model,
+                                    exc.failure_class, exc.detail))
+            continue
         except Exception as exc:
-            # A present-but-unusable CLI (expired login, bad install) should not
-            # shadow a working API key.
-            if not _api_available():
-                raise
-            cli_error = exc
-    if _api_available():
-        try:
-            return _validate(_plan_via_api(prompt, device_state, param_reference))
-        except Exception as exc:
-            if cli_error is not None:
-                raise RuntimeError(
-                    f"{cli_error}; API fallback also failed: {exc}") from exc
-            raise
-    raise RuntimeError("No planner backend: install the claude CLI or set ANTHROPIC_API_KEY")
+            # An unexpected fault is still this backend failing, not a plan.
+            attempts.append(Attempt(name, None, model, "backend_error",
+                                    str(exc)[:300]))
+            continue
+        resolve = _TARGETS.get(name)
+        attempts.append(Attempt(name, resolve() if resolve else None, model))
+        plan_obj["backend"] = name
+        plan_obj["model"] = model
+        plan_obj["plan_quality"] = _plan_quality(plan_obj)
+        plan_obj["attempts"] = [a.as_dict() for a in attempts]
+        log.info("planner: %s answered via %s (model %s, %d action(s))",
+                 plan_obj["plan_quality"], name, model,
+                 len(plan_obj.get("actions") or []))
+        return plan_obj
+    detail = "; ".join(f"{a.backend} [{a.failure_class}] {a.detail}"
+                       for a in attempts)
+    raise RuntimeError(f"every planner backend failed: {detail}")

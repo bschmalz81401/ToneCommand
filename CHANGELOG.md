@@ -45,6 +45,101 @@ Notable changes to ToneCommand. Dates are UTC.
   Control Change by the shared SendGuard, and the pedal's serial
   control port is opened read-only, since firmware and bootloader
   traffic travels over that kind of channel on an undecoded device.
+### Added (planner backends, 2026-08-24)
+- **OpenAI-compatible planner backend** (`PLANNER_BASE_URL`): reaches
+  CLIProxyAPI, and through it Claude Code, Codex, Grok, Gemini or Kimi over
+  their own OAuth logins, plus local models and OpenRouter. No new
+  dependency - urllib, not the openai package. `PLANNER_API_KEY` is
+  optional by design, since an OAuth router needs none.
+- **Grok CLI planner backend** (`PLANNER_BACKEND=grok`), with replies
+  constrained by `--json-schema` to `PLAN_SCHEMA`. Verified on grok 1.0.5.
+  Reached only when pinned or through a router, never auto-selected.
+- **Failure taxonomy and per-attempt record** in `plan()`, implementing
+  @Triumph1701's contract from #7: transport or malformed output is a
+  backend failure and moves on; a reply that parses but says nothing is a
+  planner result and does not fall through; the aggregate error is raised
+  only after every candidate is exhausted, naming each attempt.
+- Every plan now carries `backend`, `model`, `plan_quality` and `attempts`,
+  plus one log line, so backend choice is visible before the settings UI
+  lands.
+- `PLANNER_BACKEND` pins a backend and disables fallthrough; a deliberate
+  choice must not quietly resolve to another vendor's model.
+- README: planner backend table, and instructions for installing and
+  running CLIProxyAPI yourself. It is a separate service, deliberately not
+  vendored and not a dependency.
+
+### Fixed (planner backends, 2026-08-24)
+- `_env` distinguishes a variable that is ABSENT from one that is PRESENT and
+  empty. Only an absent one falls through to `.env`; a blank means
+  deliberately blank and stops the search, resolving to the built-in default.
+  Treating them the same left no way for a layer above to say "not set", so
+  the settings panel selecting Auto could not clear a `PLANNER_BACKEND` pin
+  written into `.env` (@Triumph1701 on #25). A blank still resolves to the
+  default, so an empty `CLAUDE_CLI_MODEL` means the built-in model rather
+  than `--model ""`.
+- The Claude API backend is bounded by `PLANNER_TIMEOUT` like every other
+  backend, with timeouts and connection errors mapped to `timeout` and
+  `transport` failures. It was the one backend not honouring the contract
+  this work introduced: the SDK default plus its retries applied, so a stuck
+  call hung `/api/plan` with no failure and no fall-through.
+- `GROK_ENV_KEYS` includes `NETWORK_ENV_KEYS`. Withholding the proxy and CA
+  variables from the grok CLI reproduced exactly the failure that set exists
+  to prevent, and the test asserted the broken behaviour. Narrowing per tool
+  means narrowing which credentials it sees, not starving it of the shell:
+  no Anthropic or cloud keys reach it, which the test now checks explicitly.
+- The test isolation fixture clears `CLAUDE_CLI_MODEL` and
+  `CLAUDE_API_MODEL`. Both are new here and were left out, so a developer
+  with either exported got a false failure from the test asserting the
+  built-in default.
+- Planner subprocesses get an environment allowlist instead of
+  `os.environ`. The `claude` binary had been receiving every secret in the
+  process; with a second vendor's CLI in play an xAI binary would have
+  received `ANTHROPIC_API_KEY`.
+- The Claude CLI path gained the timeout and empty-output cases it was
+  missing, and reports the model from `modelUsage` rather than a top-level
+  `model` key, which a real envelope does not carry - reading `model` alone
+  reported the alias we asked for.
+- Planner subprocesses get an environment allowlist wide enough to keep
+  working setups working: proxy and CA variables, the CLI's config dir, and
+  the Bedrock and Vertex routes are configuration rather than foreign
+  secrets. Each CLI still sees only its own credentials.
+- `PLANNER_TIMEOUT` is parsed safely and per call. It was an unguarded
+  `int()` at import, so a dotenv-style `PLANNER_TIMEOUT=300  # comment`
+  crashed `import fm9.planner` and took the server down at startup, for
+  users who never plan anything.
+- The OpenAI-compatible path enforces a real wall-clock deadline. urllib's
+  timeout bounds each socket operation, not the attempt, so a router that
+  trickles its body never tripped it and `/api/plan` hung with no timeout
+  failure and no fall-through.
+- The two Claude models are configurable instead of hard-coded:
+  `CLAUDE_CLI_MODEL` and `CLAUDE_API_MODEL`, defaulting to the previous
+  constants (`sonnet` and `claude-opus-5`). The CLI has always taken
+  `--model` and the SDK a model id, so neither needed to be fixed, and
+  wanting Opus on the CLI path is a reasonable thing to want. Read per call,
+  so a change does not wait for a restart, and passed through the subprocess
+  allowlist.
+- JSON extraction tries each `{` with the stdlib decoder and prefers the
+  last plan-shaped object. Slicing from the first brace to the last one
+  broke on real local-model output: a reasoning model drafts an object and
+  then emits its final answer, and that span covers both, failing with
+  "Extra data: line 2 column 1". Found by pointing the OpenAI-compatible
+  backend at LM Studio, which is what issue #7 asked for. Counting braces
+  in one pass is not enough either, as @Triumph1701 pointed out on #21: a
+  model that abandons a draft part way leaves an unclosed brace and an
+  unterminated quote behind, which pin the depth and swallow the rest of
+  the reply, losing the real answer that follows. Trying each start in turn
+  costs a bad start only that start.
+- `.env` values are unquoted. `PLANNER_API_KEY="sk-local"` was sending
+  `Bearer "sk-local"`, and a quoted base URL failed as an unknown url type.
+- Plan validation runs inside the per-backend try, so a reply that parses
+  as JSON but is shaped wrongly (`{"actions": 42}`) falls through to the
+  next backend instead of aborting the run untyped.
+- An explicit JSON `null` for a non-nullable action field no longer costs
+  the whole plan a 502; nulls are replaced, not merely defaulted when absent.
+- `_api_available()` checks for the key instead of the mere existence of a
+  `.env` file, so a router-only install stops offering a doomed `api`
+  candidate whose auth noise buried the actionable transport failure.
+
 ### Fixed (docs, 2026-08-24)
 - docs/HARDWARE-VALIDATION.md is marked as a preserved 2026-08-16 snapshot
   rather than current documentation, listing what has been superseded since
