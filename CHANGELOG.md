@@ -2,7 +2,21 @@
 
 Notable changes to ToneCommand. Dates are UTC.
 
-## Unreleased
+## 0.2.0 (2026-08-28)
+
+**Bring your own AI.** The natural-language planner now runs on the Claude
+Code CLI, the Claude API, the Grok CLI, or any OpenAI-compatible endpoint,
+chosen from a panel in the UI rather than by editing a dotfile. That last
+option covers local models through Ollama or LM Studio, anything behind
+OpenRouter, and via CLIProxyAPI it reaches Codex, Gemini and Kimi over
+their own OAuth logins. A fresh checkout still needs no key and no
+configuration: the Claude CLI remains the default when nothing is set.
+
+Underneath it, the groundwork for supporting more than one device: the
+never-brick guard is now architecture rather than one class's policy, and
+the adapter contract states what a device can actually answer instead of
+assuming every method works everywhere.
+
 
 ### Changed (2026-08-24 session)
 - The adapter contract declares capabilities instead of assuming them.
