@@ -139,6 +139,15 @@
   .spin { display: inline-block; animation: spin 0.9s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
   .hint { color: var(--muted); font-size: 0.72rem; margin-top: 10px; letter-spacing: 0.05em; }
+.airow { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.airow select, .airow input {
+  background: #0d0f0d; border: 1px solid #1f2a1f; color: var(--fg);
+  font: inherit; padding: 6px 8px; border-radius: 3px;
+}
+.airow input { flex: 1 1 140px; min-width: 120px; }
+.airow #aikey { flex: 3 1 340px; }
+.airow select, .airow button { flex: 0 0 auto; }
+.answered { color: var(--dim); font-size: 11px; letter-spacing: .04em; margin-top: 6px; }
 </style>
 </head>
 <body>
@@ -180,6 +189,24 @@
     </div>
   </div>
 
+  <div class="console" data-label="AI SETTINGS" style="margin-top:20px">
+    <div class="airow">
+      <select id="aibackend"></select>
+      <input id="aibaseurl" autocomplete="off" spellcheck="false"
+             placeholder="http://127.0.0.1:8317/v1">
+      <input id="aimodel" autocomplete="off" spellcheck="false"
+             list="aimodels" placeholder="model (optional)">
+      <datalist id="aimodels"></datalist>
+      <input id="aikey" type="password" autocomplete="off"
+             placeholder="API key (required for Claude API but optional for others)">
+      <button id="aisave">SAVE</button>
+      <button id="aiclearkey" class="danger">CLEAR KEY</button>
+    </div>
+    <div class="hint" id="ainote"></div>
+    <div class="hint" id="aisrc"></div>
+    <div class="hint">Takes effect on the next prompt, no restart. Keys are stored on this machine and never sent to the browser. Only the boxes a backend actually reads are shown.</div>
+  </div>
+
   <div class="console" data-label="LOG" style="margin-top:20px">
     <div id="log"></div>
   </div>
@@ -189,10 +216,17 @@
 const $ = id => document.getElementById(id);
 let currentPlan = null;
 
+// Model output reaches HTML templates below, and the model can be any
+// endpoint the user configured.
+const esc = s => String(s ?? '').replace(/[&<>"']/g,
+  c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+
 function log(msg, cls) {
   const t = new Date().toLocaleTimeString();
+  // esc: clarifications and planner errors are model output, or a remote
+  // body, and this was the last place either reached innerHTML raw
   $('log').insertAdjacentHTML('afterbegin',
-    `<div><span class="t">${t}</span><span class="${cls || ''}">${msg}</span></div>`);
+    `<div><span class="t">${t}</span><span class="${cls || ''}">${esc(msg)}</span></div>`);
 }
 
 const KNOB_LABELS = {
@@ -267,16 +301,28 @@ async function engage() {
       return;
     }
     currentPlan = plan;
+    const prevBy = $('planby'); if (prevBy) prevBy.remove();
     $('plansummary').textContent = plan.summary;
+    // half the value of the settings panel: a wrong-sounding plan should be
+    // attributable to the model that produced it, not to the tool
+    if (plan.backend) {
+      // plan.model is whatever the configured endpoint reported, so text
+      const by = document.createElement('div');
+      by.className = 'answered';
+      by.id = 'planby';
+      by.textContent = `planned by ${plan.backend}`
+        + (plan.model ? ` / ${plan.model}` : '');
+      $('plansummary').after(by);
+    }
     $('plancards').innerHTML = plan.actions.map(a => {
       const errs = a.validation_errors || [];
       const warns = a.validation_warnings || [];
       const vclass = errs.length ? ' vfail' : (warns.length ? ' vwarn' : '');
       const vmsg = errs.concat(warns).map(m =>
-        `<div class="vmsg ${errs.length ? 'verr' : 'vwrn'}">${m}</div>`).join('');
+        `<div class="vmsg ${errs.length ? 'verr' : 'vwrn'}">${esc(m)}</div>`).join('');
       return `
       <div class="plan-card${vclass}">
-        <div><div class="what">${describe(a)}</div><div class="why">${a.reason || ''}</div>${vmsg}</div>
+        <div><div class="what">${esc(describe(a))}</div><div class="why">${esc(a.reason || '')}</div>${vmsg}</div>
         <div class="delta">${errs.length ? 'BLOCKED' : (a.kind === 'set_param' ? '→ ' + a.value : '')}</div>
       </div>`;
     }).join('');
@@ -289,6 +335,115 @@ async function engage() {
   } finally {
     $('engage').disabled = false;
     $('engage').textContent = 'ENGAGE';
+  }
+}
+
+let aiDefaults = {};
+let aiBackends = [];
+let aiEnvBaseUrl = '';        // what .env or the shell already provides
+
+// Each backend reads different variables, and two of them read none at all.
+// Showing a box a backend ignores is the same sin as offering a backend that
+// silently falls through to another one.
+function aiFields() {
+  const chosen = $('aibackend').value;
+  const b = aiBackends.find(x => x.backend === chosen);
+  const show = (id, on) => { $(id).style.display = on ? '' : 'none'; };
+  show('aibaseurl', !!(b && b.needsBaseUrl));
+  show('aimodel', !!(b && b.needsModel));
+  show('aikey', !!(b && b.needsKey));
+  show('aiclearkey', !!(b && b.needsKey && b.hasKey));
+  // Claude API and a bare endpoint are selectable now, because the box that
+  // fixes them is on this form. Say what is still missing while it is, rather
+  // than letting the save fail to explain it.
+  $('ainote').textContent = b ? (b.needs ? `${b.note} Still needed: ${b.needs}.`
+                                         : b.note) : '';
+  if (b) {
+    $('aimodel').value = b.model || '';
+    loadAiModels(b.backend);
+    $('aimodel').placeholder = b.modelFallback
+      ? `model (optional, .env says ${b.modelFallback})`
+      : (b.modelOptional ? 'model (optional)' : 'model');
+    $('aibaseurl').placeholder = aiEnvBaseUrl
+      ? `base URL (.env says ${aiEnvBaseUrl})`
+      : (aiDefaults.cliproxy || 'base URL');
+    $('aikey').value = '';
+    // Spell out the whole rule rather than a per-backend word: the Claude API
+    // cannot run without a key, and an OAuth router wants none at all, so
+    // hunting for one you do not need is a waste of an afternoon.
+    $('aikey').placeholder = b.hasKey ? 'key stored (blank keeps it)'
+      : 'API key (required for Claude API but optional for others)';
+  }
+}
+
+async function loadAiSettings() {
+  try {
+    const r = await fetch('/api/ai-settings');
+    const d = await r.json();
+    aiDefaults = d.defaults || {};
+    aiBackends = d.backends || [];
+    // options come from the server, auto included, so labels and the fields
+    // each backend honours are described in exactly one place
+    $('aibackend').innerHTML = aiBackends.map(b =>
+      `<option value="${b.backend}"${b.available ? '' : ' disabled'}>` +
+      `${b.label}${b.available ? '' : ' (' + b.why + ')'}</option>`).join('');
+    $('aibackend').value = d.settings.backend || '';
+    // stored value in the box, environment value as a placeholder: filling
+    // the box from the merged view and then saving pinned a .env value into
+    // the settings file, which then outranked .env for good
+    $('aibaseurl').value = d.settings.baseUrl || '';
+    aiEnvBaseUrl = d.settings.baseUrlFallback || '';
+    aiFields();
+  } catch (e) {
+    log(`could not read AI settings: ${e.message}`, 'err');
+  }
+}
+
+// Pick or type: the list is a convenience, never a constraint.
+async function loadAiModels(backend) {
+  $('aimodels').innerHTML = '';
+  $('aisrc').textContent = '';
+  try {
+    const d = await (await fetch(
+      `/api/ai-settings/models?backend=${encodeURIComponent(backend)}`)).json();
+    // the listing can be slow (a subprocess, or a request over the network),
+    // so drop the answer if the user has moved on: appending it would stack
+    // one backend's source line under another's
+    if ($('aibackend').value !== backend) return;
+    // property, not an interpolated value="" attribute: an id containing a
+    // double quote would break out of it
+    const dl = $('aimodels');
+    dl.innerHTML = '';
+    for (const m of (d.models || [])) {
+      const opt = document.createElement('option');
+      opt.value = m;
+      dl.appendChild(opt);
+    }
+    $('aisrc').textContent = d.source ? `Models from ${d.source}.` : '';
+  } catch (e) {
+    // a missing list is a lost convenience, not a broken panel
+  }
+}
+
+async function saveAiSettings(extra) {
+  const body = Object.assign({
+    backend: $('aibackend').value,
+    baseUrl: $('aibaseurl').value.trim(),
+    model: $('aimodel').value.trim(),
+    apiKey: $('aikey').value,
+  }, extra || {});
+  try {
+    const r = await fetch('/api/ai-settings', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body),
+    });
+    const d = await r.json();
+    if (d.error) throw new Error(d.error);
+    log(`AI backend: ${d.settings.backend || 'auto'}`
+        + (d.settings.hasKey ? ' (key stored)' : ''), 'ok');
+    await loadAiSettings();
+  } catch (e) {
+    log(`could not save AI settings: ${e.message}`, 'err');
   }
 }
 
@@ -336,6 +491,19 @@ $('prompt').addEventListener('keydown', e => { if (e.key === 'Enter') engage(); 
 $('apply').onclick = apply;
 $('discard').onclick = () => { $('planbox').style.display = 'none'; currentPlan = null; log('plan discarded'); };
 
+$('aisave').onclick = () => saveAiSettings();
+$('aiclearkey').onclick = () => saveAiSettings({clearKey: true});
+$('aibackend').onchange = () => {
+  // only when nothing already provides one: filling the box over a .env
+  // value would pin this default on the next save
+  if ($('aibackend').value === 'openai' && !$('aibaseurl').value
+      && !aiEnvBaseUrl) {
+    $('aibaseurl').value = aiDefaults.cliproxy || '';
+  }
+  aiFields();
+};
+
+loadAiSettings();
 refresh();
 setInterval(refresh, 5000);
 </script>

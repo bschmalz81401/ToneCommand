@@ -17,7 +17,7 @@ from pydantic import BaseModel
 
 from fm9.device import FM9, FM9NotFound
 from fm9.registry import Registry
-from fm9 import planner
+from fm9 import ai_settings, planner
 from fm9 import protocol as proto
 
 ROOT = Path(__file__).resolve().parent
@@ -25,6 +25,13 @@ app = FastAPI(title="FM9 Tone Control")
 
 reg = Registry()
 _lock = threading.Lock()
+# Planner configuration lives in os.environ, which the settings panel rewrites
+# and the planner rereads inside each backend runner. A save landing mid-plan
+# could therefore tear the view: candidates() has already chosen a backend,
+# then the runner picks up the new key and the old URL (@Triumph1701 on #25).
+# Held for the whole planner call, and a save that cannot get it says so
+# rather than hanging for the length of a plan.
+_settings_lock = threading.Lock()
 _fm9: FM9 | None = None
 
 FRIENDLY = {"DISTORT": "Amp", "CABINET": "Cab", "FUZZ": "Drive", "GATE": "Gate",
@@ -284,7 +291,8 @@ def api_plan(body: PromptBody):
             drop_fm9()
             return JSONResponse({"error": "FM9 not connected"}, status_code=503)
     try:
-        result = planner.plan(body.prompt, state_text(snap), PARAM_REFERENCE)
+        with _settings_lock:
+            result = planner.plan(body.prompt, state_text(snap), PARAM_REFERENCE)
         result["device"] = {"preset": snap["preset"], "scene": snap["scene"]}
         for a in result.get("actions", []):
             errs, warns = validate_action(Action(**a))
@@ -597,6 +605,51 @@ def api_gig_state():
     return {"gig_mode": _gig_mode["on"]}
 
 
+@app.get("/api/ai-settings")
+def api_ai_settings_state():
+    """The saved planner choice, plus what this host can actually run.
+
+    Never returns the API key in any form: `hasKey` says whether one is
+    stored and nothing more.
+    """
+    return {"settings": ai_settings.panel_state(),
+            "backends": ai_settings.available_backends(),
+            "defaults": {"cliproxy": ai_settings.CLIPROXY_DEFAULT_URL,
+                         "localLlm": ai_settings.LOCAL_LLM_DEFAULT_URL}}
+
+
+@app.get("/api/ai-settings/models")
+def api_ai_models(backend: str = ""):
+    """Model ids to offer for a backend, and where the list came from.
+
+    Suggestions only: every model box stays typeable, because a list that
+    cannot be overridden is worse than no list once it goes stale.
+    """
+    return ai_settings.list_models(backend)
+
+
+@app.post("/api/ai-settings")
+def api_ai_settings(body: dict):
+    """Save the choice and make it effective for the next prompt.
+
+    A blank or absent apiKey keeps whatever is stored; clearKey removes it.
+    """
+    if not _settings_lock.acquire(timeout=2):
+        return JSONResponse(
+            {"error": "a plan is in flight, so nothing was saved. Try again "
+                      "once it finishes: changing the backend underneath a "
+                      "running plan would send it half of each setting."},
+            status_code=409)
+    try:
+        saved = ai_settings.save(body)
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    finally:
+        _settings_lock.release()
+    return {"settings": saved.public(),
+            "backends": ai_settings.available_backends()}
+
+
 @app.post("/api/apply")
 def api_apply(body: ApplyBody):
     results = []
@@ -651,6 +704,9 @@ def api_apply(body: ApplyBody):
 
 
 def main():
+    # a choice made in the UI has to survive a restart, and the planner reads
+    # its configuration from the environment, so push the saved one there
+    ai_settings.apply_to_env()
     import uvicorn
     uvicorn.run(app, host="127.0.0.1", port=8909)
 

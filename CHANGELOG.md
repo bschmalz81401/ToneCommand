@@ -45,6 +45,113 @@ Notable changes to ToneCommand. Dates are UTC.
   Control Change by the shared SendGuard, and the pedal's serial
   control port is opened read-only, since firmware and bootloader
   traffic travels over that kind of channel on an undecoded device.
+### Fixed (AI settings review round two, 2026-08-24)
+- Selecting Auto clears a `PLANNER_BACKEND` pin instead of being unable to
+  override one. A stored backend of `""` used to be indistinguishable from
+  never having chosen, so the panel could not honour its own Auto setting:
+  GET reported the pin again, the dropdown snapped back after a successful
+  save, and `candidates()` stayed pinned. The choice is now recorded as a
+  choice, and applying it writes an explicit blank, which `planner._env`
+  reads as deliberately unset. A file with no backend key at all still
+  defers to the environment, because that is not a vote for anything.
+- A save no longer pins base URL or model values that came from the
+  environment. Both boxes were prefilled from the merged view and posted
+  back, so opening the panel and clicking SAVE wrote a `.env` value into the
+  file, and since the file outranks `.env`, editing it there afterwards
+  silently did nothing. The boxes now carry only what is stored, with the
+  environment's value shown as a placeholder, which is the shape the key box
+  already had. Found by an independent review; the key half was fixed one
+  round earlier and not generalised.
+- `ai_settings.json` is written `0600`. It holds an API key and was created
+  with the process umask, commonly `0644`, so on a shared machine any other
+  local account could read it. A file predating the fix is tightened on the
+  next save. Patch supplied by @Triumph1701 on #25.
+- Log lines are escaped. It was the last place model output reached
+  `innerHTML` raw, including `plan.clarification` and planner error text.
+- A save cannot land in the middle of a plan. Planner configuration lives in
+  `os.environ` and is reread inside each backend runner, so a save arriving
+  after `candidates()` chose a backend could send the new key at the old
+  URL. The planner call holds a settings lock, and a save that cannot take it
+  is refused with a sentence rather than left to hang for the length of a
+  plan.
+
+### Added (AI settings in the UI, 2026-08-24)
+- `GET`/`POST /api/ai-settings`, following the existing `/api/gig` pair, and
+  an AI SETTINGS panel in the UI: pick Claude Code CLI, Claude API, Grok CLI
+  or an OpenAI-compatible endpoint, with CLIProxyAPI's default prefilled.
+  Takes effect on the next prompt with no restart and no `.env` edit
+  (issue #24).
+- The choice persists in a gitignored `ai_settings.json`, with the
+  environment as the fallback when the file is absent. Precedence, highest
+  first: the file, the environment including `.env`, the built-in default.
+  Outranking is not erasing: applying a choice now releases the variables it
+  is not setting, restoring whatever the user had, and only ever removes a
+  value this module wrote. Clearing them meant that anyone with
+  `ANTHROPIC_API_KEY` exported lost the Claude API backend the moment the
+  server started, having changed nothing and been told nothing, and that the
+  key was stripped from the environment handed to the `claude` subprocess
+  even though the allowlist passes it deliberately.
+- Only what the user typed into the panel is written to the file. A save
+  used to be seeded from the merged view, so an exported key or a model id
+  from `.env` was copied into `ai_settings.json` on a save that had nothing
+  to do with either. Since the file outranks both, that also turned a later
+  edit of `.env` into a silent no-op, which is a genuinely horrible thing to
+  debug.
+- The API key never reaches the browser. `GET` returns a `hasKey` boolean
+  and nothing more; a blank or absent key on `POST` keeps whatever is
+  stored, and removing one takes an explicit `clearKey`.
+- Backends the host cannot run are shown disabled with the reason, because
+  a dead option that silently falls through to something else is worse than
+  no option. Disabled now means only "you cannot fix this from this panel":
+  a missing `claude` or `grok` binary is a fact about the host, while a
+  missing key or base URL is a box on the same form, so those backends stay
+  selectable and say what they still need. Disabling them was a closed loop
+  (@Triumph1701 on #25): the Claude API option needed a key to be
+  selectable, and needed to be selected for the key box to appear, which
+  made the one backend a new user reaches for first unreachable. Saving a
+  pinned backend that still cannot run is refused in a sentence instead,
+  since pinning disables fallthrough by design.
+- Only the controls a backend actually reads are shown, for the same reason.
+  The four backends read different variables and two read none at all: the
+  Claude CLI has nothing to configure and its model is a planner constant;
+  the Claude API takes a key (`ANTHROPIC_API_KEY`) and its model is also a
+  constant; the Grok CLI takes a model (`GROK_CLI_MODEL`) and no key; the
+  OpenAI-compatible path takes all three. Auto carries the same three as
+  the OpenAI path, since a configured endpoint is the planner's first
+  candidate.
+- Model strings are treated as untrusted input, because this release invites
+  people to point the tool at endpoints they do not control. The answering
+  model is written with `textContent`, `/models` ids are set as option
+  properties rather than interpolated into a `value=""` attribute, and every
+  string on a plan card (all of it model output) is escaped.
+- Listing Anthropic models is bounded at 10s with one retry, like the grok
+  and endpoint listers. Without a timeout a hung network pinned a threadpool
+  worker for the SDK default plus its retries, and the panel looked frozen
+  rather than slow.
+- Keys and models are stored per backend, so a router key cannot quietly
+  become an Anthropic one, and a value cannot steer a backend that never
+  reads it.
+- Boxes that can be left blank say so. Model boxes read "model (optional)",
+  since every backend has a default. The key box states the whole rule,
+  "API key (required for Claude API but optional for others)", rather than
+  a per-backend word: the Claude API cannot run without one, an OAuth
+  router wants none, and nobody should go hunting for a credential nothing
+  asked for.
+- Every backend now has a model box, since the two Claude models became
+  configurable, and each box offers suggestions from whatever can actually
+  answer: `grok models` for the Grok CLI, `GET /models` for an
+  OpenAI-compatible endpoint, the Anthropic models API when a key is
+  configured, and the aliases the claude CLI documents. The panel says
+  where each list came from, and every box stays typeable, because a list
+  that cannot be overridden is worse than no list once it goes stale.
+- `GET /api/ai-settings/models?backend=` exposes that listing.
+- A finished plan says which backend and model produced it, so a
+  wrong-sounding plan is attributable to the model rather than the tool.
+- `fm9/ai_settings.py` deliberately changes no planner behaviour: it writes
+  the saved choice onto the same environment the planner already reads, so
+  a UI selection and a hand-edited `.env` take exactly the same path.
+
+
 ### Added (planner backends, 2026-08-24)
 - **OpenAI-compatible planner backend** (`PLANNER_BASE_URL`): reaches
   CLIProxyAPI, and through it Claude Code, Codex, Grok, Gemini or Kimi over
