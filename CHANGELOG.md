@@ -49,8 +49,9 @@ session, we have already lost.
   needs no extra reads. Run against preset 151 it found THREE identical
   scenes where the ear pass had found two, one of them named PITCH with no
   pitch block engaged. Three separate audits had passed all of them.
-- **Blast-radius warning.** Changing a parameter moves every scene sharing that
-  block's channel. Those scenes now light amber with a WILL CHANGE badge at
+- **Blast radius.** Changing a parameter moves every scene sharing that
+  block's channel, and the tool now says so by name, on the plan card and in
+  the log. Those scenes now light amber with a WILL CHANGE badge at
   the same visual weight as the active scene, rather than the fact living in
   small print under the plan card.
 - **`tools/ui_probe.py`.** Headless Chrome over the DevTools protocol:

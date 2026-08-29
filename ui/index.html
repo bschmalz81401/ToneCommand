@@ -939,8 +939,12 @@ function alsoAffects(a, currentScene) {
     if (!scenes.includes(currentScene)) continue;
     const others = scenes.filter(n => n !== currentScene);
     if (!others.length) return '';
-    return `also changes scene${others.length > 1 ? 's' : ''} ${others.join(', ')}, ` +
-           `which ${others.length > 1 ? 'share' : 'shares'} this block's channel`;
+    // "Blast radius" is the name of this idea in the project, so it is the
+    // name on screen too. A warning you can refer to by name is one people
+    // repeat to each other.
+    return `blast radius: also changes scene${others.length > 1 ? 's' : ''} ` +
+           `${others.join(', ')}, which ${others.length > 1 ? 'share' : 'shares'} ` +
+           `this block's channel`;
   }
   return '';
 }
@@ -1566,7 +1570,7 @@ async function engage() {
     affectedScenes = scenesAffectedBy(plan);
     renderScenes({scenes: lastScenes, scene: {number: currentSceneNumber}});
     if (affectedScenes.size) {
-      log(`heads up: this also moves scene${affectedScenes.size > 1 ? 's' : ''} ` +
+      log(`blast radius: this also moves scene${affectedScenes.size > 1 ? 's' : ''} ` +
           `${[...affectedScenes].sort((a, b) => a - b).join(', ')}`, 'warn');
     }
     const prevBy = $('planby'); if (prevBy) prevBy.remove();

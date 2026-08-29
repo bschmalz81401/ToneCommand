@@ -1,7 +1,11 @@
 <p align="center">
+  <img src="docs/img/logo.png" alt="ToneCommand" width="190">
+</p>
+
+<p align="center">
   <img src="docs/img/wordmark.png"
        alt="ToneCommand: natural language, real tones. Plan, preview, confirm, send."
-       width="560">
+       width="520">
 </p>
 
 <p align="center"><strong>Describe the tone you want. Your rig obeys.</strong></p>
@@ -62,15 +66,18 @@ cabs, searchable by name **and** by what the cab actually is, because
 Every step loads on the unit and is covered by UNDO, because an audition you
 cannot back out of is a trap rather than a feature.
 
-### It warns you before it surprises you
+### Blast radius
 
 ![Seven scenes lit amber with WILL CHANGE badges](docs/img/blast-radius.png)
 
 FM9 parameters live on the **channel**, not on the scene. Turning up the mid in
 scene 1 moves every other scene sharing that channel, which is the single
-easiest way to wreck a working preset without noticing. Every scene a pending
-plan would also move lights up and says so, at the same visual weight as the
-scene you are standing in.
+easiest way to wreck a working preset without noticing.
+
+So before anything is sent, the tool shows you the blast radius: every scene
+the pending plan would also move lights up and says WILL CHANGE, at the same
+visual weight as the scene you are standing in. It goes out the moment the
+plan does.
 
 ### It can tell you whether a preset is actually correct
 

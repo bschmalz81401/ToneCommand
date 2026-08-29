@@ -238,3 +238,11 @@ def test_the_chevron_is_drawn_not_typed():
     style = UI.split("<style>")[1].split("</style>")[0]
     after = style.split(".audbtn::after {")[1].split("}")[0]
     assert "border-left" in after and "border-top" in after
+
+
+def test_the_warning_is_called_a_blast_radius():
+    """Moncy named it and the name is good, so it is the name on screen too.
+    A warning you can refer to by name is one people repeat to each other."""
+    assert "blast radius:" in SCRIPT
+    spread = SCRIPT.split("function alsoAffects")[1].split("\n}")[0]
+    assert "blast radius" in spread
