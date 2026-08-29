@@ -165,6 +165,18 @@
   }
   .popfoot button:hover { border-color: var(--cyan-dim); color: var(--cyan); }
 
+  /* A pending plan will move these scenes too. Amber because it is a warning,
+     and warnings are the one thing colour is allowed to mean here. It pulses
+     because the text under the plan card is skippable and this is not. */
+  .sc.willchange {
+    border-color: var(--amber);
+    box-shadow: 0 0 14px rgba(255,180,84,0.30), inset 0 0 20px rgba(255,180,84,0.07);
+    animation: willpulse 1.6s ease-in-out infinite;
+  }
+  .sc.willchange .n, .sc.willchange .nm { color: var(--amber); }
+  @keyframes willpulse { 50% { box-shadow: 0 0 6px rgba(255,180,84,0.14); } }
+  @media (prefers-reduced-motion: reduce) { .sc.willchange { animation: none; } }
+
   .console {
     background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
     padding: 18px; margin-bottom: 20px; position: relative;
@@ -260,6 +272,7 @@
   #log .t { color: var(--cyan-dim); margin-right: 8px; }
   #log .ok { color: var(--green); }
   #log .err { color: var(--red); }
+  #log .warn { color: var(--amber); }
   .spin { display: inline-block; animation: spin 0.9s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
   .hint { color: var(--muted); font-size: 0.72rem; margin-top: 10px; letter-spacing: 0.05em; }
@@ -380,16 +393,18 @@ let sceneBusy = false;
 let currentSceneNumber = null;
 
 function renderScenes(s) {
-  const names = s.scenes || [];
+  const names = s.scenes || lastScenes;
+  if (s.scenes) lastScenes = s.scenes;
   const active = s.scene ? s.scene.number : null;
   const box = $('scenes');
   if (!names.length) { box.innerHTML = '<span class="hint">awaiting link...</span>'; return; }
   box.innerHTML = names.map(sc => {
     const on = sc.number === active ? ' on' : '';
+    const warn = affectedScenes.has(sc.number) ? ' willchange' : '';
     // A scene that did not answer shows its number and nothing else, rather
     // than a name we cannot back up.
     const nm = sc.name ? esc(sc.name) : '&nbsp;';
-    return `<button class="sc${on}" data-scene="${sc.number}" title="${sc.name ? esc(sc.name) : 'scene ' + sc.number}">
+    return `<button class="sc${on}${warn}" data-scene="${sc.number}" title="${sc.name ? esc(sc.name) : 'scene ' + sc.number}">
               <span class="n">${sc.number}</span><span class="nm">${nm}</span></button>`;
   }).join('');
 }
@@ -550,6 +565,8 @@ $('psearch').addEventListener('keydown', e => {
 // moves every scene sitting on that channel, and the plan card should say so
 // before you transmit rather than after you notice.
 let sharedMap = null;
+let affectedScenes = new Set();   // scenes a pending plan would also move
+let lastScenes = [];              // last known scene list, to redraw marks
 let sharedFor = null;
 
 async function loadShared(presetNumber) {
@@ -560,6 +577,24 @@ async function loadShared(presetNumber) {
     if (d.error) return;                 // a hint is never worth an error
     sharedMap = d.shared; sharedFor = d.preset;
   } catch (e) { /* silent: this only ever adds information */ }
+}
+
+function scenesAffectedBy(plan) {
+  // Union across the plan of every OTHER scene that shares a channel with a
+  // block being edited. The scene you are on is excluded: you already know
+  // that one is changing. These are the ones you did not ask for.
+  const out = new Set();
+  if (!sharedMap || !currentSceneNumber || !plan) return out;
+  for (const a of plan.actions || []) {
+    if (a.kind !== 'set_param' && a.kind !== 'set_type') continue;
+    const eid = a.effect_id != null ? String(a.effect_id) : null;
+    if (!eid || !sharedMap[eid]) continue;
+    for (const scenes of Object.values(sharedMap[eid])) {
+      if (!scenes.includes(currentSceneNumber)) continue;
+      scenes.filter(n => n !== currentSceneNumber).forEach(n => out.add(n));
+    }
+  }
+  return out;
 }
 
 function alsoAffects(a, currentScene) {
@@ -653,9 +688,18 @@ async function engage() {
     if (plan.clarification) {
       log(`needs clarification: ${plan.clarification}`, 'err');
       $('planbox').style.display = 'none';
+      affectedScenes = new Set();
       return;
     }
     currentPlan = plan;
+    // Light the scenes this plan would also move, so it cannot be skipped the
+    // way a line of small print under a card can be.
+    affectedScenes = scenesAffectedBy(plan);
+    renderScenes({scenes: lastScenes, scene: {number: currentSceneNumber}});
+    if (affectedScenes.size) {
+      log(`heads up: this also moves scene${affectedScenes.size > 1 ? 's' : ''} ` +
+          `${[...affectedScenes].sort((a, b) => a - b).join(', ')}`, 'warn');
+    }
     const prevBy = $('planby'); if (prevBy) prevBy.remove();
     $('plansummary').textContent = plan.summary;
     // half the value of the settings panel: a wrong-sounding plan should be
@@ -834,12 +878,14 @@ async function apply() {
       log(`${describe(res.action)}: ${res.detail}${extra}`, res.ok ? 'ok' : 'err');
     });
     $('prompt').value = '';
-    setTimeout(() => { $('planbox').style.display = 'none'; refresh(); }, 1500);
+    setTimeout(() => { $('planbox').style.display = 'none';
+                       affectedScenes = new Set(); refresh(); }, 1500);
   } catch (e) {
     log(`transmit failed: ${e.message}`, 'err');
   } finally {
     $('apply').disabled = false; $('discard').disabled = false;
     currentPlan = null;
+    affectedScenes = new Set();
   }
 }
 
