@@ -42,6 +42,15 @@ def isolated_env(tmp_path, monkeypatch):
     """
     from fm9 import planner
     monkeypatch.setattr(planner, "_env_path", lambda: tmp_path / ".env")
+    # The same lesson, one file later. store_slots.json is the boundary that
+    # decides which of the owner's 512 presets may be overwritten, and tests
+    # that exercise the endpoint were isolating it one by one. A test that
+    # forgot wrote to the real file, and the suite twice widened Moncy's live
+    # whitelist to every slot on the unit, paid content included. Relying on
+    # each test to remember is the wrong shape for a safety boundary, so it
+    # is pinned here for every module whether the test asks or not.
+    monkeypatch.setenv("TONECOMMAND_STORE_SLOTS_FILE",
+                       str(tmp_path / "store_slots.json"))
     for name in ("PLANNER_BACKEND", "PLANNER_BASE_URL", "PLANNER_MODEL",
                  "PLANNER_API_KEY", "PLANNER_TIMEOUT", "PLANNER_MAX_TOKENS",
                  "GROK_CLI_MODEL", "ANTHROPIC_API_KEY",

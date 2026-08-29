@@ -193,3 +193,13 @@ def test_the_save_button_names_both_numbers():
     script = UI.split("<script>")[1]
     upd = script.split("function updateSaveButton")[1].split("\n}")[0]
     assert "sel.label" in upd and "sel.editor" not in upd
+
+
+def test_the_panel_says_how_many_slots_and_why():
+    """Moncy read a 33 entry list as a half-finished load. A short list with
+    no explanation looks like a bug, not a safety catch, so the count and its
+    reason are on screen rather than in the source."""
+    script = UI.split("<script>")[1]
+    assert "savecount" in UI
+    assert "slots you marked disposable" in script
+    assert "out of 512" in script

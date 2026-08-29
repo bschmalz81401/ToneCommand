@@ -49,12 +49,70 @@ class FM9NotFound(RuntimeError):
     pass
 
 
+def store_slots_path() -> Path:
+    """Where a whitelist chosen in the UI is kept. Gitignored, like .env."""
+    import os
+    override = os.environ.get("TONECOMMAND_STORE_SLOTS_FILE", "").strip()
+    if override:
+        return Path(override)
+    return Path(__file__).resolve().parent.parent / "store_slots.json"
+
+
+def get_store_slots_spec() -> tuple[str, str]:
+    """The raw whitelist spec and where it came from, for showing the owner.
+
+    A safety boundary the owner cannot see is one they forget they set, which
+    is exactly what happened here: the range was authorised in conversation,
+    written to .env by a script, and six days later the owner had no way to
+    check it from the product and misremembered what it was.
+    """
+    import json
+    import os
+    raw = os.environ.get("TONECOMMAND_STORE_SLOTS", "")
+    if raw:
+        # An explicit env var is an operator pin and outranks the UI, so a
+        # browser cannot widen a boundary someone set deliberately outside it.
+        return raw, "environment"
+    path = store_slots_path()
+    if path.exists():
+        try:
+            got = json.loads(path.read_text())
+            if isinstance(got, dict) and isinstance(got.get("slots"), str):
+                return got["slots"], "app"
+        except (json.JSONDecodeError, ValueError, OSError):
+            pass          # a corrupt file must not silently widen anything
+    env_file = Path(__file__).resolve().parent.parent / ".env"
+    if env_file.exists():
+        for line in env_file.read_text().splitlines():
+            if line.strip().startswith("TONECOMMAND_STORE_SLOTS="):
+                return line.split("=", 1)[1].strip(), ".env"
+    return "", "unset"
+
+
+def set_store_slots_spec(raw: str) -> tuple[str, str]:
+    """Persist a whitelist chosen in the UI. Returns the stored spec+source."""
+    import json
+    import os
+    if os.environ.get("TONECOMMAND_STORE_SLOTS", ""):
+        raise PermissionError(
+            "TONECOMMAND_STORE_SLOTS is pinned in the environment; change it "
+            "there rather than in the app")
+    store_slots_path().write_text(json.dumps({"slots": raw.strip()}, indent=1))
+    return get_store_slots_spec()
+
+
+def parse_store_slots(raw: str) -> set[int]:
+    """Slot numbers from a spec string. Wire numbers, 0-511."""
+    return _parse_slots(raw)
+
+
 def get_store_slots() -> set[int]:
     """The ONLY preset slots this tool is allowed to store to, configured by
     the user for their own unit. Sources, first match wins:
 
-      1. env var  TONECOMMAND_STORE_SLOTS
-      2. a TONECOMMAND_STORE_SLOTS= line in .env at the repo root
+      1. env var  TONECOMMAND_STORE_SLOTS   (an operator pin, unoverridable)
+      2. store_slots.json                    (chosen in the app)
+      3. a TONECOMMAND_STORE_SLOTS= line in .env at the repo root
 
     Format: "133-148" or "133,140,150-155". These are WIRE numbers, 0-511.
     FM9-Edit and the front panel number the same slots 1-512, so "133-148"
@@ -64,15 +122,11 @@ def get_store_slots() -> set[int]:
     DEFAULT IS EMPTY: storing is disabled until the owner designates
     disposable slots, because nobody but the owner knows what lives in
     their banks."""
-    import os
-    raw = os.environ.get("TONECOMMAND_STORE_SLOTS", "")
-    if not raw:
-        env_file = Path(__file__).resolve().parent.parent / ".env"
-        if env_file.exists():
-            for line in env_file.read_text().splitlines():
-                if line.strip().startswith("TONECOMMAND_STORE_SLOTS="):
-                    raw = line.split("=", 1)[1].strip()
-                    break
+    raw, _source = get_store_slots_spec()
+    return _parse_slots(raw)
+
+
+def _parse_slots(raw: str) -> set[int]:
     slots: set[int] = set()
     for part in raw.split(","):
         part = part.strip()

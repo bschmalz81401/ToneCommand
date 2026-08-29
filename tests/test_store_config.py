@@ -78,3 +78,121 @@ def test_slot_set_label_collapses_runs():
     assert p.slot_set_label(range(133, 136)) == "133-135 (FM9-Edit 134-136)"
     assert p.slot_set_label([5, 133, 134, 135, 200]) == (
         "5 (FM9-Edit 6), 133-135 (FM9-Edit 134-136), 200 (FM9-Edit 201)")
+
+
+# --- the owner can see and change the boundary from the app ---------------
+# It lived only in .env, so the thing protecting 512 presets was invisible from
+# the product that enforces it. Moncy authorised a range in conversation, a
+# script wrote it to a gitignored file, and six days later he had no way to
+# check it and misremembered what it was.
+
+def test_the_spec_reports_where_it_came_from(monkeypatch, tmp_path):
+    from fm9 import device
+    monkeypatch.delenv("TONECOMMAND_STORE_SLOTS", raising=False)
+    monkeypatch.setenv("TONECOMMAND_STORE_SLOTS_FILE", str(tmp_path / "s.json"))
+    assert device.get_store_slots_spec()[1] in (".env", "unset")
+    device.set_store_slots_spec("200-205")
+    assert device.get_store_slots_spec() == ("200-205", "app")
+    assert device.get_store_slots() == set(range(200, 206))
+
+
+def test_an_environment_pin_cannot_be_widened_from_the_app(monkeypatch, tmp_path):
+    """An operator who set the boundary deliberately outside the app must not
+    have it moved by a browser."""
+    from fm9 import device
+    monkeypatch.setenv("TONECOMMAND_STORE_SLOTS_FILE", str(tmp_path / "s.json"))
+    monkeypatch.setenv("TONECOMMAND_STORE_SLOTS", "300-302")
+    assert device.get_store_slots_spec() == ("300-302", "environment")
+    with pytest.raises(PermissionError):
+        device.set_store_slots_spec("0-511")
+    assert device.get_store_slots() == {300, 301, 302}
+
+
+def test_a_corrupt_settings_file_does_not_widen_anything(monkeypatch, tmp_path):
+    """Failing open on a safety boundary would be the worst possible default."""
+    from fm9 import device
+    f = tmp_path / "s.json"
+    f.write_text("{ this is not json")
+    monkeypatch.delenv("TONECOMMAND_STORE_SLOTS", raising=False)
+    monkeypatch.setenv("TONECOMMAND_STORE_SLOTS_FILE", str(f))
+    spec, source = device.get_store_slots_spec()
+    assert source != "app", "a corrupt file must not be treated as a choice"
+
+
+def test_widening_names_what_it_newly_exposes(monkeypatch, tmp_path):
+    """"5 more slots" and "the Worship Tutorials packs" are different
+    sentences, and only one of them is a warning."""
+    import server
+    from fastapi.testclient import TestClient
+    monkeypatch.delenv("TONECOMMAND_STORE_SLOTS", raising=False)
+    monkeypatch.setenv("TONECOMMAND_STORE_SLOTS_FILE", str(tmp_path / "s.json"))
+    c = TestClient(server.app)
+    c.post("/api/store-slots", json={"spec": "200-201"})
+    d = c.post("/api/store-slots", json={"spec": "200-205"}).json()
+    assert [s["label"] for s in d["newly_exposed"]] == [
+        f"{n} (FM9-Edit {n + 1})" for n in range(202, 206)]
+    assert d["count"] == 6
+
+
+def test_narrowing_reports_what_it_took_back(monkeypatch, tmp_path):
+    import server
+    from fastapi.testclient import TestClient
+    monkeypatch.delenv("TONECOMMAND_STORE_SLOTS", raising=False)
+    monkeypatch.setenv("TONECOMMAND_STORE_SLOTS_FILE", str(tmp_path / "s.json"))
+    c = TestClient(server.app)
+    c.post("/api/store-slots", json={"spec": "200-210"})
+    d = c.post("/api/store-slots", json={"spec": "200-205"}).json()
+    assert d["removed"] == 5 and not d["newly_exposed"]
+
+
+def test_the_settings_panel_shows_the_boundary_and_its_source():
+    from pathlib import Path
+    ui = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text()
+    assert 'data-label="SAVE SLOTS"' in ui
+    assert 'id="slotspec"' in ui and 'id="slotsrc"' in ui
+    script = ui.split("<script>")[1]
+    assert "not set in the app" in script and "pinned by the" in script
+
+
+def test_a_widening_can_be_previewed_without_happening(monkeypatch, tmp_path):
+    """The first version applied and then reported, so by the time you read
+    what you had exposed, you had exposed it. That is backwards for the one
+    control governing every preset on the unit, and it bit during development:
+    a probe left the boundary at 1-511 with the owner's untouchable packs
+    inside it.
+    """
+    import server
+    from fastapi.testclient import TestClient
+    from fm9 import device
+    monkeypatch.delenv("TONECOMMAND_STORE_SLOTS", raising=False)
+    monkeypatch.setenv("TONECOMMAND_STORE_SLOTS_FILE", str(tmp_path / "s.json"))
+    c = TestClient(server.app)
+    c.post("/api/store-slots", json={"spec": "200-205"})
+    before = device.get_store_slots()
+
+    d = c.post("/api/store-slots", json={"spec": "0-511", "preview": True}).json()
+    assert d["preview"] is True and d["count"] == 512
+    assert len(d["newly_exposed"]) == 512 - len(before)
+    assert device.get_store_slots() == before, "a preview must not write"
+
+
+def test_the_ui_asks_before_it_widens():
+    from pathlib import Path
+    ui = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text()
+    fn = ui.split("<script>")[1].split("async function saveSlotSpec")[1].split("\n}\n")[0]
+    assert "preview: true" in fn
+    assert "window.confirm" in fn
+    assert fn.index("preview: true") < fn.index("window.confirm"), \
+        "the preview has to come before the question, or the question is theatre"
+    assert "Newly at risk" in fn
+
+
+def test_the_examples_only_fill_the_box():
+    """An example that silently moved the boundary would be the worst kind of
+    shortcut on this particular control."""
+    from pathlib import Path
+    ui = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text()
+    script = ui.split("<script>")[1]
+    handler = script.split("document.querySelectorAll('.eg')")[1].split("});")[0]
+    assert "$('slotspec').value = b.dataset.eg" in handler
+    assert "fetch(" not in handler and "saveSlotSpec" not in handler

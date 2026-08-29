@@ -360,3 +360,20 @@ def test_long_block_names_have_short_forms():
     short = SCRIPT.split("const SHORT = {")[1].split("};")[0]
     for name in ("Graphic EQ", "Compressor", "Volume"):
         assert name in short, name
+
+
+def test_cab_descriptions_are_not_clipped():
+    """The description is how anyone actually finds a cab: "Vibrolux" is in
+    the description, not in the name. Clipped to one line it was unreadable
+    exactly where it mattered."""
+    style = UI.split("<style>")[1].split("</style>")[0]
+    det = style.split(".prow .det {")[1].split("}")[0]
+    assert "white-space: normal" in det
+    # No clamp at all. Two lines still cut the long ones: the longest entry in
+    # the catalogue runs to 268 characters, and the median is 56, so most rows
+    # stay short and only the rare verbose one is tall.
+    assert "line-clamp" not in det
+    sub = style.split(".model.sub .audbtn .l {")[1].split("}")[0]
+    assert "white-space: normal" in sub
+    # and the full text on hover for anything past two lines
+    assert 'title="${esc(m.name)}' in SCRIPT

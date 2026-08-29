@@ -354,6 +354,12 @@ def index():
     return FileResponse(ROOT / "ui" / "index.html")
 
 
+@app.get("/logo.png")
+def logo():
+    """The mark, for the page header and the browser tab."""
+    return FileResponse(ROOT / "ui" / "logo.png", media_type="image/png")
+
+
 @app.get("/api/state")
 def api_state():
     with _lock:
@@ -747,12 +753,13 @@ def api_store_slots():
     Names come from the same cache the preset browser uses, read by number
     without disturbing the loaded preset.
     """
-    from fm9.device import get_store_slots
+    from fm9.device import get_store_slots, get_store_slots_spec
     allowed = sorted(get_store_slots())
+    spec, source = get_store_slots_spec()
     if not allowed:
-        return {"slots": [], "configured": False,
-                "why": "storing is disabled until TONECOMMAND_STORE_SLOTS names "
-                       "slots on your unit that are safe to overwrite"}
+        return {"slots": [], "configured": False, "spec": spec, "source": source,
+                "why": "storing is disabled until you designate slots on your "
+                       "unit that are safe to overwrite"}
     known = {}
     if _preset_cache["slots"]:
         known = {s["number"]: s for s in _preset_cache["slots"]}
@@ -768,8 +775,68 @@ def api_store_slots():
             "name": (s or {}).get("name"),
             "empty": (s or {}).get("empty"),
         })
-    return {"slots": out, "configured": True,
-            "named": bool(known)}
+    return {"slots": out, "configured": True, "named": bool(known),
+            # where the boundary came from, so the owner can see whether they
+            # set it here, in a file, or never at all
+            "spec": spec, "source": source, "total": 512}
+
+
+class StoreSlotsBody(BaseModel):
+    spec: str
+    #: Ask what this WOULD do without doing it. The first version of this
+    #: endpoint applied and then reported, which is backwards for the control
+    #: that governs every preset on the unit: by the time you read what you
+    #: had exposed, you had exposed it.
+    preview: bool = False
+
+
+@app.post("/api/store-slots")
+def api_set_store_slots(body: StoreSlotsBody):
+    """Change which slots may be overwritten.
+
+    The most dangerous endpoint in the app: it moves the boundary that protects
+    every preset on the unit. So it reports what the change would newly expose
+    BEFORE it is confirmed, rather than after, and it refuses outright when the
+    boundary is pinned in the environment.
+    """
+    from fm9.device import (get_store_slots, parse_store_slots,
+                            set_store_slots_spec)
+    before = get_store_slots()
+    try:
+        wanted = parse_store_slots(body.spec)
+    except Exception as e:
+        return JSONResponse({"error": f"could not read that: {e}"}, status_code=400)
+    if body.spec.strip() and not wanted:
+        return JSONResponse(
+            {"error": f"nothing usable in {body.spec!r}. Wire numbers 0-511, "
+                      f"like \"133,139-170\""}, status_code=400)
+    with _lock:
+        added = sorted(wanted - before)
+        known = {s["number"]: s for s in (_preset_cache["slots"] or [])}
+        if body.preview:
+            return {
+                "preview": True, "spec": body.spec, "count": len(wanted),
+                "newly_exposed": [
+                    {"label": proto.slot_label(n),
+                     "name": (known.get(n) or {}).get("name")} for n in added],
+                "removed": len(before - wanted),
+            }
+        try:
+            spec, source = set_store_slots_spec(body.spec)
+        except PermissionError as e:
+            return JSONResponse({"error": str(e)}, status_code=409)
+        known = {s["number"]: s for s in (_preset_cache["slots"] or [])}
+        return {
+            "spec": spec, "source": source, "count": len(wanted),
+            # named presets that just became overwritable, by name, because
+            # "5 more slots" and "the Worship Tutorials packs" are different
+            # sentences and only one of them is a warning
+            "newly_exposed": [
+                {"label": proto.slot_label(n),
+                 "name": (known.get(n) or {}).get("name")}
+                for n in added],
+            "removed": len(before - wanted),
+        }
 
 
 @app.get("/api/presets")

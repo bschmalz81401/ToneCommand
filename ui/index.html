@@ -36,11 +36,33 @@
       linear-gradient(90deg, rgba(47, 230, 255, 0.025) 1px, transparent 1px);
     background-size: 100% 100%, 44px 44px, 44px 44px;
   }
+  :root {
+    /* One scale. There were seventeen different font sizes on this page,
+       several of them a hundredth of a rem apart, which is not a hierarchy,
+       it is drift. Six steps, each with a job. */
+    --fs-badge: 0.58rem;   /* channel letters, WILL CHANGE */
+    --fs-label: 0.66rem;   /* panel captions and micro uppercase */
+    --fs-hint:  0.73rem;   /* hints, secondary rows, readouts */
+    --fs-body:  0.80rem;   /* controls, inputs, buttons, list rows */
+    --fs-sub:   0.90rem;   /* a group headline, like the amp model */
+    --fs-lead:  1.05rem;   /* scene numbers */
+  }
   .wrap { max-width: 1100px; margin: 0 auto; padding: 28px 20px 60px; }
 
   header {
     display: flex; align-items: baseline; gap: 18px; flex-wrap: wrap;
     border-bottom: 1px solid var(--line); padding-bottom: 14px; margin-bottom: 22px;
+  }
+  /* The mark sits with the wordmark rather than replacing it: the wordmark is
+     what people read, the mark is what they recognise on a tab. Rebased onto
+     the app background so it blends instead of sitting on a black tile. */
+  .brand { display: flex; align-items: center; gap: 15px; text-decoration: none; }
+  /* Big enough to read the gear at a glance, with a soft halo so it reads as
+     lit rather than as a dark tile. At 38px it was a smudge: art drawn at
+     1024 carries its detail in shadow that is simply not there when small. */
+  .brand img {
+    display: block; border-radius: 18px;
+    filter: drop-shadow(0 0 26px rgba(90,140,255,0.42));
   }
   h1 {
     font-size: 1.25rem; letter-spacing: 0.35em; color: var(--cyan);
@@ -49,7 +71,7 @@
   h1 span { color: var(--muted); text-shadow: none; }
   .status {
     margin-left: auto; display: flex; gap: 14px; align-items: center;
-    font-size: 0.78rem; letter-spacing: 0.08em;
+    font-size: var(--fs-body); letter-spacing: 0.08em;
   }
   .pill {
     padding: 4px 12px; border: 1px solid var(--line); border-radius: 3px;
@@ -72,13 +94,13 @@
     position: relative; cursor: pointer; text-align: left; min-width: 0;
     padding: 11px 11px 10px; border: 1px solid #241a3d; border-radius: 4px;
     background: linear-gradient(180deg, rgba(185,140,255,0.05), rgba(0,0,0,0.4));
-    color: var(--muted); font-family: inherit; font-size: 0.72rem;
+    color: var(--muted); font-family: inherit; font-size: var(--fs-hint);
     letter-spacing: 0.06em; transition: border-color .12s, color .12s, box-shadow .12s;
   }
   .sc:hover:not(:disabled) { border-color: var(--violet-dim); color: var(--text); }
-  .sc .n { display: block; font-size: 1.05rem; font-weight: 600; line-height: 1; }
+  .sc .n { display: block; font-size: var(--fs-lead); font-weight: 600; line-height: 1; }
   .sc .nm {
-    display: block; margin-top: 6px; font-size: 0.72rem; color: var(--muted);
+    display: block; margin-top: 6px; font-size: var(--fs-hint); color: var(--muted);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
   }
   .sc.on {
@@ -111,13 +133,13 @@
     flex: 1; min-width: 0; overflow: hidden;
     text-overflow: ellipsis; white-space: nowrap; text-align: left;
   }
-  .pillbtn .caret { flex: none; color: var(--cyan-dim); font-size: 0.7em; }
+  .pillbtn .caret { flex: none; color: var(--cyan-dim); font-size: var(--fs-badge); }
   .pillbtn .lbl { flex: none; color: var(--muted); }
   .pillbtn .pnum {
     flex: none; color: var(--text); font-variant-numeric: tabular-nums;
     min-width: 30px; text-align: right;
   }
-  .pillbtn .caret { margin-left: 7px; color: var(--cyan-dim); font-size: 0.7em; }
+  .pillbtn .caret { margin-left: 7px; color: var(--cyan-dim); font-size: var(--fs-badge); }
   .pillbtn:hover { border-color: var(--cyan-dim); }
   .pillbtn.open { border-color: var(--cyan); color: var(--cyan); }
 
@@ -133,7 +155,7 @@
   .pop input {
     width: 100%; background: rgba(0,0,0,0.5); border: 1px solid var(--line);
     border-radius: 3px; color: var(--text); font-family: inherit;
-    font-size: 0.8rem; padding: 7px 9px; outline: none; margin-bottom: 8px;
+    font-size: var(--fs-body); padding: 7px 9px; outline: none; margin-bottom: 8px;
   }
   .pop input:focus { border-color: var(--cyan-dim); }
   /* Fixed height, not max-height. With max-height the box grew and shrank
@@ -144,11 +166,11 @@
     display: flex; gap: 10px; align-items: baseline; width: 100%;
     padding: 6px 8px; cursor: pointer; text-align: left; border: 0;
     border-radius: 3px; background: none; color: var(--text);
-    font-family: inherit; font-size: 0.76rem;
+    font-family: inherit; font-size: var(--fs-hint);
   }
   .prow:hover, .prow.cursor { background: rgba(47, 230, 255, 0.10); }
   .prow .num { color: var(--muted); min-width: 34px; text-align: right;
-                font-variant-numeric: tabular-nums; font-size: 0.7rem; }
+                font-variant-numeric: tabular-nums; font-size: var(--fs-hint); }
   .prow .nm { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .prow.on { color: var(--cyan); background: rgba(47, 230, 255, 0.09); }
   .prow.on .num { color: var(--cyan-dim); }
@@ -157,11 +179,11 @@
   .popfoot {
     display: flex; justify-content: space-between; align-items: center;
     margin-top: 8px; padding-top: 7px; border-top: 1px solid var(--line);
-    font-size: 0.66rem; color: var(--muted);
+    font-size: var(--fs-label); color: var(--muted);
   }
   .popfoot button {
     background: none; border: 1px solid var(--line); border-radius: 3px;
-    color: var(--muted); font-family: inherit; font-size: 0.62rem;
+    color: var(--muted); font-family: inherit; font-size: var(--fs-label);
     letter-spacing: 0.1em; padding: 3px 8px; cursor: pointer;
   }
   .popfoot button:hover { border-color: var(--cyan-dim); color: var(--cyan); }
@@ -185,7 +207,7 @@
      states read as answers to the same question. */
   .sc.willchange::after {
     content: 'WILL CHANGE'; position: absolute; top: 6px; right: 7px;
-    font-size: 0.5rem; letter-spacing: 0.13em; color: var(--amber);
+    font-size: var(--fs-badge); letter-spacing: 0.13em; color: var(--amber);
     background: rgba(255,180,84,0.14); border: 1px solid rgba(255,180,84,0.45);
     border-radius: 2px; padding: 2px 4px; line-height: 1; font-weight: 600;
   }
@@ -199,10 +221,14 @@
     padding: 18px; margin-bottom: 20px; position: relative;
     box-shadow: 0 0 40px rgba(0,0,0,0.5), inset 0 0 60px rgba(47,230,255,0.03);
   }
+  /* A panel name is the label for everything under it, so it was doing the
+     most work at the smallest size on the page. Bigger, brighter, and lit,
+     so the eye can find the sections before reading any of them. */
   .console::before {
-    content: attr(data-label); position: absolute; top: -9px; left: 14px;
-    background: var(--bg); padding: 0 8px; font-size: 0.68rem;
-    letter-spacing: 0.25em; color: var(--cyan-dim);
+    content: attr(data-label); position: absolute; top: -11px; left: 14px;
+    background: var(--bg); padding: 0 9px; font-size: var(--fs-body);
+    letter-spacing: 0.24em; color: var(--cyan); font-weight: 600;
+    text-shadow: 0 0 14px rgba(47,230,255,0.45);
   }
   /* Scenes are the performance surface, so they carry the violet accent all
      the way through: label, border and glow. */
@@ -218,11 +244,11 @@
   .prompt-prefix { color: var(--cyan); align-self: center; user-select: none; }
   #prompt {
     flex: 1; background: transparent; border: none; outline: none;
-    color: var(--text); font: inherit; font-size: 1.05rem; caret-color: var(--cyan);
+    color: var(--text); font: inherit; font-size: var(--fs-lead); caret-color: var(--cyan);
   }
   #prompt::placeholder { color: var(--muted); opacity: 0.6; }
   button {
-    font: inherit; letter-spacing: 0.15em; font-size: 0.8rem; cursor: pointer;
+    font: inherit; letter-spacing: 0.15em; font-size: var(--fs-body); cursor: pointer;
     background: transparent; color: var(--cyan); border: 1px solid var(--cyan-dim);
     border-radius: 4px; padding: 9px 20px; transition: all 0.15s;
   }
@@ -239,15 +265,15 @@
   .plan-card {
     border: 1px solid var(--line); border-left: 3px solid var(--amber);
     border-radius: 4px; padding: 12px 14px; margin: 10px 0;
-    background: rgba(0,0,0,0.3); font-size: 0.88rem;
+    background: rgba(0,0,0,0.3); font-size: var(--fs-sub);
     display: flex; justify-content: space-between; gap: 14px; align-items: center;
   }
   .plan-card .what { color: var(--text); }
-  .plan-card .why { color: var(--muted); font-size: 0.78rem; margin-top: 4px; }
+  .plan-card .why { color: var(--muted); font-size: var(--fs-body); margin-top: 4px; }
   /* Not a warning: nothing is wrong. It is the reach of the change, stated
      before you press transmit rather than discovered after. */
   .plan-card .spread {
-    margin-top: 5px; font-size: 0.72rem; color: var(--violet);
+    margin-top: 5px; font-size: var(--fs-hint); color: var(--violet);
     border-left: 2px solid var(--violet-dim); padding-left: 8px;
   }
   .plan-card .delta { color: var(--amber); white-space: nowrap; }
@@ -255,11 +281,11 @@
   .plan-card.fail { border-left-color: var(--red); }
   .plan-card.vfail { border-left-color: var(--red); background: rgba(255,84,112,0.06); }
   .plan-card.vwarn { border-left-color: var(--amber); }
-  .vmsg { font-size: 0.72rem; margin-top: 5px; }
+  .vmsg { font-size: var(--fs-hint); margin-top: 5px; }
   .vmsg.verr { color: var(--red); }
   .vmsg.vwrn { color: var(--amber); }
   .plan-actions { display: flex; gap: 12px; margin-top: 14px; }
-  #plansummary { color: var(--cyan); font-size: 0.9rem; margin-bottom: 4px; }
+  #plansummary { color: var(--cyan); font-size: var(--fs-sub); margin-bottom: 4px; }
 
   .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
   @media (max-width: 800px) { .grid { grid-template-columns: 1fr; } }
@@ -268,29 +294,29 @@
   /* A group split across a column break reads as two groups. */
   .kgroup { break-inside: avoid; margin: 0 0 18px; }
   .kgroup > h4 {
-    font-size: 0.66rem; letter-spacing: 0.22em; color: var(--cyan-dim);
+    font-size: var(--fs-label); letter-spacing: 0.22em; color: var(--cyan-dim);
     font-weight: 500; margin: 0 0 2px; text-transform: uppercase;
   }
   /* The model is the headline, not a row: it is the first thing anyone wants
      to know about an amp block and it was not shown anywhere at all before. */
   .kgroup .model {
-    color: var(--text); font-size: 0.9rem; margin-bottom: 9px;
+    color: var(--text); font-size: var(--fs-sub); margin-bottom: 9px;
     letter-spacing: 0.02em;
   }
   .kgroup .picklabel {
-    font-size: 0.58rem; letter-spacing: 0.2em; color: var(--dim);
-    margin: 9px 0 3px;
+    font-size: var(--fs-label); letter-spacing: 0.2em; color: var(--cyan-dim);
+    margin: 11px 0 4px; font-weight: 600;
   }
   .kgroup .model.sub {
-    display: block; color: var(--muted); font-size: 0.7rem; margin-top: 3px;
+    display: block; color: var(--muted); font-size: var(--fs-hint); margin-top: 3px;
     letter-spacing: 0.03em; line-height: 1.45;
   }
   .knob { display: grid; grid-template-columns: 108px 1fr 62px; gap: 9px;
           align-items: center; padding: 3px 0; }
-  .knob .k { color: var(--muted); font-size: 0.75rem; letter-spacing: 0.04em; }
-  .knob .v { color: var(--cyan); font-size: 0.78rem; text-align: right;
+  .knob .k { color: var(--muted); font-size: var(--fs-hint); letter-spacing: 0.04em; }
+  .knob .v { color: var(--cyan); font-size: var(--fs-body); text-align: right;
              font-variant-numeric: tabular-nums; }
-  .knob .v .u { color: var(--dim); font-size: 0.68rem; margin-left: 2px; }
+  .knob .v .u { color: var(--dim); font-size: var(--fs-label); margin-left: 2px; }
   .knob.busy .v { color: var(--amber); }
   .knob.ro .v { color: var(--muted); }
 
@@ -299,6 +325,7 @@
   .knob input[type=range] {
     -webkit-appearance: none; appearance: none; width: 100%; height: 16px;
     background: none; cursor: pointer; margin: 0;
+    font: inherit;      /* else these 18 sliders sit on the UA default */
   }
   .knob input[type=range]::-webkit-slider-runnable-track {
     height: 3px; border-radius: 2px;
@@ -325,20 +352,20 @@
   .hz { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
   .hz button { flex: 0 0 auto; }
   .hrow { display: flex; align-items: baseline; gap: 10px; padding: 5px 0;
-          border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 0.76rem; }
+          border-bottom: 1px solid rgba(255,255,255,0.04); font-size: var(--fs-hint); }
   .hrow:last-child { border-bottom: none; }
   .hrow .n { color: var(--dim); width: 16px; flex: 0 0 auto; }
   .hrow .nm { color: var(--muted); flex: 1 1 auto; min-width: 0;
               overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .hrow .lv { color: var(--dim); font-variant-numeric: tabular-nums;
-              font-size: 0.72rem; }
+              font-size: var(--fs-hint); }
   .hrow .lv .unread { color: var(--amber); font-style: normal; opacity: 0.75; }
-  .hrow .vd { flex: 0 0 auto; font-size: 0.68rem; letter-spacing: 0.1em; }
+  .hrow .vd { flex: 0 0 auto; font-size: var(--fs-label); letter-spacing: 0.1em; }
   .hrow .vd.pass { color: var(--green); }
   .hrow .vd.fail { color: var(--red); }
   .hfind { display: flex; gap: 9px; padding: 8px 10px; margin-top: 8px;
-           border-radius: 3px; font-size: 0.74rem; line-height: 1.55; }
-  .hfind .tag { flex: 0 0 auto; font-size: 0.62rem; letter-spacing: 0.12em;
+           border-radius: 3px; font-size: var(--fs-hint); line-height: 1.55; }
+  .hfind .tag { flex: 0 0 auto; font-size: var(--fs-label); letter-spacing: 0.12em;
                 padding: 2px 5px; border-radius: 2px; height: fit-content; }
   .hfind.warn { background: rgba(255,180,84,0.07); color: #d8c6a8; }
   .hfind.warn .tag { background: rgba(255,180,84,0.18); color: var(--amber); }
@@ -347,7 +374,7 @@
   /* The bottom rung of the ladder, and the one that never turns green on its
      own. Everything above it is a machine reading a wire. */
   .hears { margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--line);
-           color: var(--dim); font-size: 0.72rem; letter-spacing: 0.04em; }
+           color: var(--dim); font-size: var(--fs-hint); letter-spacing: 0.04em; }
 
   /* Undo and A/B. Every plugin a guitarist has ever used has A/B compare and
      the FM9 does not, and an edit you cannot take back is an edit you think
@@ -355,11 +382,11 @@
   .abrow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
   .abrow .sep { width: 1px; align-self: stretch; background: var(--line);
                 margin: 0 4px; }
-  .abrow .lbl { color: var(--cyan-dim); font-size: 0.62rem;
+  .abrow .lbl { color: var(--cyan-dim); font-size: var(--fs-label);
                 letter-spacing: 0.18em; }
-  .abrow button.small { padding: 4px 9px; font-size: 0.68rem; }
+  .abrow button.small { padding: 4px 9px; font-size: var(--fs-label); }
   .abrow button.held { border-color: var(--violet); color: var(--violet); }
-  #undowhat { color: var(--muted); font-size: 0.72rem; letter-spacing: 0.04em;
+  #undowhat { color: var(--muted); font-size: var(--fs-hint); letter-spacing: 0.04em;
               flex: 1 1 200px; min-width: 0; overflow: hidden;
               text-overflow: ellipsis; white-space: nowrap; }
 
@@ -405,7 +432,7 @@
   .gridnote { display: flex; gap: 14px; align-items: center; flex-wrap: wrap;
               margin-top: 10px; }
   .gridnote .k { display: inline-flex; align-items: center; gap: 5px;
-                 color: var(--muted); font-size: 0.68rem; letter-spacing: .05em; }
+                 color: var(--muted); font-size: var(--fs-label); letter-spacing: .05em; }
   .gridnote .sw { width: 16px; height: 3px; border-radius: 2px; }
   .gridnote .dead { color: var(--red); }
 
@@ -420,21 +447,29 @@
      hover border they read as a caption, so nobody discovers that the two
      most interesting facts on the page are also the two things easiest to
      change. Bordered, tinted, with a drawn chevron. */
+  /* The amp and the cab are the two facts anyone looks for first, and they
+     are also the two things easiest to change. They should read as the
+     headline of this panel, not as a caption under one. */
   .audbtn {
-    display: inline-flex; align-items: center; gap: 9px; max-width: 100%;
-    background: rgba(47,230,255,0.05); border: 1px solid #24404d;
-    color: inherit; font: inherit; padding: 3px 9px; border-radius: 4px;
+    display: inline-flex; align-items: center; gap: 11px; max-width: 100%;
+    background: rgba(47,230,255,0.07); border: 1px solid #2c5061;
+    color: inherit; font: inherit; font-size: var(--fs-sub);
+    padding: 7px 13px; border-radius: 5px;
     cursor: pointer; text-align: left;
     transition: border-color .12s, background .12s, color .12s;
   }
+  /* the cab line is a sentence, so it stays at reading size */
+  .model.sub .audbtn { font-size: var(--fs-hint); }
   /* An amp name is short and it is the headline, so it never truncates: it
      wraps if it has to. Only the cab line is prose long enough to need an
      ellipsis, and it gets the full width of the column to use first. */
   .audbtn .l { min-width: max-content; }
   .model.sub .audbtn { width: 100%; }
   .model.sub .audbtn .l {
-    min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    min-width: 0; white-space: normal; line-height: 1.45;
   }
+  .model.sub .audbtn { align-items: flex-start; }
+  .model.sub .audbtn::after { margin-top: 4px; }
   .audbtn:hover, .audbtn:focus-visible {
     border-color: var(--cyan); background: rgba(47,230,255,0.12);
     color: var(--cyan); outline: none;
@@ -443,9 +478,9 @@
      as a speck, the same way U+2699 did on the settings gear. A triangle made
      of borders is exactly the size we say it is. */
   .audbtn::after {
-    content: ''; flex: 0 0 auto; width: 0; height: 0; margin-left: 1px;
-    border-left: 5px solid transparent; border-right: 5px solid transparent;
-    border-top: 6px solid var(--cyan-dim);
+    content: ''; flex: 0 0 auto; width: 0; height: 0; margin-left: 2px;
+    border-left: 6px solid transparent; border-right: 6px solid transparent;
+    border-top: 7px solid var(--cyan);
   }
   .audbtn:hover::after { border-top-color: var(--cyan); }
   .aud { max-width: 100%; }
@@ -454,49 +489,94 @@
      that panel's innerHTML, so the popover was destroyed on the next tick:
      the dropdown opened once and then threw for the rest of the session.
      Positioned from the button's rect instead, left edge aligned to it. */
-  #audpop { position: fixed; width: 380px; right: auto; }
-  .audtitle { font-size: 0.62rem; letter-spacing: 0.2em; color: var(--cyan-dim);
+  /* Wider than the preset popover: these rows carry a sentence, not a name. */
+  #audpop { position: fixed; width: 460px; right: auto; }
+  .audtitle { font-size: var(--fs-label); letter-spacing: 0.2em; color: var(--cyan-dim);
               margin-bottom: 7px; }
   .audhead { display: flex; gap: 6px; align-items: center; margin-bottom: 7px; }
   .audhead select { flex: 0 0 auto; background: #0d0f0d; color: var(--fg);
                     border: 1px solid #1f2a1f; font: inherit;
-                    font-size: 0.7rem; padding: 4px 5px; border-radius: 3px; }
-  .audhead .step { flex: 0 0 auto; padding: 3px 8px; font-size: 0.72rem; }
-  .audlist { max-height: 300px; overflow-y: auto; }
-  .prow .det { color: var(--dim); font-size: 0.66rem; margin-top: 2px;
-               white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+                    font-size: var(--fs-hint); padding: 4px 5px; border-radius: 3px; }
+  .audhead .step { flex: 0 0 auto; padding: 3px 8px; font-size: var(--fs-hint); }
+  .audlist { max-height: 340px; overflow-y: auto; }
+  /* Cab descriptions run to a full sentence and are the reason you can find
+     a Vibrolux at all, so they wrap rather than clip. Two lines is enough for
+     every entry in the catalogue and keeps the rows scannable. */
+  /* No clamp. Two lines still cut the long ones, and the longest cab
+     description in the catalogue runs to 268 characters. The median is 56, so
+     most rows stay one line and only the rare verbose entry is tall; the list
+     scrolls, which is the correct place to spend the space. */
+  .prow .det {
+    color: var(--dim); font-size: var(--fs-label); margin-top: 3px;
+    white-space: normal; line-height: 1.5; width: 100%;
+  }
   .prow { flex-wrap: wrap; }
   .audfoot { display: flex; justify-content: space-between; align-items: center;
              gap: 8px; margin-top: 7px; padding-top: 7px;
              border-top: 1px solid var(--line); color: var(--dim);
-             font-size: 0.66rem; letter-spacing: 0.05em; }
+             font-size: var(--fs-label); letter-spacing: 0.05em; }
 
   /* Saving is the only destructive thing this tool does, so it gets its own
      panel, an explicit list of slots the owner designated, and a confirmation
      that names what is about to be lost. Amber rather than cyan throughout:
      everything else here writes to the edit buffer and is reversible. */
   .saverow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .saverow input {
+    background: #0d0f0d; border: 1px solid #3a2f18; color: var(--fg);
+    font: inherit; font-size: var(--fs-body); padding: 6px 9px; border-radius: 3px;
+    flex: 1 1 240px; min-width: 0;
+  }
   .saverow select {
     background: #0d0f0d; border: 1px solid #3a2f18; color: var(--fg);
-    font: inherit; font-size: 0.76rem; padding: 6px 8px; border-radius: 3px;
+    font: inherit; font-size: var(--fs-hint); padding: 6px 8px; border-radius: 3px;
     flex: 1 1 320px; min-width: 0;
   }
+  /* The commit action. Every other button on the page is a step you can walk
+     back; this one is not, so it is the only filled button in the app. */
   #save {
-    border-color: var(--amber); color: var(--amber); flex: 0 0 auto;
+    flex: 0 0 auto; border: 1px solid var(--amber); color: #1a1206;
+    background: var(--amber); font-weight: 600;
+    padding: 9px 18px; font-size: var(--fs-body); letter-spacing: 0.1em;
+    box-shadow: 0 0 18px rgba(255,180,84,0.22);
   }
   #save:hover:not(:disabled) {
-    background: rgba(255,180,84,0.12); border-color: var(--amber);
+    background: #ffc978; box-shadow: 0 0 24px rgba(255,180,84,0.42);
   }
-  #save:disabled { opacity: 0.45; cursor: default; }
-  .savewarn { color: var(--amber); font-size: 0.72rem; letter-spacing: 0.04em; }
-  .savenow { font-size: 0.74rem; letter-spacing: 0.04em; margin-bottom: 9px;
+  #save:disabled {
+    background: none; color: var(--amber); opacity: 0.4; cursor: default;
+    box-shadow: none;
+  }
+  .savewarn { color: var(--amber); font-size: var(--fs-hint); letter-spacing: 0.04em; }
+  .egrow { display: flex; align-items: center; gap: 7px; flex-wrap: wrap;
+           margin-top: 9px; }
+  .eglabel { font-size: var(--fs-label); letter-spacing: 0.18em;
+             color: var(--dim); margin-right: 2px; }
+  .eg {
+    padding: 3px 9px; font-size: var(--fs-hint); border-radius: 3px;
+    border: 1px dashed #2a3a44; background: none; color: var(--muted);
+    font-family: inherit; cursor: pointer;
+  }
+  .eg:hover { border-style: solid; border-color: var(--cyan-dim);
+              color: var(--cyan); }
+  .savenow { font-size: var(--fs-hint); letter-spacing: 0.04em; margin-bottom: 9px;
              color: var(--muted); }
   .savenow b { color: var(--text); font-weight: 500; }
   .savenow.blocked { color: var(--amber); }
   .savenow.blocked b { color: var(--amber); }
 
+  #logempty { padding: 2px 0 2px; }
+  #logempty.gone { display: none; }
+  .lehead { font-size: var(--fs-label); letter-spacing: 0.2em;
+            color: var(--cyan-dim); margin-bottom: 10px; }
+  .lelist { margin: 0; padding-left: 18px; color: var(--muted);
+            font-size: var(--fs-hint); line-height: 1.75; }
+  .lelist li { margin-bottom: 5px; }
+  .lelist b { color: var(--text); font-weight: 500; }
+  .lefoot { margin-top: 11px; padding-top: 9px; color: var(--dim);
+            font-size: var(--fs-hint); border-top: 1px dashed var(--line); }
+
   #log {
-    font-size: 0.75rem; color: var(--muted); max-height: 180px; overflow-y: auto;
+    font-size: var(--fs-hint); color: var(--muted); max-height: 180px; overflow-y: auto;
     line-height: 1.7;
   }
   #log .t { color: var(--cyan-dim); margin-right: 8px; }
@@ -505,7 +585,7 @@
   #log .warn { color: var(--amber); }
   .spin { display: inline-block; animation: spin 0.9s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
-  .hint { color: var(--muted); font-size: 0.72rem; margin-top: 10px; letter-spacing: 0.05em; }
+  .hint { color: var(--muted); font-size: var(--fs-hint); margin-top: 10px; letter-spacing: 0.05em; }
 .airow { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .airow select, .airow input {
   background: #0d0f0d; border: 1px solid #1f2a1f; color: var(--fg);
@@ -540,27 +620,38 @@
 
   .modal {
     position: fixed; inset: 0; z-index: 50; display: flex;
-    align-items: flex-start; justify-content: center; padding: 60px 20px 20px;
+    /* column, not row: the modal holds more than one panel now, and a flex
+       row put the second one alongside the first and off the screen edge */
+    flex-direction: column; align-items: center; justify-content: flex-start;
+    padding: 60px 20px 40px;
     background: rgba(0,0,0,0.72); backdrop-filter: blur(2px); overflow-y: auto;
   }
   .modal[hidden] { display: none; }
   .modal .console { width: min(760px, 100%); margin: 0;
                     box-shadow: 0 20px 60px rgba(0,0,0,0.7); }
   .modal .airow { flex-direction: column; align-items: stretch; }
-  .modal .airow input, .modal .airow select { flex: none; width: 100%; }
+  /* #aikey carries flex: 3 1 340px for the horizontal layout, and an id beats
+     a class, so in this column it made the basis a HEIGHT and grew the box to
+     340px tall. Reset flex for everything in the stacked version. */
+  .modal .airow input, .modal .airow select,
+  .modal .airow #aikey { flex: 0 0 auto; width: 100%; }
   .modal .airow .btns { display: flex; gap: 8px; margin-top: 4px; }
   .mclose {
     position: absolute; top: 10px; right: 12px; background: none; border: none;
-    color: var(--muted); font: inherit; font-size: 1.1rem; cursor: pointer;
+    color: var(--muted); font: inherit; font-size: var(--fs-lead); cursor: pointer;
     line-height: 1; padding: 4px 6px;
   }
   .mclose:hover { color: var(--red); }
 </style>
+  <link rel="icon" type="image/png" href="/logo.png">
 </head>
 <body>
 <div class="wrap">
   <header>
-    <h1>TONE <span>//</span> COMMAND</h1>
+    <a class="brand" href="/" title="ToneCommand">
+      <img src="/logo.png" alt="" width="104" height="104">
+      <h1>TONE <span>//</span> COMMAND</h1>
+    </a>
     <div class="status">
       <span class="pillwrap">
         <button class="pill pillbtn" id="preset">PRESET <b>...</b><span class="caret">&#9662;</span></button>
@@ -638,19 +729,6 @@
       before every change. Nothing here touches a saved preset.</div>
   </div>
 
-  <div class="console" data-label="SAVE TO PRESET">
-    <div class="savenow" id="savenow"></div>
-    <div class="saverow">
-      <select id="saveslot"><option>loading slots...</option></select>
-      <button id="save" disabled>SAVE</button>
-      <button class="small" id="savescan" title="read the current names of these slots">NAMES</button>
-    </div>
-    <div class="hint">Everything else in this app is edit buffer only and
-      reversible. This is not: it overwrites whatever is stored in the slot,
-      permanently, and <span class="savewarn">UNDO does not cover it</span>.
-      Only slots you listed in TONECOMMAND_STORE_SLOTS are offered.</div>
-  </div>
-
   <div class="console" data-label="PRESET HEALTH">
     <div class="hz">
       <button id="scan">SCAN THIS PRESET</button>
@@ -661,8 +739,43 @@
     <div id="hout"></div>
   </div>
 
+  <div class="console" data-label="SAVE TO PRESET">
+    <div class="savenow" id="savenow"></div>
+    <div class="saverow">
+      <select id="saveslot"><option>loading slots...</option></select>
+      <button id="save" disabled>SAVE</button>
+      <button class="small" id="savescan" title="read the current names of these slots">NAMES</button>
+    </div>
+    <div class="hint"><span id="savecount"></span> Everything else in this app
+      is edit buffer only and reversible. This is not: it overwrites whatever is
+      stored in the slot, permanently, and
+      <span class="savewarn">UNDO does not cover it</span>.</div>
+  </div>
+
   <div class="console" data-label="LOG" style="margin-top:20px">
     <div id="log"></div>
+    <!-- The log is empty on arrival, which is dead space on the one screen a
+         new user is deciding whether to keep open. These are the four things
+         FM9-Edit structurally cannot do, and they vanish the moment anything
+         is logged. -->
+    <div id="logempty">
+      <div class="lehead">What this does that FM9-Edit cannot</div>
+      <ul class="lelist">
+        <li><b>Judge a preset.</b> SCAN THIS PRESET walks every scene and
+          reports whether a live signal path exists, names the hop that broke
+          it, and flags scenes that are secretly the same sound.</li>
+        <li><b>Warn before it surprises you.</b> Parameters live on the
+          channel, so changing one moves every scene sharing it. Those scenes
+          light up and say WILL CHANGE before anything is sent.</li>
+        <li><b>Undo, and A/B.</b> Neither of which the FM9 has. A snapshot is
+          taken automatically before every change.</li>
+        <li><b>Audition by typing.</b> 331 amps and 2,237 cabs, filtered as
+          you type and stepped with the arrow keys, searchable by what the cab
+          actually is rather than only its name.</li>
+      </ul>
+      <div class="lefoot">And it takes plain English: describe the tone in the
+        box above, review exactly what it proposes, then confirm.</div>
+    </div>
   </div>
 </div>
 
@@ -701,6 +814,30 @@
     <div class="hint" id="aisrc"></div>
     <div class="hint">Takes effect on the next prompt, no restart. Keys are stored on this machine and never sent to the browser. Only the boxes a backend actually reads are shown.</div>
   </div>
+
+  <div class="console" data-label="SAVE SLOTS" style="margin-top:22px">
+    <div class="hint" style="margin:0 0 9px" id="slotsrc"></div>
+    <div class="saverow">
+      <input id="slotspec" autocomplete="off" spellcheck="false"
+             placeholder="133,139-170">
+      <button id="slotsave">SET</button>
+    </div>
+    <div class="egrow">
+      <span class="eglabel">EXAMPLES</span>
+      <button class="eg" data-eg="150">150</button>
+      <button class="eg" data-eg="139-170">139-170</button>
+      <button class="eg" data-eg="133,139-170">133,139-170</button>
+      <button class="eg" data-eg="">none</button>
+    </div>
+    <div class="hint">One slot, a range with a dash, or several separated by
+      commas. Click an example to fill the box, then SET.<br>
+      These are <b>wire</b> numbers, 0-511. Your unit and FM9-Edit number the
+      same slots 1-512, so <b>139 here is 140 on the screen</b>. Read the range
+      off the wire or the whole list sits one slot out.<br>
+      This is the only thing standing between a mis-click and a preset you
+      cannot get back, so list only slots you genuinely do not mind losing.
+      "none" switches saving off entirely.</div>
+  </div>
 </div>
 
 <script>
@@ -718,6 +855,8 @@ function log(msg, cls) {
   // body, and this was the last place either reached innerHTML raw
   $('log').insertAdjacentHTML('afterbegin',
     `<div><span class="t">${t}</span><span class="${cls || ''}">${esc(msg)}</span></div>`);
+  const intro = $('logempty');
+  if (intro) intro.classList.add('gone');   // it has done its job
 }
 
 // Which families to show and what to call them. The panel groups by block
@@ -1025,7 +1164,8 @@ function renderAud() {
   const cur = kind === 'amp' ? audCurrentAmp() : audCurrentCab();
   $('audlist').innerHTML = list.length ? list.map((m, i) => `
     <button class="prow${i === audCursor ? ' cursor' : ''}${m.ordinal === cur ? ' on' : ''}"
-            data-ord="${m.ordinal}" data-i="${i}">
+            data-ord="${m.ordinal}" data-i="${i}"
+            title="${esc(m.name)}${m.detail ? ': ' + esc(m.detail) : ''}">
       <span class="num">${m.ordinal}</span><span class="nm">${esc(m.name)}</span>
       ${m.detail ? `<span class="det">${esc(m.detail)}</span>` : ''}
     </button>`).join('')
@@ -1322,6 +1462,112 @@ $('holdb').onclick = () => holdSlot('b');
 $('reca').onclick = () => recallSlot('a');
 $('recb').onclick = () => recallSlot('b');
 
+// --- who decides what may be overwritten --------------------------------
+// This lived only in .env, so the boundary protecting 512 presets was
+// invisible from the product that enforces it. Moncy set it in conversation
+// six days ago and then, reasonably, had no idea what it was or where it came
+// from. A safety setting you cannot see is one you forget you made.
+async function loadSlotSpec() {
+  try {
+    const d = await (await fetch('/api/store-slots')).json();
+    $('slotspec').value = d.spec || '';
+    const where = {
+      environment: 'pinned by the TONECOMMAND_STORE_SLOTS environment variable, ' +
+                   'so it cannot be changed here',
+      app: 'set here in the app',
+      '.env': 'read from your .env file, not set in the app',
+      unset: 'not configured, so saving is switched off',
+    }[d.source] || d.source;
+    $('slotsrc').textContent =
+      `${d.configured ? d.slots.length : 0} of ${d.total || 512} slots, ${where}.`;
+    $('slotspec').disabled = d.source === 'environment';
+    $('slotsave').disabled = d.source === 'environment';
+  } catch (e) { /* the panel simply stays blank */ }
+}
+
+async function saveSlotSpec() {
+  const spec = $('slotspec').value.trim();
+  $('slotsave').disabled = true;
+  try {
+    // Ask first. This governs every preset on the unit, so the exposure has
+    // to be readable BEFORE it exists, not reported once it does.
+    const pre = await (await fetch('/api/store-slots', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({spec, preview: true})})).json();
+    if (pre.error) throw new Error(pre.error);
+    const opening = pre.newly_exposed || [];
+    if (opening.length) {
+      const named = opening.filter(s => s.name);
+      const lines = opening.slice(0, 10)
+        .map(s => `  ${s.label}${s.name ? '  "' + s.name + '"' : '  (empty)'}`)
+        .join('\n');
+      if (!window.confirm(
+            `This makes ${opening.length} more slot${opening.length > 1 ? 's' : ''} ` +
+            `overwritable, ${pre.count} in total.\n\n` +
+            `Newly at risk:\n${lines}` +
+            (opening.length > 10 ? `\n  ...and ${opening.length - 10} more` : '') +
+            (named.length ? `\n\n${named.length} of these hold saved presets.` : '') +
+            `\n\nContinue?`)) {
+        log('save list unchanged', 'warn');
+        return;
+      }
+    }
+    const r = await fetch('/api/store-slots', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({spec})});
+    const d = await r.json();
+    if (d.error) throw new Error(d.error);
+    // Name what just became overwritable. "5 more slots" and "the Worship
+    // Tutorials packs" are different sentences and only one is a warning.
+    const opened = d.newly_exposed || [];
+    if (opened.length) {
+      const named = opened.filter(s => s.name);
+      log(`save list now ${d.count} slots. Newly overwritable: ` +
+          opened.slice(0, 6).map(s => s.label + (s.name ? ` "${s.name}"` : ''))
+                .join('; ') + (opened.length > 6 ? `; and ${opened.length - 6} more` : ''),
+          named.length ? 'warn' : 'ok');
+    } else {
+      log(`save list now ${d.count} slots` +
+          (d.removed ? `, ${d.removed} fewer than before` : ''), 'ok');
+    }
+    await loadSlotSpec();
+    await loadSaveSlots(false);
+  } catch (e) {
+    log(`could not set save slots: ${e.message}`, 'err');
+  } finally {
+    $('slotsave').disabled = false;
+  }
+}
+
+// Fill the box, never apply. An example that silently changed the boundary
+// would be the worst kind of shortcut on this particular control.
+document.querySelectorAll('.eg').forEach(b => {
+  b.onclick = () => {
+    $('slotspec').value = b.dataset.eg;
+    $('slotspec').focus();
+    const n = b.dataset.eg
+      ? (parseStoreSpec(b.dataset.eg).size + ' slots') : 'saving switched off';
+    log(`example filled in: ${b.dataset.eg || 'none'} (${n}). Press SET to apply.`);
+  };
+});
+
+// Mirrors the server's parser closely enough to count slots for the preview.
+// The server remains the authority: this only labels a button.
+function parseStoreSpec(raw) {
+  const out = new Set();
+  for (const part of String(raw).split(',')) {
+    const s = part.trim();
+    if (!s) continue;
+    const m = s.match(/^(\d+)\s*-\s*(\d+)$/);
+    if (m) { for (let n = +m[1]; n <= +m[2]; n++) if (n >= 0 && n <= 511) out.add(n); }
+    else if (/^\d+$/.test(s) && +s >= 0 && +s <= 511) out.add(+s);
+  }
+  return out;
+}
+
+$('slotsave').onclick = saveSlotSpec;
+loadSlotSpec();
+
 // --- saving -------------------------------------------------------------
 // The one destructive operation in the product. Until now the only way to do
 // it was to type "save this to preset 139" and hope the planner agreed, which
@@ -1354,6 +1600,13 @@ async function loadSaveSlots(withNames) {
       return `<option value="${s.number}">${esc(s.label)}  ${esc(holds)}</option>`;
     }).join('');
     $('save').disabled = !saveSlots.length;
+    // Say how many, and why it is not 512. A short list with no explanation
+    // reads as a half-finished load rather than as a safety catch, which is
+    // exactly how it was read.
+    $('savecount').textContent = saveSlots.length
+      ? `Offering the ${saveSlots.length} slots you marked disposable in ` +
+        `TONECOMMAND_STORE_SLOTS, out of 512 on the unit.`
+      : '';
     aimAtLoadedPreset();
   } catch (e) {
     $('saveslot').innerHTML = '<option>could not read slots</option>';
@@ -1689,6 +1942,13 @@ $('knobs').addEventListener('change', async e => {
 });
 
 function describe(a) {
+  // The server sends action:null for notes about the plan rather than about
+  // one action, the "remaining actions skipped" line being the one that
+  // matters. Reading .kind off that threw, which aborted the whole result
+  // loop and replaced a useful explanation with a JavaScript error. Reported
+  // by Brian on an empty preset, where add_block legitimately refuses.
+  if (!a) return 'plan halted';
+  if (a.kind === 'snapshot') return 'undo snapshot';
   if (a.kind === 'set_scene') return `Scene select: ${a.value}`;
   if (a.kind === 'set_bypass') return `${a.block} ${a.instance}: ${a.bypassed ? 'bypass' : 'engage'}`;
   if (a.kind === 'set_channel') return `${a.block} ${a.instance}: channel ${'ABCD'[a.value]}`;
@@ -1929,11 +2189,19 @@ async function apply() {
     const out = await r.json();
     if (out.error) throw new Error(out.error);
     const cards = document.querySelectorAll('.plan-card');
-    out.results.forEach((res, i) => {
-      if (cards[i]) cards[i].classList.add(res.ok ? 'done' : 'fail');
+    // Results do not line up with cards one for one: a failed undo snapshot
+    // is prepended and a "remaining skipped" note is appended, neither of
+    // which is a card. Advance the card cursor only for real actions, or
+    // every card after an extra result is marked with the wrong outcome.
+    let card = 0;
+    out.results.forEach(res => {
+      const isAction = res.action && res.action.kind && res.action.kind !== 'snapshot';
+      if (isAction && cards[card]) cards[card].classList.add(res.ok ? 'done' : 'fail');
+      if (isAction) card++;
       const extra = res.before !== undefined && res.before !== null
         ? ` (${res.before} → ${res.after})` : '';
-      log(`${describe(res.action)}: ${res.detail}${extra}`, res.ok ? 'ok' : 'err');
+      log(`${describe(res.action)}: ${res.detail}${extra}`,
+          res.ok ? 'ok' : (res.action ? 'err' : 'warn'));
     });
     $('prompt').value = '';
     setTimeout(() => { $('planbox').style.display = 'none';

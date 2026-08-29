@@ -233,10 +233,16 @@ def test_the_chevron_is_drawn_not_typed():
     """U+25BE renders small inside its own em box and came out as a speck, the
     same way U+2699 did on the settings gear. A triangle made of borders is
     exactly the size we say it is."""
-    assert "\\25BE" not in UI and "&#9662;" not in UI.split("</style>")[1] \
-        or "border-top: 6px solid" in UI
+    # Intent, not pixels. The first version pinned "border-top: 6px solid",
+    # so nudging the chevron to 7px reported it missing, and it matched the
+    # U+25BE in the comment explaining why the glyph was abandoned.
+    markup = UI.split("</style>")[1]
+    assert "\u25be" not in markup.lower(), "the glyph is back in the markup"
+    # Anchored on the rule itself. A plain substring split started matching
+    # ".model.sub .audbtn::after", a later override that only nudges margin,
+    # and reported the chevron missing when it was untouched.
     style = UI.split("<style>")[1].split("</style>")[0]
-    after = style.split(".audbtn::after {")[1].split("}")[0]
+    after = re.search(r"^\s*\.audbtn::after \{([^}]*)\}", style, re.M).group(1)
     assert "border-left" in after and "border-top" in after
 
 
@@ -246,3 +252,38 @@ def test_the_warning_is_called_a_blast_radius():
     assert "blast radius:" in SCRIPT
     spread = SCRIPT.split("function alsoAffects")[1].split("\n}")[0]
     assert "blast radius" in spread
+
+
+# --- a result that is about the plan, not about one action ---
+
+def test_a_null_action_does_not_crash_the_transmit():
+    """Brian's bug, on an empty preset where add_block legitimately refuses.
+
+    The server appends {"action": null} to say the remaining actions were
+    skipped, which is a protective guard: running them would bind modifiers to
+    a block that never landed, observed on hardware on 2026-08-20. The UI read
+    .kind off that null, threw inside the result loop, and replaced the
+    server's useful explanation with "Cannot read properties of null".
+    """
+    assert "if (!a) return 'plan halted';" in SCRIPT
+    body = SCRIPT.split("async function apply()")[1].split("\n}\n")[0]
+    assert "res.action && res.action.kind" in body
+
+
+def test_result_cards_are_not_knocked_out_of_step_by_extra_results():
+    """Results do not line up with cards one for one: a failed undo snapshot
+    is prepended and a skip note appended, neither of which is a card. Indexed
+    naively, every card after an extra result takes the wrong outcome."""
+    body = SCRIPT.split("async function apply()")[1].split("\n}\n")[0]
+    assert "let card = 0" in body
+    assert "cards[card]" in body and "cards[i]" not in body
+
+
+def test_the_app_carries_the_mark():
+    """In the header beside the wordmark, and on the tab. The mark is what you
+    recognise among twenty tabs; the wordmark is what you read."""
+    assert 'class="brand"' in UI
+    assert 'src="/logo.png"' in UI
+    assert 'rel="icon"' in UI
+    style = UI.split("<style>")[1].split("</style>")[0]
+    assert ".brand {" in style
