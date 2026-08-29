@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="docs/img/logo.png" alt="ToneCommand" width="170">
+  <img src="docs/img/wordmark.png"
+       alt="ToneCommand: natural language, real tones. Plan, preview, confirm, send."
+       width="560">
 </p>
-
-<h1 align="center">ToneCommand</h1>
 
 <p align="center"><strong>Describe the tone you want. Your rig obeys.</strong></p>
 
