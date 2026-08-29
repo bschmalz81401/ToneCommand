@@ -2,6 +2,95 @@
 
 Notable changes to ToneCommand. Dates are UTC.
 
+## 0.3.0 (2026-08-29)
+
+**The UI stops being a poster.** It had four interactive controls: a prompt
+box and three buttons. Everything else was a readout, so the moment you wanted
+to change a scene, mute a delay or nudge a mid you were back in FM9-Edit, and
+a tool you leave in the middle of a session is one you stop opening. Every
+panel is now a control surface.
+
+The rule the release is built to: if you have to switch to FM9-Edit mid
+session, we have already lost.
+
+### Added
+- **Scene and preset switching.** Eight footswitch-shaped scene buttons posting
+  straight to the device with no planner in the way, and a searchable preset
+  popover on the header pill. `set_scene` was already the one action gig mode
+  permits, so the architecture always treated it as the safe operation.
+- **The signal chain is the real routing grid.** Rows, columns and cables as
+  the unit has them, drawn in SVG, with the live path lit and anything the
+  signal never reaches left grey. Blocks are clickable: bypass on the block,
+  channel on its letter. The traversal is the path audit's own, extracted into
+  `walk()` rather than reimplemented, because five silent-scene classes were
+  found the hard way getting it right.
+- **A tone panel you can turn.** Grouped by block, in the unit's own labels,
+  ranges and units from the registry rather than a table in the browser, with
+  every published-range value a slider you drag. The amp model and cab
+  description are shown at last; both were being read on every poll and thrown
+  away.
+- **Auditioning amps and cabs.** 331 amps and 2,237 cabs, filtered as you type
+  and stepped with the arrow keys while you keep playing. Searchable by name
+  and by what the cab actually is. New `set_cab` action kind, since bank and
+  slot are two parameters and the slot ordinal lives in the raw wire rather
+  than on its declared display scale.
+- **Undo and A/B compare**, which the FM9 has neither of. A snapshot is a
+  silent read of the whole edit buffer, about a quarter second, taken
+  automatically before every write, so undo is always armed. A restore is a
+  diff, not a replay. Recalling A captures B first, so A/B is a round trip.
+  In memory only, and refused across a preset change or in gig mode.
+- **Preset health scan.** The audits that have existed as command-line scripts
+  for weeks, on a screen: every named scene alive or dead with the hop that
+  broke the path, amp level and volume gain side by side, and the findings
+  underneath. Audible, so it is a POST, never on the poll, refused in gig mode,
+  and it restores the scene it started from.
+- **A clone check**, new. Two scenes with the same bypass and channel set are
+  the same scene, necessarily, because parameters live on the channel. It
+  needs no extra reads. Run against preset 151 it found THREE identical
+  scenes where the ear pass had found two, one of them named PITCH with no
+  pitch block engaged. Three separate audits had passed all of them.
+- **Blast-radius warning.** Changing a parameter moves every scene sharing that
+  block's channel. Those scenes now light amber with a WILL CHANGE badge at
+  the same visual weight as the active scene, rather than the fact living in
+  small print under the plan card.
+- **`tools/ui_probe.py`.** Headless Chrome over the DevTools protocol:
+  screenshots the page and evaluates JavaScript inside it, so states that need
+  triggering can be set up with the app's own functions and read back with
+  `getComputedStyle`. `kb/UI_VERIFICATION.md` makes rendering before signing
+  off a standing rule.
+
+### Fixed
+- **Restores wrote display values, which silently loaded the wrong cabinet.**
+  A cab slot is an ordinal held raw in the wire, so display 1.64 on a 0-1023
+  scale came back as cab 1 instead of cab 105 while the undo reported success.
+  New `FM9.set_param_wire` writes exact wire values verified by integer
+  equality, and tries both encodings because `spec.kind` does not distinguish
+  them: `CABINET_TYPE1` declares float while holding an ordinal.
+- **`restore()` re-read block channels between writes.** The FM9 applies writes
+  asynchronously and serves pre-write state to reads inside that window, so a
+  status dump taken straight after `set_channel` reported where a block used to
+  be. It never fired on hardware because the writes happened to be slow enough.
+  Positions are tracked instead. Recorded in KNOWN_QUIRKS.
+- **The audition popover was destroyed by its own panel.** It was parented into
+  the panel that the five-second poll repaints, so each picker opened exactly
+  once and then threw. It is anchored by measurement now.
+- The blast-radius warning stayed lit after a plan was discarded, until the
+  next poll happened to repaint it.
+- AI settings held a full console on the main page for a once-a-month setting.
+  Now behind a header gear, which no longer carries the backend name, because a
+  label on a control names the control and it made the gear look like it was
+  called AUTO.
+- The signal chain overflowed its panel on any preset past twelve columns. It
+  scales to fit now, measured at four viewport widths.
+- Removing the old block-list CSS took the tone panel's stylesheet with it, and
+  342 tests passed over a page rendering in browser defaults. Tests now require
+  a rule for every class the page uses.
+
+### Simulator
+- Discrete writes apply to any parameter, not only ones the reference calls
+  enum. Hardware accepts one on `CABINET_TYPE1` and stores it exactly, so cab
+  auditioning worked on the unit while being untestable in the double.
+
 ## 0.2.0 (2026-08-28)
 
 **Bring your own AI.** The natural-language planner now runs on the Claude

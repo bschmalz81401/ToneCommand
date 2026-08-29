@@ -1,17 +1,21 @@
-# ToneCommand
+<p align="center">
+  <img src="docs/img/logo.png" alt="ToneCommand" width="170">
+</p>
 
-**Describe the tone you want. Your rig obeys.**
+<h1 align="center">ToneCommand</h1>
+
+<p align="center"><strong>Describe the tone you want. Your rig obeys.</strong></p>
 
 Natural-language tone control for the Fractal FM9: type "give me a Van Halen
 Balance era tone with the flanger on the expression pedal", review the exact
 parameter changes it proposes, confirm, and they land on the hardware over
 USB MIDI with read-back verification.
 
-![ToneCommand UI: command bar, live signal chain, and amp telemetry](docs/img/ui.png)
+![The ToneCommand interface: scenes, the live routing grid, the command bar and the tone panel](docs/img/ui-full.png)
 
-*The UI running against the bundled FM9 simulator, which exercises the same
-code path as hardware. Changes are proposed first and sent only after you
-confirm; the state panels are read back from the device, not assumed.*
+*Everything above is live from a connected FM9. The cyan path is the signal
+actually reaching the output; the dashed blocks are bypassed but still passing
+through. Nothing on this page is a mock-up.*
 
 ## What you can say
 
@@ -28,6 +32,71 @@ you before anything is sent:
 
 Requests that need facts the project cannot verify get an honest refusal
 instead of an invented answer (see Grounding Data below).
+
+## The interface
+
+The rule this UI is built to: **if you have to switch to FM9-Edit in the middle
+of a session, we have already lost.** Every panel is a control surface, not a
+readout.
+
+### The signal chain is your actual routing grid
+
+Rows, columns and cables as the unit has them, with the live path lit and
+anything the signal never reaches left grey. Click a block to bypass or engage
+it; click its channel letter to cycle A through D. The traversal is the same
+one the path audit uses, so what is drawn is what was proven, not a second
+guess at it.
+
+### Audition amps and cabs faster than the unit can
+
+![Auditioning amp models: a filtered list stepped with the arrow keys](docs/img/audition-amp.png)
+
+On the FM9, changing a cabinet means turning a knob through 1024 entries one at
+a time, because there is nowhere to type. Here you type two letters and step
+the shortlist with the arrow keys while you keep playing. 331 amps and 2,237
+cabs, searchable by name **and** by what the cab actually is, because
+"Vibrolux" lives in the description.
+
+![Auditioning cabinets: 1024 entries in one bank, filtered as you type](docs/img/audition-cab.png)
+
+Every step loads on the unit and is covered by UNDO, because an audition you
+cannot back out of is a trap rather than a feature.
+
+### It warns you before it surprises you
+
+![Seven scenes lit amber with WILL CHANGE badges](docs/img/blast-radius.png)
+
+FM9 parameters live on the **channel**, not on the scene. Turning up the mid in
+scene 1 moves every other scene sharing that channel, which is the single
+easiest way to wreck a working preset without noticing. Every scene a pending
+plan would also move lights up and says so, at the same visual weight as the
+scene you are standing in.
+
+### It can tell you whether a preset is actually correct
+
+![A preset health scan: every scene alive, levels listed, nothing flagged](docs/img/health-scan.png)
+
+The question no other FM9 tool answers. FM9-Edit edits presets; it does not
+reason about them, so it will happily let you save one whose scene 4 makes no
+sound. A scan walks every named scene and reports whether a live signal path
+exists, names the hop that broke it when one does not, lists amp level and
+volume gain side by side, and flags scenes that are byte-identical duplicates
+of each other.
+
+That last check found a real one: preset 151 had **three** scenes that were the
+same sound under different names, and three separate audits had passed it,
+because a duplicate is not broken by any rule anyone had written down.
+
+The ladder ends honestly. Every check is a machine reading a wire, so the
+bottom rung always reads **ears: pending**.
+
+### Undo and A/B, because the FM9 has neither
+
+A snapshot is a silent read of the whole edit buffer, about a quarter of a
+second, taken automatically before every change. So UNDO is always armed rather
+than something you had to remember to turn on, and a restore writes only the
+handful of values that actually differ. Recalling A captures B first, so A/B is
+a round trip and not a one-way door.
 
 ## Why this is different
 
