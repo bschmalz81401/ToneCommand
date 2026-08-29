@@ -138,3 +138,35 @@ def test_closing_drops_a_typed_key():
     body = SCRIPT.split("function aiModal(")[1].split("\n}")[0]
     assert "$('aikey').value = ''" in body, \
         "a typed key must not sit in the DOM after the panel closes"
+
+
+# --- the warning has to be seen, not merely present ---
+# It was a thin amber outline, and it was correct: the class landed, the logic
+# agreed with the plan card exactly. It failed anyway, because an outline among
+# eight boxes, next to an active scene carrying a fill and a glow and a dot, is
+# something you find only if you already know to look. This warning exists for
+# the case where the small print under the plan card was not read, so it is
+# weighted to match the active state rather than to whisper under it.
+
+def test_the_warning_is_as_loud_as_the_active_scene():
+    warn = UI.split(".sc.willchange {")[1].split("}")[0]
+    for prop in ("background", "box-shadow", "border-color"):
+        assert prop in warn, f"the warning has no {prop}, so it is an outline"
+
+
+def test_it_says_what_it_means():
+    """Colour says something is different. It does not say what. The badge
+    names it, in the corner where the active scene keeps its dot."""
+    badge = UI.split(".sc.willchange::after {")[1].split("}")[0]
+    assert "WILL CHANGE" in badge
+
+
+def test_the_badge_does_not_collide_with_the_active_dot():
+    """A scene can be both current and about to change."""
+    assert ".sc.on.willchange::after { display: none; }" in UI
+
+
+def test_the_sentence_agrees_with_itself():
+    """"scene 5, which share this block's channel" reads as a typo, on the one
+    sentence in the product whose whole job is to be believed."""
+    assert "'share' : 'shares'" in SCRIPT or '"share" : "shares"' in SCRIPT

@@ -87,6 +87,7 @@
     box-shadow: 0 0 20px rgba(185,140,255,0.30), inset 0 0 26px rgba(185,140,255,0.10);
   }
   .sc.on .nm { color: #cbb0ff; }
+  .sc.on.willchange::after { display: none; }
   .sc.on::after {
     content: ''; position: absolute; top: 7px; right: 8px;
     width: 6px; height: 6px; border-radius: 50%;
@@ -168,13 +169,29 @@
   /* A pending plan will move these scenes too. Amber because it is a warning,
      and warnings are the one thing colour is allowed to mean here. It pulses
      because the text under the plan card is skippable and this is not. */
+  /* Weighted to match .on, deliberately. An outline was all this used to be,
+     and an outline among eight boxes is something you find only if you already
+     know to look, which defeats the point: this exists for the case where the
+     line of small print under the plan card was not read. */
   .sc.willchange {
-    border-color: var(--amber);
-    box-shadow: 0 0 14px rgba(255,180,84,0.30), inset 0 0 20px rgba(255,180,84,0.07);
+    border-color: var(--amber); color: var(--amber);
+    background: linear-gradient(180deg, rgba(255,180,84,0.14), rgba(40,26,8,0.55));
+    box-shadow: 0 0 20px rgba(255,180,84,0.34), inset 0 0 26px rgba(255,180,84,0.10);
     animation: willpulse 1.6s ease-in-out infinite;
   }
   .sc.willchange .n, .sc.willchange .nm { color: var(--amber); }
-  @keyframes willpulse { 50% { box-shadow: 0 0 6px rgba(255,180,84,0.14); } }
+  /* Colour alone says something is different; it does not say what. The badge
+     names it, in the corner where the active scene keeps its dot, so the two
+     states read as answers to the same question. */
+  .sc.willchange::after {
+    content: 'WILL CHANGE'; position: absolute; top: 6px; right: 7px;
+    font-size: 0.5rem; letter-spacing: 0.13em; color: var(--amber);
+    background: rgba(255,180,84,0.14); border: 1px solid rgba(255,180,84,0.45);
+    border-radius: 2px; padding: 2px 4px; line-height: 1; font-weight: 600;
+  }
+  @keyframes willpulse {
+    50% { box-shadow: 0 0 8px rgba(255,180,84,0.16), inset 0 0 26px rgba(255,180,84,0.06); }
+  }
   @media (prefers-reduced-motion: reduce) { .sc.willchange { animation: none; } }
 
   .console {
@@ -757,7 +774,7 @@ function alsoAffects(a, currentScene) {
     const others = scenes.filter(n => n !== currentScene);
     if (!others.length) return '';
     return `also changes scene${others.length > 1 ? 's' : ''} ${others.join(', ')}, ` +
-           `which share this block's channel`;
+           `which ${others.length > 1 ? 'share' : 'shares'} this block's channel`;
   }
   return '';
 }
