@@ -2,6 +2,65 @@
 
 Notable changes to ToneCommand. Dates are UTC.
 
+## 0.3.1 (2026-08-29)
+
+A patch on the day 0.3.0 shipped, because the first person to run it outside
+this machine hit a crash on his first real prompt.
+
+### Fixed
+- **Transmit crashed instead of explaining itself.** On an empty preset,
+  `add_block` correctly refuses (nothing to place onto), and the server then
+  reports that it skipped the remaining actions. That report carries
+  `"action": null`, because it is about the plan rather than about one action.
+  The browser read `.kind` off it, threw inside the result loop, and replaced
+  the server's explanation with "Cannot read properties of null". The guard
+  itself matters: running the rest would bind modifiers to a block that never
+  landed, observed on hardware on 2026-08-20. It now reads "plan halted:
+  remaining actions skipped: add_block failed". Reported by Brian; reproduced
+  through the real transmit path in a browser rather than a stub.
+- **Result cards took the wrong outcome after any extra result.** Results do
+  not map one to one onto cards: a failed undo snapshot is prepended and the
+  skip note appended. The card cursor now advances only for real actions.
+- **The settings modal put its second panel off the screen edge**, being a flex
+  row with more than one child.
+- **The API key box grew to 340px tall.** `#aikey` carries `flex: 3 1 340px`
+  for the horizontal layout, an id beats a class, and in the stacked modal that
+  basis became a height.
+
+### Added
+- **A save button.** Until now the only way to keep a change was to type "save
+  this to preset 139" and hope the planner agreed, which is a poor interface
+  for the one action that cannot be undone. It aims at the preset you are
+  looking at, offers only slots you marked disposable, shows both the wire and
+  the FM9-Edit number, says what each slot currently holds, and states plainly
+  that undo does not cover it.
+- **The save whitelist is visible and editable in the app.** It lived only in
+  `.env`, so the boundary protecting 512 presets was invisible from the product
+  that enforces it: it was authorised in conversation, written to a gitignored
+  file, and days later its owner could not check it. Now in settings, with
+  clickable examples, and a preview that names what a change would newly expose
+  BEFORE it is applied rather than after. An explicit environment variable
+  still outranks the app, so a deliberate pin cannot be moved from a browser.
+
+### Changed
+- One type scale of six steps replaces seventeen font sizes, several of them a
+  hundredth of a rem apart. Section names were doing the most work at the
+  smallest size on the page and now lead; the amp and cab pickers read as the
+  headline of the tone panel rather than a caption under one; the logo is in
+  the header at a size you can actually see.
+- Cab descriptions are no longer clipped. Two lines still cut the long ones:
+  the longest in the catalogue runs to 268 characters, the median is 56.
+- The empty log now says what this does that FM9-Edit cannot, and retires
+  itself the moment anything is logged.
+
+### Internal
+- **The test suite could write to the real save whitelist.** `conftest` never
+  isolated `store_slots.json`, so a test that forgot to monkeypatch it wrote to
+  the live file. Relying on each test to remember is the wrong shape for a
+  safety boundary; it is pinned session wide beside the `.env` isolation that
+  exists for exactly the same lesson, and the suite is verified to leave the
+  real file byte identical.
+
 ## 0.3.0 (2026-08-29)
 
 **The UI stops being a poster.** It had four interactive controls: a prompt
