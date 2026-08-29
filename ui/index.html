@@ -277,7 +277,11 @@
     color: var(--text); font-size: 0.9rem; margin-bottom: 9px;
     letter-spacing: 0.02em;
   }
-  .kgroup .model .sub {
+  .kgroup .picklabel {
+    font-size: 0.58rem; letter-spacing: 0.2em; color: var(--dim);
+    margin: 9px 0 3px;
+  }
+  .kgroup .model.sub {
     display: block; color: var(--muted); font-size: 0.7rem; margin-top: 3px;
     letter-spacing: 0.03em; line-height: 1.45;
   }
@@ -421,8 +425,8 @@
      wraps if it has to. Only the cab line is prose long enough to need an
      ellipsis, and it gets the full width of the column to use first. */
   .audbtn .l { min-width: max-content; }
-  .model .sub .audbtn { width: 100%; }
-  .model .sub .audbtn .l {
+  .model.sub .audbtn { width: 100%; }
+  .model.sub .audbtn .l {
     min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
   .audbtn:hover, .audbtn:focus-visible {
@@ -439,7 +443,14 @@
   }
   .audbtn:hover::after { border-top-color: var(--cyan); }
   .aud { max-width: 100%; }
-  .aud .pop { width: 380px; right: auto; left: 0; }
+  /* Fixed and parented to the body, never moved into the panel. It used to
+     be appended to the button's wrapper, and the five second poll repaints
+     that panel's innerHTML, so the popover was destroyed on the next tick:
+     the dropdown opened once and then threw for the rest of the session.
+     Positioned from the button's rect instead, left edge aligned to it. */
+  #audpop { position: fixed; width: 380px; right: auto; }
+  .audtitle { font-size: 0.62rem; letter-spacing: 0.2em; color: var(--cyan-dim);
+              margin-bottom: 7px; }
   .audhead { display: flex; gap: 6px; align-items: center; margin-bottom: 7px; }
   .audhead select { flex: 0 0 auto; background: #0d0f0d; color: var(--fg);
                     border: 1px solid #1f2a1f; font: inherit;
@@ -613,6 +624,7 @@
 </div>
 
 <div class="pop" id="audpop" hidden>
+  <div class="audtitle" id="audtitle"></div>
   <div class="audhead">
     <select id="audbanks"></select>
     <button class="step" id="audprev" title="previous (up arrow)">&#9650;</button>
@@ -995,8 +1007,10 @@ async function openAud(kind, anchor) {
     `<option value="${b.bank}">${esc(b.name)}</option>`).join('');
   $('audbanks').value = String(audBank);
   $('audbanks').style.display = banks.length > 1 ? '' : 'none';
-  anchor.appendChild($('audpop'));
+  $('audtitle').textContent = kind === 'amp'
+    ? 'AMP MODEL' : 'CABINET';
   $('audpop').hidden = false;
+  positionAud();
   $('audq').value = '';
   renderAud();
   // put the cursor on what is loaded, so stepping starts from here rather
@@ -1009,6 +1023,23 @@ async function openAud(kind, anchor) {
 }
 
 function closeAud() { $('audpop').hidden = true; audOpen = null; }
+
+// Anchored to the button by measurement rather than by being a child of it,
+// which is what kept it alive across a panel repaint. Left edges align.
+function positionAud() {
+  if (!audOpen) return;
+  const btn = document.querySelector(`[data-aud="${audOpen}"]`);
+  const pop = $('audpop');
+  if (!btn) { closeAud(); return; }
+  const r = btn.getBoundingClientRect();
+  pop.style.top = Math.round(r.bottom + 6) + 'px';
+  const w = pop.offsetWidth || 380;
+  // nudged back on screen rather than allowed to run off the right edge
+  pop.style.left = Math.round(
+    Math.max(10, Math.min(r.left, window.innerWidth - w - 10))) + 'px';
+}
+addEventListener('resize', positionAud);
+addEventListener('scroll', positionAud, true);
 
 async function audLoad(ordinal) {
   if (audBusy) return;
@@ -1418,16 +1449,21 @@ function renderParams(s) {
       // Both are buttons. They were the two most interesting facts on the
       // page and the two you were most likely to want to change, and until
       // now changing either meant leaving for FM9-Edit or the unit itself.
-      if (model) head += `<div class="model">
-        <span class="aud"><button class="audbtn" data-aud="amp"
-          title="audition amp models"><span class="l">${esc(model)}</span></button></span>` +
-        (cab ? `<span class="sub"><span class="aud"><button class="audbtn"
-           data-aud="cab" title="audition cabinets"><span class="l">${esc(cab)}</span></button></span></span>`
-             : '') + `</div>`;
+      // Both get a label. An unlabelled control showing a cab description is
+      // just a sentence in a box: nothing says it is a cabinet, and nothing
+      // says it can be changed.
+      if (model) head += `<div class="picklabel">MODEL</div>
+        <div class="model"><span class="aud"><button class="audbtn" data-aud="amp"
+          title="choose an amp model"><span class="l">${esc(model)}</span></button></span></div>` +
+        (cab ? `<div class="picklabel">CABINET</div>
+          <div class="model sub"><span class="aud"><button class="audbtn"
+           data-aud="cab" title="choose a cabinet"><span class="l">${esc(cab)}</span></button></span></div>`
+             : '');
     }
     out.push(`<div class="kgroup">${head}${keys.map(k => knobRow(k, meta[k], s.values[k])).join('')}</div>`);
   }
   $('knobs').innerHTML = out.join('') || '<span class="hint">no data</span>';
+  positionAud();       // the button just moved; the popover has to follow
 }
 
 function knobRow(key, m, value) {

@@ -288,3 +288,43 @@ def test_the_ordinal_is_accepted_directly():
     assert "needle.isdigit()" in src
     exact = src.index("str(label).lower() == needle")
     assert exact < src.index("needle.isdigit()")
+
+
+# --- the picker has to survive the panel it is anchored to ---
+
+def test_the_popover_is_never_parented_into_a_repainting_panel():
+    """The bug behind "the dropdowns don't always open".
+
+    It was appended to the button's own wrapper, and the five-second poll
+    rewrites that panel's innerHTML, so the popover was destroyed on the next
+    tick. It opened once, then threw for the rest of the session. Anchoring is
+    by measurement now, not by parentage.
+    """
+    open_fn = SCRIPT.split("async function openAud")[1].split("\n}")[0]
+    assert "appendChild" not in open_fn, \
+        "a child of the panel does not outlive the panel's next repaint"
+    assert "positionAud()" in open_fn
+    assert "#audpop { position: fixed" in UI
+
+
+def test_the_popover_follows_the_button_after_a_repaint():
+    """Repainting moves the button under it, so the anchor has to be
+    recomputed or the list ends up somewhere the eye is not."""
+    render = SCRIPT.split("function renderParams")[1].split("\nfunction ")[0]
+    assert "positionAud()" in render
+
+
+def test_the_list_aligns_to_the_left_edge_of_its_button():
+    pos = SCRIPT.split("function positionAud")[1].split("\n}")[0]
+    assert "r.left" in pos and "r.bottom" in pos
+    # and it is nudged back on screen rather than running off the right edge
+    assert "window.innerWidth" in pos
+
+
+def test_both_the_control_and_the_list_say_what_they_are():
+    """An unlabelled control showing a cab description is just a sentence in a
+    box: nothing says it is a cabinet, and nothing says it can be changed."""
+    assert '<div class="picklabel">CABINET</div>' in UI
+    assert '<div class="picklabel">MODEL</div>' in UI
+    assert "'AMP MODEL' : 'CABINET'" in SCRIPT or "'CABINET'" in SCRIPT
+    assert 'id="audtitle"' in UI
