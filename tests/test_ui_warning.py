@@ -92,9 +92,21 @@ def test_the_gear_carries_no_label():
     """It briefly showed the backend name, which made a settings gear look
     like it was called AUTO. A label on a control names the control. Which
     model answered belongs on the plan it produced, where it already is."""
-    gear = re.search(r'<button class="gear"[^>]*>(.*?)</button>', UI).group(1)
-    assert gear.strip() in ("&#9881;", "&#x2699;"), gear
+    gear = re.search(r'<button class="gear".*?</button>', UI, re.S).group(0)
+    assert "<svg" in gear and "</svg>" in gear
+    assert not re.search(r">\s*[A-Za-z]", gear.split("<svg")[0].split(">", 1)[1]), \
+        "text next to the icon names the control, not the backend"
     assert "ailabel" not in UI
+
+
+def test_the_gear_is_drawn_not_typed():
+    """U+2699 is drawn small inside its own em box, so raising font-size moved
+    it barely at all and it stayed a speck beside the LINK pill. A path is
+    sized by the numbers we give it."""
+    assert "&#9881;" not in UI
+    gear = re.search(r'<button class="gear".*?</button>', UI, re.S).group(0)
+    size = re.search(r'width="(\d+)"', gear)
+    assert size and int(size.group(1)) >= 18, "still too small to hit comfortably"
 
 
 def test_the_gear_is_last_in_the_header_and_quiet():

@@ -276,15 +276,62 @@
   }
   .block.byp .dot { background: var(--muted); box-shadow: none; }
 
-  .knobs { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
-  .knob { font-size: 0.78rem; }
-  .knob .k { color: var(--muted); }
-  .knob .v { color: var(--cyan); float: right; }
-  .knob .bar { height: 3px; background: var(--line); border-radius: 2px; margin-top: 5px; }
-  .knob .bar i {
-    display: block; height: 100%; background: var(--cyan); border-radius: 2px;
-    box-shadow: 0 0 8px rgba(47, 230, 255, 0.6); transition: width 0.4s;
+  /* Parameters, grouped by the block they belong to and adjustable in place.
+     This panel used to be a wall of right-aligned numbers under one heading
+     called AMP TELEMETRY, which is not a thing a guitarist says, and half of
+     what it listed was the input gate. Worse, it was a readout: the one
+     question it invited, "so nudge the mid up a bit", it could not answer. */
+  .knobs { columns: 340px; column-gap: 30px; }
+  /* A group split across a column break reads as two groups. */
+  .kgroup { break-inside: avoid; margin: 0 0 18px; }
+  .kgroup > h4 {
+    font-size: 0.66rem; letter-spacing: 0.22em; color: var(--cyan-dim);
+    font-weight: 500; margin: 0 0 2px; text-transform: uppercase;
   }
+  /* The model is the headline, not a row: it is the first thing anyone wants
+     to know about an amp block and it was not shown anywhere at all before. */
+  .kgroup .model {
+    color: var(--text); font-size: 0.9rem; margin-bottom: 9px;
+    letter-spacing: 0.02em;
+  }
+  .kgroup .model .sub {
+    display: block; color: var(--muted); font-size: 0.7rem; margin-top: 3px;
+    letter-spacing: 0.03em; line-height: 1.45;
+  }
+  .knob { display: grid; grid-template-columns: 108px 1fr 62px; gap: 9px;
+          align-items: center; padding: 3px 0; }
+  .knob .k { color: var(--muted); font-size: 0.75rem; letter-spacing: 0.04em; }
+  .knob .v { color: var(--cyan); font-size: 0.78rem; text-align: right;
+             font-variant-numeric: tabular-nums; }
+  .knob .v .u { color: var(--dim); font-size: 0.68rem; margin-left: 2px; }
+  .knob.busy .v { color: var(--amber); }
+  .knob.ro .v { color: var(--muted); }
+
+  /* A real range input: draggable, keyboard reachable, and it arrives with
+     the accessibility a div and a mousemove handler would have to reinvent. */
+  .knob input[type=range] {
+    -webkit-appearance: none; appearance: none; width: 100%; height: 16px;
+    background: none; cursor: pointer; margin: 0;
+  }
+  .knob input[type=range]::-webkit-slider-runnable-track {
+    height: 3px; border-radius: 2px;
+    background: linear-gradient(to right, var(--cyan) var(--pct, 0%),
+                                var(--line) var(--pct, 0%));
+  }
+  .knob input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none; width: 11px; height: 11px;
+    border-radius: 50%; background: var(--cyan); margin-top: -4px;
+    box-shadow: 0 0 8px rgba(47,230,255,0.65); transition: transform 0.12s;
+  }
+  .knob input[type=range]:hover::-webkit-slider-thumb { transform: scale(1.25); }
+  .knob input[type=range]:focus-visible::-webkit-slider-thumb {
+    outline: 2px solid var(--cyan); outline-offset: 2px;
+  }
+  .knob input[type=range]:disabled { cursor: default; opacity: 0.5; }
+  /* A flat readout for anything the registry has not verified a range for.
+     Offering a slider we cannot map back to a real value would be worse than
+     offering nothing, because it would look exactly as trustworthy. */
+  .knob .flat { height: 3px; border-radius: 2px; background: var(--line); }
 
   #log {
     font-size: 0.75rem; color: var(--muted); max-height: 180px; overflow-y: auto;
@@ -312,19 +359,22 @@
      backend name for a while, which only made a settings gear look like it
      was called AUTO. Which model answered is already on every plan, and the
      tooltip has it before then. */
+  /* An SVG rather than the U+2699 glyph. Raising font-size on the glyph does
+     almost nothing visible, because the character is drawn small inside its
+     own em box, so it stayed a speck next to the LINK pill however large the
+     box got. A path is sized by the numbers we give it. */
   .gear {
-    background: none; border: none; color: var(--muted); font: inherit;
-    /* Out of the way is about position and weight, not size. At 1rem it was
-       quiet by being hard to hit, which is a different thing and a worse one.
-       Sized to the pills beside it and given a real target. */
-    font-size: 1.45rem; line-height: 1; cursor: pointer;
-    padding: 2px 4px; opacity: 0.7;
-    transition: opacity 0.15s, color 0.15s, transform 0.2s;
+    background: none; border: none; color: var(--muted); cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 5px; margin-left: -2px; border-radius: 4px;
+    transition: color 0.15s, transform 0.25s, background 0.15s;
   }
-  .gear:hover { color: var(--cyan); opacity: 1; transform: rotate(45deg); }
+  .gear:focus-visible { outline: 1px solid var(--cyan-dim); }
+  .gear:hover { color: var(--cyan); background: rgba(47,230,255,0.08);
+                transform: rotate(40deg); }
   /* The exception to quiet. A backend that cannot run makes ENGAGE fail with
      the reason stuck behind this button, so here it does interrupt. */
-  .gear.needs { color: var(--amber); opacity: 1; }
+  .gear.needs { color: var(--amber); }
 
   .modal {
     position: fixed; inset: 0; z-index: 50; display: flex;
@@ -362,7 +412,13 @@
         </div>
       </span>
       <span class="pill off" id="link"><span class="dot"></span>LINK</span>
-      <button class="gear" id="aiopen" aria-label="AI backend settings">&#9881;</button>
+      <button class="gear" id="aiopen" aria-label="AI backend settings">
+        <svg viewBox="0 0 24 24" width="21" height="21" fill="none"
+             stroke="currentColor" stroke-width="1.7" stroke-linecap="round"
+             stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="3.1"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg></button>
     </div>
   </header>
 
@@ -389,13 +445,14 @@
     </div>
   </div>
 
-  <div class="grid">
-    <div class="console" data-label="SIGNAL CHAIN">
-      <div class="blocks" id="blocks"><span class="hint">awaiting link...</span></div>
-    </div>
-    <div class="console" data-label="AMP TELEMETRY">
-      <div class="knobs" id="knobs"><span class="hint">awaiting link...</span></div>
-    </div>
+  <div class="console" data-label="SIGNAL CHAIN">
+    <div class="blocks" id="blocks"><span class="hint">awaiting link...</span></div>
+    <div class="hint">Click a block to bypass or engage it. Click its letter to change channel.</div>
+  </div>
+
+  <div class="console" data-label="TONE">
+    <div class="knobs" id="knobs"><span class="hint">awaiting link...</span></div>
+    <div class="hint">Drag any slider to set it. Changes go to the edit buffer, not to your saved preset.</div>
   </div>
 
   <div class="console" data-label="LOG" style="margin-top:20px">
@@ -443,11 +500,29 @@ function log(msg, cls) {
     `<div><span class="t">${t}</span><span class="${cls || ''}">${esc(msg)}</span></div>`);
 }
 
-const KNOB_LABELS = {
-  DISTORT_DRIVE: ['GAIN', 10], DISTORT_BASS: ['BASS', 10], DISTORT_MID: ['MID', 10],
-  DISTORT_TREBLE: ['TREBLE', 10], DISTORT_PRESENCE: ['PRESENCE', 10],
-  DISTORT_DEPTH: ['DEPTH', 10], DISTORT_MASTER: ['MASTER', 10],
-};
+// Which families to show and what to call them. The panel groups by block
+// because that is how the rig is laid out and how the question arrives: you
+// want the delay a little wetter, not "DELAY_MIX raised". Order is the order
+// they are shown, and anything not listed here is not surfaced.
+const PARAM_GROUPS = [
+  ['DISTORT', 'Amp'], ['INPUT', 'Input gate'], ['DELAY', 'Delay'],
+  ['REVERB', 'Reverb'], ['TREMOLO', 'Tremolo'], ['FUZZ', 'Drive'],
+];
+
+// The registry's unit names are internal. Only the ones that mean something
+// to a player get printed; knob_0_10 and numeric are just "a number" and
+// saying so adds nothing next to a value that is plainly a number.
+const UNITS = {percent: '%', db: 'dB', ms: 'ms', hz: 'Hz', seconds: 's'};
+
+// Sliders need a step, and one step for every range is wrong in both
+// directions: 0.01 across a 1-16000ms delay is 1.6 million notches, and 1
+// across a 0-10 knob is ten. Scale it to the span.
+function stepFor(span) {
+  if (span <= 2) return 0.01;
+  if (span <= 25) return 0.05;
+  if (span <= 250) return 0.5;
+  return 5;
+}
 
 // --- scene switcher -------------------------------------------------------
 // set_scene is the one action gig mode allows, so this posts it straight to
@@ -767,22 +842,94 @@ async function refresh() {
          <span class="dot"></span>${esc(b.label)}<span class="ch" data-cyc="1"
            title="cycle channel">${b.channel}</span></button>`
     ).join('');
-    const knobs = Object.entries(s.values)
-      .filter(([k]) => KNOB_LABELS[k])
-      .map(([k, v]) => {
-        const [label, max] = KNOB_LABELS[k];
-        return `<div class="knob"><span class="k">${label}</span><span class="v">${v}</span>
-                <div class="bar"><i style="width:${Math.min(100, v / max * 100)}%"></i></div></div>`;
-      });
-    const others = Object.entries(s.values)
-      .filter(([k]) => !KNOB_LABELS[k] && (k.startsWith('INPUT_') || k.startsWith('GATE_')))
-      .slice(0, 4)
-      .map(([k, v]) => `<div class="knob"><span class="k">${k.replace(/_/g, ' ')}</span><span class="v">${v}</span></div>`);
-    $('knobs').innerHTML = knobs.join('') + others.join('') || '<span class="hint">no data</span>';
+    if (!dragging) renderParams(s);
   } catch (e) {
     $('link').className = 'pill off';
   }
 }
+
+// --- the tone panel -------------------------------------------------------
+// Skipped while a slider is being dragged, so the five-second poll cannot pull
+// the handle out from under the thumb mid-gesture.
+let dragging = false;
+let lastParams = {};        // key -> metadata, for the write path
+
+function renderParams(s) {
+  const meta = s.params || {};
+  lastParams = meta;
+  if (!Object.keys(meta).length) {
+    $('knobs').innerHTML = '<span class="hint">awaiting link...</span>';
+    return;
+  }
+  const out = [];
+  for (const [fam, title] of PARAM_GROUPS) {
+    // "unverified" means the registry has not confirmed what this parameter's
+    // numbers mean. FUZZ_TYPE is the example: a model selector whose ordinal
+    // arrives scaled to 0.08, which is not a fact about anything. A row that
+    // says TYPE 0.08 is worse than no row, so it is not drawn.
+    const keys = Object.keys(meta).filter(k => meta[k].family === fam
+                                            && s.values[k] !== undefined
+                                            && meta[k].unit !== 'unverified');
+    if (!keys.length) continue;
+    let head = `<h4>${esc(title)}</h4>`;
+    // The amp model and the cab were read every poll and then thrown away.
+    // They are the two facts a player actually leads with.
+    if (fam === 'DISTORT') {
+      const model = s.values.AMP_MODEL, cab = s.values.cab;
+      if (model) head += `<div class="model">${esc(model)}` +
+        (cab ? `<span class="sub">${esc(cab)}</span>` : '') + `</div>`;
+    }
+    out.push(`<div class="kgroup">${head}${keys.map(k => knobRow(k, meta[k], s.values[k])).join('')}</div>`);
+  }
+  $('knobs').innerHTML = out.join('') || '<span class="hint">no data</span>';
+}
+
+function knobRow(key, m, value) {
+  const unit = UNITS[m.unit] ? `<span class="u">${UNITS[m.unit]}</span>` : '';
+  const val = `<span class="v" data-v="${esc(key)}">${value}${unit}</span>`;
+  const lab = `<span class="k">${esc(m.label)}</span>`;
+  // A slider needs a span to map a position onto. Without one it stays a
+  // readout: a control we cannot map back would look exactly as trustworthy
+  // as one we can.
+  const span = m.max - m.min;
+  if (!(span > 0)) {
+    return `<div class="knob ro" title="no range published for this one, so it is read only">${lab}<div class="flat"></div>${val}</div>`;
+  }
+  const pct = Math.max(0, Math.min(100, (value - m.min) / span * 100));
+  return `<div class="knob" data-key="${esc(key)}">${lab}
+    <input type="range" min="${m.min}" max="${m.max}" step="${stepFor(span)}"
+           value="${value}" style="--pct:${pct}%"
+           aria-label="${esc(m.label)}" title="${esc(m.label)}: ${m.min} to ${m.max}">
+    ${val}</div>`;
+}
+
+// Track fills live under the thumb, but nothing is transmitted until the drag
+// ends. Sending on every input event would put a SysEx write on the wire for
+// each pixel of travel, which is how you flood a MIDI port.
+$('knobs').addEventListener('input', e => {
+  const el = e.target;
+  if (el.type !== 'range') return;
+  dragging = true;
+  const row = el.closest('.knob');
+  const pct = (el.value - el.min) / (el.max - el.min) * 100;
+  el.style.setProperty('--pct', pct + '%');
+  row.querySelector('.v').firstChild.nodeValue = el.value;
+});
+
+$('knobs').addEventListener('change', async e => {
+  const el = e.target;
+  if (el.type !== 'range') return;
+  const row = el.closest('.knob');
+  const m = (lastParams || {})[row.dataset.key];
+  dragging = false;
+  if (!m) return;
+  row.classList.add('busy');
+  el.disabled = true;
+  await blockAction({kind: 'set_param', block: m.family, instance: m.instance,
+                     param: m.param, value: Number(el.value)}, null);
+  row.classList.remove('busy');
+  el.disabled = false;
+});
 
 function describe(a) {
   if (a.kind === 'set_scene') return `Scene select: ${a.value}`;
@@ -797,6 +944,8 @@ function describe(a) {
   // danger first, and one parenthetical rather than two: the slot label
   // already carries "(FM9-Edit n)"
   if (a.kind === 'store') return `OVERWRITES slot ${a.slot_label || a.value}`;
+  const m = lastParams[a.param];
+  if (m) return `${m.label}: ${a.value}`;
   return `${a.block} ${a.instance} / ${a.param}: set to ${a.value}`;
 }
 

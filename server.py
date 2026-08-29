@@ -192,6 +192,12 @@ def snapshot(fm9: FM9) -> dict:
     blocks = fm9.status_dump() or []
     out_blocks = []
     values = {}
+    # What each value IS, so the UI can offer a control instead of a readout.
+    # The browser used to carry its own table of maxima, which meant it could
+    # only draw the seven amp knobs it knew about and drew every one of them
+    # as though it ran 0-10. Ranges belong to the registry, so they are sent
+    # from here and the UI stops guessing.
+    meta = {}
     seen_fams = set()
     for b in blocks:
         fam = reg.family_of_effect_id(b.effect_id)
@@ -230,6 +236,14 @@ def snapshot(fm9: FM9) -> dict:
                         from fm9.protocol import normalized_to_display
                         values[f"{s.name}"] = round(
                             normalized_to_display(vals[idx] / 65534, s.dmin, s.dmax, s.scale), 2)
+                        meta[s.name] = {
+                            "family": fname, "instance": inst, "param": s.name,
+                            "min": s.dmin, "max": s.dmax, "scale": s.scale,
+                            "unit": s.unit or "",
+                            # the label the FM9 itself uses, so the panel reads
+                            # like the unit rather than like our variable names
+                            "label": (s.label or s.name.split("_", 1)[-1]),
+                        }
     return {
         "connected": True,
         # label, not just number: the wire numbers presets 0-511 and every
@@ -244,6 +258,7 @@ def snapshot(fm9: FM9) -> dict:
         "scenes": scene_names(fm9),
         "blocks": out_blocks,
         "values": values,
+        "params": meta,
     }
 
 
