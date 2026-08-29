@@ -103,6 +103,11 @@ holds, and asks before it overwrites. It also says plainly that undo will not
 help you here, because undo restores the edit buffer and cannot un-write a
 preset slot.
 
+It aims at the preset you are looking at, because "save" means "save this
+preset" to anyone who has ever used an editor. When the loaded preset is not
+one you marked disposable, the panel tells you so instead of quietly pointing
+somewhere else.
+
 Storing is disabled until you designate disposable slots, because nobody but
 you knows what lives in your banks.
 

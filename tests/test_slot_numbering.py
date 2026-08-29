@@ -154,3 +154,42 @@ def test_a_store_does_not_arm_an_undo(client):
     client.post("/api/apply", json={"actions": [{
         "kind": "store", "block": "PRESET", "instance": 1, "value": 139}]})
     assert srv._snaps["undo"] is None
+
+
+def test_save_aims_at_the_preset_you_are_looking_at():
+    """"Save" means "save this preset" to anyone who has used an editor, so
+    the selector defaults to the loaded preset rather than the top of a list.
+    """
+    script = UI.split("<script>")[1]
+    assert "function aimAtLoadedPreset" in script
+    fn = script.split("function aimAtLoadedPreset")[1].split("\n}")[0]
+    assert "lastState.preset" in fn
+    assert "$('saveslot').value = String(cur.number)" in fn
+
+
+def test_a_preset_outside_the_list_is_said_out_loud_not_silently_swapped():
+    """Quietly offering a different slot than the one you are on is the exact
+    failure the whitelist exists to prevent."""
+    script = UI.split("<script>")[1]
+    fn = script.split("function aimAtLoadedPreset")[1].split("\n}")[0]
+    assert "not in your save" in fn
+    assert "blocked" in fn
+
+
+def test_choosing_a_slot_is_not_undone_by_the_aiming():
+    """Wiring the change handler to the aiming function snapped the dropdown
+    back to the loaded preset on every pick, which made the selector
+    unusable. Aiming sets the selection; the button label only reports it."""
+    script = UI.split("<script>")[1]
+    assert "function updateSaveButton" in script
+    assert "$('saveslot').addEventListener('change', updateSaveButton)" in script
+    upd = script.split("function updateSaveButton")[1].split("\n}")[0]
+    assert "saveslot').value =" not in upd, "the reporter must not set the value"
+
+
+def test_the_save_button_names_both_numbers():
+    """The one control that cannot be undone, so it follows the rule that
+    applies wherever being one out is expensive."""
+    script = UI.split("<script>")[1]
+    upd = script.split("function updateSaveButton")[1].split("\n}")[0]
+    assert "sel.label" in upd and "sel.editor" not in upd

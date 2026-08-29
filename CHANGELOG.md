@@ -46,7 +46,11 @@ session, we have already lost.
   number, shows both the wire and the FM9-Edit number for each, says what
   each slot currently holds, and asks before it overwrites. It states plainly
   that undo does not cover it, because undo restores the edit buffer and
-  cannot un-write a preset slot.
+  cannot un-write a preset slot. It aims at the preset you are looking at:
+  save means save THIS preset to anyone who has used an editor, so the
+  selector defaults to the loaded slot. When the loaded preset is not one you
+  marked disposable, the panel says so rather than quietly offering a
+  different slot, which is the exact failure the whitelist exists to prevent.
 - **Preset health scan.** The audits that have existed as command-line scripts
   for weeks, on a screen: every named scene alive or dead with the hop that
   broke the path, amp level and volume gain side by side, and the findings

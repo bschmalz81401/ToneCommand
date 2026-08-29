@@ -489,6 +489,11 @@
   }
   #save:disabled { opacity: 0.45; cursor: default; }
   .savewarn { color: var(--amber); font-size: 0.72rem; letter-spacing: 0.04em; }
+  .savenow { font-size: 0.74rem; letter-spacing: 0.04em; margin-bottom: 9px;
+             color: var(--muted); }
+  .savenow b { color: var(--text); font-weight: 500; }
+  .savenow.blocked { color: var(--amber); }
+  .savenow.blocked b { color: var(--amber); }
 
   #log {
     font-size: 0.75rem; color: var(--muted); max-height: 180px; overflow-y: auto;
@@ -634,6 +639,7 @@
   </div>
 
   <div class="console" data-label="SAVE TO PRESET">
+    <div class="savenow" id="savenow"></div>
     <div class="saverow">
       <select id="saveslot"><option>loading slots...</option></select>
       <button id="save" disabled>SAVE</button>
@@ -1348,6 +1354,7 @@ async function loadSaveSlots(withNames) {
       return `<option value="${s.number}">${esc(s.label)}  ${esc(holds)}</option>`;
     }).join('');
     $('save').disabled = !saveSlots.length;
+    aimAtLoadedPreset();
   } catch (e) {
     $('saveslot').innerHTML = '<option>could not read slots</option>';
     $('save').disabled = true;
@@ -1356,6 +1363,48 @@ async function loadSaveSlots(withNames) {
     $('savescan').textContent = 'NAMES';
   }
 }
+
+// Save where you are, when you are allowed to. "Save" means "save this
+// preset" to everyone who has used any editor, so the selector defaults to
+// the preset actually loaded rather than to the top of a list. When the
+// loaded preset is not one the owner marked disposable, that is said out
+// loud rather than silently offering a different slot: quietly saving
+// somewhere the user did not mean is the exact failure this whitelist exists
+// to prevent.
+function aimAtLoadedPreset() {
+  const cur = (lastState.preset || {});
+  const el = $('savenow');
+  if (cur.number == null || !saveSlots.length) { el.textContent = ''; return; }
+  const hit = saveSlots.find(s => s.number === cur.number);
+  if (hit) {
+    $('saveslot').value = String(cur.number);
+    el.className = 'savenow';
+    el.innerHTML = `Loaded: <b>${esc(cur.label)}</b> ` +
+      `${cur.name ? '"' + esc(cur.name) + '"' : ''}. SAVE writes back to it.`;
+  } else {
+    el.className = 'savenow blocked';
+    el.innerHTML = `Loaded: <b>${esc(cur.label)}</b> ` +
+      `${cur.name ? '"' + esc(cur.name) + '"' : ''}, which is not in your save ` +
+      `list, so it cannot be overwritten from here. Choose a slot below, or ` +
+      `add it to TONECOMMAND_STORE_SLOTS if it really is disposable.`;
+  }
+  updateSaveButton();
+}
+
+// Separate from aiming, because aiming SETS the selection and this only
+// reports it. Wiring the change handler to the aiming function snapped the
+// dropdown back to the loaded preset every time the user picked anything
+// else, which made the selector unusable.
+function updateSaveButton() {
+  // The full label, not the bare editor number. This is the one control in
+  // the product that cannot be undone, and the rule everywhere being one out
+  // is expensive is that both numbers are shown.
+  const sel = saveSlots.find(s => s.number === Number($('saveslot').value));
+  $('save').textContent = sel ? `SAVE TO ${sel.label}` : 'SAVE';
+  $('save').title = sel ? `overwrite ${sel.label}` : '';
+}
+
+$('saveslot').addEventListener('change', updateSaveButton);
 
 async function saveToSlot() {
   const n = Number($('saveslot').value);
@@ -1549,8 +1598,10 @@ let lastCab = {bank: null, ordinal: -1};
 function renderParams(s) {
   const meta = s.params || {};
   lastParams = meta;
+  const movedPreset = (lastState.preset || {}).number !== (s.preset || {}).number;
   lastState = s;
   if (s.cab_sel) lastCab = s.cab_sel;
+  if (movedPreset && saveSlots.length) aimAtLoadedPreset();
   if (!Object.keys(meta).length) {
     $('knobs').innerHTML = '<span class="hint">awaiting link...</span>';
     return;
