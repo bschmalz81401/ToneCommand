@@ -220,6 +220,9 @@ def snapshot(fm9: FM9) -> dict:
                 base = min(b.channel, chans - 1) * stride
                 bank, slot = vals[base + 0], vals[base + 4]
                 values["cab"] = reg.cab_description(slot, bank)
+                # the UI needs the address, not just the description, so the
+                # audition list can show which one is loaded
+                meta["__cab__"] = {"bank": int(bank), "ordinal": int(slot)}
         if fname in INTEREST and fname not in seen_fams:
             seen_fams.add(fname)
             vals = fm9.bulk_read(reg.effect_id(fname, inst))
@@ -259,6 +262,7 @@ def snapshot(fm9: FM9) -> dict:
         "scenes": scene_names(fm9),
         "blocks": out_blocks,
         "values": values,
+        "cab_sel": meta.pop("__cab__", None),
         "params": meta,
     }
 
@@ -291,6 +295,7 @@ class Action(BaseModel):
     bypassed: bool | None = None
     type_name: str | None = None   # model name for set_type; new name for renames
     position: str | None = None    # add_block: "pre" | "post" | "any" (vs amp)
+    bank: int | None = None        # set_cab: which cab roster the ordinal is in
     reason: str = ""
 
 
@@ -308,6 +313,12 @@ def resolve_type_ordinal(family: str, name: str) -> tuple[int, str] | None:
     for ordinal, label in roster.items():
         if str(label).lower() == needle:
             return (int(ordinal), str(label))
+    # A bare ordinal, which is what the audition list sends: it already knows
+    # exactly which model it means and should not have to round trip through a
+    # name and back. Checked AFTER the exact-name match above, so an amp
+    # actually called "59" still wins over ordinal 59.
+    if needle.isdigit() and needle in roster:
+        return (int(needle), str(roster[needle]))
     matches = [(int(o), str(l)) for o, l in roster.items()
                if needle in str(l).lower()]
     if matches:
@@ -471,6 +482,15 @@ def validate_action(a: Action) -> tuple[list[str], list[str]]:
             errors.append(f"model selection not supported on block {a.block}")
         elif resolve_type_ordinal(fam, a.type_name or "") is None:
             errors.append(f"unknown model name: {a.type_name!r}")
+    elif a.kind == "set_cab":
+        bank = 0 if a.bank is None else int(a.bank)
+        roster = reg.cab_rosters.get(str(bank))
+        if roster is None:
+            errors.append(f"no cab bank {bank}; banks are "
+                          f"{sorted(reg.cab_rosters, key=int)}")
+        elif a.value is None or str(int(a.value)) not in roster:
+            errors.append(f"cab {a.value} is not in bank {bank} "
+                          f"({len(roster)} entries)")
     elif a.kind == "set_param":
         spec = None
         for (f, pid), pdata in reg.params.items():
@@ -630,6 +650,37 @@ def run_action(fm9: FM9, a: Action) -> dict:
         return _add_block(fm9, a)
     if a.kind == "bind_pedal":
         return _bind_pedal(fm9, a)
+    if a.kind == "set_cab":
+        # Bank and slot are two parameters on the CABINET block, and the slot
+        # ordinal lives in the RAW wire value rather than on the 0-1023 display
+        # scale, so this goes through the discrete path. Verified on hardware:
+        # a discrete write of 200 reads back as exactly 200.
+        bank = 0 if a.bank is None else int(a.bank)
+        ordinal = int(a.value)
+        bspec = reg.spec("CABINET", 0, a.instance)
+        tspec = reg.spec("CABINET", 4, a.instance)
+        before_o = fm9.get_param_wire(tspec)
+        before_b = fm9.get_param_wire(bspec)
+        if before_b != bank:
+            fm9.set_param_ordinal(bspec, bank)
+        fm9.set_param_ordinal(tspec, ordinal)
+        import time as _t
+        landed_o = landed_b = None
+        for _ in range(4):
+            _t.sleep(0.15)
+            landed_o = fm9.get_param_wire(tspec)
+            landed_b = fm9.get_param_wire(bspec)
+            if landed_o == ordinal and landed_b == bank:
+                break
+        ok = landed_o == ordinal and landed_b == bank
+        return {"action": a.model_dump(), "ok": ok,
+                "detail": (f"cab -> {reg.cab_description(landed_o, landed_b)}"
+                           if ok else
+                           f"read-back mismatch: wanted bank {bank} cab "
+                           f"{ordinal}, unit reports bank {landed_b} cab "
+                           f"{landed_o}"),
+                "before": reg.cab_description(before_o, before_b),
+                "after": reg.cab_description(landed_o, landed_b)}
     if a.kind == "set_type":
         pid, _ = TYPE_PARAMS.get(fam, (None, None))
         if pid is None:
@@ -856,6 +907,36 @@ def api_restore(body: dict):
             return JSONResponse({"error": str(e)}, status_code=409)
         except Exception as e:
             return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@app.get("/api/models")
+def api_models(kind: str = "amp"):
+    """The model rosters, for auditioning.
+
+    Sent whole and once. There are 331 amps and 2237 cabs, and paging that
+    would make the search feel like the device's own list, which is the thing
+    this is trying to beat: on the unit you turn a knob through a thousand
+    entries because there is nowhere to type.
+    """
+    if kind == "amp":
+        return {"kind": "amp", "banks": [{
+            "bank": None, "name": "AMP",
+            "models": [{"ordinal": int(o), "name": n}
+                       for o, n in sorted(reg.amp_roster.items(), key=lambda x: int(x[0]))]}]}
+    if kind == "cab":
+        out = []
+        for b in sorted(reg.cab_rosters, key=int):
+            out.append({
+                "bank": int(b),
+                "name": reg.cab_bank_names.get(b, f"BANK {b}"),
+                "models": [{"ordinal": int(o), "name": n,
+                            # the long description is what tells a Vibrolux
+                            # from a Vibrolux, so it is searchable too
+                            "detail": reg.cab_model(o, b) or ""}
+                           for o, n in sorted(reg.cab_rosters[b].items(),
+                                              key=lambda x: int(x[0]))]})
+        return {"kind": "cab", "banks": out}
+    return JSONResponse({"error": f"unknown kind {kind!r}"}, status_code=400)
 
 
 @app.get("/api/grid")

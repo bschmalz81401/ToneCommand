@@ -307,9 +307,13 @@ class SimFM9Core:
             slots = self.st.buffer["modifiers"]
             slots[eid - 2][pid] = int(round(val)) if pid < 25 else 0
             return []
-        spec_kind = self._param_kind(eid, pid)
-        if spec_kind == "enum":
-            self.st.set_block_param(eid, pid, int(round(val)))
+        # A discrete write stores the integer, and NOT only for parameters the
+        # reference calls enum. CABINET_TYPE1 declares float while holding a
+        # cab ordinal in its wire value, and on hardware a discrete write of
+        # 200 to it read back as exactly 200 (2026-08-29). Restricting this to
+        # enums made cab auditioning untestable here while it worked on the
+        # unit, which is the wrong way round for a test double.
+        self.st.set_block_param(eid, pid, int(round(val)))
         # continuous + value 0.0 => the zeroed GET: a NO-OP (hardware-observed)
         return [self._echo(eid, pid)]
 

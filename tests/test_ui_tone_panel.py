@@ -216,3 +216,75 @@ def test_a_dead_wire_is_still_legible():
     """A severed path is information. Drawn too dark it reads as empty space
     rather than as a fault."""
     assert "#22303a" not in UI, "the old near-invisible wire colour is back"
+
+
+# --- auditioning amps and cabs ---
+# The thing the device is worst at. On the FM9 you turn a knob through 1024
+# cabinets one at a time because there is nowhere to type.
+
+def test_the_rosters_are_served_whole(client):
+    """Paging 2237 cabs would make the search feel like the unit's own list,
+    which is the thing this is trying to beat."""
+    amps = client.get("/api/models?kind=amp").json()
+    cabs = client.get("/api/models?kind=cab").json()
+    assert len(amps["banks"][0]["models"]) > 300
+    assert sum(len(b["models"]) for b in cabs["banks"]) > 2000
+    assert all("name" in b for b in cabs["banks"]), "banks must be named"
+
+
+def test_a_cab_carries_its_description_for_searching(client):
+    """"Vibrolux" is in the description, not in the name. Searching only names
+    would miss the amp the cab was modelled on, which is how anyone actually
+    looks for one."""
+    cabs = client.get("/api/models?kind=cab").json()
+    models = cabs["banks"][0]["models"]
+    assert any(m.get("detail") for m in models)
+
+
+def test_setting_a_cab_verifies_and_names_what_landed(client):
+    c = client.get("/api/state").json()["cab_sel"]
+    assert c and "bank" in c and "ordinal" in c
+    r = client.post("/api/apply", json={"actions": [{
+        "kind": "set_cab", "block": "CABINET", "instance": 1,
+        "value": 200, "bank": 0}]}).json()
+    res = r["results"][-1]
+    assert res["ok"] and "cab ->" in res["detail"]
+
+
+def test_a_cab_outside_the_bank_is_refused(client):
+    r = client.post("/api/apply", json={"actions": [{
+        "kind": "set_cab", "block": "CABINET", "instance": 1,
+        "value": 99999, "bank": 0}]}).json()
+    assert not r["results"][-1]["ok"]
+
+
+def test_auditioning_goes_through_the_same_apply_path():
+    """So it inherits undo, gig mode and read-back verification rather than
+    reimplementing all three on a side channel."""
+    load = SCRIPT.split("async function audLoad")[1].split("\n}")[0]
+    assert "'/api/apply'" in load
+    assert "refreshSnaps" in load, "an audition you cannot undo is a trap"
+
+
+def test_stepping_is_on_the_arrow_keys():
+    """The whole point: keep both hands on the guitar and step the shortlist
+    without hunting for a button."""
+    assert "ArrowDown" in SCRIPT and "ArrowUp" in SCRIPT
+    assert "function audStep" in SCRIPT
+
+
+def test_the_search_narrows_rather_than_widens():
+    """Every word must match. An OR would make a second word return MORE
+    results, which is the opposite of what typing more means."""
+    assert "words.every(" in SCRIPT
+
+
+def test_the_ordinal_is_accepted_directly():
+    """The audition list already knows exactly which model it means and should
+    not round trip through a name. Checked after the exact-name match so an
+    amp actually called "59" still wins over ordinal 59."""
+    import inspect
+    src = inspect.getsource(server.resolve_type_ordinal)
+    assert "needle.isdigit()" in src
+    exact = src.index("str(label).lower() == needle")
+    assert exact < src.index("needle.isdigit()")

@@ -304,6 +304,39 @@
   .gridnote .sw { width: 16px; height: 3px; border-radius: 2px; }
   .gridnote .dead { color: var(--red); }
 
+  /* Auditioning. On the unit you turn a knob through 1024 cabinets because
+     there is nowhere to type; here you type two letters and step the
+     shortlist with the arrow keys while you keep playing. */
+  .aud { position: relative; display: inline-block; }
+  /* inline-flex with the label ellipsised, so the caret stays pinned beside
+     the name instead of wrapping onto a line of its own when the name is long,
+     which is most of the time: cab descriptions run to a full sentence. */
+  .audbtn {
+    display: inline-flex; align-items: baseline; gap: 5px; max-width: 100%;
+    background: none; border: 1px dashed transparent; color: inherit;
+    font: inherit; padding: 1px 5px; margin: -1px -5px; border-radius: 3px;
+    cursor: pointer; text-align: left;
+  }
+  .audbtn .l { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .audbtn:hover { border-color: var(--cyan-dim); color: var(--cyan); }
+  .audbtn::after { content: '\25BE'; color: var(--cyan-dim); font-size: 0.7em;
+                   flex: 0 0 auto; }
+  .aud { max-width: 100%; }
+  .aud .pop { width: 380px; right: auto; left: 0; }
+  .audhead { display: flex; gap: 6px; align-items: center; margin-bottom: 7px; }
+  .audhead select { flex: 0 0 auto; background: #0d0f0d; color: var(--fg);
+                    border: 1px solid #1f2a1f; font: inherit;
+                    font-size: 0.7rem; padding: 4px 5px; border-radius: 3px; }
+  .audhead .step { flex: 0 0 auto; padding: 3px 8px; font-size: 0.72rem; }
+  .audlist { max-height: 300px; overflow-y: auto; }
+  .prow .det { color: var(--dim); font-size: 0.66rem; margin-top: 2px;
+               white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .prow { flex-wrap: wrap; }
+  .audfoot { display: flex; justify-content: space-between; align-items: center;
+             gap: 8px; margin-top: 7px; padding-top: 7px;
+             border-top: 1px solid var(--line); color: var(--dim);
+             font-size: 0.66rem; letter-spacing: 0.05em; }
+
   #log {
     font-size: 0.75rem; color: var(--muted); max-height: 180px; overflow-y: auto;
     line-height: 1.7;
@@ -461,6 +494,19 @@
   <div class="console" data-label="LOG" style="margin-top:20px">
     <div id="log"></div>
   </div>
+</div>
+
+<div class="pop" id="audpop" hidden>
+  <div class="audhead">
+    <select id="audbanks"></select>
+    <button class="step" id="audprev" title="previous (up arrow)">&#9650;</button>
+    <button class="step" id="audnext" title="next (down arrow)">&#9660;</button>
+  </div>
+  <input id="audq" autocomplete="off" spellcheck="false"
+         placeholder="type to filter, arrows to audition, Enter to load">
+  <div class="audlist" id="audlist"></div>
+  <div class="audfoot"><span id="audcount"></span>
+    <span>each step loads on the unit, UNDO covers it</span></div>
 </div>
 
 <div class="modal" id="aimodal" hidden>
@@ -765,6 +811,152 @@ function alsoAffects(a, currentScene) {
   return '';
 }
 
+// --- auditioning amps and cabs -------------------------------------------
+// The thing the device is worst at. On the FM9 you turn a knob through 1024
+// cabinets one at a time, because there is nowhere to type. Here you type two
+// letters and step the shortlist with the arrow keys while you keep playing,
+// and every step goes through the same apply path as everything else, so UNDO
+// covers it and gig mode refuses it.
+const audCache = {};          // kind -> banks, fetched once
+let audOpen = null;           // 'amp' | 'cab' | null
+let audCursor = 0;
+let audBank = null;
+let audBusy = false;
+
+async function audModels(kind) {
+  if (!audCache[kind]) {
+    audCache[kind] = (await (await fetch(`/api/models?kind=${kind}`)).json()).banks;
+  }
+  return audCache[kind];
+}
+
+function audMatches(kind) {
+  const banks = audCache[kind] || [];
+  const bank = banks.find(b => String(b.bank) === String(audBank)) || banks[0];
+  const q = ($('audq').value || '').trim().toLowerCase();
+  const words = q.split(/\s+/).filter(Boolean);
+  // every word has to appear somewhere, so "vox 12" narrows rather than
+  // widening the way an OR would
+  const hit = m => words.every(w =>
+    m.name.toLowerCase().includes(w) || (m.detail || '').toLowerCase().includes(w));
+  return {bank, list: (bank ? bank.models : []).filter(hit)};
+}
+
+function renderAud() {
+  const kind = audOpen;
+  if (!kind) return;
+  const {bank, list} = audMatches(kind);
+  audCursor = Math.max(0, Math.min(audCursor, list.length - 1));
+  const cur = kind === 'amp' ? audCurrentAmp() : audCurrentCab();
+  $('audlist').innerHTML = list.length ? list.map((m, i) => `
+    <button class="prow${i === audCursor ? ' cursor' : ''}${m.ordinal === cur ? ' on' : ''}"
+            data-ord="${m.ordinal}" data-i="${i}">
+      <span class="num">${m.ordinal}</span><span class="nm">${esc(m.name)}</span>
+      ${m.detail ? `<span class="det">${esc(m.detail)}</span>` : ''}
+    </button>`).join('')
+    : '<div class="hint" style="margin:8px 4px">nothing matches</div>';
+  $('audcount').textContent = `${list.length} of ${bank ? bank.models.length : 0}`;
+  const c = $('audlist').querySelector('.cursor');
+  if (c) c.scrollIntoView({block: 'nearest'});
+}
+
+function audCurrentAmp() {
+  const m = (lastState.values || {}).AMP_MODEL;
+  const banks = audCache.amp || [];
+  const found = (banks[0] ? banks[0].models : []).find(x => x.name === m);
+  return found ? found.ordinal : -1;
+}
+function audCurrentCab() { return lastCab.ordinal; }
+
+async function openAud(kind, anchor) {
+  audOpen = kind;
+  audCursor = 0;
+  await audModels(kind);
+  const banks = audCache[kind];
+  audBank = kind === 'cab' ? (lastCab.bank != null ? lastCab.bank : banks[0].bank)
+                           : banks[0].bank;
+  $('audbanks').innerHTML = banks.map(b =>
+    `<option value="${b.bank}">${esc(b.name)}</option>`).join('');
+  $('audbanks').value = String(audBank);
+  $('audbanks').style.display = banks.length > 1 ? '' : 'none';
+  anchor.appendChild($('audpop'));
+  $('audpop').hidden = false;
+  $('audq').value = '';
+  renderAud();
+  // put the cursor on what is loaded, so stepping starts from here rather
+  // than from the top of a thousand-entry list
+  const {list} = audMatches(kind);
+  const cur = kind === 'amp' ? audCurrentAmp() : audCurrentCab();
+  const at = list.findIndex(m => m.ordinal === cur);
+  if (at >= 0) { audCursor = at; renderAud(); }
+  $('audq').focus();
+}
+
+function closeAud() { $('audpop').hidden = true; audOpen = null; }
+
+async function audLoad(ordinal) {
+  if (audBusy) return;
+  audBusy = true;
+  const kind = audOpen;
+  const action = kind === 'amp'
+    ? {kind: 'set_type', block: 'DISTORT', instance: 1,
+       type_name: String(ordinal)}
+    : {kind: 'set_cab', block: 'CABINET', instance: 1,
+       value: ordinal, bank: Number(audBank)};
+  try {
+    const r = await fetch('/api/apply', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({actions: [action]})});
+    const d = await r.json();
+    if (d.error) throw new Error(d.error);
+    const res = (d.results || []).slice(-1)[0];
+    if (!res || !res.ok) throw new Error(res ? res.detail : 'refused');
+    log(res.detail, 'ok');
+  } catch (e) {
+    log(`audition failed: ${e.message}`, 'err');
+  } finally {
+    audBusy = false;
+    await refresh();
+    refreshSnaps();
+    if (audOpen) renderAud();
+  }
+}
+
+function audStep(delta) {
+  const {list} = audMatches(audOpen);
+  if (!list.length) return;
+  audCursor = (audCursor + delta + list.length) % list.length;
+  renderAud();
+  audLoad(list[audCursor].ordinal);
+}
+
+$('audq').addEventListener('input', () => { audCursor = 0; renderAud(); });
+$('audq').addEventListener('keydown', e => {
+  if (e.key === 'ArrowDown') { e.preventDefault(); audStep(1); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); audStep(-1); }
+  else if (e.key === 'Enter') {
+    const {list} = audMatches(audOpen);
+    if (list[audCursor]) audLoad(list[audCursor].ordinal);
+  } else if (e.key === 'Escape') { closeAud(); }
+});
+$('audbanks').onchange = () => { audBank = $('audbanks').value; audCursor = 0; renderAud(); };
+$('audprev').onclick = () => audStep(-1);
+$('audnext').onclick = () => audStep(1);
+$('audlist').addEventListener('click', e => {
+  const row = e.target.closest('.prow');
+  if (!row) return;
+  audCursor = Number(row.dataset.i);
+  renderAud();
+  audLoad(Number(row.dataset.ord));
+});
+document.addEventListener('mousedown', e => {
+  if (audOpen && !e.target.closest('#audpop') && !e.target.closest('.audbtn')) closeAud();
+});
+$('knobs').addEventListener('click', e => {
+  const b = e.target.closest('.audbtn');
+  if (b) openAud(b.dataset.aud, b.parentElement);
+});
+
 // --- the routing grid, drawn ---------------------------------------------
 // Cells are laid out on a fixed pitch and cables are drawn from the resolved
 // feeds list, so the browser never has to know how the cable bitmask is
@@ -904,10 +1096,17 @@ async function recallSlot(slot) {
       body: JSON.stringify({slot})});
     const d = await r.json();
     if (d.error) throw new Error(d.error);
-    const n = (d.applied || []).length;
-    log(n ? `${slot === 'undo' ? 'undone' : 'recalled ' + slot.toUpperCase()}: `
-            + d.applied.join('; ')
-          : 'nothing to change: the buffer already matched', d.failed.length ? 'warn' : 'ok');
+    // Changing an amp model moves every parameter inside the block, so an
+    // undo of one can legitimately write forty values. Naming all of them
+    // turns the log into a wall; the count is the useful part.
+    const app = d.applied || [];
+    const head = app.slice(0, 4).join('; ');
+    const rest = app.length > 4 ? `; and ${app.length - 4} more` : '';
+    log(app.length
+        ? `${slot === 'undo' ? 'undone' : 'recalled ' + slot.toUpperCase()} `
+          + `(${app.length} value${app.length > 1 ? 's' : ''}): ${head}${rest}`
+        : 'nothing to change: the buffer already matched',
+        d.failed.length ? 'warn' : 'ok');
     // A restore that could not put something back has to say so. "Undone" is
     // a claim about the rig, not about what we meant to do.
     for (const f of d.failed || []) log(`could not restore ${f}`, 'err');
@@ -1073,10 +1272,14 @@ async function refresh() {
 // the handle out from under the thumb mid-gesture.
 let dragging = false;
 let lastParams = {};        // key -> metadata, for the write path
+let lastState = {};         // the last state payload, for the audition lists
+let lastCab = {bank: null, ordinal: -1};
 
 function renderParams(s) {
   const meta = s.params || {};
   lastParams = meta;
+  lastState = s;
+  if (s.cab_sel) lastCab = s.cab_sel;
   if (!Object.keys(meta).length) {
     $('knobs').innerHTML = '<span class="hint">awaiting link...</span>';
     return;
@@ -1096,8 +1299,15 @@ function renderParams(s) {
     // They are the two facts a player actually leads with.
     if (fam === 'DISTORT') {
       const model = s.values.AMP_MODEL, cab = s.values.cab;
-      if (model) head += `<div class="model">${esc(model)}` +
-        (cab ? `<span class="sub">${esc(cab)}</span>` : '') + `</div>`;
+      // Both are buttons. They were the two most interesting facts on the
+      // page and the two you were most likely to want to change, and until
+      // now changing either meant leaving for FM9-Edit or the unit itself.
+      if (model) head += `<div class="model">
+        <span class="aud"><button class="audbtn" data-aud="amp"
+          title="audition amp models"><span class="l">${esc(model)}</span></button></span>` +
+        (cab ? `<span class="sub"><span class="aud"><button class="audbtn"
+           data-aud="cab" title="audition cabinets"><span class="l">${esc(cab)}</span></button></span></span>`
+             : '') + `</div>`;
     }
     out.push(`<div class="kgroup">${head}${keys.map(k => knobRow(k, meta[k], s.values[k])).join('')}</div>`);
   }

@@ -71,8 +71,8 @@ def test_only_what_differs_is_written():
         dev.set_param_display(spec, 7.0)
 
         written = []
-        real = dev.set_param_display
-        dev.set_param_display = lambda s, v: (written.append(s.name), real(s, v))[1]
+        real = dev.set_param_wire
+        dev.set_param_wire = lambda s, v: (written.append(s.name), real(s, v))[1]
         eb.restore(dev, server.reg, snap)
         assert written == ["DISTORT_MID"], written
 
@@ -131,7 +131,7 @@ def test_a_restore_that_could_not_finish_says_so():
 
         class Bad:
             ok, detail = False, "read-back mismatch"
-        dev.set_param_display = lambda s, v: Bad()
+        dev.set_param_wire = lambda s, v: Bad()
         res = eb.restore(dev, server.reg, snap)
         assert not res.ok and res.failed
 
@@ -235,3 +235,39 @@ def test_nothing_here_can_touch_a_saved_preset():
     for forbidden in ("build_store", "select_preset", "store_preset"):
         assert forbidden not in src, forbidden
     assert "Nothing here touches a saved preset" in UI
+
+
+# --- a restore writes wire values, never display numbers ------------------
+
+def test_restores_write_the_exact_wire_value():
+    """Display units lose any parameter whose meaning IS the raw wire.
+
+    Found on hardware auditioning cabinets: a cab slot is an ordinal stored
+    directly in the wire, so undoing a cab change wrote display 1.64 on a
+    0-1023 scale, landed on cab 1 instead of cab 105, and quietly loaded the
+    wrong cabinet while reporting the undo as done.
+    """
+    import inspect
+    src = inspect.getsource(eb.restore)
+    assert "set_param_wire" in src
+    assert "set_param_display" not in src
+
+
+def test_the_spec_survives_an_uncalibrated_parameter():
+    """A parameter with no display range still has an exact wire value and is
+    perfectly restorable. Dropping its spec would have made those silently
+    unrestorable while the summary looked complete."""
+    import inspect
+    assert "return None, spec" in inspect.getsource(eb._display)
+
+
+def test_the_writer_verifies_by_integer_equality():
+    """There is one correct answer and we already know it, so a tolerance
+    would only let a near miss through."""
+    import inspect
+    from fm9.device import FM9
+    src = inspect.getsource(FM9.set_param_wire)
+    assert "after == wire" in src
+    # and it tries both encodings, because the spec does not say which one a
+    # parameter uses: CABINET_TYPE1 declares float while holding an ordinal
+    assert "continuous" in src and "ordinal" in src

@@ -60,6 +60,11 @@ class Change:
     label: str
     frm: float | None     # display units, for saying what will happen
     to: float | None
+    #: The exact values. Restores write these, never the display numbers: a
+    #: cab slot is an ordinal stored raw in the wire, so a display round trip
+    #: turned cab 105 into cab 1 and an undo loaded the wrong cabinet.
+    frm_wire: int = 0
+    to_wire: int = 0
 
 
 @dataclass
@@ -110,13 +115,19 @@ def capture(fm9, reg) -> dict:
 
 
 def _display(reg, family, instance, param_id, wire):
-    """Wire value as the number a human would recognise, or None."""
+    """(display value, spec). The display half may be None; the spec must not.
+
+    An uncalibrated parameter has no number worth showing a human, but it is
+    still perfectly restorable, because a restore writes the raw wire value.
+    Returning no spec for those would have made them silently unrestorable
+    while the summary looked complete.
+    """
     try:
         spec = reg.spec(family, param_id, instance)
     except Exception:
         return None, None
     if spec is None or spec.dmin is None:
-        return None, None
+        return None, spec
     from fm9.protocol import normalized_to_display
     return round(normalized_to_display(
         wire / 65534, spec.dmin, spec.dmax, spec.scale), 2), spec
@@ -158,7 +169,7 @@ def diff(reg, frm: dict, to: dict) -> dict:
                 instance=a["instance"], channel=ch, param_id=pid,
                 label=(spec.label if spec is not None and spec.label
                        else f"param {pid}"),
-                frm=old, to=new))
+                frm=old, to=new, frm_wire=x, to_wire=y))
     return {"params": params, "switches": switches}
 
 
@@ -198,16 +209,19 @@ def restore(fm9, reg, snap: dict) -> Restore:
                 spec = reg.spec(c.family, c.param_id, c.instance)
             except Exception:
                 spec = None
-            if spec is None or spec.dmin is None or c.frm is None:
-                # No calibrated range means no way to write a value back that
-                # we could then verify. Saying nothing here would let a
-                # restore report success over a parameter it never touched.
+            if spec is None:
+                # Nothing to address the parameter with. Saying nothing here
+                # would let a restore report success over a value it never
+                # touched.
                 out.failed.append(f"{c.family} {c.instance} {c.label}: "
-                                  f"no calibrated range, left as it is")
+                                  f"not in the registry, left as it is")
                 continue
-            res = fm9.set_param_display(spec, c.frm)
+            # The exact wire value, not the display number. A calibrated
+            # parameter round trips either way; an ordinal does not.
+            res = fm9.set_param_wire(spec, c.frm_wire)
             if getattr(res, "ok", False):
-                out.applied.append(f"{c.family} {c.instance} {c.label} -> {c.frm}")
+                shown = c.frm if c.frm is not None else c.frm_wire
+                out.applied.append(f"{c.family} {c.instance} {c.label} -> {shown}")
             else:
                 out.failed.append(f"{c.family} {c.instance} {c.label}: "
                                   f"{getattr(res, 'detail', 'write not verified')}")

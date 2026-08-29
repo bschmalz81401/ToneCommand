@@ -574,6 +574,59 @@ class FM9:
         return SetResult(ok, "verified by read-back" if ok else f"read-back mismatch: {after}",
                          before, after)
 
+    def set_param_wire(self, spec: ParamSpec, wire: int) -> SetResult:
+        """Set a parameter to an EXACT wire value, verified by integer equality.
+
+        For restoring a snapshot, this is the only correct write. Going back
+        through display units loses parameters whose meaning is the raw wire
+        rather than a position on a calibrated scale: a cab slot is an ordinal
+        stored directly in the wire, so display 1.64 on a 0-1023 scale came
+        back as cab 1 instead of cab 105 and an undo silently loaded the wrong
+        cabinet.
+
+        The continuous path is right for both kinds. For a calibrated
+        parameter it reproduces the value; for an ordinal it writes the
+        ordinal, which is the same reasoning that makes a continuous 0.0 the
+        way to select ordinal 0 (see set_param_ordinal).
+
+        Verification is integer equality, not a tolerance, because there is a
+        single correct answer and we already know exactly what it is.
+        """
+        before = self.get_param_wire(spec)
+        wire = max(0, min(65534, int(wire)))
+        if before == wire:
+            return SetResult(True, "already there", before, before)
+
+        # Two encodings exist and the parameter does not say which it uses.
+        # For a calibrated parameter the wire is a normalized 0-65534 position
+        # and the continuous frame reproduces it. For an ordinal-bearing one
+        # the wire IS the ordinal and a continuous write gets scaled against
+        # the parameter's own range instead: writing cab 105 that way landed
+        # on cab 1, because 105/65534 of the way along 0-1023 is 1.64.
+        #
+        # spec.kind does not separate them (CABINET_TYPE1 declares float while
+        # holding an ordinal), so rather than guess from metadata this tries
+        # both and lets the read-back decide. That is only sound because the
+        # check is integer equality against a value we already know.
+        attempts = (
+            ("continuous", lambda: p.build_set_param_continuous(
+                spec.effect_id, spec.param_id, wire / 65534)),
+            ("ordinal", lambda: (p.build_set_param_discrete(
+                spec.effect_id, spec.param_id, wire) if wire else
+                p.build_set_param_continuous(spec.effect_id, spec.param_id, 0.0))),
+        )
+        after = None
+        for how, build in attempts:
+            self._param_echo(build(), spec.effect_id, spec.param_id, timeout=0.3)
+            for _ in range(3):
+                time.sleep(0.15)
+                after = self.get_param_wire(spec)
+                if after == wire:
+                    return SetResult(True, f"verified by read-back ({how})",
+                                     before, after)
+        return SetResult(False, f"read-back mismatch: wanted {wire}, got {after}",
+                         before, after)
+
     def set_param_ordinal(self, spec: ParamSpec, ordinal: int) -> SetResult:
         """Set a discrete (enum/type) param by roster ordinal.
 
