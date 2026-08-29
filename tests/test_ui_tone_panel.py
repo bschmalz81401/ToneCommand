@@ -12,6 +12,7 @@ Three things had to be true to fix it, and these pin all three:
   a value we cannot back up is not drawn at all
   one drag puts one write on the wire, not one per pixel
 """
+import re
 from pathlib import Path
 
 import pytest
@@ -328,3 +329,34 @@ def test_both_the_control_and_the_list_say_what_they_are():
     assert '<div class="picklabel">MODEL</div>' in UI
     assert "'AMP MODEL' : 'CABINET'" in SCRIPT or "'CABINET'" in SCRIPT
     assert 'id="audtitle"' in UI
+
+
+def test_the_grid_scales_to_fit_rather_than_scrolling():
+    """A fourteen column preset is 1276 user units wide and the page is capped
+    at 1100, so at natural size the chain always overflowed and you had to
+    scroll sideways to reach your own output blocks. An SVG with a viewBox
+    scales for free."""
+    style = UI.split("<style>")[1].split("</style>")[0]
+    rule = style.split("svg.grid {")[1].split("}")[0]
+    assert "width: 100%" in rule and "height: auto" in rule
+    # never blown up past natural size, which would fur the text on wide screens
+    assert 'style="max-width:${W}px"' in SCRIPT
+    # and a floor, because below some size scrolling beats illegibility
+    assert "min-width:" in rule
+
+
+def test_block_text_is_sized_for_being_scaled_down():
+    """Text in an SVG shrinks with the drawing. Sized for the natural width it
+    would be unreadable at the 0.8 the grid usually renders at."""
+    style = UI.split("<style>")[1].split("</style>")[0]
+    nm = style.split("svg.grid .nm {")[1].split("}")[0]
+    size = float(re.search(r"font-size: ([\d.]+)px", nm).group(1))
+    assert size >= 12, "too small once the grid is scaled to fit"
+
+
+def test_long_block_names_have_short_forms():
+    """"Graphic EQ 2" does not fit a 74px cell, and a name clipped mid-word is
+    worse than one shortened on purpose."""
+    short = SCRIPT.split("const SHORT = {")[1].split("};")[0]
+    for name in ("Graphic EQ", "Compressor", "Volume"):
+        assert name in short, name

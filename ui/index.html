@@ -368,7 +368,13 @@
      that goes wrong: a severed cable and a bypassed Return both leave every
      block present and correct while the scene makes no sound. */
   .gridwrap { overflow-x: auto; padding: 4px 0 2px; }
-  svg.grid { display: block; min-width: 100%; }
+  /* Scales to fit instead of scrolling. The grid is up to fourteen columns
+     wide and the page is capped at 1100px, so at natural size it always
+     overflowed and you had to scroll sideways to see your own output blocks.
+     An SVG with a viewBox scales for free; text is sized generously in user
+     units so that shrinking still leaves it legible. min-width keeps a floor
+     for very narrow windows, where scrolling beats illegibility. */
+  svg.grid { display: block; width: 100%; height: auto; min-width: 560px; }
   svg.grid .cable { fill: none; stroke: #3b5262; stroke-width: 2; }
   svg.grid .cable.live { stroke: var(--cyan); stroke-width: 2.2;
                          filter: url(#glow); }
@@ -387,10 +393,10 @@
   svg.grid .cell.byp > rect { stroke-dasharray: 4 3; fill: #0b0e12; }
   svg.grid .cell:hover > rect { stroke: var(--cyan); fill: #101c22; }
   svg.grid .cell.busy > rect { stroke: var(--amber); }
-  svg.grid .nm { fill: var(--text); font-size: 11px; letter-spacing: 0.02em;
+  svg.grid .nm { fill: var(--text); font-size: 12.5px; letter-spacing: 0.01em;
                  pointer-events: none; }
   svg.grid .cell.byp .nm { fill: var(--dim); }
-  svg.grid .ch { fill: var(--cyan-dim); font-size: 9.5px; letter-spacing: .08em; }
+  svg.grid .ch { fill: var(--cyan-dim); font-size: 10.5px; letter-spacing: .06em; }
   svg.grid .chbox { fill: rgba(47,230,255,0.10); stroke: rgba(47,230,255,0.30);
                     stroke-width: 1; rx: 2; }
   svg.grid .cell.byp .ch { fill: var(--muted); }
@@ -1109,7 +1115,7 @@ $('knobs').addEventListener('click', e => {
 // feeds list, so the browser never has to know how the cable bitmask is
 // packed. Live cells and live cables are lit; everything the signal does not
 // reach stays grey, which is the whole point of drawing it at all.
-const CW = 88, CH = 42, HGAP = 26, VGAP = 11, PAD = 3;
+const CW = 74, CH = 40, HGAP = 18, VGAP = 10, PAD = 3;
 const cx = c => PAD + c * (CW + HGAP);
 
 function renderGrid(g) {
@@ -1155,18 +1161,19 @@ function renderGrid(g) {
     const x = cx(c.col), y = cy(c.row);
     const cls = ['cell', c.live ? 'live' : '', c.bypassed ? 'byp' : ''].join(' ');
     const ch = c.channel ? `
-      <rect class="chbox" x="${x + CW - 20}" y="${y + CH - 17}" width="14" height="12"/>
-      <text class="ch" x="${x + CW - 16.5}" y="${y + CH - 8}" data-cyc="1">${c.channel}</text>` : '';
+      <rect class="chbox" x="${x + CW - 19}" y="${y + CH - 16}" width="14" height="12.5"/>
+      <text class="ch" x="${x + CW - 15.5}" y="${y + CH - 7}" data-cyc="1">${c.channel}</text>` : '';
     parts.push(`<g class="${cls}" data-fam="${c.family}" data-inst="${c.instance}"
         data-chi="${'ABCD'.indexOf(c.channel || 'A')}" data-chn="4">
       <title>${esc(c.label)}${c.bypassed ? ' (bypassed)' : ''}${c.live ? '' : ' - not reached by the signal'}</title>
       <rect x="${x}" y="${y}" width="${CW}" height="${CH}"/>
-      <text class="nm" x="${x + 9}" y="${y + 17}">${esc(shortLabel(c.label))}</text>
+      <text class="nm" x="${x + 7}" y="${y + 17}">${esc(shortLabel(c.label))}</text>
       ${ch}</g>`);
   }
 
   $('blocks').innerHTML =
-    `<svg class="grid" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}"
+    `<svg class="grid" viewBox="0 0 ${W} ${H}" style="max-width:${W}px"
+          preserveAspectRatio="xMidYMid meet"
           role="img" aria-label="signal routing grid">
        <defs><filter id="glow" filterUnits="userSpaceOnUse"
                      x="0" y="0" width="${W}" height="${H}">
@@ -1184,7 +1191,10 @@ function renderGrid(g) {
 
 // "Compressor 1" does not fit an 88px cell at 11px, and a name clipped
 // mid-word is worse than one shortened on purpose.
-const SHORT = {Compressor: 'Comp', Tremolo: 'Trem', Multitap: 'MTap'};
+const SHORT = {Compressor: 'Comp', Tremolo: 'Trem', Multitap: 'MTap',
+               'Graphic EQ': 'GEQ', 'Parametric EQ': 'PEQ', Volume: 'Vol',
+               Megatap: 'MTap', Enhancer: 'Enh', Crossover: 'Xover',
+               Synth: 'Syn', Vocoder: 'Voc', Looper: 'Loop'};
 function shortLabel(label) {
   if (!label) return '';
   const m = label.match(/^(.*?) (\d+)$/);
