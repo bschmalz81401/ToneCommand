@@ -17,7 +17,7 @@ from pydantic import BaseModel
 
 from fm9.device import FM9, FM9NotFound
 from fm9.registry import Registry
-from fm9 import ai_settings, health, planner
+from fm9 import ai_settings, editbuffer, health, planner
 from fm9 import protocol as proto
 
 ROOT = Path(__file__).resolve().parent
@@ -752,6 +752,111 @@ def api_preset(body: PresetBody):
 _shared_cache: dict = {"preset": None, "map": None}
 
 
+# --- undo and A/B ----------------------------------------------------------
+# In memory and lost on restart, deliberately. An undo history that outlived
+# the session would be offering to revert a rig it has not looked at since.
+_snaps: dict = {"undo": None, "a": None, "b": None}
+
+
+def _take(slot: str) -> dict:
+    """Capture the edit buffer into a slot. Silent, about a quarter second."""
+    snap = editbuffer.capture(get_fm9(), reg)
+    _snaps[slot] = snap
+    return snap
+
+
+@app.get("/api/snapshots")
+def api_snapshots():
+    """Which slots hold something, and what undoing would actually do.
+
+    The pending description is computed live rather than stored, because the
+    buffer moves under it: a snapshot taken two edits ago describes a larger
+    undo now than it did then, and a button whose label is stale about its own
+    blast radius is worse than one with no label.
+    """
+    with _lock:
+        out = {}
+        # One read of the buffer for all three slots. Reading it per slot
+        # tripled the MIDI traffic to answer the same question three times.
+        try:
+            now = editbuffer.capture(get_fm9(), reg)
+            err = None
+        except Exception as e:
+            now, err = None, str(e)
+        for slot, snap in _snaps.items():
+            if snap is None:
+                out[slot] = None
+                continue
+            row = {"preset": snap.get("preset"),
+                   "preset_name": snap.get("preset_name"),
+                   "scene": snap.get("scene")}
+            if now is None:
+                row["stale"] = True
+                row["pending"] = err
+            elif now.get("preset") != snap.get("preset"):
+                row["stale"] = True
+                row["pending"] = (f"captured on preset {snap.get('preset')}, "
+                                  f"{now.get('preset')} is loaded")
+            else:
+                row["stale"] = False
+                row["pending"] = editbuffer.summarise(
+                    editbuffer.diff(reg, snap, now))
+            out[slot] = row
+        return out
+
+
+@app.post("/api/snapshot")
+def api_snapshot(body: dict):
+    """Store the current edit buffer in slot a or b."""
+    slot = str(body.get("slot", "")).lower()
+    if slot not in ("a", "b"):
+        return JSONResponse({"error": "slot must be a or b"}, status_code=400)
+    with _lock:
+        try:
+            snap = _take(slot)
+            return {"slot": slot, "preset": snap.get("preset"),
+                    "blocks": len(snap.get("blocks") or [])}
+        except Exception as e:
+            return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@app.post("/api/restore")
+def api_restore(body: dict):
+    """Put the edit buffer back to a stored snapshot.
+
+    Gig mode refuses. A restore writes parameters, and gig mode's whole
+    position is that nothing but a scene change reaches hardware while someone
+    is playing; an undo is no less a write for being a well-intentioned one.
+    """
+    slot = str(body.get("slot", "")).lower()
+    if slot not in _snaps:
+        return JSONResponse({"error": f"unknown slot {slot!r}"}, status_code=400)
+    with _lock:
+        if _gig_mode["on"]:
+            return JSONResponse(
+                {"error": "GIG MODE is on: refusing to restore. An undo writes "
+                          "parameters like any other change."}, status_code=423)
+        snap = _snaps.get(slot)
+        if snap is None:
+            return JSONResponse({"error": f"nothing captured in {slot}"},
+                                status_code=409)
+        try:
+            fm9 = get_fm9()
+            # Recalling A must not lose where you were, or A/B is a one-way
+            # trip and the comparison can only be made once.
+            if slot in ("a", "b"):
+                other = "b" if slot == "a" else "a"
+                if _snaps.get(other) is None:
+                    _take(other)
+            res = editbuffer.restore(fm9, reg, snap)
+            return {"slot": slot, "ok": res.ok,
+                    "applied": res.applied, "failed": res.failed}
+        except ValueError as e:
+            return JSONResponse({"error": str(e)}, status_code=409)
+        except Exception as e:
+            return JSONResponse({"error": str(e)}, status_code=500)
+
+
 @app.post("/api/health")
 def api_health():
     """Scan the loaded preset: dead scenes, cloned scenes, level outliers.
@@ -885,6 +990,25 @@ def api_apply(body: ApplyBody):
                                   f"\"{current[1] if current else ''}\"). "
                                   f"Re-run the prompt against the current preset."},
                         status_code=409)
+            # Snapshot before anything is written, so undo is always there
+            # rather than something you had to remember to arm. It is silent
+            # and costs about a quarter second, which is the whole reason it
+            # can be automatic: reads of the loaded buffer are free, unlike
+            # the scene sweep a health scan needs.
+            #
+            # Only for actions that actually write. A scene change is the
+            # rig's own control surface and undoing it means pressing the
+            # other scene, and storing is guarded by its own confirmation.
+            if any(a.kind not in ("set_scene", "store") for a in body.actions):
+                try:
+                    _take("undo")
+                except Exception as e:
+                    # A snapshot that fails must not block the edit. Say so,
+                    # rather than leaving an UNDO button that quietly refers
+                    # to some older state than the user assumes.
+                    _snaps["undo"] = None
+                    results.append({"action": {"kind": "snapshot"}, "ok": False,
+                                    "detail": f"could not snapshot for undo: {e}"})
             for a in body.actions:
                 errs, warns = validate_action(a)
                 if errs:

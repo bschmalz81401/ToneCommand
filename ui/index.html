@@ -379,6 +379,20 @@
   .hears { margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--line);
            color: var(--dim); font-size: 0.72rem; letter-spacing: 0.04em; }
 
+  /* Undo and A/B. Every plugin a guitarist has ever used has A/B compare and
+     the FM9 does not, and an edit you cannot take back is an edit you think
+     twice about, which is the opposite of what a tool like this needs. */
+  .abrow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .abrow .sep { width: 1px; align-self: stretch; background: var(--line);
+                margin: 0 4px; }
+  .abrow .lbl { color: var(--cyan-dim); font-size: 0.62rem;
+                letter-spacing: 0.18em; }
+  .abrow button.small { padding: 4px 9px; font-size: 0.68rem; }
+  .abrow button.held { border-color: var(--violet); color: var(--violet); }
+  #undowhat { color: var(--muted); font-size: 0.72rem; letter-spacing: 0.04em;
+              flex: 1 1 200px; min-width: 0; overflow: hidden;
+              text-overflow: ellipsis; white-space: nowrap; }
+
   #log {
     font-size: 0.75rem; color: var(--muted); max-height: 180px; overflow-y: auto;
     line-height: 1.7;
@@ -489,6 +503,22 @@
       <button class="confirm" id="apply">TRANSMIT TO FM9</button>
       <button class="danger" id="discard">DISCARD</button>
     </div>
+  </div>
+
+  <div class="console" data-label="UNDO / COMPARE">
+    <div class="abrow">
+      <button id="undo" disabled>UNDO</button>
+      <span id="undowhat">nothing to undo yet</span>
+      <span class="sep"></span>
+      <span class="lbl">A/B</span>
+      <button class="small" id="holda">HOLD A</button>
+      <button class="small" id="reca" disabled>RECALL A</button>
+      <button class="small" id="holdb">HOLD B</button>
+      <button class="small" id="recb" disabled>RECALL B</button>
+    </div>
+    <div class="hint">A snapshot is a silent read of the edit buffer, taken
+      automatically before every change so UNDO is always there. Only what
+      actually differs is written back. Nothing here touches a saved preset.</div>
   </div>
 
   <div class="console" data-label="SIGNAL CHAIN">
@@ -818,6 +848,72 @@ function alsoAffects(a, currentScene) {
   return '';
 }
 
+// --- undo and A/B ---------------------------------------------------------
+// Refreshed after changes rather than on the five-second poll: describing what
+// an undo would do means reading the whole buffer, and doing that on a timer
+// would put a quarter second of MIDI traffic on the wire every five seconds to
+// answer a question nothing had changed the answer to.
+async function refreshSnaps() {
+  try {
+    const d = await (await fetch('/api/snapshots')).json();
+    const u = d.undo;
+    $('undo').disabled = !u || u.stale;
+    $('undowhat').textContent = u ? u.pending : 'nothing to undo yet';
+    $('undowhat').title = u ? u.pending : '';
+    for (const [slot, hold, rec] of [['a', 'holda', 'reca'], ['b', 'holdb', 'recb']]) {
+      const s = d[slot];
+      $(rec).disabled = !s || s.stale;
+      $(hold).classList.toggle('held', !!s && !s.stale);
+      $(rec).title = s ? (s.stale ? s.pending : `back to ${slot.toUpperCase()}: ${s.pending}`)
+                       : `nothing held in ${slot.toUpperCase()}`;
+    }
+  } catch (e) { /* silent: this only ever adds information */ }
+}
+
+async function holdSlot(slot) {
+  try {
+    const r = await fetch('/api/snapshot', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({slot})});
+    const d = await r.json();
+    if (d.error) throw new Error(d.error);
+    log(`held ${slot.toUpperCase()}: ${d.blocks} blocks of preset ${d.preset}`, 'ok');
+  } catch (e) {
+    log(`could not hold ${slot.toUpperCase()}: ${e.message}`, 'err');
+  }
+  refreshSnaps();
+}
+
+async function recallSlot(slot) {
+  const btns = ['undo', 'holda', 'reca', 'holdb', 'recb'];
+  btns.forEach(b => $(b).disabled = true);
+  try {
+    const r = await fetch('/api/restore', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({slot})});
+    const d = await r.json();
+    if (d.error) throw new Error(d.error);
+    const n = (d.applied || []).length;
+    log(n ? `${slot === 'undo' ? 'undone' : 'recalled ' + slot.toUpperCase()}: `
+            + d.applied.join('; ')
+          : 'nothing to change: the buffer already matched', d.failed.length ? 'warn' : 'ok');
+    // A restore that could not put something back has to say so. "Undone" is
+    // a claim about the rig, not about what we meant to do.
+    for (const f of d.failed || []) log(`could not restore ${f}`, 'err');
+  } catch (e) {
+    log(`restore failed: ${e.message}`, 'err');
+  } finally {
+    await refresh();
+    await refreshSnaps();
+  }
+}
+
+$('undo').onclick = () => recallSlot('undo');
+$('holda').onclick = () => holdSlot('a');
+$('holdb').onclick = () => holdSlot('b');
+$('reca').onclick = () => recallSlot('a');
+$('recb').onclick = () => recallSlot('b');
+
 // --- preset health --------------------------------------------------------
 // The one thing this tool does that FM9-Edit structurally cannot: not edit the
 // preset, but judge it. Audible, so it only ever runs on a click.
@@ -910,6 +1006,7 @@ async function blockAction(action, btn) {
     if (btn) btn.classList.remove('busy');
     blockBusy = false;
     await refresh();          // re-read: never assume the write landed
+    refreshSnaps();           // and the undo now refers to this change
   }
 }
 
@@ -1261,6 +1358,7 @@ async function saveAiSettings(extra) {
     log(`AI backend: ${d.settings.backend || 'auto'}`
         + (d.settings.hasKey ? ' (key stored)' : ''), 'ok');
     await loadAiSettings();
+refreshSnaps();
     aiModal(false);
   } catch (e) {
     log(`could not save AI settings: ${e.message}`, 'err');
@@ -1305,6 +1403,7 @@ async function apply() {
     $('apply').disabled = false; $('discard').disabled = false;
     currentPlan = null;
     clearAffected();
+    refreshSnaps();
   }
 }
 

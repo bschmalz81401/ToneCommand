@@ -1,0 +1,244 @@
+"""Undo, and A/B: the two things that make a tone tool safe to play with.
+
+Every plugin a guitarist has ever used has A/B compare. The FM9 does not, and
+until now neither did this. That absence shapes behaviour: a change you cannot
+take back is a change you think twice about, so the tool got used timidly, for
+edits people were already sure of. The interesting prompts are the ones you
+are NOT sure of.
+
+WHAT A SNAPSHOT IS
+------------------
+A read of the whole edit buffer: every block's bypass state, selected channel,
+and complete parameter dump across all its channels. On the connected FM9 that
+is fourteen bulk reads and about a quarter of a second, and it is SILENT. No
+scene changes, no writes, nothing audible. That is what makes it affordable to
+take one automatically before every transmit, which is what makes undo always
+available rather than something you had to remember to arm.
+
+Contrast with fm9/health.py, where reading a scene means standing in it. The
+difference is worth internalising: reads of the loaded state are free, reads
+that require changing the loaded state are not.
+
+WHAT A RESTORE IS
+-----------------
+A diff, not a replay. Comparing two snapshots gives the handful of parameters
+that actually differ, and only those are written back. Writing all 3000 values
+in the buffer would take minutes, would put thousands of messages on the wire,
+and would touch parameters nothing had changed, which is a large blast radius
+for an operation whose entire purpose is to be safe.
+
+Each write goes through the device's verified path and is read back. A restore
+that could not put something back says so and names it, because "undone" is a
+claim about the rig, not about our intentions.
+
+WHAT IT DELIBERATELY DOES NOT DO
+--------------------------------
+Nothing here writes to a preset slot. Snapshots live in memory for the life of
+the server process and are lost on restart, which is correct: an undo history
+that outlives the session would be offering to revert a rig it has not looked
+at since. The edit buffer is the scope, exactly as everywhere else in this
+tool.
+
+It also refuses to restore into a different preset than it captured. The block
+layout, the channel assignments and the parameter meanings are all
+preset-specific, so a snapshot applied to the wrong preset is not an undo, it
+is a corruption with a reassuring name.
+"""
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+
+
+@dataclass
+class Change:
+    """One parameter that differs between two snapshots."""
+    effect_id: int
+    family: str
+    instance: int
+    channel: int          # which channel the value lives on
+    param_id: int
+    label: str
+    frm: float | None     # display units, for saying what will happen
+    to: float | None
+
+
+@dataclass
+class Restore:
+    """What a restore actually managed to do."""
+    applied: list[str] = field(default_factory=list)
+    failed: list[str] = field(default_factory=list)
+
+    @property
+    def ok(self) -> bool:
+        return not self.failed
+
+
+def _stride(values: list[int], channels: int) -> int:
+    """Parameter block length for one channel.
+
+    bulk_read returns every channel's values concatenated, so index
+    `channel * stride + param_id` addresses one parameter on one channel.
+    """
+    return len(values) // channels if channels > 1 else len(values)
+
+
+def capture(fm9, reg) -> dict:
+    """Read the whole edit buffer. Silent, and cheap enough to do often."""
+    preset = fm9.current_preset()
+    scene = fm9.scene_name()
+    blocks = []
+    for b in fm9.status_dump() or []:
+        fam = reg.family_of_effect_id(b.effect_id)
+        if not fam:
+            continue
+        values = fm9.bulk_read(b.effect_id)
+        blocks.append({
+            "effect_id": b.effect_id,
+            "family": fam[0],
+            "instance": fam[1],
+            "bypassed": bool(b.bypassed),
+            "channel": int(b.channel),
+            "channels": max(1, fm9._channels.get(b.effect_id, 1)),
+            "values": values or [],
+        })
+    return {
+        "preset": preset[0] if preset else None,
+        "preset_name": preset[1] if preset else None,
+        "scene": scene[0] if scene else None,
+        "blocks": blocks,
+    }
+
+
+def _display(reg, family, instance, param_id, wire):
+    """Wire value as the number a human would recognise, or None."""
+    try:
+        spec = reg.spec(family, param_id, instance)
+    except Exception:
+        return None, None
+    if spec is None or spec.dmin is None:
+        return None, None
+    from fm9.protocol import normalized_to_display
+    return round(normalized_to_display(
+        wire / 65534, spec.dmin, spec.dmax, spec.scale), 2), spec
+
+
+def diff(reg, frm: dict, to: dict) -> dict:
+    """What changed between two snapshots.
+
+    Returns parameter changes plus bypass and channel changes, which are
+    stored per scene rather than per channel and so are listed separately.
+    """
+    params: list[Change] = []
+    switches: list[str] = []
+    by_eid = {b["effect_id"]: b for b in to["blocks"]}
+    for a in frm["blocks"]:
+        b = by_eid.get(a["effect_id"])
+        if b is None:
+            continue
+        if a["bypassed"] != b["bypassed"]:
+            switches.append(f"{a['family']} {a['instance']}: "
+                            f"{'bypassed' if b['bypassed'] else 'engaged'} "
+                            f"-> {'bypassed' if a['bypassed'] else 'engaged'}")
+        if a["channel"] != b["channel"]:
+            switches.append(f"{a['family']} {a['instance']}: channel "
+                            f"{'ABCD'[b['channel']]} -> {'ABCD'[a['channel']]}")
+        av, bv = a["values"], b["values"]
+        if not av or len(av) != len(bv):
+            continue
+        chans = a["channels"]
+        stride = _stride(av, chans)
+        for i, (x, y) in enumerate(zip(av, bv)):
+            if x == y:
+                continue
+            ch, pid = (i // stride, i % stride) if stride else (0, i)
+            old, spec = _display(reg, a["family"], a["instance"], pid, x)
+            new, _ = _display(reg, a["family"], a["instance"], pid, y)
+            params.append(Change(
+                effect_id=a["effect_id"], family=a["family"],
+                instance=a["instance"], channel=ch, param_id=pid,
+                label=(spec.label if spec is not None and spec.label
+                       else f"param {pid}"),
+                frm=old, to=new))
+    return {"params": params, "switches": switches}
+
+
+def restore(fm9, reg, snap: dict) -> Restore:
+    """Put the edit buffer back the way the snapshot found it.
+
+    Writes only what differs. Raises if the loaded preset is not the one the
+    snapshot came from, because applying it anywhere else is not an undo.
+    """
+    now = capture(fm9, reg)
+    if snap.get("preset") != now.get("preset"):
+        raise ValueError(
+            f"snapshot is of preset {snap.get('preset')} but "
+            f"{now.get('preset')} is loaded; refusing to restore across presets")
+
+    out = Restore()
+    d = diff(reg, snap, now)
+    by_eid = {b["effect_id"]: b for b in now["blocks"]}
+    # Track channel positions rather than re-reading them between writes. The
+    # device applies writes asynchronously and a read fired inside that window
+    # returns the PRE-write state, which the simulator models faithfully. So a
+    # status dump taken right after set_channel would report where the block
+    # used to be, and we would move it back to the wrong place.
+    where = {eid: b["channel"] for eid, b in by_eid.items()}
+
+    # Parameters first, grouped by block so a block whose values live on a
+    # non-active channel is switched there once rather than once per value.
+    from itertools import groupby
+    changes = sorted(d["params"], key=lambda c: (c.effect_id, c.channel))
+    for (eid, ch), group in groupby(changes, key=lambda c: (c.effect_id, c.channel)):
+        group = list(group)
+        if where.get(eid) != ch:
+            fm9.set_channel(eid, ch)
+            where[eid] = ch
+        for c in group:
+            try:
+                spec = reg.spec(c.family, c.param_id, c.instance)
+            except Exception:
+                spec = None
+            if spec is None or spec.dmin is None or c.frm is None:
+                # No calibrated range means no way to write a value back that
+                # we could then verify. Saying nothing here would let a
+                # restore report success over a parameter it never touched.
+                out.failed.append(f"{c.family} {c.instance} {c.label}: "
+                                  f"no calibrated range, left as it is")
+                continue
+            res = fm9.set_param_display(spec, c.frm)
+            if getattr(res, "ok", False):
+                out.applied.append(f"{c.family} {c.instance} {c.label} -> {c.frm}")
+            else:
+                out.failed.append(f"{c.family} {c.instance} {c.label}: "
+                                  f"{getattr(res, 'detail', 'write not verified')}")
+
+    # Then bypass and channel, which are what the scene itself stores. Channel
+    # goes last for each block so the parameter writes above land where they
+    # were read from before the block is moved back.
+    for a in snap["blocks"]:
+        b = by_eid.get(a["effect_id"])
+        if b is None:
+            continue
+        if a["bypassed"] != b["bypassed"]:
+            fm9.set_bypass(a["effect_id"], a["bypassed"])
+            out.applied.append(f"{a['family']} {a['instance']}: "
+                               f"{'bypassed' if a['bypassed'] else 'engaged'}")
+        if where.get(a["effect_id"]) != a["channel"]:
+            fm9.set_channel(a["effect_id"], a["channel"])
+            where[a["effect_id"]] = a["channel"]
+            out.applied.append(f"{a['family']} {a['instance']}: "
+                               f"channel {'ABCD'[a['channel']]}")
+    return out
+
+
+def summarise(d: dict, limit: int = 6) -> str:
+    """One line saying what a restore would do, for a button that needs to be
+    honest about its blast radius before it is pressed."""
+    bits = [f"{c.family} {c.instance} {c.label} {c.to} -> {c.frm}"
+            for c in d["params"][:limit]]
+    bits += d["switches"][:max(0, limit - len(bits))]
+    total = len(d["params"]) + len(d["switches"])
+    if not total:
+        return "nothing to undo: the buffer matches the snapshot"
+    more = total - len(bits)
+    return "; ".join(bits) + (f"; and {more} more" if more > 0 else "")
