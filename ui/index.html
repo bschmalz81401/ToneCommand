@@ -56,12 +56,6 @@
     background: rgba(0,0,0,0.35); color: var(--muted); white-space: nowrap;
   }
   .pill b { color: var(--text); font-weight: 500; }
-  #scene {
-    display: inline-flex; align-items: baseline; gap: 7px;
-    width: 190px; overflow: hidden;
-  }
-  #scene b { flex: 1; min-width: 0; overflow: hidden;
-             text-overflow: ellipsis; white-space: nowrap; }
   #link.on { border-color: var(--green); color: var(--green);
              box-shadow: 0 0 12px rgba(61, 255, 160, 0.25); }
   #link.off { border-color: var(--red); color: var(--red); }
@@ -290,7 +284,6 @@
             <button id="prescan">RESCAN</button></div>
         </div>
       </span>
-      <span class="pill" id="scene">SCENE <b>...</b></span>
       <span class="pill off" id="link"><span class="dot"></span>LINK</span>
     </div>
   </header>
@@ -564,7 +557,6 @@ async function refresh() {
     if (s.preset) $('preset').innerHTML =
       `<span class="lbl">PRESET</span><span class="pnum">${s.preset.editor ?? s.preset.number}</span>` +
       `<b>${esc(s.preset.name)}</b><span class="caret">&#9662;</span>`;
-    if (s.scene) $('scene').innerHTML = `SCENE ${s.scene.number} <b>${s.scene.name}</b>`;
     renderScenes(s);
     $('blocks').innerHTML = s.blocks.map(b =>
       `<span class="block ${b.bypassed ? 'byp' : ''}">${b.label}<span class="ch">${b.channel}</span></span>`
