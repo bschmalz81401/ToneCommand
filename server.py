@@ -17,7 +17,7 @@ from pydantic import BaseModel
 
 from fm9.device import FM9, FM9NotFound
 from fm9.registry import Registry
-from fm9 import ai_settings, planner
+from fm9 import ai_settings, health, planner
 from fm9 import protocol as proto
 
 ROOT = Path(__file__).resolve().parent
@@ -750,6 +750,33 @@ def api_preset(body: PresetBody):
 
 
 _shared_cache: dict = {"preset": None, "map": None}
+
+
+@app.post("/api/health")
+def api_health():
+    """Scan the loaded preset: dead scenes, cloned scenes, level outliers.
+
+    POST rather than GET because this is not a read. It walks the rig through
+    all eight scenes to reach them, which is audible, so it must never be
+    something a browser can do by prefetching a link or replaying a refresh.
+    It is not cached either: a scan you did not just run is a scan describing
+    a preset you may since have edited, and a stale green tick is worse than
+    no tick at all.
+
+    Gig mode refuses it. The scan makes noise and takes several seconds, which
+    on stage is the definition of the thing gig mode exists to prevent.
+    """
+    with _lock:
+        if _gig_mode["on"]:
+            return JSONResponse(
+                {"error": "GIG MODE is on: refusing to scan. A scan walks the "
+                          "rig through every scene and is audible, which on "
+                          "stage is exactly what gig mode exists to prevent."},
+                status_code=423)
+        try:
+            return health.scan(get_fm9(), reg)
+        except Exception as e:
+            return {"error": str(e)}
 
 
 @app.get("/api/shared")

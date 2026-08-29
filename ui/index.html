@@ -350,6 +350,35 @@
      offering nothing, because it would look exactly as trustworthy. */
   .knob .flat { height: 3px; border-radius: 2px; background: var(--line); }
 
+  /* Is this preset actually correct? The capability no other FM9 tool has,
+     and until now it lived entirely in command-line scripts. */
+  .hz { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .hz button { flex: 0 0 auto; }
+  .hrow { display: flex; align-items: baseline; gap: 10px; padding: 5px 0;
+          border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 0.76rem; }
+  .hrow:last-child { border-bottom: none; }
+  .hrow .n { color: var(--dim); width: 16px; flex: 0 0 auto; }
+  .hrow .nm { color: var(--muted); flex: 1 1 auto; min-width: 0;
+              overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .hrow .lv { color: var(--dim); font-variant-numeric: tabular-nums;
+              font-size: 0.72rem; }
+  .hrow .lv .unread { color: var(--amber); font-style: normal; opacity: 0.75; }
+  .hrow .vd { flex: 0 0 auto; font-size: 0.68rem; letter-spacing: 0.1em; }
+  .hrow .vd.pass { color: var(--green); }
+  .hrow .vd.fail { color: var(--red); }
+  .hfind { display: flex; gap: 9px; padding: 8px 10px; margin-top: 8px;
+           border-radius: 3px; font-size: 0.74rem; line-height: 1.55; }
+  .hfind .tag { flex: 0 0 auto; font-size: 0.62rem; letter-spacing: 0.12em;
+                padding: 2px 5px; border-radius: 2px; height: fit-content; }
+  .hfind.warn { background: rgba(255,180,84,0.07); color: #d8c6a8; }
+  .hfind.warn .tag { background: rgba(255,180,84,0.18); color: var(--amber); }
+  .hfind.fail { background: rgba(255,92,92,0.08); color: #e3b6b6; }
+  .hfind.fail .tag { background: rgba(255,92,92,0.20); color: var(--red); }
+  /* The bottom rung of the ladder, and the one that never turns green on its
+     own. Everything above it is a machine reading a wire. */
+  .hears { margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--line);
+           color: var(--dim); font-size: 0.72rem; letter-spacing: 0.04em; }
+
   #log {
     font-size: 0.75rem; color: var(--muted); max-height: 180px; overflow-y: auto;
     line-height: 1.7;
@@ -470,6 +499,16 @@
   <div class="console" data-label="TONE">
     <div class="knobs" id="knobs"><span class="hint">awaiting link...</span></div>
     <div class="hint">Drag any slider to set it. Changes go to the edit buffer, not to your saved preset.</div>
+  </div>
+
+  <div class="console" data-label="PRESET HEALTH">
+    <div class="hz">
+      <button id="scan">SCAN THIS PRESET</button>
+      <span class="hint" style="margin:0" id="scanhint">Walks every scene to
+        read it, so the rig makes noise for a few seconds. Not a background
+        check, and never on a timer.</span>
+    </div>
+    <div id="hout"></div>
   </div>
 
   <div class="console" data-label="LOG" style="margin-top:20px">
@@ -778,6 +817,69 @@ function alsoAffects(a, currentScene) {
   }
   return '';
 }
+
+// --- preset health --------------------------------------------------------
+// The one thing this tool does that FM9-Edit structurally cannot: not edit the
+// preset, but judge it. Audible, so it only ever runs on a click.
+async function scanPreset() {
+  const btn = $('scan');
+  btn.disabled = true;
+  const was = btn.textContent;
+  btn.textContent = 'SCANNING...';
+  $('hout').innerHTML = '<div class="hint">walking the scenes...</div>';
+  try {
+    const r = await fetch('/api/health', {method: 'POST'});
+    const d = await r.json();
+    if (d.error) throw new Error(d.error);
+    renderHealth(d);
+    const bad = d.findings.length;
+    log(bad ? `scan: ${bad} finding${bad > 1 ? 's' : ''} on this preset`
+            : 'scan: every scene alive, nothing flagged', bad ? 'warn' : 'ok');
+  } catch (e) {
+    $('hout').innerHTML = '';
+    log(`scan failed: ${e.message}`, 'err');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = was;
+    refresh();
+  }
+}
+
+function renderHealth(d) {
+  const rows = d.scenes.map(s => `
+    <div class="hrow"><span class="n">${s.number}</span>
+      <span class="nm">${esc(s.name)}</span>
+      <span class="lv">${(() => {
+        // A value we failed to read is marked, never left blank: a blank cell
+        // reads as "this scene has no volume block", which would be a false
+        // statement about the rig.
+        const u = s.unread || [];
+        const cell = (k, txt) => u.includes(k) ? '<i class="unread">unread</i>'
+                                               : txt;
+        return [s.amp_db === null && !u.includes('amp_db') ? '' : cell('amp_db', s.amp_db + ' dB'),
+                s.vol === null && !u.includes('vol') ? '' : cell('vol', 'vol ' + s.vol)]
+               .filter(Boolean).join('  ');
+      })()}</span>
+      <span class="vd ${s.alive ? 'pass' : 'fail'}">${s.alive ? 'ALIVE' : 'DEAD'}</span>
+    </div>`).join('');
+  // Severity first: a dead scene and a loudness note are not the same news.
+  const order = {fail: 0, warn: 1};
+  const finds = [...d.findings]
+    .sort((a, b) => (order[a.severity] ?? 9) - (order[b.severity] ?? 9))
+    .map(f => `<div class="hfind ${f.severity}">
+        <span class="tag">${esc(f.kind)}</span><span>${esc(f.detail)}</span></div>`)
+    .join('');
+  const clean = d.findings.length ? '' :
+    '<div class="hfind warn" style="background:rgba(61,255,160,0.06);color:#a8d8bf">' +
+    '<span class="tag" style="background:rgba(61,255,160,0.18);color:var(--green)">clear</span>' +
+    '<span>Every named scene has a live signal path, no two scenes are the ' +
+    'same, and levels sit inside your conventions.</span></div>';
+  $('hout').innerHTML = rows + finds + clean +
+    `<div class="hears">Ears: pending. Every check above is a machine reading a
+     wire. None of them can tell you the tone is good.</div>`;
+}
+
+$('scan').onclick = scanPreset;
 
 // --- signal chain as a control surface ------------------------------------
 // Clicking a block bypasses it; clicking its channel letter cycles A-D. These
