@@ -93,6 +93,19 @@ because a duplicate is not broken by any rule anyone had written down.
 The ladder ends honestly. Every check is a machine reading a wire, so the
 bottom rung always reads **ears: pending**.
 
+### Saving, with the safety catch on
+
+Everything else in this app is edit buffer only and reversible. Saving is not,
+so it gets its own panel and its own rules: it offers only the slots you listed
+in `TONECOMMAND_STORE_SLOTS` and never a free-text number, shows both the wire
+number and the FM9-Edit number for each, tells you what the slot currently
+holds, and asks before it overwrites. It also says plainly that undo will not
+help you here, because undo restores the edit buffer and cannot un-write a
+preset slot.
+
+Storing is disabled until you designate disposable slots, because nobody but
+you knows what lives in your banks.
+
 ### Undo and A/B, because the FM9 has neither
 
 A snapshot is a silent read of the whole edit buffer, about a quarter of a

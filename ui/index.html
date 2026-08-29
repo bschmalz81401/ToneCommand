@@ -471,6 +471,25 @@
              border-top: 1px solid var(--line); color: var(--dim);
              font-size: 0.66rem; letter-spacing: 0.05em; }
 
+  /* Saving is the only destructive thing this tool does, so it gets its own
+     panel, an explicit list of slots the owner designated, and a confirmation
+     that names what is about to be lost. Amber rather than cyan throughout:
+     everything else here writes to the edit buffer and is reversible. */
+  .saverow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .saverow select {
+    background: #0d0f0d; border: 1px solid #3a2f18; color: var(--fg);
+    font: inherit; font-size: 0.76rem; padding: 6px 8px; border-radius: 3px;
+    flex: 1 1 320px; min-width: 0;
+  }
+  #save {
+    border-color: var(--amber); color: var(--amber); flex: 0 0 auto;
+  }
+  #save:hover:not(:disabled) {
+    background: rgba(255,180,84,0.12); border-color: var(--amber);
+  }
+  #save:disabled { opacity: 0.45; cursor: default; }
+  .savewarn { color: var(--amber); font-size: 0.72rem; letter-spacing: 0.04em; }
+
   #log {
     font-size: 0.75rem; color: var(--muted); max-height: 180px; overflow-y: auto;
     line-height: 1.7;
@@ -612,6 +631,18 @@
     </div>
     <div class="hint">Snapshots are silent reads of the edit buffer, taken
       before every change. Nothing here touches a saved preset.</div>
+  </div>
+
+  <div class="console" data-label="SAVE TO PRESET">
+    <div class="saverow">
+      <select id="saveslot"><option>loading slots...</option></select>
+      <button id="save" disabled>SAVE</button>
+      <button class="small" id="savescan" title="read the current names of these slots">NAMES</button>
+    </div>
+    <div class="hint">Everything else in this app is edit buffer only and
+      reversible. This is not: it overwrites whatever is stored in the slot,
+      permanently, and <span class="savewarn">UNDO does not cover it</span>.
+      Only slots you listed in TONECOMMAND_STORE_SLOTS are offered.</div>
   </div>
 
   <div class="console" data-label="PRESET HEALTH">
@@ -1284,6 +1315,85 @@ $('holda').onclick = () => holdSlot('a');
 $('holdb').onclick = () => holdSlot('b');
 $('reca').onclick = () => recallSlot('a');
 $('recb').onclick = () => recallSlot('b');
+
+// --- saving -------------------------------------------------------------
+// The one destructive operation in the product. Until now the only way to do
+// it was to type "save this to preset 139" and hope the planner agreed, which
+// is a poor interface for the single action that cannot be undone.
+//
+// Three rules, all of them the same rule: never let this be a surprise.
+//   the slot list is the owner's whitelist, never a free-text number
+//   both numbers are shown, because being one out here overwrites the wrong preset
+//   the confirmation names what is about to be lost, not just where it lands
+let saveSlots = [];
+
+async function loadSaveSlots(withNames) {
+  try {
+    if (withNames) {
+      $('savescan').disabled = true;
+      $('savescan').textContent = 'READING...';
+      await fetch('/api/presets');        // fills the cache the endpoint reads
+    }
+    const d = await (await fetch('/api/store-slots')).json();
+    saveSlots = d.slots || [];
+    if (!d.configured) {
+      $('saveslot').innerHTML = `<option>${esc(d.why || 'storing is disabled')}</option>`;
+      $('save').disabled = true;
+      return;
+    }
+    $('saveslot').innerHTML = saveSlots.map(s => {
+      // What is in the slot NOW. "Overwrite 139" means nothing until you can
+      // see what 139 currently holds.
+      const holds = s.name ? `"${s.name}"` : (s.empty === true ? 'empty' : 'name not read');
+      return `<option value="${s.number}">${esc(s.label)}  ${esc(holds)}</option>`;
+    }).join('');
+    $('save').disabled = !saveSlots.length;
+  } catch (e) {
+    $('saveslot').innerHTML = '<option>could not read slots</option>';
+    $('save').disabled = true;
+  } finally {
+    $('savescan').disabled = false;
+    $('savescan').textContent = 'NAMES';
+  }
+}
+
+async function saveToSlot() {
+  const n = Number($('saveslot').value);
+  const slot = saveSlots.find(s => s.number === n);
+  if (!slot) return;
+  const holds = slot.name ? `"${slot.name}"` : (slot.empty === true ? 'nothing' : 'an unread preset');
+  if (!window.confirm(
+        `Save the current edit buffer to slot ${slot.label}?\n\n` +
+        `That slot currently holds ${holds}, and it will be overwritten ` +
+        `permanently. UNDO does not cover this.`)) {
+    log('save cancelled', 'warn');
+    return;
+  }
+  $('save').disabled = true;
+  const was = $('save').textContent;
+  $('save').textContent = 'SAVING...';
+  try {
+    const r = await fetch('/api/apply', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({actions: [{kind: 'store', block: 'PRESET',
+                                       instance: 1, value: n}]})});
+    const d = await r.json();
+    if (d.error) throw new Error(d.error);
+    const res = (d.results || []).slice(-1)[0];
+    if (!res || !res.ok) throw new Error(res ? res.detail : 'refused');
+    log(`saved to ${slot.label}: ${res.detail}`, 'ok');
+    await loadSaveSlots(true);          // that slot's name has just changed
+  } catch (e) {
+    log(`save failed: ${e.message}`, 'err');
+  } finally {
+    $('save').disabled = false;
+    $('save').textContent = was;
+  }
+}
+
+$('save').onclick = saveToSlot;
+$('savescan').onclick = () => loadSaveSlots(true);
+loadSaveSlots(false);
 
 // --- preset health --------------------------------------------------------
 // The one thing this tool does that FM9-Edit structurally cannot: not edit the

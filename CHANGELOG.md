@@ -39,6 +39,14 @@ session, we have already lost.
   automatically before every write, so undo is always armed. A restore is a
   diff, not a replay. Recalling A captures B first, so A/B is a round trip.
   In memory only, and refused across a preset change or in gig mode.
+- **A save button.** Until now the only way to keep a change was to type
+  "save this to preset 139" and hope the planner agreed, which is a poor
+  interface for the single action that cannot be undone. SAVE TO PRESET
+  offers the owner's whitelisted slots and nothing else, never a free-text
+  number, shows both the wire and the FM9-Edit number for each, says what
+  each slot currently holds, and asks before it overwrites. It states plainly
+  that undo does not cover it, because undo restores the edit buffer and
+  cannot un-write a preset slot.
 - **Preset health scan.** The audits that have existed as command-line scripts
   for weeks, on a screen: every named scene alive or dead with the hop that
   broke the path, amp level and volume gain side by side, and the findings

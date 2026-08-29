@@ -79,3 +79,78 @@ def test_the_text_snapshot_uses_the_label_too():
                        "label": p.slot_label(386), "name": "TEST"},
             "scene": None, "blocks": [], "values": {}}
     assert "386 (FM9-Edit 387)" in server.state_text(snap)
+
+
+# --- the save button: the one destructive control in the product ---
+
+def test_the_ui_offers_only_the_owners_whitelisted_slots(client):
+    """Never a free-text slot number. The list IS the safety mechanism, and a
+    typo in a text box would overwrite a preset nobody meant to touch."""
+    d = client.get("/api/store-slots").json()
+    assert d["configured"] and d["slots"]
+    from fm9.device import get_store_slots
+    assert {s["number"] for s in d["slots"]} == get_store_slots()
+    assert "saveslot" in UI and "<select" in UI.split('id="saveslot"')[0][-200:]
+
+
+def test_every_offered_slot_carries_both_numbers(client):
+    """The wire numbers slots 0-511 and the unit numbers them 1-512. Being one
+    out here overwrites the wrong preset, which is the definition of a prompt
+    that has to be unambiguous."""
+    for s in client.get("/api/store-slots").json()["slots"]:
+        assert s["label"] == f"{s['number']} (FM9-Edit {s['editor']})"
+
+
+def test_the_slot_list_says_what_each_slot_currently_holds():
+    """"Overwrite 139" means nothing until you can see what 139 holds."""
+    script = UI.split("<script>")[1]
+    load = script.split("async function loadSaveSlots")[1].split("\n}")[0]
+    assert "s.name" in load and "empty" in load
+
+
+def test_saving_asks_before_it_overwrites():
+    """The confirmation names what is about to be LOST, not just where the
+    save lands, and says plainly that undo will not help."""
+    script = UI.split("<script>")[1]
+    fn = script.split("async function saveToSlot")[1].split("\n}\n")[0]
+    assert "window.confirm" in fn
+    assert "holds" in fn and "UNDO does not cover this" in fn
+
+
+def test_a_store_outside_the_whitelist_is_refused(client):
+    """Derived from the configured whitelist, never hardcoded.
+
+    The first version of this test named slot 136, which is untouchable on
+    Moncy's unit but inside the range conftest configures for the suite. A
+    safety test that only passes against one person's .env is not a safety
+    test.
+    """
+    from fm9.device import get_store_slots
+    allowed = get_store_slots()
+    outside = [n for n in range(0, 512) if n not in allowed][:3]
+    assert outside, "nothing outside the whitelist to test against"
+    for slot in outside:
+        r = client.post("/api/apply", json={"actions": [{
+            "kind": "store", "block": "PRESET", "instance": 1,
+            "value": slot}]}).json()
+        assert not r["results"][-1]["ok"], slot
+
+
+def test_gig_mode_refuses_to_store(client):
+    client.post("/api/gig", json={"on": True})
+    try:
+        r = client.post("/api/apply", json={"actions": [{
+            "kind": "store", "block": "PRESET", "instance": 1, "value": 139}]})
+        assert r.status_code == 423
+    finally:
+        client.post("/api/gig", json={"on": False})
+
+
+def test_a_store_does_not_arm_an_undo(client):
+    """Undo restores the edit buffer. It cannot un-write a preset slot, and an
+    UNDO button that looked like it might would be worse than none."""
+    import server as srv
+    srv._snaps["undo"] = None
+    client.post("/api/apply", json={"actions": [{
+        "kind": "store", "block": "PRESET", "instance": 1, "value": 139}]})
+    assert srv._snaps["undo"] is None

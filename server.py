@@ -735,6 +735,43 @@ _gig_mode = {"on": _os.environ.get("TONECOMMAND_GIG_MODE") == "1"}
 _preset_cache: dict = {"slots": None}
 
 
+@app.get("/api/store-slots")
+def api_store_slots():
+    """The slots this unit's owner has designated as safe to overwrite.
+
+    Storing is the only destructive thing this tool does, so the UI is never
+    allowed to offer a free-text slot number: it offers this list or nothing.
+    Each entry carries what is in the slot NOW, because "overwrite 139" means
+    nothing until you can see what 139 currently holds.
+
+    Names come from the same cache the preset browser uses, read by number
+    without disturbing the loaded preset.
+    """
+    from fm9.device import get_store_slots
+    allowed = sorted(get_store_slots())
+    if not allowed:
+        return {"slots": [], "configured": False,
+                "why": "storing is disabled until TONECOMMAND_STORE_SLOTS names "
+                       "slots on your unit that are safe to overwrite"}
+    known = {}
+    if _preset_cache["slots"]:
+        known = {s["number"]: s for s in _preset_cache["slots"]}
+    out = []
+    for n in allowed:
+        s = known.get(n)
+        out.append({
+            "number": n,
+            "editor": proto.editor_number(n),
+            # both numbers, because this is the prompt where being one out is
+            # expensive and it is the rule everywhere else that costs
+            "label": proto.slot_label(n),
+            "name": (s or {}).get("name"),
+            "empty": (s or {}).get("empty"),
+        })
+    return {"slots": out, "configured": True,
+            "named": bool(known)}
+
+
 @app.get("/api/presets")
 def api_presets(refresh: bool = False):
     """Every slot name, read by number without disturbing the loaded preset."""
