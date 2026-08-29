@@ -406,11 +406,16 @@
   /* inline-flex with the label ellipsised, so the caret stays pinned beside
      the name instead of wrapping onto a line of its own when the name is long,
      which is most of the time: cab descriptions run to a full sentence. */
+  /* These are selectors and have to look like selectors. As bare text with a
+     hover border they read as a caption, so nobody discovers that the two
+     most interesting facts on the page are also the two things easiest to
+     change. Bordered, tinted, with a drawn chevron. */
   .audbtn {
-    display: inline-flex; align-items: baseline; gap: 5px; max-width: 100%;
-    background: none; border: 1px dashed transparent; color: inherit;
-    font: inherit; padding: 1px 5px; margin: -1px -5px; border-radius: 3px;
+    display: inline-flex; align-items: center; gap: 9px; max-width: 100%;
+    background: rgba(47,230,255,0.05); border: 1px solid #24404d;
+    color: inherit; font: inherit; padding: 3px 9px; border-radius: 4px;
     cursor: pointer; text-align: left;
+    transition: border-color .12s, background .12s, color .12s;
   }
   /* An amp name is short and it is the headline, so it never truncates: it
      wraps if it has to. Only the cab line is prose long enough to need an
@@ -420,9 +425,19 @@
   .model .sub .audbtn .l {
     min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
-  .audbtn:hover { border-color: var(--cyan-dim); color: var(--cyan); }
-  .audbtn::after { content: '\25BE'; color: var(--cyan-dim); font-size: 0.7em;
-                   flex: 0 0 auto; }
+  .audbtn:hover, .audbtn:focus-visible {
+    border-color: var(--cyan); background: rgba(47,230,255,0.12);
+    color: var(--cyan); outline: none;
+  }
+  /* Drawn, not typed. U+25BE renders small inside its own em box and came out
+     as a speck, the same way U+2699 did on the settings gear. A triangle made
+     of borders is exactly the size we say it is. */
+  .audbtn::after {
+    content: ''; flex: 0 0 auto; width: 0; height: 0; margin-left: 1px;
+    border-left: 5px solid transparent; border-right: 5px solid transparent;
+    border-top: 6px solid var(--cyan-dim);
+  }
+  .audbtn:hover::after { border-top-color: var(--cyan); }
   .aud { max-width: 100%; }
   .aud .pop { width: 380px; right: auto; left: 0; }
   .audhead { display: flex; gap: 6px; align-items: center; margin-bottom: 7px; }
@@ -532,6 +547,17 @@
     <div class="scenes" id="scenes"></div>
   </div>
 
+  <div class="console" data-label="SIGNAL CHAIN">
+    <div class="gridwrap" id="blocks"><span class="hint">awaiting link...</span></div>
+    <div class="gridnote">
+      <span class="k"><span class="sw" style="background:var(--cyan)"></span>carrying signal</span>
+      <span class="k"><span class="sw" style="background:#3b5262"></span>not reached</span>
+      <span class="k">dashed = bypassed</span>
+      <span class="k">click a block to bypass it, its letter to change channel</span>
+      <span class="k" id="gridwhy"></span>
+    </div>
+  </div>
+
   <div class="console" data-label="COMMAND">
     <div class="promptrow">
       <span class="prompt-prefix">&gt;</span>
@@ -551,6 +577,11 @@
     </div>
   </div>
 
+  <div class="console" data-label="TONE">
+    <div class="knobs" id="knobs"><span class="hint">awaiting link...</span></div>
+    <div class="hint">Drag any slider to set it. Changes go to the edit buffer, not to your saved preset.</div>
+  </div>
+
   <div class="console" data-label="UNDO / COMPARE">
     <div class="abrow">
       <button id="undo" disabled>UNDO</button>
@@ -562,25 +593,8 @@
       <button class="small" id="holdb">HOLD B</button>
       <button class="small" id="recb" disabled>RECALL B</button>
     </div>
-    <div class="hint">A snapshot is a silent read of the edit buffer, taken
-      automatically before every change so UNDO is always there. Only what
-      actually differs is written back. Nothing here touches a saved preset.</div>
-  </div>
-
-  <div class="console" data-label="SIGNAL CHAIN">
-    <div class="gridwrap" id="blocks"><span class="hint">awaiting link...</span></div>
-    <div class="gridnote">
-      <span class="k"><span class="sw" style="background:var(--cyan)"></span>carrying signal</span>
-      <span class="k"><span class="sw" style="background:#3b5262"></span>not reached</span>
-      <span class="k">dashed = bypassed, still passing through</span>
-      <span class="k" id="gridwhy"></span>
-    </div>
-    <div class="hint">Click a block to bypass or engage it. Click its letter to change channel.</div>
-  </div>
-
-  <div class="console" data-label="TONE">
-    <div class="knobs" id="knobs"><span class="hint">awaiting link...</span></div>
-    <div class="hint">Drag any slider to set it. Changes go to the edit buffer, not to your saved preset.</div>
+    <div class="hint">Snapshots are silent reads of the edit buffer, taken
+      before every change. Nothing here touches a saved preset.</div>
   </div>
 
   <div class="console" data-label="PRESET HEALTH">

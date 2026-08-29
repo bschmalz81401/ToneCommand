@@ -204,3 +204,37 @@ def test_the_slider_styling_is_present():
     style = UI.split("<style>")[1].split("</style>")[0]
     for rule in ("slider-runnable-track", "slider-thumb", ".knob", ".knobs"):
         assert rule in style, rule
+
+
+# --- what you see without scrolling ---
+
+def test_the_signal_chain_comes_before_the_prompt():
+    """It answers "what does my rig look like right now", which is the
+    question you arrive with. Fourth panel down it started at 521px, below the
+    fold on a laptop, so the rig you came to look at needed a scroll."""
+    order = re.findall(r'data-label="([^"]+)"', UI)
+    order = [x for x in order if x not in ("PROPOSED CHANGES", "AI SETTINGS")]
+    assert order.index("SIGNAL CHAIN") < order.index("COMMAND")
+    assert order.index("SCENES") < order.index("SIGNAL CHAIN")
+    # undo is reached after a change, not before one
+    assert order.index("UNDO / COMPARE") > order.index("TONE")
+
+
+def test_the_model_selectors_look_like_selectors():
+    """As bare text with a hover border they read as a caption, so nobody
+    discovers that the two most interesting facts on the page are also the two
+    things easiest to change."""
+    style = UI.split("<style>")[1].split("</style>")[0]
+    rule = style.split(".audbtn {")[1].split("}")[0]
+    assert "border:" in rule and "background:" in rule
+
+
+def test_the_chevron_is_drawn_not_typed():
+    """U+25BE renders small inside its own em box and came out as a speck, the
+    same way U+2699 did on the settings gear. A triangle made of borders is
+    exactly the size we say it is."""
+    assert "\\25BE" not in UI and "&#9662;" not in UI.split("</style>")[1] \
+        or "border-top: 6px solid" in UI
+    style = UI.split("<style>")[1].split("</style>")[0]
+    after = style.split(".audbtn::after {")[1].split("}")[0]
+    assert "border-left" in after and "border-top" in after

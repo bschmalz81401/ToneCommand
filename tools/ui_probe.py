@@ -132,6 +132,12 @@ class Tab:
     async def goto(self, url: str, settle: float, width: int, height: int):
         await self.send("Page.enable")
         await self.send("Runtime.enable")
+        # Without this the browser can serve index.html from its own cache and
+        # the probe reports on a page that no longer exists on disk. A tool
+        # whose entire purpose is to show what is really rendered must never
+        # be one edit behind: it turns "I checked" into a false statement.
+        await self.send("Network.enable")
+        await self.send("Network.setCacheDisabled", cacheDisabled=True)
         await self.send("Emulation.setDeviceMetricsOverride", width=width,
                         height=height, deviceScaleFactor=2, mobile=False)
         await self.send("Page.navigate", url=url)

@@ -141,7 +141,7 @@ def test_it_is_not_called_telemetry():
 def test_both_control_surfaces_say_what_they_do():
     """Nothing else on the page announces itself, and a control that looks
     like a readout is a control nobody finds."""
-    assert "Click a block to bypass or engage it" in UI
+    assert "click a block to bypass it, its letter to change channel" in UI
     assert "Drag any slider" in UI
     # and the one thing a player needs to know before touching either
     assert "edit buffer, not to your saved preset" in UI
