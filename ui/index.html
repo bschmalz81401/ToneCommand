@@ -248,12 +248,33 @@
   @media (max-width: 800px) { .grid { grid-template-columns: 1fr; } }
 
   .blocks { display: flex; flex-wrap: wrap; gap: 8px; }
+  /* The signal chain is a control surface, not a readout. Clicking a block
+     bypasses it; clicking its channel letter cycles A-D. Both are your hands
+     on your own amp, so they go straight to the device: the confirm gate
+     exists to review what a MODEL proposed, not to second-guess your click.
+     Gig mode still governs, and refuses everything but a scene change. */
   .block {
     border: 1px solid var(--line); border-radius: 4px; padding: 7px 11px;
     font-size: 0.78rem; color: var(--text); background: rgba(0,0,0,0.3);
+    cursor: pointer; font-family: inherit; transition: border-color .12s, color .12s;
   }
+  .block:hover:not(:disabled) { border-color: var(--green); color: #d8ffe9; }
   .block.byp { color: var(--muted); border-style: dashed; opacity: 0.7; }
-  .block .ch { color: var(--cyan-dim); margin-left: 6px; }
+  .block:disabled { cursor: default; opacity: 0.5; }
+  .block.busy { border-color: var(--amber); color: var(--amber); }
+  .block .ch {
+    color: var(--cyan-dim); margin-left: 8px; padding: 1px 5px;
+    border: 1px solid var(--line); border-radius: 3px; font-size: 0.7rem;
+  }
+  .block .ch:hover { border-color: var(--cyan); color: var(--cyan); }
+  /* An engaged block is carrying signal, so it reads green: the same green
+     that means "passed" elsewhere, used for the same reason. */
+  .block:not(.byp) { border-color: #1d4a35; }
+  .block:not(.byp) .dot {
+    display: inline-block; width: 5px; height: 5px; border-radius: 50%;
+    background: var(--green); box-shadow: 0 0 6px var(--green); margin-right: 7px;
+  }
+  .block.byp .dot { background: var(--muted); box-shadow: none; }
 
   .knobs { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
   .knob { font-size: 0.78rem; }
@@ -614,6 +635,56 @@ function alsoAffects(a, currentScene) {
   return '';
 }
 
+// --- signal chain as a control surface ------------------------------------
+// Clicking a block bypasses it; clicking its channel letter cycles A-D. These
+// go straight to the device rather than through plan-and-confirm, because the
+// confirm gate exists to review what a MODEL proposed. Second-guessing your
+// own click on your own amp would be theatre, and FM9-Edit does not do it
+// either. Gig mode still refuses both, as it refuses everything but a scene.
+let blockBusy = false;
+
+async function blockAction(action, btn) {
+  if (blockBusy) return;
+  blockBusy = true;
+  document.querySelectorAll('.block').forEach(b => b.disabled = true);
+  if (btn) btn.classList.add('busy');
+  try {
+    const r = await fetch('/api/apply', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({actions: [action]}),
+    });
+    const out = await r.json();
+    if (out.error) throw new Error(out.error);
+    const res = (out.results || [])[0];
+    if (res && !res.ok) throw new Error(res.detail || 'refused');
+    log(`${describe(action)}: ${res ? res.detail : 'ok'}`, 'ok');
+  } catch (e) {
+    log(`${describe(action)} failed: ${e.message}`, 'err');
+  } finally {
+    if (btn) btn.classList.remove('busy');
+    blockBusy = false;
+    await refresh();          // re-read: never assume the write landed
+  }
+}
+
+$('blocks').addEventListener('click', e => {
+  const btn = e.target.closest('.block');
+  if (!btn || btn.disabled) return;
+  const eid = Number(btn.dataset.eid);
+  const fam = btn.dataset.fam;
+  const inst = Number(btn.dataset.inst || 1);
+  if (e.target.closest('[data-cyc]')) {
+    // cycle A-D, wrapping, but only across the channels this block has
+    const n = Math.max(1, Number(btn.dataset.chn || 1));
+    const next = (Number(btn.dataset.chi || 0) + 1) % n;
+    blockAction({kind: 'set_channel', block: fam, instance: inst, value: next}, btn);
+  } else {
+    const nowBypassed = btn.classList.contains('byp');
+    blockAction({kind: 'set_bypass', block: fam, instance: inst,
+                 bypassed: !nowBypassed}, btn);
+  }
+});
+
 async function refresh() {
   try {
     const r = await fetch('/api/state');
@@ -637,7 +708,12 @@ async function refresh() {
     if (s.scene) currentSceneNumber = s.scene.number;
     if (s.preset) loadShared(s.preset.number);
     $('blocks').innerHTML = s.blocks.map(b =>
-      `<span class="block ${b.bypassed ? 'byp' : ''}">${b.label}<span class="ch">${b.channel}</span></span>`
+      `<button class="block ${b.bypassed ? 'byp' : ''}" data-eid="${b.effect_id}"
+               data-fam="${b.family}" data-inst="${b.instance}"
+               data-chi="${b.channel_index}" data-chn="${b.channels}"
+               title="${b.bypassed ? 'engage' : 'bypass'} ${esc(b.label)}">
+         <span class="dot"></span>${esc(b.label)}<span class="ch" data-cyc="1"
+           title="cycle channel">${b.channel}</span></button>`
     ).join('');
     const knobs = Object.entries(s.values)
       .filter(([k]) => KNOB_LABELS[k])

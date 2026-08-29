@@ -200,7 +200,11 @@ def snapshot(fm9: FM9) -> dict:
         fname, inst = fam
         label = f"{FRIENDLY.get(fname, fname)} {inst}"
         out_blocks.append({"family": fname, "instance": inst, "label": label,
-                           "bypassed": b.bypassed, "channel": "ABCD"[b.channel]})
+                           "bypassed": b.bypassed, "channel": "ABCD"[b.channel],
+                           # the UI needs these to drive the block directly
+                           "effect_id": b.effect_id,
+                           "channel_index": b.channel,
+                           "channels": max(1, b.channels_supported)})
         if fname == "CABINET" and "cab" not in values:
             vals = fm9.bulk_read(b.effect_id)
             if vals:
