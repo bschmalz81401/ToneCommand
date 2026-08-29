@@ -631,8 +631,9 @@ def api_presets(refresh: bool = False):
             slots = []
             for s in fm9.scan_slots(0, 511):
                 slots.append({
-                    "number": s.number,
-                    "label": proto.slot_label(s.number),
+                    "number": s.number,                       # wire
+                    "editor": proto.editor_number(s.number),  # what the unit shows
+                    "label": proto.slot_label(s.number),      # both, for prompts
                     "name": s.name,
                     "empty": proto.is_empty_slot_name(s.name),
                 })
@@ -681,8 +682,8 @@ def api_preset(body: PresetBody):
             {"error": f"asked for {proto.slot_label(body.number)} but the unit "
                       f"reports {proto.slot_label(got[0]) if got else 'nothing'}"},
             status_code=409)
-    return {"preset": {"number": got[0], "label": proto.slot_label(got[0]),
-                       "name": got[1]}}
+    return {"preset": {"number": got[0], "editor": proto.editor_number(got[0]),
+                       "label": proto.slot_label(got[0]), "name": got[1]}}
 
 
 @app.post("/api/gig")

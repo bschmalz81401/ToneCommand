@@ -11,6 +11,12 @@
     --line: #122438;
     --cyan: #2fe6ff;
     --cyan-dim: #1a7f96;
+    /* Second accent. Cyan is the tool: navigation, plans, telemetry. Violet is
+       the rig itself: the scenes you stand on stage and step through. Green,
+       amber and red stay reserved for status and are never decorative. */
+    --violet: #b98cff;
+    --violet-dim: #6f4fa8;
+    --violet-deep: #1a1030;
     --amber: #ffb454;
     --red: #ff5470;
     --green: #3dffa0;
@@ -50,6 +56,12 @@
     background: rgba(0,0,0,0.35); color: var(--muted); white-space: nowrap;
   }
   .pill b { color: var(--text); font-weight: 500; }
+  #scene {
+    display: inline-flex; align-items: baseline; gap: 7px;
+    width: 190px; overflow: hidden;
+  }
+  #scene b { flex: 1; min-width: 0; overflow: hidden;
+             text-overflow: ellipsis; white-space: nowrap; }
   #link.on { border-color: var(--green); color: var(--green);
              box-shadow: 0 0 12px rgba(61, 255, 160, 0.25); }
   #link.off { border-color: var(--red); color: var(--red); }
@@ -59,59 +71,105 @@
 
   /* Scene switcher: shaped like the footswitches it stands in for, because
      this is the one control that gets used while playing. */
-  .scenes { display: grid; grid-template-columns: repeat(8, 1fr); gap: 8px; }
+  .scenes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
   .sc {
-    position: relative; cursor: pointer; text-align: left;
-    padding: 10px 10px 9px; border: 1px solid var(--line); border-radius: 4px;
-    background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(0,0,0,0.35));
+    /* min-width:0 or the grid will not shrink the button below its own text,
+       so the ellipsis below never fires and the name escapes the box */
+    position: relative; cursor: pointer; text-align: left; min-width: 0;
+    padding: 11px 11px 10px; border: 1px solid #241a3d; border-radius: 4px;
+    background: linear-gradient(180deg, rgba(185,140,255,0.05), rgba(0,0,0,0.4));
     color: var(--muted); font-family: inherit; font-size: 0.72rem;
     letter-spacing: 0.06em; transition: border-color .12s, color .12s, box-shadow .12s;
   }
-  .sc:hover:not(:disabled) { border-color: var(--cyan-dim); color: var(--text); }
+  .sc:hover:not(:disabled) { border-color: var(--violet-dim); color: var(--text); }
   .sc .n { display: block; font-size: 1.05rem; font-weight: 600; line-height: 1; }
   .sc .nm {
-    display: block; margin-top: 6px; font-size: 0.66rem; color: var(--muted);
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    display: block; margin-top: 6px; font-size: 0.72rem; color: var(--muted);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
   }
   .sc.on {
-    border-color: var(--cyan); color: var(--cyan);
-    box-shadow: 0 0 16px rgba(47, 230, 255, 0.28), inset 0 0 22px rgba(47, 230, 255, 0.06);
+    border-color: var(--violet); color: var(--violet);
+    background: linear-gradient(180deg, rgba(185,140,255,0.16), rgba(26,16,48,0.6));
+    box-shadow: 0 0 20px rgba(185,140,255,0.30), inset 0 0 26px rgba(185,140,255,0.10);
   }
-  .sc.on .nm { color: var(--cyan-dim); }
+  .sc.on .nm { color: #cbb0ff; }
   .sc.on::after {
     content: ''; position: absolute; top: 7px; right: 8px;
     width: 6px; height: 6px; border-radius: 50%;
-    background: var(--cyan); box-shadow: 0 0 8px var(--cyan);
+    background: var(--violet); box-shadow: 0 0 10px var(--violet);
   }
   .sc:disabled { opacity: 0.45; cursor: default; }
   .sc.busy { border-color: var(--amber); color: var(--amber); }
 
-  /* Preset browser. FM9-Edit makes you scroll a long list; this filters. */
-  .psearch { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; }
-  .psearch input {
-    flex: 1; background: rgba(0,0,0,0.4); border: 1px solid var(--line);
+  /* Preset popover: hangs off the PRESET pill, opens scrolled to where you
+     already are, so the presets either side are the first thing you see. */
+  .pillwrap { position: relative; display: inline-block; }
+  /* Fixed width. The pill carries the preset NAME, so without this it
+     resized on every load, reflowing the header and shifting the popover
+     anchored to it. A long name truncates instead of moving the furniture. */
+  .pillbtn {
+    cursor: pointer; font-family: inherit; font-size: inherit;
+    display: inline-flex; align-items: baseline; gap: 7px;
+    width: 430px; overflow: hidden;
+  }
+  .pillbtn b {
+    flex: 1; min-width: 0; overflow: hidden;
+    text-overflow: ellipsis; white-space: nowrap; text-align: left;
+  }
+  .pillbtn .caret { flex: none; color: var(--cyan-dim); font-size: 0.7em; }
+  .pillbtn .lbl { flex: none; color: var(--muted); }
+  .pillbtn .pnum {
+    flex: none; color: var(--text); font-variant-numeric: tabular-nums;
+    min-width: 30px; text-align: right;
+  }
+  .pillbtn .caret { margin-left: 7px; color: var(--cyan-dim); font-size: 0.7em; }
+  .pillbtn:hover { border-color: var(--cyan-dim); }
+  .pillbtn.open { border-color: var(--cyan); color: var(--cyan); }
+
+  .pop {
+    position: absolute; top: calc(100% + 8px); right: 0; z-index: 40;
+    width: 340px; padding: 9px;
+    /* fixed, so a long name cannot widen the box mid-filter */
+    box-sizing: border-box;
+    background: #070d16; border: 1px solid var(--cyan-dim); border-radius: 5px;
+    box-shadow: 0 18px 44px rgba(0,0,0,0.7), 0 0 22px rgba(47,230,255,0.10);
+  }
+  .pop[hidden] { display: none; }
+  .pop input {
+    width: 100%; background: rgba(0,0,0,0.5); border: 1px solid var(--line);
     border-radius: 3px; color: var(--text); font-family: inherit;
-    font-size: 0.85rem; padding: 8px 11px; outline: none;
+    font-size: 0.8rem; padding: 7px 9px; outline: none; margin-bottom: 8px;
   }
-  .psearch input:focus { border-color: var(--cyan-dim); }
-  .psearch .count { font-size: 0.7rem; color: var(--muted); white-space: nowrap; }
-  .plist {
-    max-height: 260px; overflow-y: auto; border: 1px solid var(--line);
-    border-radius: 3px; background: rgba(0,0,0,0.25);
-  }
+  .pop input:focus { border-color: var(--cyan-dim); }
+  /* Fixed height, not max-height. With max-height the box grew and shrank
+     under the cursor as the filter narrowed, which made every keystroke move
+     the thing you were aiming at. */
+  .plist { height: 300px; overflow-y: auto; scrollbar-width: thin; }
   .prow {
-    display: flex; gap: 12px; align-items: baseline; width: 100%;
-    padding: 7px 11px; cursor: pointer; text-align: left;
-    background: none; border: 0; border-bottom: 1px solid rgba(18,36,56,0.6);
-    color: var(--text); font-family: inherit; font-size: 0.78rem;
+    display: flex; gap: 10px; align-items: baseline; width: 100%;
+    padding: 6px 8px; cursor: pointer; text-align: left; border: 0;
+    border-radius: 3px; background: none; color: var(--text);
+    font-family: inherit; font-size: 0.76rem;
   }
-  .prow:hover { background: rgba(47, 230, 255, 0.06); }
-  .prow .num { color: var(--muted); min-width: 118px; font-size: 0.7rem; }
+  .prow:hover, .prow.cursor { background: rgba(47, 230, 255, 0.10); }
+  .prow .num { color: var(--muted); min-width: 34px; text-align: right;
+                font-variant-numeric: tabular-nums; font-size: 0.7rem; }
   .prow .nm { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .prow.on { color: var(--cyan); background: rgba(47, 230, 255, 0.08); }
+  .prow.on { color: var(--cyan); background: rgba(47, 230, 255, 0.09); }
   .prow.on .num { color: var(--cyan-dim); }
   .prow.empty .nm { color: var(--muted); font-style: italic; }
-  .prow:disabled { opacity: 0.5; cursor: default; }
+  .popfoot .numnote { opacity: 0.65; }
+  .popfoot {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 8px; padding-top: 7px; border-top: 1px solid var(--line);
+    font-size: 0.66rem; color: var(--muted);
+  }
+  .popfoot button {
+    background: none; border: 1px solid var(--line); border-radius: 3px;
+    color: var(--muted); font-family: inherit; font-size: 0.62rem;
+    letter-spacing: 0.1em; padding: 3px 8px; cursor: pointer;
+  }
+  .popfoot button:hover { border-color: var(--cyan-dim); color: var(--cyan); }
 
   .console {
     background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
@@ -123,6 +181,16 @@
     background: var(--bg); padding: 0 8px; font-size: 0.68rem;
     letter-spacing: 0.25em; color: var(--cyan-dim);
   }
+  /* Scenes are the performance surface, so they carry the violet accent all
+     the way through: label, border and glow. */
+  .console.perf {
+    border-color: #2a1d47;
+    background:
+      radial-gradient(ellipse 70% 120% at 12% 0%, rgba(185,140,255,0.07), transparent),
+      var(--panel);
+    box-shadow: 0 0 40px rgba(0,0,0,0.5), inset 0 0 60px rgba(185,140,255,0.04);
+  }
+  .console.perf::before { color: var(--violet-dim); }
   .promptrow { display: flex; gap: 12px; }
   .prompt-prefix { color: var(--cyan); align-self: center; user-select: none; }
   #prompt {
@@ -211,25 +279,24 @@
   <header>
     <h1>TONE <span>//</span> COMMAND</h1>
     <div class="status">
-      <span class="pill" id="preset">PRESET <b>...</b></span>
+      <span class="pillwrap">
+        <button class="pill pillbtn" id="preset">PRESET <b>...</b><span class="caret">&#9662;</span></button>
+        <div class="pop" id="ppop" hidden>
+          <input id="psearch" autocomplete="off" spellcheck="false"
+                 placeholder="filter, or type a number">
+          <div class="plist" id="plist"></div>
+          <div class="popfoot"><span id="pcount"></span>
+            <span class="numnote">numbers as on the FM9</span>
+            <button id="prescan">RESCAN</button></div>
+        </div>
+      </span>
       <span class="pill" id="scene">SCENE <b>...</b></span>
       <span class="pill off" id="link"><span class="dot"></span>LINK</span>
     </div>
   </header>
 
-  <div class="console" data-label="SCENES">
+  <div class="console perf" data-label="SCENES">
     <div class="scenes" id="scenes"></div>
-  </div>
-
-  <div class="console" data-label="PRESETS">
-    <div class="psearch">
-      <input id="psearch" autocomplete="off" spellcheck="false"
-             placeholder="filter by name or number... e.g. worship, 141, bassguy">
-      <span class="count" id="pcount"></span>
-      <button id="prescan" title="Re-read every slot name from the unit">RESCAN</button>
-    </div>
-    <div class="plist" id="plist"></div>
-    <div class="hint">Loading a preset discards unsaved edit-buffer changes, same as switching on the unit itself. Nothing here writes to your presets.</div>
   </div>
 
   <div class="console" data-label="COMMAND">
@@ -311,7 +378,6 @@ const KNOB_LABELS = {
 // /api/apply rather than through the planner. Asking a language model to
 // interpret "go to scene 3" would be slower, less reliable, and no safer.
 let sceneBusy = false;
-let currentPresetNumber = null;
 
 function renderScenes(s) {
   const names = s.scenes || [];
@@ -358,55 +424,77 @@ $('scenes').addEventListener('click', e => {
   if (b && !b.disabled) gotoScene(Number(b.dataset.scene));
 });
 
-// --- preset browser -------------------------------------------------------
-// Not a planner action: selecting a preset discards the edit buffer, so it is
-// a person's decision, never something a model emits mid-plan.
+// --- preset popover -------------------------------------------------------
+// Modelled on how FM9-Edit is actually used: you look at where you are, and
+// the presets either side are right there. So this hangs off the PRESET pill
+// and opens scrolled to the current slot rather than at the top of 512.
+//
+// Selecting a preset is deliberately NOT a planner action: it discards the
+// edit buffer, so it stays a person's decision, and gig mode refuses it.
 let allSlots = [];
+let currentPresetNumber = null;
 let presetBusy = false;
+let popCursor = -1;          // keyboard highlight within the filtered list
 
-function renderPresets() {
+function filteredSlots() {
   const q = $('psearch').value.trim().toLowerCase();
-  const cur = currentPresetNumber;
-  const hits = allSlots.filter(s => {
-    if (!q) return true;
-    return s.name.toLowerCase().includes(q)
-        || String(s.number) === q
-        || String(s.number + 1) === q;      // the number FM9-Edit shows
-  });
-  $('pcount').textContent = q
-    ? `${hits.length} of ${allSlots.length}`
-    : `${allSlots.length} slots`;
-  // Cap the DOM at a sane size; refine the filter rather than scroll forever.
-  const shown = hits.slice(0, 200);
-  $('plist').innerHTML = shown.map(s =>
-    `<button class="prow${s.number === cur ? ' on' : ''}${s.empty ? ' empty' : ''}"
-             data-preset="${s.number}">
-       <span class="num">${esc(s.label)}</span>
-       <span class="nm">${esc(s.name)}</span></button>`
-  ).join('') || '<div class="hint" style="padding:12px">nothing matches</div>';
-  if (hits.length > shown.length) {
-    $('plist').insertAdjacentHTML('beforeend',
-      `<div class="hint" style="padding:8px 11px">${hits.length - shown.length} more, keep typing to narrow</div>`);
+  if (!q) return allSlots;
+  return allSlots.filter(s =>
+    s.name.toLowerCase().includes(q)
+    || String(s.number) === q
+    || String(s.number + 1) === q);      // the number FM9-Edit shows
+}
+
+function renderPresets(scrollToCurrent) {
+  const hits = filteredSlots();
+  $('pcount').textContent = hits.length === allSlots.length
+    ? `${allSlots.length} slots` : `${hits.length} of ${allSlots.length}`;
+  $('plist').innerHTML = hits.map((s, i) =>
+    // Just the number the front panel and FM9-Edit show. Repeating
+    // "(FM9-Edit n)" on all 512 rows is noise. The numbering is stated once in
+    // the footer, and both numbers still appear wherever being wrong is
+    // expensive: the store confirmation and the refusals.
+    `<button class="prow${s.number === currentPresetNumber ? ' on' : ''}` +
+    `${s.empty ? ' empty' : ''}${i === popCursor ? ' cursor' : ''}" data-preset="${s.number}">` +
+    `<span class="num">${s.editor}</span><span class="nm">${esc(s.name)}</span></button>`
+  ).join('') || '<div class="hint" style="padding:10px">nothing matches</div>';
+  if (scrollToCurrent) {
+    const on = $('plist').querySelector('.prow.on');
+    // centre it, so the neighbours above and below are both visible
+    if (on) on.scrollIntoView({block: 'center'});
   }
 }
 
+function openPop() {
+  $('ppop').hidden = false;
+  $('preset').classList.add('open');
+  $('psearch').value = '';
+  popCursor = -1;
+  renderPresets(true);
+  $('psearch').focus();
+}
+
+function closePop() {
+  $('ppop').hidden = true;
+  $('preset').classList.remove('open');
+}
+
 async function loadPresets(refresh) {
-  $('plist').innerHTML = '<div class="hint" style="padding:12px">reading slot names from the unit...</div>';
   try {
     const r = await fetch('/api/presets' + (refresh ? '?refresh=true' : ''));
     const d = await r.json();
     if (d.error) throw new Error(d.error);
     allSlots = d.slots || [];
-    renderPresets();
+    if (!$('ppop').hidden) renderPresets(true);
   } catch (e) {
-    $('plist').innerHTML = `<div class="hint" style="padding:12px">could not read presets: ${esc(e.message)}</div>`;
+    $('plist').innerHTML = `<div class="hint" style="padding:10px">could not read presets: ${esc(e.message)}</div>`;
   }
 }
 
 async function gotoPreset(n) {
   if (presetBusy) return;
   presetBusy = true;
-  document.querySelectorAll('.prow').forEach(b => b.disabled = true);
+  closePop();
   try {
     const r = await fetch('/api/preset', {
       method: 'POST', headers: {'Content-Type': 'application/json'},
@@ -414,7 +502,9 @@ async function gotoPreset(n) {
     });
     const d = await r.json();
     if (d.error) throw new Error(d.error);
-    log(`loaded ${d.preset.label} "${d.preset.name}"`, 'ok');
+    // One number here: this is a status line, not a confirmation. Both
+    // numbers stay on the store prompt, where being wrong is expensive.
+    log(`loaded ${d.preset.editor ?? d.preset.number} "${d.preset.name}"`, 'ok');
   } catch (e) {
     log(`preset ${n} failed: ${e.message}`, 'err');
   } finally {
@@ -423,11 +513,36 @@ async function gotoPreset(n) {
   }
 }
 
-$('psearch').addEventListener('input', renderPresets);
+$('preset').addEventListener('click', e => {
+  e.stopPropagation();
+  $('ppop').hidden ? openPop() : closePop();
+});
+$('ppop').addEventListener('click', e => e.stopPropagation());
+document.addEventListener('click', () => { if (!$('ppop').hidden) closePop(); });
+$('psearch').addEventListener('input', () => { popCursor = -1; renderPresets(false); });
 $('prescan').addEventListener('click', () => loadPresets(true));
 $('plist').addEventListener('click', e => {
   const b = e.target.closest('.prow');
-  if (b && !b.disabled) gotoPreset(Number(b.dataset.preset));
+  if (b) gotoPreset(Number(b.dataset.preset));
+});
+$('psearch').addEventListener('keydown', e => {
+  const hits = filteredSlots();
+  if (e.key === 'Escape') { closePop(); $('prompt').focus(); return; }
+  if (e.key === 'Enter') {
+    const pick = hits[popCursor >= 0 ? popCursor : 0];
+    if (pick) gotoPreset(pick.number);
+    return;
+  }
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    if (!hits.length) return;
+    popCursor = e.key === 'ArrowDown'
+      ? Math.min(hits.length - 1, popCursor + 1)
+      : Math.max(0, popCursor - 1);
+    renderPresets(false);
+    const c = $('plist').querySelector('.prow.cursor');
+    if (c) c.scrollIntoView({block: 'nearest'});
+  }
 });
 
 async function refresh() {
@@ -440,10 +555,15 @@ async function refresh() {
     // one the front panel and FM9-Edit show, which differ by one
     if (s.preset && s.preset.number !== currentPresetNumber) {
       currentPresetNumber = s.preset.number;
-      if (allSlots.length) renderPresets();
+      // keep the popover's highlight honest if the preset changed on the unit
+      if (allSlots.length && !$('ppop').hidden) renderPresets(false);
     }
+    // The number the unit shows, not both. This is a status display, not a
+    // confirmation, so it does not need the belt and braces, and the name is
+    // what you are actually reading. Rebuild the caret: innerHTML replaces it.
     if (s.preset) $('preset').innerHTML =
-      `PRESET ${s.preset.label || s.preset.number} <b>${s.preset.name}</b>`;
+      `<span class="lbl">PRESET</span><span class="pnum">${s.preset.editor ?? s.preset.number}</span>` +
+      `<b>${esc(s.preset.name)}</b><span class="caret">&#9662;</span>`;
     if (s.scene) $('scene').innerHTML = `SCENE ${s.scene.number} <b>${s.scene.name}</b>`;
     renderScenes(s);
     $('blocks').innerHTML = s.blocks.map(b =>
