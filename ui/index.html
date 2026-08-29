@@ -307,17 +307,24 @@
 .airow select, .airow button { flex: 0 0 auto; }
 .answered { color: var(--dim); font-size: 11px; letter-spacing: .04em; margin-top: 6px; }
 
-  /* AI settings live behind a header button rather than on the front page.
-     Which model is driving is worth a glance, so the button says so; the
-     boxes that set it are a once-a-month errand and stay out of the way. */
-  .aipill { cursor: pointer; font: inherit; max-width: 190px; overflow: hidden;
-            text-overflow: ellipsis; }
-  .aipill:hover { border-color: var(--cyan-dim); color: var(--text); }
-  .aipill .gear { color: var(--cyan-dim); margin-right: 6px; }
-  /* A backend that cannot run is the one thing here worth interrupting for,
-     because ENGAGE will fail and the reason is behind this button. */
-  .aipill.needs { border-color: var(--amber); color: var(--amber); }
-  .aipill.needs .gear { color: var(--amber); }
+  /* Last in the header and deliberately quiet: no border, no label, so it
+     reads as a control rather than a third piece of status. It carried the
+     backend name for a while, which only made a settings gear look like it
+     was called AUTO. Which model answered is already on every plan, and the
+     tooltip has it before then. */
+  .gear {
+    background: none; border: none; color: var(--muted); font: inherit;
+    /* Out of the way is about position and weight, not size. At 1rem it was
+       quiet by being hard to hit, which is a different thing and a worse one.
+       Sized to the pills beside it and given a real target. */
+    font-size: 1.45rem; line-height: 1; cursor: pointer;
+    padding: 2px 4px; opacity: 0.7;
+    transition: opacity 0.15s, color 0.15s, transform 0.2s;
+  }
+  .gear:hover { color: var(--cyan); opacity: 1; transform: rotate(45deg); }
+  /* The exception to quiet. A backend that cannot run makes ENGAGE fail with
+     the reason stuck behind this button, so here it does interrupt. */
+  .gear.needs { color: var(--amber); opacity: 1; }
 
   .modal {
     position: fixed; inset: 0; z-index: 50; display: flex;
@@ -354,9 +361,8 @@
             <button id="prescan">RESCAN</button></div>
         </div>
       </span>
-      <button class="pill aipill" id="aiopen" title="AI backend settings">
-        <span class="gear">&#9881;</span><span id="ailabel">AI</span></button>
       <span class="pill off" id="link"><span class="dot"></span>LINK</span>
+      <button class="gear" id="aiopen" aria-label="AI backend settings">&#9881;</button>
     </div>
   </header>
 
@@ -899,19 +905,19 @@ function aiFields() {
   }
 }
 
-// The header button carries the one fact from this panel worth seeing all the
-// time: which model is about to read your prompt. Everything else here is a
-// setting you touch once and then forget, so it stays behind the button.
-function aiPill(backend) {
+// The gear says nothing until something is wrong. Naming the backend on it
+// made the gear look like it was called AUTO, which is a fair reading: a
+// label on a control names the control. The backend belongs on the plan it
+// produced, where it already is, and in this tooltip until then.
+function aiGear(backend) {
   const b = aiBackends.find(x => x.backend === backend);
-  $('ailabel').textContent = (b ? b.short : backend || 'auto').toUpperCase();
   // Amber only for a backend that cannot actually run. ENGAGE would fail and
   // the explanation is behind this button, so the button has to say so.
   const broken = !!b && (!b.available || !!b.needs);
   $('aiopen').classList.toggle('needs', broken);
   $('aiopen').title = broken
-    ? `${b.label} is not ready: ${b.needs || b.why}. Click to fix.`
-    : `Planning with ${b ? b.label : 'the first backend available'}. Click to change.`;
+    ? `AI settings. ${b.short} is not ready: ${b.needs || b.why}.`
+    : `AI settings. Planning with ${b ? b.short : 'the first backend available'}.`;
 }
 
 function aiModal(open) {
@@ -938,7 +944,7 @@ async function loadAiSettings() {
     $('aibaseurl').value = d.settings.baseUrl || '';
     aiEnvBaseUrl = d.settings.baseUrlFallback || '';
     aiFields();
-    aiPill(d.settings.backend || '');
+    aiGear(d.settings.backend || '');
   } catch (e) {
     log(`could not read AI settings: ${e.message}`, 'err');
   }

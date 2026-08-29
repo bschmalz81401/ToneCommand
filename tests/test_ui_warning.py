@@ -88,22 +88,38 @@ def test_no_id_is_declared_twice():
         [i for i in set(ids) if ids.count(i) > 1]
 
 
-def test_the_button_says_which_model_is_driving():
-    """The one fact from the panel worth permanent space. A tool whose whole
-    pitch is 'bring your own AI' has to show whose AI is answering."""
-    assert "function aiPill(" in SCRIPT
-    assert "$('ailabel').textContent" in SCRIPT
-    # and it is refreshed from the server read, not the dropdown, which can be
-    # sitting on a selection the user never saved
+def test_the_gear_carries_no_label():
+    """It briefly showed the backend name, which made a settings gear look
+    like it was called AUTO. A label on a control names the control. Which
+    model answered belongs on the plan it produced, where it already is."""
+    gear = re.search(r'<button class="gear"[^>]*>(.*?)</button>', UI).group(1)
+    assert gear.strip() in ("&#9881;", "&#x2699;"), gear
+    assert "ailabel" not in UI
+
+
+def test_the_gear_is_last_in_the_header_and_quiet():
+    """Out of the way means after the status readout, not interrupting it,
+    and without the border that would make it read as a third status pill."""
+    status = UI.split('<div class="status">')[1].split("</header>")[0]
+    assert status.index('id="aiopen"') > status.index('id="link"')
+    style = UI.split("  .gear {")[1].split("}")[0]
+    assert "border: none" in style and "background: none" in style
+
+
+def test_which_backend_is_driving_is_still_reachable_before_a_plan_runs():
+    """Quiet is not the same as silent: the tooltip answers it on hover, and
+    it reads from the saved settings rather than the dropdown, which can be
+    sitting on a selection the user never saved."""
+    assert "$('aiopen').title" in SCRIPT
     load = SCRIPT.split("async function loadAiSettings()")[1].split("\n}")[0]
-    assert "aiPill(d.settings.backend" in load
+    assert "aiGear(d.settings.backend" in load
 
 
 def test_a_backend_that_cannot_run_is_flagged_on_the_button():
     """Hiding the panel must not hide a broken planner: ENGAGE would fail with
     the explanation stuck behind a button nothing told you to press."""
     assert "classList.toggle('needs'" in SCRIPT
-    assert ".aipill.needs" in UI
+    assert ".gear.needs" in UI
 
 
 def test_closing_drops_a_typed_key():
