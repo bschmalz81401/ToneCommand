@@ -69,6 +69,24 @@ def resolve_aliases(cells, present: set[int]) -> dict:
 
 
 def scene_alive(cells, st, reg) -> tuple[bool, str]:
+    """Is there a live path from INPUT to an engaged OUTPUT in this scene?
+
+    Thin wrapper over walk(), kept because it is the shape every existing
+    caller uses and because a verdict is what an audit wants.
+    """
+    w = walk(cells, st, reg)
+    return w["alive"], w["why"]
+
+
+def walk(cells, st, reg) -> dict:
+    """The same traversal, with its working shown.
+
+    Returns the verdict AND the set of cells the signal actually reaches, so
+    the UI can light the live path rather than merely being told a scene is
+    alive. Extracted from scene_alive on 2026-08-29; the traversal itself is
+    unchanged, which matters because five silent-scene classes were found the
+    hard way to get it right.
+    """
     present = set(st)
     resolved = resolve_aliases(cells, present)
     by_pos = {}
@@ -119,17 +137,21 @@ def scene_alive(cells, st, reg) -> tuple[bool, str]:
             break
         live.update(jumped); frontier = list(jumped)
 
+    def done(alive, why):
+        return {"alive": alive, "why": why, "live": live,
+                "resolved": resolved, "by_pos": by_pos}
+
     outs = [pos for pos, (eid, sh, _) in by_pos.items() if fam(eid) == "OUTPUT"]
     if not outs:
-        return False, "no OUTPUT block on grid"
+        return done(False, "no OUTPUT block on grid")
     for pos in outs:
         eid, sh, _ = by_pos[pos]
         bk = st.get(eid)
         if pos in live and bk is not None and not bk.bypassed:
-            return True, "alive"
+            return done(True, "alive")
     if not starts:
-        return False, "INPUT bypassed or missing"
-    return False, "no live path from INPUT to an engaged OUTPUT"
+        return done(False, "INPUT bypassed or missing")
+    return done(False, "no live path from INPUT to an engaged OUTPUT")
 
 
 def main(a: int, b: int) -> int:

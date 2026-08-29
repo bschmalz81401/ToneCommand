@@ -264,134 +264,45 @@
   .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
   @media (max-width: 800px) { .grid { grid-template-columns: 1fr; } }
 
-  .blocks { display: flex; flex-wrap: wrap; gap: 8px; }
-  /* The signal chain is a control surface, not a readout. Clicking a block
-     bypasses it; clicking its channel letter cycles A-D. Both are your hands
-     on your own amp, so they go straight to the device: the confirm gate
-     exists to review what a MODEL proposed, not to second-guess your click.
-     Gig mode still governs, and refuses everything but a scene change. */
-  .block {
-    border: 1px solid var(--line); border-radius: 4px; padding: 7px 11px;
-    font-size: 0.78rem; color: var(--text); background: rgba(0,0,0,0.3);
-    cursor: pointer; font-family: inherit; transition: border-color .12s, color .12s;
+  /* The routing grid, drawn. A wrapped list of block names tells you what is
+     in the preset but not how any of it is wired, and the wiring is the part
+     that goes wrong: a severed cable and a bypassed Return both leave every
+     block present and correct while the scene makes no sound. */
+  .gridwrap { overflow-x: auto; padding: 4px 0 2px; }
+  svg.grid { display: block; min-width: 100%; }
+  svg.grid .cable { fill: none; stroke: #3b5262; stroke-width: 2; }
+  svg.grid .cable.live { stroke: var(--cyan); stroke-width: 2.2;
+                         filter: url(#glow); }
+  svg.grid .shunt { stroke: #3b5262; stroke-width: 2; }
+  svg.grid .shunt.live { stroke: var(--cyan); stroke-width: 2.2;
+                         filter: url(#glow); }
+  svg.grid .cell { cursor: pointer; }
+  svg.grid .cell > rect {
+    fill: #0d1117; stroke: #3b5262; stroke-width: 1.2; rx: 4;
+    transition: stroke 0.12s, fill 0.12s;
   }
-  .block:hover:not(:disabled) { border-color: var(--green); color: #d8ffe9; }
-  .block.byp { color: var(--muted); border-style: dashed; opacity: 0.7; }
-  .block:disabled { cursor: default; opacity: 0.5; }
-  .block.busy { border-color: var(--amber); color: var(--amber); }
-  .block .ch {
-    color: var(--cyan-dim); margin-left: 8px; padding: 1px 5px;
-    border: 1px solid var(--line); border-radius: 3px; font-size: 0.7rem;
-  }
-  .block .ch:hover { border-color: var(--cyan); color: var(--cyan); }
-  /* An engaged block is carrying signal, so it reads green: the same green
-     that means "passed" elsewhere, used for the same reason. */
-  .block:not(.byp) { border-color: #1d4a35; }
-  .block:not(.byp) .dot {
-    display: inline-block; width: 5px; height: 5px; border-radius: 50%;
-    background: var(--green); box-shadow: 0 0 6px var(--green); margin-right: 7px;
-  }
-  .block.byp .dot { background: var(--muted); box-shadow: none; }
-
-  /* Parameters, grouped by the block they belong to and adjustable in place.
-     This panel used to be a wall of right-aligned numbers under one heading
-     called AMP TELEMETRY, which is not a thing a guitarist says, and half of
-     what it listed was the input gate. Worse, it was a readout: the one
-     question it invited, "so nudge the mid up a bit", it could not answer. */
-  .knobs { columns: 340px; column-gap: 30px; }
-  /* A group split across a column break reads as two groups. */
-  .kgroup { break-inside: avoid; margin: 0 0 18px; }
-  .kgroup > h4 {
-    font-size: 0.66rem; letter-spacing: 0.22em; color: var(--cyan-dim);
-    font-weight: 500; margin: 0 0 2px; text-transform: uppercase;
-  }
-  /* The model is the headline, not a row: it is the first thing anyone wants
-     to know about an amp block and it was not shown anywhere at all before. */
-  .kgroup .model {
-    color: var(--text); font-size: 0.9rem; margin-bottom: 9px;
-    letter-spacing: 0.02em;
-  }
-  .kgroup .model .sub {
-    display: block; color: var(--muted); font-size: 0.7rem; margin-top: 3px;
-    letter-spacing: 0.03em; line-height: 1.45;
-  }
-  .knob { display: grid; grid-template-columns: 108px 1fr 62px; gap: 9px;
-          align-items: center; padding: 3px 0; }
-  .knob .k { color: var(--muted); font-size: 0.75rem; letter-spacing: 0.04em; }
-  .knob .v { color: var(--cyan); font-size: 0.78rem; text-align: right;
-             font-variant-numeric: tabular-nums; }
-  .knob .v .u { color: var(--dim); font-size: 0.68rem; margin-left: 2px; }
-  .knob.busy .v { color: var(--amber); }
-  .knob.ro .v { color: var(--muted); }
-
-  /* A real range input: draggable, keyboard reachable, and it arrives with
-     the accessibility a div and a mousemove handler would have to reinvent. */
-  .knob input[type=range] {
-    -webkit-appearance: none; appearance: none; width: 100%; height: 16px;
-    background: none; cursor: pointer; margin: 0;
-  }
-  .knob input[type=range]::-webkit-slider-runnable-track {
-    height: 3px; border-radius: 2px;
-    background: linear-gradient(to right, var(--cyan) var(--pct, 0%),
-                                var(--line) var(--pct, 0%));
-  }
-  .knob input[type=range]::-webkit-slider-thumb {
-    -webkit-appearance: none; appearance: none; width: 11px; height: 11px;
-    border-radius: 50%; background: var(--cyan); margin-top: -4px;
-    box-shadow: 0 0 8px rgba(47,230,255,0.65); transition: transform 0.12s;
-  }
-  .knob input[type=range]:hover::-webkit-slider-thumb { transform: scale(1.25); }
-  .knob input[type=range]:focus-visible::-webkit-slider-thumb {
-    outline: 2px solid var(--cyan); outline-offset: 2px;
-  }
-  .knob input[type=range]:disabled { cursor: default; opacity: 0.5; }
-  /* A flat readout for anything the registry has not verified a range for.
-     Offering a slider we cannot map back to a real value would be worse than
-     offering nothing, because it would look exactly as trustworthy. */
-  .knob .flat { height: 3px; border-radius: 2px; background: var(--line); }
-
-  /* Is this preset actually correct? The capability no other FM9 tool has,
-     and until now it lived entirely in command-line scripts. */
-  .hz { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-  .hz button { flex: 0 0 auto; }
-  .hrow { display: flex; align-items: baseline; gap: 10px; padding: 5px 0;
-          border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 0.76rem; }
-  .hrow:last-child { border-bottom: none; }
-  .hrow .n { color: var(--dim); width: 16px; flex: 0 0 auto; }
-  .hrow .nm { color: var(--muted); flex: 1 1 auto; min-width: 0;
-              overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .hrow .lv { color: var(--dim); font-variant-numeric: tabular-nums;
-              font-size: 0.72rem; }
-  .hrow .lv .unread { color: var(--amber); font-style: normal; opacity: 0.75; }
-  .hrow .vd { flex: 0 0 auto; font-size: 0.68rem; letter-spacing: 0.1em; }
-  .hrow .vd.pass { color: var(--green); }
-  .hrow .vd.fail { color: var(--red); }
-  .hfind { display: flex; gap: 9px; padding: 8px 10px; margin-top: 8px;
-           border-radius: 3px; font-size: 0.74rem; line-height: 1.55; }
-  .hfind .tag { flex: 0 0 auto; font-size: 0.62rem; letter-spacing: 0.12em;
-                padding: 2px 5px; border-radius: 2px; height: fit-content; }
-  .hfind.warn { background: rgba(255,180,84,0.07); color: #d8c6a8; }
-  .hfind.warn .tag { background: rgba(255,180,84,0.18); color: var(--amber); }
-  .hfind.fail { background: rgba(255,92,92,0.08); color: #e3b6b6; }
-  .hfind.fail .tag { background: rgba(255,92,92,0.20); color: var(--red); }
-  /* The bottom rung of the ladder, and the one that never turns green on its
-     own. Everything above it is a machine reading a wire. */
-  .hears { margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--line);
-           color: var(--dim); font-size: 0.72rem; letter-spacing: 0.04em; }
-
-  /* Undo and A/B. Every plugin a guitarist has ever used has A/B compare and
-     the FM9 does not, and an edit you cannot take back is an edit you think
-     twice about, which is the opposite of what a tool like this needs. */
-  .abrow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-  .abrow .sep { width: 1px; align-self: stretch; background: var(--line);
-                margin: 0 4px; }
-  .abrow .lbl { color: var(--cyan-dim); font-size: 0.62rem;
-                letter-spacing: 0.18em; }
-  .abrow button.small { padding: 4px 9px; font-size: 0.68rem; }
-  .abrow button.held { border-color: var(--violet); color: var(--violet); }
-  #undowhat { color: var(--muted); font-size: 0.72rem; letter-spacing: 0.04em;
-              flex: 1 1 200px; min-width: 0; overflow: hidden;
-              text-overflow: ellipsis; white-space: nowrap; }
+  svg.grid .cell.live > rect { stroke: var(--green); fill: #0b1a14; }
+  /* Bypassed reads as a dashed outline rather than a colour, because colour
+     here already means live versus dead and one signal must not carry two
+     meanings. A bypassed block still passes signal through. */
+  svg.grid .cell.byp > rect { stroke-dasharray: 4 3; fill: #0b0e12; }
+  svg.grid .cell:hover > rect { stroke: var(--cyan); fill: #101c22; }
+  svg.grid .cell.busy > rect { stroke: var(--amber); }
+  svg.grid .nm { fill: var(--text); font-size: 11px; letter-spacing: 0.02em;
+                 pointer-events: none; }
+  svg.grid .cell.byp .nm { fill: var(--dim); }
+  svg.grid .ch { fill: var(--cyan-dim); font-size: 9.5px; letter-spacing: .08em; }
+  svg.grid .chbox { fill: rgba(47,230,255,0.10); stroke: rgba(47,230,255,0.30);
+                    stroke-width: 1; rx: 2; }
+  svg.grid .cell.byp .ch { fill: var(--muted); }
+  svg.grid .cell.byp .chbox { fill: rgba(255,255,255,0.04);
+                              stroke: rgba(255,255,255,0.16); }
+  .gridnote { display: flex; gap: 14px; align-items: center; flex-wrap: wrap;
+              margin-top: 10px; }
+  .gridnote .k { display: inline-flex; align-items: center; gap: 5px;
+                 color: var(--muted); font-size: 0.68rem; letter-spacing: .05em; }
+  .gridnote .sw { width: 16px; height: 3px; border-radius: 2px; }
+  .gridnote .dead { color: var(--red); }
 
   #log {
     font-size: 0.75rem; color: var(--muted); max-height: 180px; overflow-y: auto;
@@ -522,7 +433,13 @@
   </div>
 
   <div class="console" data-label="SIGNAL CHAIN">
-    <div class="blocks" id="blocks"><span class="hint">awaiting link...</span></div>
+    <div class="gridwrap" id="blocks"><span class="hint">awaiting link...</span></div>
+    <div class="gridnote">
+      <span class="k"><span class="sw" style="background:var(--cyan)"></span>carrying signal</span>
+      <span class="k"><span class="sw" style="background:#3b5262"></span>not reached</span>
+      <span class="k">dashed = bypassed, still passing through</span>
+      <span class="k" id="gridwhy"></span>
+    </div>
     <div class="hint">Click a block to bypass or engage it. Click its letter to change channel.</div>
   </div>
 
@@ -848,6 +765,100 @@ function alsoAffects(a, currentScene) {
   return '';
 }
 
+// --- the routing grid, drawn ---------------------------------------------
+// Cells are laid out on a fixed pitch and cables are drawn from the resolved
+// feeds list, so the browser never has to know how the cable bitmask is
+// packed. Live cells and live cables are lit; everything the signal does not
+// reach stays grey, which is the whole point of drawing it at all.
+const CW = 88, CH = 42, HGAP = 26, VGAP = 11, PAD = 3;
+const cx = c => PAD + c * (CW + HGAP);
+
+function renderGrid(g) {
+  if (!g || g.error || !g.cells || !g.cells.length) {
+    $('blocks').innerHTML = '<span class="hint">awaiting link...</span>';
+    return;
+  }
+  // The device numbers rows from its own full grid, and a preset using rows
+  // 1 to 3 would otherwise be drawn with an empty row above and below it,
+  // which is a third of the panel spent on nothing.
+  const r0 = Math.min(...g.cells.map(c => c.row));
+  const rN = Math.max(...g.cells.map(c => c.row));
+  const cN = Math.max(...g.cells.map(c => c.col));
+  const cy = r => PAD + (r - r0) * (CH + VGAP);
+  const W = PAD * 2 + (cN + 1) * (CW + HGAP) - HGAP;
+  const H = PAD * 2 + (rN - r0 + 1) * (CH + VGAP) - VGAP;
+  const at = new Map(g.cells.map(c => [c.row + ',' + c.col, c]));
+  const parts = [];
+
+  // Cables first so blocks sit on top of them.
+  for (const c of g.cells) {
+    for (const src of c.feeds) {
+      const from = at.get(src + ',' + (c.col - 1));
+      const x1 = cx(c.col - 1) + CW, y1 = cy(src) + CH / 2;
+      const x2 = cx(c.col), y2 = cy(c.row) + CH / 2;
+      // A cable is only carrying signal if BOTH ends are: a live block fed
+      // from a dead one is not being reached through this cable.
+      const on = c.live && from && from.live;
+      const d = y1 === y2 ? `M${x1} ${y1} H${x2}`
+        : `M${x1} ${y1} C${x1 + HGAP * 0.55} ${y1} ${x2 - HGAP * 0.55} ${y2} ${x2} ${y2}`;
+      parts.push(`<path class="cable${on ? ' live' : ''}" d="${d}"/>`);
+    }
+    if (c.shunt) {
+      // A shunt is a piece of wire, not a box. Drawing it as a block would
+      // imply the preset contains something it does not.
+      parts.push(`<line class="shunt${c.live ? ' live' : ''}" x1="${cx(c.col)}"
+        y1="${cy(c.row) + CH / 2}" x2="${cx(c.col) + CW}" y2="${cy(c.row) + CH / 2}"/>`);
+    }
+  }
+
+  for (const c of g.cells) {
+    if (c.shunt) continue;
+    const x = cx(c.col), y = cy(c.row);
+    const cls = ['cell', c.live ? 'live' : '', c.bypassed ? 'byp' : ''].join(' ');
+    const ch = c.channel ? `
+      <rect class="chbox" x="${x + CW - 20}" y="${y + CH - 17}" width="14" height="12"/>
+      <text class="ch" x="${x + CW - 16.5}" y="${y + CH - 8}" data-cyc="1">${c.channel}</text>` : '';
+    parts.push(`<g class="${cls}" data-fam="${c.family}" data-inst="${c.instance}"
+        data-chi="${'ABCD'.indexOf(c.channel || 'A')}" data-chn="4">
+      <title>${esc(c.label)}${c.bypassed ? ' (bypassed)' : ''}${c.live ? '' : ' - not reached by the signal'}</title>
+      <rect x="${x}" y="${y}" width="${CW}" height="${CH}"/>
+      <text class="nm" x="${x + 9}" y="${y + 17}">${esc(shortLabel(c.label))}</text>
+      ${ch}</g>`);
+  }
+
+  $('blocks').innerHTML =
+    `<svg class="grid" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}"
+          role="img" aria-label="signal routing grid">
+       <defs><filter id="glow" filterUnits="userSpaceOnUse"
+                     x="0" y="0" width="${W}" height="${H}">
+         <feGaussianBlur stdDeviation="2.2" result="b"/>
+         <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+       </filter></defs>${parts.join('')}</svg>`;
+  // filterUnits matters more than it looks. The default is objectBoundingBox,
+  // and a horizontal line or a straight cable has a bounding box zero pixels
+  // tall, so a percentage filter region collapses to nothing and the element
+  // renders as blank. Every straight wire in the chain was invisible while
+  // its computed stroke read as cyan and its geometry was correct.
+  $('gridwhy').textContent = g.alive ? '' : `no live path: ${g.why}`;
+  $('gridwhy').className = 'k' + (g.alive ? '' : ' dead');
+}
+
+// "Compressor 1" does not fit an 88px cell at 11px, and a name clipped
+// mid-word is worse than one shortened on purpose.
+const SHORT = {Compressor: 'Comp', Tremolo: 'Trem', Multitap: 'MTap'};
+function shortLabel(label) {
+  if (!label) return '';
+  const m = label.match(/^(.*?) (\d+)$/);
+  if (!m) return label;
+  return (SHORT[m[1]] || m[1]) + ' ' + m[2];
+}
+
+async function loadGrid() {
+  try {
+    renderGrid(await (await fetch('/api/grid')).json());
+  } catch (e) { /* the panel keeps whatever it last drew */ }
+}
+
 // --- undo and A/B ---------------------------------------------------------
 // Refreshed after changes rather than on the five-second poll: describing what
 // an undo would do means reading the whole buffer, and doing that on a timer
@@ -988,7 +999,7 @@ let blockBusy = false;
 async function blockAction(action, btn) {
   if (blockBusy) return;
   blockBusy = true;
-  document.querySelectorAll('.block').forEach(b => b.disabled = true);
+  document.querySelectorAll('.cell').forEach(b => b.style.pointerEvents = 'none');
   if (btn) btn.classList.add('busy');
   try {
     const r = await fetch('/api/apply', {
@@ -1011,8 +1022,8 @@ async function blockAction(action, btn) {
 }
 
 $('blocks').addEventListener('click', e => {
-  const btn = e.target.closest('.block');
-  if (!btn || btn.disabled) return;
+  const btn = e.target.closest('.cell');
+  if (!btn) return;
   const eid = Number(btn.dataset.eid);
   const fam = btn.dataset.fam;
   const inst = Number(btn.dataset.inst || 1);
@@ -1050,14 +1061,7 @@ async function refresh() {
     renderScenes(s);
     if (s.scene) currentSceneNumber = s.scene.number;
     if (s.preset) loadShared(s.preset.number);
-    $('blocks').innerHTML = s.blocks.map(b =>
-      `<button class="block ${b.bypassed ? 'byp' : ''}" data-eid="${b.effect_id}"
-               data-fam="${b.family}" data-inst="${b.instance}"
-               data-chi="${b.channel_index}" data-chn="${b.channels}"
-               title="${b.bypassed ? 'engage' : 'bypass'} ${esc(b.label)}">
-         <span class="dot"></span>${esc(b.label)}<span class="ch" data-cyc="1"
-           title="cycle channel">${b.channel}</span></button>`
-    ).join('');
+    loadGrid();
     if (!dragging) renderParams(s);
   } catch (e) {
     $('link').className = 'pill off';

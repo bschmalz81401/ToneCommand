@@ -145,3 +145,74 @@ def test_both_control_surfaces_say_what_they_do():
     assert "Drag any slider" in UI
     # and the one thing a player needs to know before touching either
     assert "edit buffer, not to your saved preset" in UI
+
+
+# --- the signal chain is the actual grid ---
+# It was a wrapped list of block names, which tells you what is in the preset
+# but not how any of it is wired, and the wiring is the part that goes wrong:
+# a severed cable and a bypassed Return both leave every block present and
+# correct while the scene makes no sound.
+
+def test_the_grid_endpoint_resolves_the_cables(client):
+    """The browser is handed the source rows that feed each cell, not the
+    bitmask they arrived in. How the cable mask is packed is a protocol fact
+    and belongs on this side of the wire."""
+    g = client.get("/api/grid").json()
+    assert g["cells"] and "error" not in g
+    for c in g["cells"]:
+        assert isinstance(c["feeds"], list)
+        assert all(isinstance(r, int) for r in c["feeds"])
+        assert "live" in c
+
+
+def test_the_walk_is_shared_with_the_audit_not_reimplemented():
+    """Five silent-scene classes were found the hard way getting this
+    traversal right. A second copy in the browser would drift from it."""
+    from tools import path_audit
+    assert hasattr(path_audit, "walk")
+    alive, why = path_audit.scene_alive.__doc__, path_audit.walk.__doc__
+    assert alive and why
+    import inspect
+    assert "walk(" in inspect.getsource(path_audit.scene_alive), \
+        "scene_alive must delegate, so both answers come from one traversal"
+
+
+def test_shunts_are_drawn_as_wire_not_as_blocks():
+    """A shunt is a piece of cable. Drawing it as a box would imply the preset
+    contains something it does not."""
+    render = SCRIPT.split("function renderGrid")[1].split("\nfunction ")[0]
+    assert "if (c.shunt)" in render and "line class=\"shunt" in render.replace("`", "")
+
+
+def test_a_cable_is_lit_only_when_both_ends_are():
+    """A live block fed from a dead one is not being reached through THIS
+    cable, and lighting it would draw a path the signal does not take."""
+    render = SCRIPT.split("function renderGrid")[1].split("\nfunction ")[0]
+    assert "c.live && from && from.live" in render
+
+
+def test_the_glow_filter_is_in_user_space():
+    """objectBoundingBox is the default, and a horizontal line has a bounding
+    box zero pixels tall, so a percentage filter region collapses and the
+    element renders blank. Every straight wire in the chain was invisible
+    while its computed stroke read as cyan."""
+    assert 'filterUnits="userSpaceOnUse"' in SCRIPT
+
+
+def test_empty_leading_rows_are_trimmed():
+    """The device numbers rows on its own full grid. A preset using rows 1 to
+    4 drawn at absolute coordinates wastes a row of panel on nothing."""
+    render = SCRIPT.split("function renderGrid")[1].split("\nfunction ")[0]
+    assert "Math.min(...g.cells.map(c => c.row))" in render
+
+
+def test_bypassed_is_shown_by_dash_not_by_colour():
+    """Colour here already means live versus dead. One signal must not carry
+    two meanings, and a bypassed block still passes signal through."""
+    assert "svg.grid .cell.byp > rect { stroke-dasharray" in UI
+
+
+def test_a_dead_wire_is_still_legible():
+    """A severed path is information. Drawn too dark it reads as empty space
+    rather than as a fault."""
+    assert "#22303a" not in UI, "the old near-invisible wire colour is back"

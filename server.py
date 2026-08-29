@@ -18,6 +18,7 @@ from pydantic import BaseModel
 from fm9.device import FM9, FM9NotFound
 from fm9.registry import Registry
 from fm9 import ai_settings, editbuffer, health, planner
+from tools import path_audit
 from fm9 import protocol as proto
 
 ROOT = Path(__file__).resolve().parent
@@ -855,6 +856,57 @@ def api_restore(body: dict):
             return JSONResponse({"error": str(e)}, status_code=409)
         except Exception as e:
             return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@app.get("/api/grid")
+def api_grid():
+    """The routing grid as it actually is, with the live path marked.
+
+    SIGNAL CHAIN was a wrapped list of block names, which tells you what is in
+    the preset but not how any of it is wired, and the wiring is the part that
+    goes wrong: a severed cable and a bypassed Return both leave every block
+    present and correct while the scene makes no sound.
+
+    Read-only and silent. Reads the loaded scene only, so it costs one grid
+    read and one status dump and can ride along with the normal poll.
+    """
+    with _lock:
+        try:
+            fm9 = get_fm9()
+            cells = fm9.read_grid() or []
+            status = fm9.status_dump() or []
+            st = {b.effect_id: b for b in status}
+            w = path_audit.walk(cells, st, reg)
+            live, resolved = w["live"], w["resolved"]
+            out = []
+            for c in cells:
+                if c.effect_id is None and not c.is_shunt:
+                    continue
+                eid = resolved.get((c.row, c.col)) if c.effect_id else None
+                fam = reg.family_of_effect_id(eid) if eid else None
+                blk = st.get(eid) if eid else None
+                out.append({
+                    "row": c.row, "col": c.col,
+                    "shunt": bool(c.effect_id is None and c.is_shunt),
+                    "effect_id": eid,
+                    "family": fam[0] if fam else None,
+                    "instance": fam[1] if fam else None,
+                    "label": (f"{FRIENDLY.get(fam[0], fam[0])} {fam[1]}"
+                              if fam else None),
+                    "bypassed": bool(blk.bypassed) if blk else None,
+                    "channel": "ABCD"[blk.channel] if blk else None,
+                    # feeds names the cells one column left that reach this
+                    # one, resolved here so the browser never has to know how
+                    # the cable bitmask is packed
+                    "feeds": [r for r in range(8)
+                              if c.cable_in_mask & (1 << (r + 1))],
+                    "live": (c.row, c.col) in live,
+                })
+            return {"cells": out, "alive": w["alive"], "why": w["why"],
+                    "rows": 1 + max((c["row"] for c in out), default=0),
+                    "cols": 1 + max((c["col"] for c in out), default=0)}
+        except Exception as e:
+            return {"error": str(e)}
 
 
 @app.post("/api/health")
