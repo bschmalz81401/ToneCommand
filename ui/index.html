@@ -413,6 +413,15 @@ const KNOB_LABELS = {
 let sceneBusy = false;
 let currentSceneNumber = null;
 
+function clearAffected() {
+  // Drop the warning and un-paint it in the same breath. Clearing the set
+  // alone left the amber lit until the next poll, so a discarded plan went on
+  // warning about scenes nothing was going to touch any more.
+  affectedScenes = new Set();
+  document.querySelectorAll('.sc.willchange')
+          .forEach(b => b.classList.remove('willchange'));
+}
+
 function renderScenes(s) {
   const names = s.scenes || lastScenes;
   if (s.scenes) lastScenes = s.scenes;
@@ -764,7 +773,7 @@ async function engage() {
     if (plan.clarification) {
       log(`needs clarification: ${plan.clarification}`, 'err');
       $('planbox').style.display = 'none';
-      affectedScenes = new Set();
+      clearAffected();
       return;
     }
     currentPlan = plan;
@@ -955,20 +964,23 @@ async function apply() {
     });
     $('prompt').value = '';
     setTimeout(() => { $('planbox').style.display = 'none';
-                       affectedScenes = new Set(); refresh(); }, 1500);
+                       clearAffected(); refresh(); }, 1500);
   } catch (e) {
     log(`transmit failed: ${e.message}`, 'err');
   } finally {
     $('apply').disabled = false; $('discard').disabled = false;
     currentPlan = null;
-    affectedScenes = new Set();
+    clearAffected();
   }
 }
 
 $('engage').onclick = engage;
 $('prompt').addEventListener('keydown', e => { if (e.key === 'Enter') engage(); });
 $('apply').onclick = apply;
-$('discard').onclick = () => { $('planbox').style.display = 'none'; currentPlan = null; log('plan discarded'); };
+$('discard').onclick = () => {
+  $('planbox').style.display = 'none'; currentPlan = null;
+  clearAffected(); log('plan discarded');
+};
 
 $('aisave').onclick = () => saveAiSettings();
 $('aiclearkey').onclick = () => saveAiSettings({clearKey: true});
