@@ -215,6 +215,12 @@
   }
   .plan-card .what { color: var(--text); }
   .plan-card .why { color: var(--muted); font-size: 0.78rem; margin-top: 4px; }
+  /* Not a warning: nothing is wrong. It is the reach of the change, stated
+     before you press transmit rather than discovered after. */
+  .plan-card .spread {
+    margin-top: 5px; font-size: 0.72rem; color: var(--violet);
+    border-left: 2px solid var(--violet-dim); padding-left: 8px;
+  }
   .plan-card .delta { color: var(--amber); white-space: nowrap; }
   .plan-card.done { border-left-color: var(--green); }
   .plan-card.fail { border-left-color: var(--red); }
@@ -371,6 +377,7 @@ const KNOB_LABELS = {
 // /api/apply rather than through the planner. Asking a language model to
 // interpret "go to scene 3" would be slower, less reliable, and no safer.
 let sceneBusy = false;
+let currentSceneNumber = null;
 
 function renderScenes(s) {
   const names = s.scenes || [];
@@ -538,6 +545,40 @@ $('psearch').addEventListener('keydown', e => {
   }
 });
 
+// --- blast radius ---------------------------------------------------------
+// Block PARAMETERS live on the channel, not the scene. So editing a knob
+// moves every scene sitting on that channel, and the plan card should say so
+// before you transmit rather than after you notice.
+let sharedMap = null;
+let sharedFor = null;
+
+async function loadShared(presetNumber) {
+  if (sharedFor === presetNumber && sharedMap) return;
+  try {
+    const r = await fetch('/api/shared');
+    const d = await r.json();
+    if (d.error) return;                 // a hint is never worth an error
+    sharedMap = d.shared; sharedFor = d.preset;
+  } catch (e) { /* silent: this only ever adds information */ }
+}
+
+function alsoAffects(a, currentScene) {
+  // Only parameter and type edits travel down the channel. Bypass and channel
+  // are stored per scene, so those really are scene-local.
+  if (!sharedMap || !currentScene) return '';
+  if (a.kind !== 'set_param' && a.kind !== 'set_type') return '';
+  const eid = a.effect_id != null ? String(a.effect_id) : null;
+  if (!eid || !sharedMap[eid]) return '';
+  for (const [ch, scenes] of Object.entries(sharedMap[eid])) {
+    if (!scenes.includes(currentScene)) continue;
+    const others = scenes.filter(n => n !== currentScene);
+    if (!others.length) return '';
+    return `also changes scene${others.length > 1 ? 's' : ''} ${others.join(', ')}, ` +
+           `which share this block's channel`;
+  }
+  return '';
+}
+
 async function refresh() {
   try {
     const r = await fetch('/api/state');
@@ -558,6 +599,8 @@ async function refresh() {
       `<span class="lbl">PRESET</span><span class="pnum">${s.preset.editor ?? s.preset.number}</span>` +
       `<b>${esc(s.preset.name)}</b><span class="caret">&#9662;</span>`;
     renderScenes(s);
+    if (s.scene) currentSceneNumber = s.scene.number;
+    if (s.preset) loadShared(s.preset.number);
     $('blocks').innerHTML = s.blocks.map(b =>
       `<span class="block ${b.bypassed ? 'byp' : ''}">${b.label}<span class="ch">${b.channel}</span></span>`
     ).join('');
@@ -634,7 +677,9 @@ async function engage() {
         `<div class="vmsg ${errs.length ? 'verr' : 'vwrn'}">${esc(m)}</div>`).join('');
       return `
       <div class="plan-card${vclass}">
-        <div><div class="what">${esc(describe(a))}</div><div class="why">${esc(a.reason || '')}</div>${vmsg}</div>
+        <div><div class="what">${esc(describe(a))}</div><div class="why">${esc(a.reason || '')}</div>${vmsg}${
+          (() => { const s = alsoAffects(a, currentSceneNumber);
+                   return s ? `<div class="spread">${esc(s)}</div>` : ''; })()}</div>
         <div class="delta">${errs.length ? 'BLOCKED' : (a.kind === 'set_param' ? '→ ' + a.value : '')}</div>
       </div>`;
     }).join('');

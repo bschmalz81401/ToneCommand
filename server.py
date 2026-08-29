@@ -135,6 +135,40 @@ def param_reference() -> str:
 PARAM_REFERENCE = param_reference()
 
 
+def shared_scenes(fm9: FM9) -> dict:
+    """For each block, the scenes currently using each of its channels.
+
+    The FM9 stores bypass and channel per scene, but block PARAMETERS live on
+    the CHANNEL. So "make this scene grittier" moves every other scene sitting
+    on that channel too, and nothing in the UI showed that before.
+
+    COSTS A SCENE SWEEP. There is no way to read another scene's channel
+    assignments without visiting it, so this walks all eight and returns to
+    where it started. That is audible, so it must NEVER run on the state poll:
+    it is called deliberately and cached per preset. Any scene that does not
+    answer is skipped rather than guessed at.
+    """
+    here = fm9.scene_name()
+    active = here[0] if here else 1
+    by_block: dict = {}
+    try:
+        for sc in range(1, 9):
+            try:
+                fm9.set_scene(sc)
+                blocks = fm9.status_dump() or []
+            except Exception:
+                continue
+            for b in blocks:
+                key = str(b.effect_id)
+                by_block.setdefault(key, {}).setdefault(str(b.channel), []).append(sc)
+    finally:
+        try:
+            fm9.set_scene(active)
+        except Exception:
+            pass
+    return by_block
+
+
 def scene_names(fm9: FM9) -> list[dict]:
     """Names of all eight scenes, for labelling the UI's scene buttons.
 
@@ -325,6 +359,16 @@ def api_plan(body: PromptBody):
             # numbering rule stays in protocol.py alone.
             if a.get("kind") == "store" and isinstance(a.get("value"), (int, float)):
                 a["slot_label"] = proto.slot_label(int(a["value"]))
+            # Resolve the block to its effect id so the UI can say which other
+            # scenes share its channel and will move with a parameter edit.
+            # Resolved here for the same reason as the label: one place.
+            if a.get("block"):
+                try:
+                    # resolve_block already returns (family, effect_id)
+                    a["effect_id"] = reg.resolve_block(
+                        a["block"], int(a.get("instance") or 1))[1]
+                except Exception:
+                    pass
         return result
     except Exception as e:
         return JSONResponse({"error": f"planner failed: {e}"}, status_code=502)
@@ -684,6 +728,33 @@ def api_preset(body: PresetBody):
             status_code=409)
     return {"preset": {"number": got[0], "editor": proto.editor_number(got[0]),
                        "label": proto.slot_label(got[0]), "name": got[1]}}
+
+
+_shared_cache: dict = {"preset": None, "map": None}
+
+
+@app.get("/api/shared")
+def api_shared():
+    """Which scenes share each block's channel, for the blast-radius hint.
+
+    Cached per preset because computing it sweeps all eight scenes, which is
+    audible. The UI asks for it once per preset, never on a timer.
+    """
+    with _lock:
+        try:
+            fm9 = get_fm9()
+            cur = fm9.current_preset()
+            key = cur[0] if cur else None
+            if _shared_cache["preset"] == key and _shared_cache["map"] is not None:
+                return {"preset": key, "shared": _shared_cache["map"], "cached": True}
+            got = shared_scenes(fm9)
+        except FM9NotFound:
+            drop_fm9()
+            return JSONResponse({"error": "FM9 not connected"}, status_code=503)
+        except Exception as e:
+            return JSONResponse({"error": str(e)}, status_code=500)
+    _shared_cache["preset"], _shared_cache["map"] = key, got
+    return {"preset": key, "shared": got, "cached": False}
 
 
 @app.post("/api/gig")
