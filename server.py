@@ -135,6 +135,23 @@ def param_reference() -> str:
 PARAM_REFERENCE = param_reference()
 
 
+def scene_names(fm9: FM9) -> list[dict]:
+    """Names of all eight scenes, for labelling the UI's scene buttons.
+
+    Queried by number, so the loaded scene is untouched. A scene that does
+    not answer is reported as None rather than guessed at or skipped, so the
+    button still renders and says nothing it cannot back up.
+    """
+    out = []
+    for n in range(1, 9):
+        try:
+            got = fm9.scene_name(n)
+        except Exception:
+            got = None
+        out.append({"number": n, "name": got[1] if got else None})
+    return out
+
+
 def snapshot(fm9: FM9) -> dict:
     preset = fm9.current_preset()
     scene = fm9.scene_name()
@@ -183,6 +200,10 @@ def snapshot(fm9: FM9) -> dict:
                     "label": proto.slot_label(preset[0]), "name": preset[1]}
                    if preset else None),
         "scene": {"number": scene[0], "name": scene[1]} if scene else None,
+        # All eight names so the UI can label its scene buttons with what the
+        # owner called them rather than with the numbers 1-8. Read-only: this
+        # queries names, it does not switch the active scene.
+        "scenes": scene_names(fm9),
         "blocks": out_blocks,
         "values": values,
     }
@@ -591,6 +612,77 @@ import os as _os
 
 GIG_SAFE_KINDS = {"set_scene"}
 _gig_mode = {"on": _os.environ.get("TONECOMMAND_GIG_MODE") == "1"}
+
+
+# Slot names change only when someone stores a preset, and a full sweep of
+# 512 costs about 15 seconds of MIDI, so it is read once and kept. Refresh is
+# explicit rather than automatic: silently re-scanning would stall a prompt.
+_preset_cache: dict = {"slots": None}
+
+
+@app.get("/api/presets")
+def api_presets(refresh: bool = False):
+    """Every slot name, read by number without disturbing the loaded preset."""
+    if _preset_cache["slots"] is not None and not refresh:
+        return {"slots": _preset_cache["slots"], "cached": True}
+    with _lock:
+        try:
+            fm9 = get_fm9()
+            slots = []
+            for s in fm9.scan_slots(0, 511):
+                slots.append({
+                    "number": s.number,
+                    "label": proto.slot_label(s.number),
+                    "name": s.name,
+                    "empty": proto.is_empty_slot_name(s.name),
+                })
+        except FM9NotFound:
+            drop_fm9()
+            return JSONResponse({"error": "FM9 not connected"}, status_code=503)
+        except Exception as e:
+            drop_fm9()
+            return JSONResponse({"error": str(e)}, status_code=500)
+    _preset_cache["slots"] = slots
+    return {"slots": slots, "cached": False}
+
+
+class PresetBody(BaseModel):
+    number: int
+
+
+@app.post("/api/preset")
+def api_preset(body: PresetBody):
+    """Load a preset.
+
+    Not a planner action on purpose. Selecting a preset DISCARDS the edit
+    buffer, so it is a deliberate act by a person, not something a language
+    model gets to decide mid-plan. Gig mode refuses it for the same reason it
+    refuses everything but a scene change.
+    """
+    if _gig_mode["on"]:
+        return JSONResponse(
+            {"error": "GIG MODE is on: refusing to change preset. Only scene "
+                      "changes are allowed during a performance."},
+            status_code=423)
+    with _lock:
+        try:
+            fm9 = get_fm9()
+            fm9.select_preset(body.number)
+            got = fm9.current_preset()
+        except FM9NotFound:
+            drop_fm9()
+            return JSONResponse({"error": "FM9 not connected"}, status_code=503)
+        except Exception as e:
+            return JSONResponse({"error": str(e)}, status_code=500)
+    # Report what the unit says it loaded, not what we asked for: a dropped
+    # program change would otherwise look like success.
+    if not got or got[0] != body.number:
+        return JSONResponse(
+            {"error": f"asked for {proto.slot_label(body.number)} but the unit "
+                      f"reports {proto.slot_label(got[0]) if got else 'nothing'}"},
+            status_code=409)
+    return {"preset": {"number": got[0], "label": proto.slot_label(got[0]),
+                       "name": got[1]}}
 
 
 @app.post("/api/gig")

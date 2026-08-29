@@ -57,6 +57,62 @@
                background: currentColor; margin-right: 7px; animation: pulse 2s infinite; }
   @keyframes pulse { 50% { opacity: 0.25; } }
 
+  /* Scene switcher: shaped like the footswitches it stands in for, because
+     this is the one control that gets used while playing. */
+  .scenes { display: grid; grid-template-columns: repeat(8, 1fr); gap: 8px; }
+  .sc {
+    position: relative; cursor: pointer; text-align: left;
+    padding: 10px 10px 9px; border: 1px solid var(--line); border-radius: 4px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(0,0,0,0.35));
+    color: var(--muted); font-family: inherit; font-size: 0.72rem;
+    letter-spacing: 0.06em; transition: border-color .12s, color .12s, box-shadow .12s;
+  }
+  .sc:hover:not(:disabled) { border-color: var(--cyan-dim); color: var(--text); }
+  .sc .n { display: block; font-size: 1.05rem; font-weight: 600; line-height: 1; }
+  .sc .nm {
+    display: block; margin-top: 6px; font-size: 0.66rem; color: var(--muted);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .sc.on {
+    border-color: var(--cyan); color: var(--cyan);
+    box-shadow: 0 0 16px rgba(47, 230, 255, 0.28), inset 0 0 22px rgba(47, 230, 255, 0.06);
+  }
+  .sc.on .nm { color: var(--cyan-dim); }
+  .sc.on::after {
+    content: ''; position: absolute; top: 7px; right: 8px;
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--cyan); box-shadow: 0 0 8px var(--cyan);
+  }
+  .sc:disabled { opacity: 0.45; cursor: default; }
+  .sc.busy { border-color: var(--amber); color: var(--amber); }
+
+  /* Preset browser. FM9-Edit makes you scroll a long list; this filters. */
+  .psearch { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; }
+  .psearch input {
+    flex: 1; background: rgba(0,0,0,0.4); border: 1px solid var(--line);
+    border-radius: 3px; color: var(--text); font-family: inherit;
+    font-size: 0.85rem; padding: 8px 11px; outline: none;
+  }
+  .psearch input:focus { border-color: var(--cyan-dim); }
+  .psearch .count { font-size: 0.7rem; color: var(--muted); white-space: nowrap; }
+  .plist {
+    max-height: 260px; overflow-y: auto; border: 1px solid var(--line);
+    border-radius: 3px; background: rgba(0,0,0,0.25);
+  }
+  .prow {
+    display: flex; gap: 12px; align-items: baseline; width: 100%;
+    padding: 7px 11px; cursor: pointer; text-align: left;
+    background: none; border: 0; border-bottom: 1px solid rgba(18,36,56,0.6);
+    color: var(--text); font-family: inherit; font-size: 0.78rem;
+  }
+  .prow:hover { background: rgba(47, 230, 255, 0.06); }
+  .prow .num { color: var(--muted); min-width: 118px; font-size: 0.7rem; }
+  .prow .nm { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .prow.on { color: var(--cyan); background: rgba(47, 230, 255, 0.08); }
+  .prow.on .num { color: var(--cyan-dim); }
+  .prow.empty .nm { color: var(--muted); font-style: italic; }
+  .prow:disabled { opacity: 0.5; cursor: default; }
+
   .console {
     background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
     padding: 18px; margin-bottom: 20px; position: relative;
@@ -161,6 +217,21 @@
     </div>
   </header>
 
+  <div class="console" data-label="SCENES">
+    <div class="scenes" id="scenes"></div>
+  </div>
+
+  <div class="console" data-label="PRESETS">
+    <div class="psearch">
+      <input id="psearch" autocomplete="off" spellcheck="false"
+             placeholder="filter by name or number... e.g. worship, 141, bassguy">
+      <span class="count" id="pcount"></span>
+      <button id="prescan" title="Re-read every slot name from the unit">RESCAN</button>
+    </div>
+    <div class="plist" id="plist"></div>
+    <div class="hint">Loading a preset discards unsaved edit-buffer changes, same as switching on the unit itself. Nothing here writes to your presets.</div>
+  </div>
+
   <div class="console" data-label="COMMAND">
     <div class="promptrow">
       <span class="prompt-prefix">&gt;</span>
@@ -235,6 +306,130 @@ const KNOB_LABELS = {
   DISTORT_DEPTH: ['DEPTH', 10], DISTORT_MASTER: ['MASTER', 10],
 };
 
+// --- scene switcher -------------------------------------------------------
+// set_scene is the one action gig mode allows, so this posts it straight to
+// /api/apply rather than through the planner. Asking a language model to
+// interpret "go to scene 3" would be slower, less reliable, and no safer.
+let sceneBusy = false;
+let currentPresetNumber = null;
+
+function renderScenes(s) {
+  const names = s.scenes || [];
+  const active = s.scene ? s.scene.number : null;
+  const box = $('scenes');
+  if (!names.length) { box.innerHTML = '<span class="hint">awaiting link...</span>'; return; }
+  box.innerHTML = names.map(sc => {
+    const on = sc.number === active ? ' on' : '';
+    // A scene that did not answer shows its number and nothing else, rather
+    // than a name we cannot back up.
+    const nm = sc.name ? esc(sc.name) : '&nbsp;';
+    return `<button class="sc${on}" data-scene="${sc.number}" title="${sc.name ? esc(sc.name) : 'scene ' + sc.number}">
+              <span class="n">${sc.number}</span><span class="nm">${nm}</span></button>`;
+  }).join('');
+}
+
+async function gotoScene(n) {
+  if (sceneBusy) return;
+  sceneBusy = true;
+  const btn = document.querySelector(`.sc[data-scene="${n}"]`);
+  document.querySelectorAll('.sc').forEach(b => b.disabled = true);
+  if (btn) btn.classList.add('busy');
+  try {
+    const r = await fetch('/api/apply', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({actions: [{kind: 'set_scene', value: n}]}),
+    });
+    const out = await r.json();
+    if (out.error) throw new Error(out.error);
+    const res = (out.results || [])[0];
+    if (res && !res.ok) throw new Error(res.detail || 'refused');
+    log(`scene ${n}`, 'ok');
+  } catch (e) {
+    log(`scene ${n} failed: ${e.message}`, 'err');
+  } finally {
+    if (btn) btn.classList.remove('busy');
+    sceneBusy = false;
+    await refresh();          // re-read rather than assume the write landed
+  }
+}
+
+$('scenes').addEventListener('click', e => {
+  const b = e.target.closest('.sc');
+  if (b && !b.disabled) gotoScene(Number(b.dataset.scene));
+});
+
+// --- preset browser -------------------------------------------------------
+// Not a planner action: selecting a preset discards the edit buffer, so it is
+// a person's decision, never something a model emits mid-plan.
+let allSlots = [];
+let presetBusy = false;
+
+function renderPresets() {
+  const q = $('psearch').value.trim().toLowerCase();
+  const cur = currentPresetNumber;
+  const hits = allSlots.filter(s => {
+    if (!q) return true;
+    return s.name.toLowerCase().includes(q)
+        || String(s.number) === q
+        || String(s.number + 1) === q;      // the number FM9-Edit shows
+  });
+  $('pcount').textContent = q
+    ? `${hits.length} of ${allSlots.length}`
+    : `${allSlots.length} slots`;
+  // Cap the DOM at a sane size; refine the filter rather than scroll forever.
+  const shown = hits.slice(0, 200);
+  $('plist').innerHTML = shown.map(s =>
+    `<button class="prow${s.number === cur ? ' on' : ''}${s.empty ? ' empty' : ''}"
+             data-preset="${s.number}">
+       <span class="num">${esc(s.label)}</span>
+       <span class="nm">${esc(s.name)}</span></button>`
+  ).join('') || '<div class="hint" style="padding:12px">nothing matches</div>';
+  if (hits.length > shown.length) {
+    $('plist').insertAdjacentHTML('beforeend',
+      `<div class="hint" style="padding:8px 11px">${hits.length - shown.length} more, keep typing to narrow</div>`);
+  }
+}
+
+async function loadPresets(refresh) {
+  $('plist').innerHTML = '<div class="hint" style="padding:12px">reading slot names from the unit...</div>';
+  try {
+    const r = await fetch('/api/presets' + (refresh ? '?refresh=true' : ''));
+    const d = await r.json();
+    if (d.error) throw new Error(d.error);
+    allSlots = d.slots || [];
+    renderPresets();
+  } catch (e) {
+    $('plist').innerHTML = `<div class="hint" style="padding:12px">could not read presets: ${esc(e.message)}</div>`;
+  }
+}
+
+async function gotoPreset(n) {
+  if (presetBusy) return;
+  presetBusy = true;
+  document.querySelectorAll('.prow').forEach(b => b.disabled = true);
+  try {
+    const r = await fetch('/api/preset', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({number: n}),
+    });
+    const d = await r.json();
+    if (d.error) throw new Error(d.error);
+    log(`loaded ${d.preset.label} "${d.preset.name}"`, 'ok');
+  } catch (e) {
+    log(`preset ${n} failed: ${e.message}`, 'err');
+  } finally {
+    presetBusy = false;
+    await refresh();
+  }
+}
+
+$('psearch').addEventListener('input', renderPresets);
+$('prescan').addEventListener('click', () => loadPresets(true));
+$('plist').addEventListener('click', e => {
+  const b = e.target.closest('.prow');
+  if (b && !b.disabled) gotoPreset(Number(b.dataset.preset));
+});
+
 async function refresh() {
   try {
     const r = await fetch('/api/state');
@@ -243,9 +438,14 @@ async function refresh() {
     $('link').className = 'pill on';
     // the label carries both numbers: the wire number this tool sends and the
     // one the front panel and FM9-Edit show, which differ by one
+    if (s.preset && s.preset.number !== currentPresetNumber) {
+      currentPresetNumber = s.preset.number;
+      if (allSlots.length) renderPresets();
+    }
     if (s.preset) $('preset').innerHTML =
       `PRESET ${s.preset.label || s.preset.number} <b>${s.preset.name}</b>`;
     if (s.scene) $('scene').innerHTML = `SCENE ${s.scene.number} <b>${s.scene.name}</b>`;
+    renderScenes(s);
     $('blocks').innerHTML = s.blocks.map(b =>
       `<span class="block ${b.bypassed ? 'byp' : ''}">${b.label}<span class="ch">${b.channel}</span></span>`
     ).join('');
@@ -505,6 +705,7 @@ $('aibackend').onchange = () => {
 
 loadAiSettings();
 refresh();
+loadPresets(false);      // cached server side, so this is cheap after the first read
 setInterval(refresh, 5000);
 </script>
 </body>
