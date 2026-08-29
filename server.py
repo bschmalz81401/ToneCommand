@@ -528,6 +528,31 @@ def validate_action(a: Action) -> tuple[list[str], list[str]]:
     return errors, warnings
 
 
+#: Where a block was asked to go, as a phrase rather than an enum. Interpolating
+#: the raw value produced "no free pass-through cell any of the amp".
+_POSITION_PHRASE = {"pre": "before the amp", "post": "after the amp",
+                    "any": "anywhere on the grid"}
+
+
+def _no_placement_detail(a: Action, pos: str, cells: list) -> str:
+    """Why a block could not be placed, in terms of the wall actually hit.
+
+    An EMPTY preset is not a full one. It has no grid cells at all, not even
+    the pass-through shunts (PROTOCOL finding 18), so "no free pass-through
+    cell" describes a preset packed with blocks and says nothing useful about
+    a slot that is simply blank. The two need different answers, because only
+    one of them is the user's fault.
+    """
+    where = _POSITION_PHRASE.get(pos, f"at position {pos!r}")
+    if not cells:
+        return (f"this preset is empty: it has no grid cells at all, not even "
+                f"pass-through cells, so there is nothing to place {a.block} "
+                f"onto. Load a preset with a signal chain, or build one from "
+                f"scratch with tools/build_from_scratch.py")
+    return (f"no free pass-through cell {where} to place {a.block} on; "
+            f"refusing rather than rewiring the grid")
+
+
 def _add_block(fm9: FM9, a: Action) -> dict:
     """Insert a block onto a free shunt cell. Refuses when no sane placement
     exists rather than guessing (no cable drawing in the planner path)."""
@@ -545,9 +570,7 @@ def _add_block(fm9: FM9, a: Action) -> dict:
     elif pos == "post" and amp_col is not None:
         shunts = [(r, c) for r, c in shunts if c > amp_col]
     if not shunts:
-        return {"ok": False,
-                "detail": f"no free pass-through cell {pos} of the amp to place "
-                          f"{a.block} on; refusing rather than rewiring the grid"}
+        return {"ok": False, "detail": _no_placement_detail(a, pos, cells)}
     row, col = sorted(shunts, key=lambda rc: rc[1])[0]
     fm9.place_block(row + 1, col + 1, eid)
     after = fm9.read_grid() or []
