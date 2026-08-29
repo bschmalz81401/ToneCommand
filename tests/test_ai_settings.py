@@ -599,3 +599,25 @@ def test_a_save_during_a_plan_is_refused_rather_than_torn(client, store):
 
     assert client.post("/api/ai-settings",
                        json={"backend": "cli"}).status_code == 200
+
+
+# --- a short name for places with no room to explain ---
+
+def test_every_backend_has_a_short_name_fit_for_a_pill():
+    """The header button names the model that is about to read your prompt.
+
+    The dropdown labels read like sentences because a dropdown has room for
+    one. "auto (let the planner choose)" in a header pill truncates to
+    "auto (let the plan...", which is worse than either form, so the short
+    name is a real string rather than an ellipsis.
+    """
+    for b in ai_settings.available_backends():
+        short = b["short"]
+        assert short and "(" not in short, b["backend"]
+        assert len(short) <= 16, f"{short!r} will not fit a header pill"
+
+
+def test_the_short_names_live_beside_the_long_ones():
+    """Both tables cover the same backends, so adding one cannot leave the
+    button falling back to a raw key like 'openai'."""
+    assert set(ai_settings.BACKEND_SHORT) == set(ai_settings.BACKEND_LABELS)

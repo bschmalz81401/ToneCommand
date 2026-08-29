@@ -41,3 +41,72 @@ def test_every_way_a_plan_can_end_puts_the_warning_out():
                  ):
         seg = UI.split(path)[1][:400]
         assert "clearAffected()" in UI.split(path)[0][-400:] or "clearAffected()" in seg, path
+
+
+# --- AI settings sit behind a header button, not on the front page ---
+# Choosing a planner backend is a once-a-month errand. It held a full console
+# on the main screen, above the log, competing with the controls you touch
+# every session. Moving markup is where element references quietly break, so
+# these pin the move rather than trusting a read of the diff.
+
+import re
+
+SCRIPT = UI.split("<script>")[1]
+
+
+def test_the_settings_panel_is_behind_the_button_not_on_the_page():
+    modal = UI.split('<div class="modal" id="aimodal"')[1]
+    for control in ("aibackend", "aikey", "aisave", "aiclearkey"):
+        assert f'id="{control}"' in modal, f"{control} escaped the modal"
+    assert UI.count('data-label="AI SETTINGS"') == 1
+    assert 'id="aiopen"' in UI.split("<script>")[0].split('id="aimodal"')[0], \
+        "no way to reach the panel from the header"
+
+
+def test_it_opens_closed():
+    assert re.search(r'<div class="modal" id="aimodal" hidden>', UI), \
+        "the panel must start hidden or it is not out of the way at all"
+
+
+def test_every_element_the_script_reaches_for_still_exists():
+    """The failure mode of moving markup: a live reference to a dead id.
+
+    Ids the script creates itself are exempt, which is why the check reads
+    assignments as well as markup.
+    """
+    declared = set(re.findall(r'\bid="([^"]+)"', UI))
+    created = set(re.findall(r"\.id = '([^']+)'", SCRIPT))
+    used = set(re.findall(r"\$\('([^']+)'\)", SCRIPT))
+    assert not (used - declared - created)
+
+
+def test_no_id_is_declared_twice():
+    """getElementById would silently pick the first, so a stray duplicate left
+    behind by a move would half-work, which is worse than breaking."""
+    ids = re.findall(r'\bid="([^"]+)"', UI)
+    assert len(ids) == len(set(ids)), \
+        [i for i in set(ids) if ids.count(i) > 1]
+
+
+def test_the_button_says_which_model_is_driving():
+    """The one fact from the panel worth permanent space. A tool whose whole
+    pitch is 'bring your own AI' has to show whose AI is answering."""
+    assert "function aiPill(" in SCRIPT
+    assert "$('ailabel').textContent" in SCRIPT
+    # and it is refreshed from the server read, not the dropdown, which can be
+    # sitting on a selection the user never saved
+    load = SCRIPT.split("async function loadAiSettings()")[1].split("\n}")[0]
+    assert "aiPill(d.settings.backend" in load
+
+
+def test_a_backend_that_cannot_run_is_flagged_on_the_button():
+    """Hiding the panel must not hide a broken planner: ENGAGE would fail with
+    the explanation stuck behind a button nothing told you to press."""
+    assert "classList.toggle('needs'" in SCRIPT
+    assert ".aipill.needs" in UI
+
+
+def test_closing_drops_a_typed_key():
+    body = SCRIPT.split("function aiModal(")[1].split("\n}")[0]
+    assert "$('aikey').value = ''" in body, \
+        "a typed key must not sit in the DOM after the panel closes"

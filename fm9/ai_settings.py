@@ -50,6 +50,20 @@ BACKEND_LABELS = {
     "openai": "OpenAI-compatible endpoint",
 }
 
+#: The same names with the explanation trimmed off, for places with no room to
+#: explain: a header button, a status line. The full label reads like a
+#: sentence because a dropdown has space for one; a pill does not, and
+#: truncating the long form with an ellipsis produces "auto (let the plan...",
+#: which is worse than either. Kept here rather than in the browser so a
+#: backend is still named in exactly one place.
+BACKEND_SHORT = {
+    "": "auto",
+    "cli": "Claude CLI",
+    "api": "Claude API",
+    "grok": "Grok",
+    "openai": "custom endpoint",
+}
+
 #: Which controls each backend genuinely honours, and the variable behind each.
 BACKEND_FIELDS = {
     # Auto reads the same three as openai: a configured router is the first
@@ -496,6 +510,7 @@ def available_backends() -> list[dict]:
         fields = BACKEND_FIELDS[name]
         out.append({
             "backend": name, "label": BACKEND_LABELS[name],
+            "short": BACKEND_SHORT[name],
             "available": usable.get(name, True),
             "why": "" if usable.get(name, True) else reasons[name],
             "note": BACKEND_NOTES[name],

@@ -306,6 +306,36 @@
 .airow #aikey { flex: 3 1 340px; }
 .airow select, .airow button { flex: 0 0 auto; }
 .answered { color: var(--dim); font-size: 11px; letter-spacing: .04em; margin-top: 6px; }
+
+  /* AI settings live behind a header button rather than on the front page.
+     Which model is driving is worth a glance, so the button says so; the
+     boxes that set it are a once-a-month errand and stay out of the way. */
+  .aipill { cursor: pointer; font: inherit; max-width: 190px; overflow: hidden;
+            text-overflow: ellipsis; }
+  .aipill:hover { border-color: var(--cyan-dim); color: var(--text); }
+  .aipill .gear { color: var(--cyan-dim); margin-right: 6px; }
+  /* A backend that cannot run is the one thing here worth interrupting for,
+     because ENGAGE will fail and the reason is behind this button. */
+  .aipill.needs { border-color: var(--amber); color: var(--amber); }
+  .aipill.needs .gear { color: var(--amber); }
+
+  .modal {
+    position: fixed; inset: 0; z-index: 50; display: flex;
+    align-items: flex-start; justify-content: center; padding: 60px 20px 20px;
+    background: rgba(0,0,0,0.72); backdrop-filter: blur(2px); overflow-y: auto;
+  }
+  .modal[hidden] { display: none; }
+  .modal .console { width: min(760px, 100%); margin: 0;
+                    box-shadow: 0 20px 60px rgba(0,0,0,0.7); }
+  .modal .airow { flex-direction: column; align-items: stretch; }
+  .modal .airow input, .modal .airow select { flex: none; width: 100%; }
+  .modal .airow .btns { display: flex; gap: 8px; margin-top: 4px; }
+  .mclose {
+    position: absolute; top: 10px; right: 12px; background: none; border: none;
+    color: var(--muted); font: inherit; font-size: 1.1rem; cursor: pointer;
+    line-height: 1; padding: 4px 6px;
+  }
+  .mclose:hover { color: var(--red); }
 </style>
 </head>
 <body>
@@ -324,6 +354,8 @@
             <button id="prescan">RESCAN</button></div>
         </div>
       </span>
+      <button class="pill aipill" id="aiopen" title="AI backend settings">
+        <span class="gear">&#9881;</span><span id="ailabel">AI</span></button>
       <span class="pill off" id="link"><span class="dot"></span>LINK</span>
     </div>
   </header>
@@ -360,7 +392,14 @@
     </div>
   </div>
 
-  <div class="console" data-label="AI SETTINGS" style="margin-top:20px">
+  <div class="console" data-label="LOG" style="margin-top:20px">
+    <div id="log"></div>
+  </div>
+</div>
+
+<div class="modal" id="aimodal" hidden>
+  <div class="console" data-label="AI SETTINGS">
+    <button class="mclose" id="aiclose" title="close">&#10005;</button>
     <div class="airow">
       <select id="aibackend"></select>
       <input id="aibaseurl" autocomplete="off" spellcheck="false"
@@ -370,16 +409,14 @@
       <datalist id="aimodels"></datalist>
       <input id="aikey" type="password" autocomplete="off"
              placeholder="API key (required for Claude API but optional for others)">
-      <button id="aisave">SAVE</button>
-      <button id="aiclearkey" class="danger">CLEAR KEY</button>
+      <div class="btns">
+        <button id="aisave">SAVE</button>
+        <button id="aiclearkey" class="danger">CLEAR KEY</button>
+      </div>
     </div>
     <div class="hint" id="ainote"></div>
     <div class="hint" id="aisrc"></div>
     <div class="hint">Takes effect on the next prompt, no restart. Keys are stored on this machine and never sent to the browser. Only the boxes a backend actually reads are shown.</div>
-  </div>
-
-  <div class="console" data-label="LOG" style="margin-top:20px">
-    <div id="log"></div>
   </div>
 </div>
 
@@ -862,6 +899,27 @@ function aiFields() {
   }
 }
 
+// The header button carries the one fact from this panel worth seeing all the
+// time: which model is about to read your prompt. Everything else here is a
+// setting you touch once and then forget, so it stays behind the button.
+function aiPill(backend) {
+  const b = aiBackends.find(x => x.backend === backend);
+  $('ailabel').textContent = (b ? b.short : backend || 'auto').toUpperCase();
+  // Amber only for a backend that cannot actually run. ENGAGE would fail and
+  // the explanation is behind this button, so the button has to say so.
+  const broken = !!b && (!b.available || !!b.needs);
+  $('aiopen').classList.toggle('needs', broken);
+  $('aiopen').title = broken
+    ? `${b.label} is not ready: ${b.needs || b.why}. Click to fix.`
+    : `Planning with ${b ? b.label : 'the first backend available'}. Click to change.`;
+}
+
+function aiModal(open) {
+  $('aimodal').hidden = !open;
+  if (open) $('aibackend').focus();
+  else $('aikey').value = '';   // never leave a typed key sitting in the DOM
+}
+
 async function loadAiSettings() {
   try {
     const r = await fetch('/api/ai-settings');
@@ -880,6 +938,7 @@ async function loadAiSettings() {
     $('aibaseurl').value = d.settings.baseUrl || '';
     aiEnvBaseUrl = d.settings.baseUrlFallback || '';
     aiFields();
+    aiPill(d.settings.backend || '');
   } catch (e) {
     log(`could not read AI settings: ${e.message}`, 'err');
   }
@@ -928,6 +987,7 @@ async function saveAiSettings(extra) {
     log(`AI backend: ${d.settings.backend || 'auto'}`
         + (d.settings.hasKey ? ' (key stored)' : ''), 'ok');
     await loadAiSettings();
+    aiModal(false);
   } catch (e) {
     log(`could not save AI settings: ${e.message}`, 'err');
   }
@@ -982,6 +1042,15 @@ $('discard').onclick = () => {
   clearAffected(); log('plan discarded');
 };
 
+$('aiopen').onclick = () => aiModal(true);
+$('aiclose').onclick = () => aiModal(false);
+// backdrop only, not a click that started inside the panel
+$('aimodal').addEventListener('mousedown', e => {
+  if (e.target === $('aimodal')) aiModal(false);
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && !$('aimodal').hidden) aiModal(false);
+});
 $('aisave').onclick = () => saveAiSettings();
 $('aiclearkey').onclick = () => saveAiSettings({clearKey: true});
 $('aibackend').onchange = () => {
