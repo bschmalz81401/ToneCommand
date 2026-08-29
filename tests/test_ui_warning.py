@@ -170,3 +170,37 @@ def test_the_sentence_agrees_with_itself():
     """"scene 5, which share this block's channel" reads as a typo, on the one
     sentence in the product whose whole job is to be believed."""
     assert "'share' : 'shares'" in SCRIPT or '"share" : "shares"' in SCRIPT
+
+
+# --- deleting dead CSS must not take live CSS with it ---
+
+def test_every_class_the_page_uses_has_a_rule():
+    """The regression this exists for: removing the old flat block list's
+    styling took a 7KB run of the stylesheet with it, including every rule for
+    the TONE panel. The sliders reverted to browser default blue and the
+    health rows lost their layout. Nothing failed, because no test looked at
+    the stylesheet, and the tell arrived from Moncy as "the whole look and
+    feel of the amp section changed".
+
+    So: every class name the markup or the render functions attach must have
+    at least one rule somewhere in the stylesheet.
+    """
+    style = UI.split("<style>")[1].split("</style>")[0]
+    used = set()
+    # class="..." in markup and in template literals
+    for chunk in re.findall(r'class="([^"$]*)"', UI):
+        used.update(c for c in chunk.split() if c)
+    # classList.add/remove/toggle('x')
+    used.update(re.findall(r"classList\.(?:add|remove|toggle)\('([\w-]+)'", SCRIPT))
+    styled = set(re.findall(r'\.([A-Za-z][\w-]*)', style))
+    missing = sorted(c for c in used - styled if not c.startswith('_'))
+    assert not missing, f"used but unstyled: {missing}"
+
+
+def test_the_slider_styling_is_present():
+    """Named explicitly because its absence is invisible to every other test:
+    a range input with no rules still works, it just looks like a web form
+    from 2005 in the middle of a panel that does not."""
+    style = UI.split("<style>")[1].split("</style>")[0]
+    for rule in ("slider-runnable-track", "slider-thumb", ".knob", ".knobs"):
+        assert rule in style, rule
