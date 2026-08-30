@@ -263,11 +263,35 @@
   /* A panel name is the label for everything under it, so it was doing the
      most work at the smallest size on the page. Bigger, brighter, and lit,
      so the eye can find the sections before reading any of them. */
-  .console::before {
-    content: attr(data-label); position: absolute; top: -11px; left: 14px;
-    background: var(--bg); padding: 0 9px; font-size: var(--fs-body);
-    letter-spacing: 0.24em; color: var(--cyan); font-weight: 600;
+  /* The label is a real button now, not a ::before, so a panel you are not
+     using can be folded away. Generated in script rather than written into
+     nine places, so they cannot drift apart. */
+  .console::before { content: none; }
+  .phead {
+    position: absolute; top: -11px; left: 14px; z-index: 1;
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--bg); padding: 0 9px; border: none;
+    font-family: inherit; font-size: var(--fs-body); letter-spacing: 0.24em;
+    color: var(--cyan); font-weight: 600; cursor: pointer;
     text-shadow: 0 0 14px rgba(47,230,255,0.45);
+  }
+  .phead:hover { color: #9ff3ff; }
+  .phead:focus-visible { outline: 1px solid var(--cyan-dim); outline-offset: 3px; }
+  /* Points down when open, right when folded, which is the one convention
+     everybody already knows. */
+  .pcaret {
+    width: 0; height: 0; flex: none; transition: transform .15s;
+    border-left: 6px solid transparent; border-right: 6px solid transparent;
+    border-top: 7px solid var(--cyan-dim);
+  }
+  .console.folded .pcaret { transform: rotate(-90deg); }
+  .console.folded .pbody { display: none; }
+  /* A folded panel is a label, so it should not keep a panel's worth of
+     padding underneath it. */
+  .console.folded { padding-top: 14px; padding-bottom: 14px; }
+  .pcount {
+    font-size: var(--fs-label); letter-spacing: 0.08em; color: var(--dim);
+    font-weight: 400; text-shadow: none;
   }
   /* Scenes are the performance surface, so they carry the violet accent all
      the way through: label, border and glow. */
@@ -1868,6 +1892,57 @@ async function reconnect() {
 }
 
 $('link').onclick = reconnect;
+
+// --- folding panels ------------------------------------------------------
+// The page grew from four panels to nine, and the tone panel from five groups
+// to ten. Not everyone needs the routing grid and the recipe browser open at
+// the same time. Built in script rather than written into nine places in the
+// markup, so a new panel gets this for free and they cannot drift apart.
+const FOLD_KEY = 'tc-folded';
+
+function foldedSet() {
+  try { return new Set(JSON.parse(localStorage.getItem(FOLD_KEY) || '[]')); }
+  catch (e) { return new Set(); }
+}
+
+function rememberFolds(set) {
+  try { localStorage.setItem(FOLD_KEY, JSON.stringify([...set])); } catch (e) {}
+}
+
+function buildPanelHeaders() {
+  const folded = foldedSet();
+  document.querySelectorAll('.console[data-label]').forEach(c => {
+    if (c.querySelector(':scope > .phead')) return;      // already done
+    // The plan box is shown and hidden by the code that fills it, so folding
+    // it would be two mechanisms fighting over the same panel.
+    if (c.id === 'planbox') return;
+    const label = c.dataset.label;
+    const body = document.createElement('div');
+    body.className = 'pbody';
+    while (c.firstChild) body.appendChild(c.firstChild);
+    const head = document.createElement('button');
+    head.className = 'phead';
+    head.type = 'button';
+    head.innerHTML = `<span class="pcaret"></span><span>${esc(label)}</span>`;
+    head.setAttribute('aria-expanded', 'true');
+    c.appendChild(head);
+    c.appendChild(body);
+    head.onclick = () => setFold(c, !c.classList.contains('folded'));
+    if (folded.has(label)) setFold(c, true, true);
+  });
+}
+
+function setFold(c, fold, quiet) {
+  c.classList.toggle('folded', fold);
+  const head = c.querySelector(':scope > .phead');
+  if (head) head.setAttribute('aria-expanded', String(!fold));
+  const set = foldedSet();
+  fold ? set.add(c.dataset.label) : set.delete(c.dataset.label);
+  rememberFolds(set);
+  if (!quiet) log(`${fold ? 'folded' : 'opened'} ${c.dataset.label.toLowerCase()}`);
+}
+
+buildPanelHeaders();
 
 // --- text size -----------------------------------------------------------
 // How big text needs to be is a fact about the reader and their screen, so it
