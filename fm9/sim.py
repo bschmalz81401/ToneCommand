@@ -317,15 +317,17 @@ class SimFM9Core:
         # 200 to it read back as exactly 200 (2026-08-29). Restricting this to
         # enums made cab auditioning untestable here while it worked on the
         # unit, which is the wrong way round for a test double.
-        #
-        # Value 0 is the exception, and it is not a special case we invented:
-        # sub 09 00 carrying zero IS the device's zeroed GET, so it reads
-        # rather than writes. That is exactly why set_param_ordinal sends a
-        # CONTINUOUS 0.0 to select ordinal 0. Widening the rule above without
-        # keeping this cost a passing test that had been guarding it since the
-        # behaviour was first observed on hardware.
-        if val:
-            self.st.set_block_param(eid, pid, int(round(val)))
+        # The zeroed GET is byte-identical to a discrete write of zero:
+        # build_get_param sends this same sub 0x09 with value 0.0. Hardware
+        # treats it as a query and does NOT write, so a continuous parameter
+        # written with exactly 0.0 is a NO-OP here too. Only the echo goes
+        # back. Without this the sim answered a read by destroying the value
+        # being read, which test_zeroed_get_is_noop exists to catch and only
+        # caught on a slow enough machine: the settle window served the read
+        # from a pre-write snapshot and hid the damage on a fast one.
+        if val == 0.0 and self._param_kind(eid, pid) == "float":
+            return [self._echo(eid, pid)]
+        self.st.set_block_param(eid, pid, int(round(val)))
         return [self._echo(eid, pid)]
 
     def _set_continuous(self, b):

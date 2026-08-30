@@ -2,6 +2,33 @@
 
 Notable changes to ToneCommand. Dates are UTC.
 
+## Unreleased
+
+### Fixed (refusal wording, 2026-08-29)
+- A one-action plan is no longer told that its remaining actions were
+  skipped. There were none. 0.3.1 fixed the crash that made this line
+  unreadable; the line itself is still false, and now counts what it skipped.
+- The refusal names the wall it actually hit. It read "no free pass-through
+  cell any of the amp", the raw position enum in a sentence, and one sentence
+  covered three different situations. An empty slot has no grid cells at all,
+  not even pass-through cells (finding 18), so it is pointed at
+  `tools/build_from_scratch.py`, the thing that builds into one. A grid that
+  did not answer is neither case: it says so and prescribes nothing, because
+  sending someone to load a different preset over what may be a cable or
+  FM9-Edit holding the port is worse than saying "unknown".
+
+### Fixed (simulator, 2026-08-29)
+- The zeroed GET is a read again. `build_get_param` sends sub 0x09 with value
+  0.0, byte-identical to a discrete write of zero, and the simulator wrote it:
+  a query destroyed the value being queried. `test_zeroed_get_is_noop` exists
+  to catch exactly that and passed anyway on a fast machine, because the
+  settle window served the read from a pre-write snapshot while the live
+  buffer had already been zeroed. On CI, slow enough for the window to lapse
+  first, it failed - on `main` at v0.3.1 and on every open PR. The no-op the
+  code's own comment described is now implemented, scoped to continuous
+  parameters, since that is where the collision is; an enum write of ordinal 0
+  is a real write and still lands.
+
 ## 0.5.0 (2026-08-30)
 
 A graphic EQ you can read, panels organised by what a block does, and the
