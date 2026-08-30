@@ -662,18 +662,18 @@
      brightness, because dimming those would be the same lie in the other
      direction: planning, browsing recipes and reviewing designs are all
      perfectly good with the unit unplugged. */
-  .needs-rig { position: relative; transition: opacity .18s; }
-  body.rig-off .needs-rig { opacity: 0.34; pointer-events: none; user-select: none; }
-  body.rig-off .needs-rig::after {
-    content: 'NEEDS THE FM9'; position: absolute; top: -11px; right: 14px;
-    background: var(--bg); padding: 0 9px; font-size: var(--fs-label);
-    letter-spacing: 0.2em; color: var(--amber); font-weight: 600;
-  }
-  /* The preset pill is the same story: nothing to switch to. */
-  body.rig-off #preset { opacity: 0.4; pointer-events: none; }
-  /* And TRANSMIT, the one control on a panel that otherwise works offline. A
-     plan can be built with the rig off; it just cannot be sent. */
-  body.rig-off #apply { opacity: 0.4; pointer-events: none; }
+  /* Hidden, not dimmed. A greyed panel still takes up the page and still
+     invites a click, and keeping it reachable meant tracking which controls
+     were already disabled for their own reasons so reconnecting did not
+     switch them on wrongly. display:none removes it from the layout, from
+     the tab order and from that whole class of bug at once. The banner
+     carries the explanation, so nothing has quietly gone missing. */
+  body.rig-off .needs-rig { display: none; }
+  /* These two are inside panels that DO work offline, so they are hidden
+     individually. There is nothing to switch to, and a plan can be built with
+     the rig off but not sent. */
+  body.rig-off #preset { display: none; }
+  body.rig-off #apply { display: none; }
   .offbanner {
     display: none; align-items: center; gap: 11px; flex-wrap: wrap;
     padding: 10px 13px; margin-bottom: 20px; border-radius: 4px;
@@ -784,10 +784,12 @@
   </header>
 
   <div class="offbanner">
-    <span><b>The FM9 is not connected.</b> The panels marked below need it and
-      are greyed out. You can still design tones, browse and edit recipes, and
-      review what is waiting to go out: everything you build is kept, and it
-      sends when the rig comes back.</span>
+    <span><b>The FM9 is not connected</b>, so the panels that need it are
+      hidden: scenes, the signal chain, the tone controls, undo and compare,
+      preset health and saving. They come back on their own when it does.
+      Everything still shown works: design tones, browse and edit recipes, and
+      review what is queued. Nothing you build is lost, and it goes out when
+      the rig returns.</span>
   </div>
 
   <div class="console perf needs-rig" data-label="SCENES">
@@ -2439,16 +2441,15 @@ async function refresh() {
 // but dead. Called from the poll, which is the only thing that actually knows.
 function setRigOff(off) {
   if (document.body.classList.contains('rig-off') === off) return;
+  // One class, and CSS does the rest. Nothing is disabled by hand: a hidden
+  // element is already out of the tab order and out of reach of a click, so
+  // the bookkeeping that used to remember which controls were ALREADY
+  // disabled, and the bug where reconnecting switched those back on, both
+  // stop existing rather than being handled.
   document.body.classList.toggle('rig-off', off);
-  // Disabling for real as well as visually: a dimmed control you can still
-  // reach by keyboard is a trap rather than a hint.
-  document.querySelectorAll('.needs-rig button, .needs-rig input, '
-    + '.needs-rig select, #apply').forEach(el => {
-    if (off) { el.dataset.wasDisabled = el.disabled ? '1' : ''; el.disabled = true; }
-    else if (!el.dataset.wasDisabled) { el.disabled = false; }
-  });
-  if (off) log('FM9 not connected: panels that need it are greyed out. '
-               + 'Designing, recipes and everything already saved still work.', 'warn');
+  if (off) log('FM9 not connected: the panels that need it are hidden. '
+               + 'Designing, recipes and everything already saved still work.',
+               'warn');
 }
 
 // --- the tone panel -------------------------------------------------------

@@ -251,3 +251,18 @@ def test_the_blank_context_says_what_IS_true_not_only_what_is_missing():
     assert "which ones you assumed" in text
     # while relative requests are still refused
     assert "refuse anything relative" in text
+
+
+def test_a_recipe_name_is_always_a_valid_slug():
+    """One rule, in one place. to_recipe only replaced spaces, so a design
+    called "Steve Lukather: Dumble ODS lead" produced the recipe name
+    "steve-lukather:-dumble-ods-lead", which the sharing service rejects
+    outright and which cannot be a filename either.
+    """
+    import re
+    from fm9 import designs
+    for title in ["Steve Lukather: Dumble ODS lead", "Vox AC30 (top boost)!",
+                  "   ", "a" * 200, "已经"]:
+        name = designs.to_recipe(
+            {"name": title, "actions": [{"kind": "set_scene", "value": 1}]})["name"]
+        assert re.fullmatch(r"[a-z0-9-]{1,64}", name), (title, name)

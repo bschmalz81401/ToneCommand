@@ -162,10 +162,15 @@ def to_recipe(design: dict) -> dict:
     device before a byte is sent. Nothing paid is redistributed, and the anchor
     is dropped, because it describes the author's rig rather than the tone.
     """
+    # The same slug rule the filename uses, and the same one the service
+    # validates against. Only replacing spaces left punctuation in: a design
+    # called "Steve Lukather: Dumble ODS lead" produced the name
+    # "steve-lukather:-dumble-ods-lead", which the worker rejects outright and
+    # which cannot be a filename either. One rule, in one place.
+    from fm9.recipes import _safe_name
     return {
         "recipe_version": 1,
-        "name": (design.get("name") or "untitled").strip().lower()
-                .replace(" ", "-")[:48],
+        "name": _safe_name(design.get("name") or design.get("summary")),
         "title": design.get("name") or "untitled",
         "device": "FM9",
         "author": design.get("author") or "",

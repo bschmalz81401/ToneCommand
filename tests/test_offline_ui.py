@@ -1,9 +1,15 @@
-"""With the rig off, half the page is scenery. Say so.
+"""With the rig off, half the page is scenery. Take it away.
 
 Moncy's framing: idiot proof it. A slider that cannot move, a scan button that
-cannot scan and a scene button that switches nothing are all worse than absent,
-because each one invites a click that goes nowhere and teaches you the tool is
-broken rather than that the cable is out.
+cannot scan and a scene button that switches nothing are all worse than
+absent, because each one invites a click that goes nowhere and teaches you the
+tool is broken rather than that the cable is out.
+
+Greying them was the first attempt. Hiding them is simpler and strictly
+better: a hidden element is out of the layout AND out of the tab order, so the
+bookkeeping that remembered which controls were ALREADY disabled, and the bug
+where reconnecting switched those back on, stop existing rather than being
+handled.
 
 The other half of the same rule matters just as much: the panels that DO work
 offline stay at full brightness. Dimming those would be the same lie in the
@@ -40,35 +46,36 @@ def test_the_panels_that_work_offline_are_not_dimmed():
         assert panel in live, panel
 
 
-def test_a_dimmed_panel_also_stops_taking_input():
-    """A control you can still reach by keyboard while it looks dead is a trap
-    rather than a hint, so the class dims it AND every control inside is
-    really disabled."""
-    assert "body.rig-off .needs-rig" in STYLE
-    assert "pointer-events: none" in STYLE.split("body.rig-off .needs-rig")[1][:200]
+def test_a_panel_that_needs_the_rig_is_removed_not_faded():
+    """Out of the layout and out of the tab order in one move."""
+    assert "body.rig-off .needs-rig { display: none; }" in STYLE
+
+
+def test_nothing_is_disabled_by_hand_any_more():
+    """That bookkeeping existed only to stop a greyed control being reachable.
+    Hiding removes the need, and with it the bug where reconnecting re-enabled
+    a control that had been disabled for its own reason."""
     fn = SCRIPT.split("function setRigOff")[1].split("\n}")[0]
-    assert "el.disabled = true" in fn
+    # code, not prose: the comment explaining why this went away naturally
+    # mentions the word, and asserting on text rather than behaviour is how a
+    # test breaks for no reason
+    code = "\n".join(l for l in fn.splitlines() if not l.strip().startswith("//"))
+    assert ".disabled" not in code
+    assert "wasDisabled" not in SCRIPT
+    # the whole switch is now one class toggle
+    assert "classList.toggle('rig-off', off)" in code
 
 
-def test_reconnecting_does_not_re_enable_what_was_already_disabled():
-    """UNDO with nothing to undo, or SEND with no design selected, were
-    disabled for their own reasons. Coming back online must not switch those
-    on, or the state is a lie in the opposite direction."""
-    fn = SCRIPT.split("function setRigOff")[1].split("\n}")[0]
-    assert "wasDisabled" in fn
-    assert "else if (!el.dataset.wasDisabled)" in fn
-
-
-def test_transmit_is_blocked_even_though_its_panel_works():
+def test_transmit_is_hidden_even_though_its_panel_works():
     """A plan can be BUILT with the rig off, which is the whole point of the
     designs work. It just cannot be sent."""
-    assert "body.rig-off #apply" in STYLE
+    assert "body.rig-off #apply { display: none; }" in STYLE
     assert "COMMAND" in _panels(False)
 
 
-def test_the_preset_pill_is_blocked_too():
+def test_the_preset_pill_goes_too():
     """There is nothing to switch to."""
-    assert "body.rig-off #preset" in STYLE
+    assert "body.rig-off #preset { display: none; }" in STYLE
 
 
 def test_one_switch_decides_it():
@@ -84,6 +91,10 @@ def test_one_switch_decides_it():
 def test_the_banner_says_what_still_works():
     """"Not connected" alone reads as "nothing works", which is wrong and
     discouraging: everything you build offline is kept and goes out later."""
-    banner = UI.split('class="offbanner"')[1].split("</div>")[0]
-    assert "not connected" in banner.lower()
-    assert "design" in banner.lower() and "kept" in banner.lower()
+    banner = UI.split('class="offbanner"')[1].split("</div>")[0].lower()
+    assert "not connected" in banner
+    # it NAMES what went, so nothing has silently vanished
+    assert "hidden" in banner and "scenes" in banner
+    # and says what still works, since "not connected" alone reads as
+    # "nothing works", which is wrong and discouraging
+    assert "design" in banner and "lost" in banner
