@@ -136,3 +136,93 @@ def test_sending_goes_through_the_same_confirm_gate():
     fn = script.split("async function sendDesign")[1].split("\n}\n")[0]
     assert "showPlan(" in fn
     assert "/api/apply" not in fn, "a design must not transmit itself"
+
+
+# --- three kinds of context, in descending order of what is known ---------
+
+def test_a_request_that_stands_on_its_own_plans_with_no_rig_at_all(monkeypatch):
+    """Refusing outright was wrong, and Moncy found it with the right prompt:
+    "give me a Steve Lukather lead tone in scene 4 of a new preset" is a build,
+    not an edit. Every fact it needs is in the grounding catalogs.
+    """
+    import server
+    from fastapi.testclient import TestClient
+    from fm9.device import FM9NotFound
+    monkeypatch.setattr(server, "_last_snapshot", {"state": None, "at": None})
+    monkeypatch.setattr(server, "get_fm9",
+                        lambda: (_ for _ in ()).throw(FM9NotFound("off")))
+    monkeypatch.setattr(server, "drop_fm9", lambda: None)
+    seen = {}
+    monkeypatch.setattr(server.planner, "plan",
+                        lambda prompt, state, ref: seen.update(state=state) or
+                        {"summary": "ok", "clarification": None, "actions": []})
+    d = TestClient(server.app).post("/api/plan", json={"prompt": "lukather lead"}).json()
+    assert d["no_state"] is True and d["offline"] is True
+    # and it is TOLD what it does not have, rather than handed an empty state
+    # and left to plan a relative request against a zero
+    assert "no current state at all" in seen["state"].lower()
+    assert "cannot plan anything relative" in seen["state"].lower()
+
+
+def test_a_profile_outranks_the_remembered_reading(monkeypatch):
+    """You asked to design for someone else's rig, so designing for your own
+    instead would be answering a different question."""
+    import server
+    from fastapi.testclient import TestClient
+    from fm9 import rigprofile
+    prof = {"profile_version": rigprofile.PROFILE_VERSION, "device": "FM9",
+            "author": "brian", "preset_name": "Deftones base",
+            "blocks": [{"family": "DISTORT", "instance": 1, "label": "Amp 1"}]}
+    monkeypatch.setattr(server, "_profile", {"loaded": prof})
+    monkeypatch.setattr(server, "_last_snapshot",
+                        {"state": {"preset": {"name": "MINE"}, "scene": None,
+                                   "blocks": [], "values": {}}, "at": "x"})
+    seen = {}
+    monkeypatch.setattr(server.planner, "plan",
+                        lambda prompt, state, ref: seen.update(state=state) or
+                        {"summary": "ok", "clarification": None, "actions": []})
+    d = TestClient(server.app).post("/api/plan", json={"prompt": "x"}).json()
+    assert "Deftones base" in seen["state"] and "MINE" not in seen["state"]
+    assert d["profile"]["author"] == "brian"
+
+
+# --- a profile is not a preset file -------------------------------------
+
+def test_a_profile_carries_no_parameter_values():
+    """A full dump of those IS the preset, and many presets on a real unit
+    came from paid packs. docs/RECIPES.md: nothing paid is redistributed."""
+    import json
+    from fm9 import rigprofile
+    snap = {"preset": {"number": 151, "name": "I Know A Name"},
+            "scenes": [{"number": 1, "name": "CLEAN"}],
+            "blocks": [{"family": "DISTORT", "instance": 1, "label": "Amp 1",
+                        "bypassed": False, "channel": "A", "channels": 4}],
+            "values": {"AMP_MODEL": "Brit 800", "cab": "4x12 Greenback",
+                       "DISTORT_DRIVE": 7.2, "DELAY_MIX": 31.5}}
+    blob = json.dumps(rigprofile.build(snap, author="monzta1"))
+    assert "7.2" not in blob and "31.5" not in blob
+    assert "DISTORT_DRIVE" not in blob
+    # the slot number goes too: it locates the preset on ONE person's unit
+    assert "151" not in blob
+    # but which gear is emulated is a fact, the same class a recipe carries
+    assert "Brit 800" in blob and "Greenback" in blob
+
+
+def test_a_profile_from_a_future_version_is_refused():
+    from fm9 import rigprofile
+    assert rigprofile.check({"profile_version": 99, "device": "FM9",
+                             "blocks": [1]})
+    assert rigprofile.check({"profile_version": 1, "device": "Helix",
+                             "blocks": [1]})
+    assert rigprofile.check({"profile_version": 1, "device": "FM9",
+                             "blocks": []})
+
+
+def test_sending_a_design_built_for_another_rig_asks_first():
+    """It names blocks from their preset and was never anchored to any value
+    on yours, so there is nothing to check for drift."""
+    from pathlib import Path
+    ui = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text()
+    fn = ui.split("<script>")[1].split("async function sendDesign")[1].split("\n}\n")[0]
+    assert "d.profile && !window.confirm" in fn
+    assert "not yours" in fn

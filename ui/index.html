@@ -617,6 +617,24 @@
   .ddel:hover { border-color: var(--red); color: var(--red); }
   .dempty { color: var(--dim); font-size: var(--fs-hint); padding: 4px 0 2px; }
 
+  .profrow { display: flex; align-items: center; gap: 9px; flex-wrap: wrap;
+             margin-bottom: 12px; }
+  .profrow .hint { flex: 1 1 260px; }
+  /* Designing for a rig you cannot see is a different activity from designing
+     for your own, so it says so at the top and in a colour nothing else on
+     the page uses for a normal state. */
+  .profbar {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    padding: 9px 12px; margin-bottom: 12px; border-radius: 4px;
+    background: rgba(185,140,255,0.10); border: 1px solid var(--violet-dim);
+    color: #d9c6ff; font-size: var(--fs-hint); line-height: 1.5;
+  }
+  .profbar[hidden] { display: none; }
+  .profbar b { color: var(--violet); font-weight: 500; }
+  .profbar button { padding: 4px 11px; font-size: var(--fs-hint);
+                    border-color: var(--violet-dim); color: var(--violet); }
+  .dforeign { color: var(--violet); }
+
   #log {
     font-size: var(--fs-hint); color: var(--muted); max-height: 180px; overflow-y: auto;
     line-height: 1.7;
@@ -796,6 +814,14 @@
   </div>
 
   <div class="console" data-label="DESIGNED PRESETS">
+    <div class="profbar" id="profbar" hidden></div>
+    <div class="profrow">
+      <button class="small" id="profexport">SHARE MY RIG</button>
+      <button class="small" id="profimport">DESIGN FOR SOMEONE ELSE</button>
+      <span class="hint" style="margin:0">A rig profile describes which blocks
+        a preset has and how they are wired, never the parameter values, so
+        nobody's paid preset travels with it.</span>
+    </div>
     <div id="dlist"></div>
     <div class="hint">Tones you built with the rig switched off. Each one was
       validated when it was saved, so it would actually run, but nothing has
@@ -1620,6 +1646,79 @@ function parseStoreSpec(raw) {
 $('slotsave').onclick = saveSlotSpec;
 loadSlotSpec();
 
+// --- designing for a rig you cannot see ----------------------------------
+// A profile describes a preset's SHAPE: which blocks it has, how they are
+// wired, what the scenes are called. Never the parameter values, because a
+// full dump of those IS the preset, and many presets on a real unit came from
+// paid packs. So absolute requests plan fine against a profile and relative
+// ones cannot, which the planner is told in as many words.
+let profile = null;
+
+async function loadProfile() {
+  try {
+    const d = await (await fetch('/api/profile')).json();
+    profile = d.profile || null;
+    renderProfile();
+  } catch (e) { /* leaves the bar as it was */ }
+}
+
+function renderProfile() {
+  const bar = $('profbar');
+  if (!profile) { bar.hidden = true; return; }
+  bar.hidden = false;
+  bar.innerHTML = `<span>Designing for <b>${esc(profile.preset_name || 'a shared rig')}</b>`
+    + (profile.author ? `, shared by <b>${esc(profile.author)}</b>` : '')
+    + `. This is not your rig: there are no parameter values, so ask for `
+    + `specific settings rather than "a bit more" of anything.</span>
+    <button id="profclear">BACK TO MY RIG</button>`;
+  $('profclear').onclick = () => setProfile(null);
+}
+
+async function setProfile(prof) {
+  try {
+    const d = await (await fetch('/api/profile/load', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({profile: prof})})).json();
+    if (d.error) throw new Error(d.error);
+    profile = d.profile || null;
+    renderProfile();
+    log(profile
+        ? `designing for ${profile.preset_name || 'a shared rig'}`
+          + (profile.author ? ` (${profile.author})` : '')
+        : 'back to designing for your own rig', 'ok');
+  } catch (e) {
+    log(`could not load that profile: ${e.message}`, 'err');
+  }
+}
+
+async function exportProfile() {
+  try {
+    const d = await (await fetch('/api/profile/export', {method: 'POST'})).json();
+    if (d.error) throw new Error(d.error);
+    await navigator.clipboard.writeText(JSON.stringify(d.profile, null, 1));
+    const n = (d.profile.blocks || []).length;
+    log(`rig profile copied: ${n} blocks, no parameter values. `
+        + `Send it to anyone who wants to design for this preset.`, 'ok');
+  } catch (e) {
+    log(`could not build a profile: ${e.message}`, 'err');
+  }
+}
+
+function importProfile() {
+  const raw = window.prompt(
+    'Paste a rig profile. It describes which blocks a preset has and how they '
+    + 'are wired, never the values, so you can design for a rig you do not own.');
+  if (!raw) return;
+  let prof;
+  try { prof = JSON.parse(raw.trim()); }
+  catch (e) { log('that is not a profile: could not read it as JSON', 'err'); return; }
+  setProfile(prof);
+}
+
+$('profexport').onclick = exportProfile;
+$('profimport').onclick = importProfile;
+loadProfile();
+
 // --- designed presets ----------------------------------------------------
 // A plan is data, and validation runs off local files, so a tone can be
 // designed with the rig switched off. What it cannot be is verified: there is
@@ -1652,7 +1751,8 @@ function renderDesigns(connected) {
         <div class="dmeta">${n} change${n > 1 ? 's' : ''}` +
         (p.label ? ` for <b>${esc(p.label)}</b>` : '') +
         ` &middot; ${esc((d.created || '').replace('T', ' '))}` +
-        (d.offline ? ' &middot; designed offline' : '') +
+        (d.profile ? ` &middot; <span class="dforeign">for ${esc(d.profile.author || "a shared rig")}</span>`
+                   : (d.offline ? ' &middot; designed offline' : '')) +
         (warns ? ` &middot; ${warns} warning${warns > 1 ? 's' : ''}` : '') +
         (d.summary ? `<br>${esc(d.summary)}` : '') + `</div>
       </div>
@@ -1684,6 +1784,7 @@ async function keepPlan() {
         // a merge rather than a hope
         anchor: anchorFor(currentPlan.actions),
         offline: !!currentPlan.offline,
+        profile: currentPlan.profile || null,
         backend: currentPlan.backend || null, model: currentPlan.model || null,
       })});
     const d = await r.json();
@@ -1714,6 +1815,21 @@ function anchorFor(actions) {
 async function sendDesign(id) {
   const d = designs.find(x => x.id === id);
   if (!d) return;
+  // A design built against someone else's profile was never anchored to YOUR
+  // rig, so the usual value comparison has nothing to compare. It also names
+  // blocks from their preset, which yours may not have. Validation will catch
+  // a missing block, but the owner should know what they are sending before
+  // it gets that far.
+  if (d.profile && !window.confirm(
+        `"${d.name}" was designed for ${d.profile.author || 'someone else'}'s ` +
+        `rig${d.profile.preset_name ? ' ("' + d.profile.preset_name + '")' : ''}, ` +
+        `not yours.\n\nIt names blocks from their preset and was never ` +
+        `anchored to any value on your unit, so nothing can be checked for ` +
+        `drift. Anything your preset does not have will be refused when it ` +
+        `runs.\n\nPropose it anyway?`)) {
+    log('send cancelled: designed for another rig', 'warn');
+    return;
+  }
   try {
     const chk = await (await fetch(`/api/designs/${id}/check`, {method: 'POST'})).json();
     if (chk.error) throw new Error(chk.error);

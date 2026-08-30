@@ -18,7 +18,7 @@ from pydantic import BaseModel
 
 from fm9.device import FM9, FM9NotFound
 from fm9.registry import Registry
-from fm9 import ai_settings, designs, editbuffer, health, planner
+from fm9 import ai_settings, designs, editbuffer, health, planner, rigprofile
 from tools import path_audit
 from fm9 import protocol as proto
 
@@ -382,6 +382,38 @@ def api_state():
 
 @app.post("/api/plan")
 def api_plan(body: PromptBody):
+    # A loaded profile outranks both the live device and the remembered
+    # reading: you asked to design for someone else's rig, so designing for
+    # your own instead would be answering a different question.
+    if _profile["loaded"]:
+        prof = _profile["loaded"]
+        try:
+            with _settings_lock:
+                result = planner.plan(body.prompt,
+                                      rigprofile.as_state_text(prof),
+                                      PARAM_REFERENCE)
+        except Exception as e:
+            return JSONResponse({"error": str(e)}, status_code=502)
+        result["device"] = {"preset": {"name": prof.get("preset_name"),
+                                       "label": "shared profile"},
+                            "scene": None}
+        result["offline"] = True
+        result["profile"] = {"author": prof.get("author"),
+                             "preset_name": prof.get("preset_name"),
+                             "captured": prof.get("captured")}
+        result["values"] = {}      # a profile carries none, by design
+        for a in result.get("actions", []):
+            errs, warns = validate_action(Action(**a))
+            a["validation_errors"] = errs
+            a["validation_warnings"] = warns
+            if a.get("block"):
+                try:
+                    a["effect_id"] = reg.resolve_block(
+                        a["block"], int(a.get("instance") or 1))[1]
+                except Exception:
+                    pass
+        return result
+
     offline = False
     with _lock:
         try:
@@ -394,23 +426,27 @@ def api_plan(body: PromptBody):
             # unplugged. Without one it does not, and inventing state is the
             # exact thing this project refuses everywhere else.
             snap = _last_snapshot["state"]
-            if snap is None:
-                return JSONResponse(
-                    {"error": "FM9 not connected, and no preset has been read "
-                              "yet in this session. Connect once so there is a "
-                              "real reading to design against."},
-                    status_code=503)
             offline = True
+    # Three kinds of context, in descending order of how much is known:
+    # a live or remembered reading, or nothing at all. The last is not a
+    # refusal: a request that stands on its own, like building a tone from
+    # scratch into a named scene, needs nothing from the rig. What the
+    # planner must never do is answer a RELATIVE request against a zero,
+    # so it is told exactly what it has rather than being handed an
+    # empty-looking state and left to assume.
+    context = state_text(snap) if snap else rigprofile.as_blank_text()
     try:
         with _settings_lock:
-            result = planner.plan(body.prompt, state_text(snap), PARAM_REFERENCE)
-        result["device"] = {"preset": snap["preset"], "scene": snap["scene"]}
+            result = planner.plan(body.prompt, context, PARAM_REFERENCE)
+        result["device"] = ({"preset": snap["preset"], "scene": snap["scene"]}
+                            if snap else {"preset": None, "scene": None})
         # Say so loudly. A plan built against a remembered reading is not the
         # same object as one built against a live one, and the difference has
         # to survive all the way to the button.
         result["offline"] = offline
         result["anchored_at"] = _last_snapshot["at"] if offline else None
-        result["values"] = snap.get("values", {})
+        result["no_state"] = snap is None
+        result["values"] = snap.get("values", {}) if snap else {}
         for a in result.get("actions", []):
             errs, warns = validate_action(Action(**a))
             a["validation_errors"] = errs
@@ -1189,8 +1225,76 @@ class DesignBody(BaseModel):
     preset: dict | None = None
     anchor: dict | None = None
     offline: bool = False
+    profile: dict | None = None
     backend: str | None = None
     model: str | None = None
+
+
+#: A profile loaded from someone else, replacing live state as the thing the
+#: planner designs against. Session only: it is a lens, not a setting.
+_profile: dict = {"loaded": None}
+
+
+@app.get("/api/profile")
+def api_profile():
+    """The profile currently loaded, if any."""
+    return {"profile": _profile["loaded"]}
+
+
+@app.post("/api/profile/export")
+def api_profile_export():
+    """Describe the loaded preset's SHAPE, for someone else to design against.
+
+    Structure only, never values. A full parameter dump would be the preset
+    itself, and many presets on a real unit came from paid packs. See
+    docs/RECIPES.md: nothing paid is ever redistributed.
+    """
+    with _lock:
+        try:
+            fm9 = get_fm9()
+            snap = snapshot(fm9)
+            try:
+                cells = fm9.read_grid() or []
+                status = {b.effect_id: b for b in fm9.status_dump() or []}
+                w = path_audit.walk(cells, status, reg)
+                grid = {"rows": 0, "cols": 0, "cells": []}
+                for c in cells:
+                    if c.effect_id is None and not c.is_shunt:
+                        continue
+                    eid = w["resolved"].get((c.row, c.col)) if c.effect_id else None
+                    fam = reg.family_of_effect_id(eid) if eid else None
+                    grid["cells"].append({
+                        "row": c.row, "col": c.col,
+                        "shunt": bool(c.effect_id is None and c.is_shunt),
+                        "family": fam[0] if fam else None,
+                        "instance": fam[1] if fam else None,
+                        "feeds": [r for r in range(8)
+                                  if c.cable_in_mask & (1 << (r + 1))]})
+                grid["rows"] = 1 + max((c["row"] for c in grid["cells"]), default=0)
+                grid["cols"] = 1 + max((c["col"] for c in grid["cells"]), default=0)
+            except Exception:
+                grid = None
+        except FM9NotFound:
+            drop_fm9()
+            return JSONResponse({"error": "FM9 not connected"}, status_code=503)
+    return {"profile": rigprofile.build(snap, grid)}
+
+
+class ProfileBody(BaseModel):
+    profile: dict | None = None
+
+
+@app.post("/api/profile/load")
+def api_profile_load(body: ProfileBody):
+    """Design against someone else's rig. Pass null to go back to your own."""
+    if body.profile is None:
+        _profile["loaded"] = None
+        return {"profile": None}
+    why = rigprofile.check(body.profile)
+    if why:
+        return JSONResponse({"error": why}, status_code=400)
+    _profile["loaded"] = body.profile
+    return {"profile": body.profile}
 
 
 @app.get("/api/designs")
@@ -1217,7 +1321,8 @@ def api_design_save(body: DesignBody):
         rec = designs.save({
             "name": body.name, "summary": body.summary, "author": body.author,
             "actions": actions, "preset": body.preset, "anchor": body.anchor,
-            "offline": body.offline, "backend": body.backend,
+            "offline": body.offline, "profile": body.profile,
+            "backend": body.backend,
             "model": body.model,
         })
     except ValueError as e:
