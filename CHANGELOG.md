@@ -5,7 +5,6 @@ Notable changes to ToneCommand. Dates are UTC.
 ## Unreleased
 
 
-
 ### Added (splice, 2026-08-24)
 - `FM9.splice_block()`: insert a block into a packed row by displacing its
   neighbours right and re-cabling the span, for the case add_block cannot
@@ -45,6 +44,18 @@ Notable changes to ToneCommand. Dates are UTC.
 - docs/PROTOCOL.md finding 24, with finding 6's "the removal message is
   UNKNOWN" marked superseded, and cable removal struck from the undecoded
   territory list.
+
+### Fixed (simulator, 2026-08-29)
+- The zeroed GET is a read again. `build_get_param` sends sub 0x09 with value
+  0.0, byte-identical to a discrete write of zero, and the simulator wrote it:
+  a query destroyed the value being queried. `test_zeroed_get_is_noop` exists
+  to catch exactly that and passed anyway on a fast machine, because the
+  settle window served the read from a pre-write snapshot while the live
+  buffer had already been zeroed. On CI, slow enough for the window to lapse
+  first, it failed - on `main` at v0.3.1 and on every open PR. The no-op the
+  code's own comment described is now implemented, scoped to continuous
+  parameters, since that is where the collision is; an enum write of ordinal 0
+  is a real write and still lands.
 
 ## 0.3.1 (2026-08-29)
 
