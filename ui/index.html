@@ -370,6 +370,28 @@
   .hfind.warn { background: rgba(255,180,84,0.07); color: #d8c6a8; }
   .hfind.warn .tag { background: rgba(255,180,84,0.18); color: var(--amber); }
   .hfind.fail { background: rgba(255,92,92,0.08); color: #e3b6b6; }
+  .hfind .txt { flex: 1 1 auto; min-width: 0; }
+  /* One offer for the whole report, not one per row: five buttons down the
+     side of five findings is a form to fill in, and a preset is either right
+     or it is not. It never applies anything. It fills the plan box, the same
+     confirm gate stands in front of it as everything else, and the preset is
+     rescanned afterwards so "fixed" is a measurement rather than a claim. */
+  .fixbar { display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+            margin-top: 14px; }
+  .fixall {
+    flex: 0 0 auto; padding: 9px 20px; font-size: var(--fs-body);
+    letter-spacing: 0.11em; font-weight: 600; border-radius: 4px;
+    border: 1px solid var(--amber); background: var(--amber); color: #1a1206;
+    font-family: inherit; cursor: pointer;
+    box-shadow: 0 0 18px rgba(255,180,84,0.22);
+  }
+  .fixall:hover:not(:disabled) {
+    background: #ffc978; box-shadow: 0 0 24px rgba(255,180,84,0.42);
+  }
+  .fixall:disabled { background: none; color: var(--amber); opacity: 0.5;
+                     cursor: default; box-shadow: none; }
+  .fixnote { color: var(--dim); font-size: var(--fs-hint); flex: 1 1 240px;
+             line-height: 1.5; }
   .hfind.fail .tag { background: rgba(255,92,92,0.20); color: var(--red); }
   /* The bottom rung of the ladder, and the one that never turns green on its
      own. Everything above it is a machine reading a wire. */
@@ -1724,7 +1746,71 @@ async function scanPreset() {
   }
 }
 
+// The findings currently on screen, so a FIX button can reach its own.
+let lastFindings = [];
+
+// A fix is a PROPOSAL. It never writes: it fills the plan box and stops, so
+// the confirm gate, the validation, the blast radius warning and the undo
+// snapshot all still stand in front of it exactly as they do for a typed
+// prompt. Two shapes, because the two kinds of problem are different:
+// levels are arithmetic and we state the exact numbers, while making a
+// cloned scene its own sound needs taste and goes to the planner.
+async function fixAll() {
+  const findings = lastFindings.filter(f => f.fix && f.fix.how !== 'rescan');
+  if (!findings.length) return;
+  const btn = $('fixall');
+  btn.disabled = true;
+  const was = btn.textContent;
+  try {
+    // Two kinds of problem, handled differently on purpose. A level is
+    // arithmetic and the exact number came from the scan, so it is stated
+    // rather than described to a language model. Making a cloned scene its
+    // own sound is taste, so that goes to the planner.
+    const sure = findings.filter(f => f.fix.how === 'actions')
+                         .flatMap(f => f.fix.actions);
+    const asks = findings.filter(f => f.fix.how === 'prompt');
+
+    let plan = {summary: 'fix what the scan found', actions: sure,
+                device: lastState.preset ? {preset: lastState.preset} : null};
+
+    if (asks.length) {
+      btn.textContent = 'ASKING...';
+      log(`asking the planner to fix ${asks.length} finding` +
+          `${asks.length > 1 ? 's' : ''}...`);
+      const r = await fetch('/api/plan', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({prompt: asks.map(f => f.fix.prompt).join('\n\n')})});
+      const got = await r.json();
+      if (got.error) throw new Error(got.error);
+      if (got.clarification) throw new Error(got.clarification);
+      // the planner's actions first, then the arithmetic, so a level we
+      // computed is not overwritten by one it guessed at
+      plan = Object.assign({}, got, {
+        summary: 'fix what the scan found',
+        actions: (got.actions || []).concat(sure),
+      });
+    }
+    if (!plan.actions.length) throw new Error('nothing to propose');
+    fixPending = true;          // rescan once this lands, to prove it
+    showPlan(plan);
+    $('planbox').scrollIntoView({behavior: 'smooth', block: 'center'});
+  } catch (e) {
+    log(`could not build a fix: ${e.message}`, 'err');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = was;
+  }
+}
+
+// "Fixed" is a measurement, not a claim, so the scan runs again by itself
+// once a fix has actually landed on the unit.
+let fixPending = false;
+
+$('hout').addEventListener('click', e => {
+  if (e.target.closest('#fixall')) fixAll();
+});
 function renderHealth(d) {
+  lastFindings = d.findings || [];
   const rows = d.scenes.map(s => `
     <div class="hrow"><span class="n">${s.number}</span>
       <span class="nm">${esc(s.name)}</span>
@@ -1746,14 +1832,26 @@ function renderHealth(d) {
   const finds = [...d.findings]
     .sort((a, b) => (order[a.severity] ?? 9) - (order[b.severity] ?? 9))
     .map(f => `<div class="hfind ${f.severity}">
-        <span class="tag">${esc(f.kind)}</span><span>${esc(f.detail)}</span></div>`)
+        <span class="tag">${esc(f.kind)}</span>
+        <span class="txt">${esc(f.detail)}</span>
+      </div>`)
     .join('');
+  // One offer, not one per row. Five buttons down the side of five findings
+  // is a form to fill in; a preset is either right or it is not.
+  const fixable = (d.findings || []).filter(f => f.fix && f.fix.how !== 'rescan');
+  const fixbar = fixable.length ? `
+    <div class="fixbar">
+      <button class="fixall" id="fixall">FIX ${fixable.length === (d.findings||[]).length
+        ? 'IT' : 'WHAT CAN BE FIXED'}</button>
+      <span class="fixnote">Proposes the changes. Nothing is sent until you
+        confirm, and the preset is rescanned afterwards to prove it.</span>
+    </div>` : '';
   const clean = d.findings.length ? '' :
     '<div class="hfind warn" style="background:rgba(61,255,160,0.06);color:#a8d8bf">' +
     '<span class="tag" style="background:rgba(61,255,160,0.18);color:var(--green)">clear</span>' +
     '<span>Every named scene has a live signal path, no two scenes are the ' +
     'same, and levels sit inside your conventions.</span></div>';
-  $('hout').innerHTML = rows + finds + clean +
+  $('hout').innerHTML = rows + finds + fixbar + clean +
     `<div class="hears">Ears: pending. Every check above is a machine reading a
      wire. None of them can tell you the tone is good.</div>`;
 }
@@ -1966,6 +2064,51 @@ function describe(a) {
   return `${a.block} ${a.instance} / ${a.param}: set to ${a.value}`;
 }
 
+// One renderer for every plan, however it was produced. Extracted so a
+// health fix lands in exactly the same box, behind exactly the same
+// confirm gate, as a plan a language model wrote.
+function showPlan(plan) {
+  currentPlan = plan;
+  // Light the scenes this plan would also move, so it cannot be skipped the
+  // way a line of small print under a card can be.
+  affectedScenes = scenesAffectedBy(plan);
+  renderScenes({scenes: lastScenes, scene: {number: currentSceneNumber}});
+  if (affectedScenes.size) {
+    log(`blast radius: this also moves scene${affectedScenes.size > 1 ? 's' : ''} ` +
+        `${[...affectedScenes].sort((a, b) => a - b).join(', ')}`, 'warn');
+  }
+  const prevBy = $('planby'); if (prevBy) prevBy.remove();
+  $('plansummary').textContent = plan.summary;
+  // half the value of the settings panel: a wrong-sounding plan should be
+  // attributable to the model that produced it, not to the tool
+  if (plan.backend) {
+    // plan.model is whatever the configured endpoint reported, so text
+    const by = document.createElement('div');
+    by.className = 'answered';
+    by.id = 'planby';
+    by.textContent = `planned by ${plan.backend}`
+      + (plan.model ? ` / ${plan.model}` : '');
+    $('plansummary').after(by);
+  }
+  $('plancards').innerHTML = plan.actions.map(a => {
+    const errs = a.validation_errors || [];
+    const warns = a.validation_warnings || [];
+    const vclass = errs.length ? ' vfail' : (warns.length ? ' vwarn' : '');
+    const vmsg = errs.concat(warns).map(m =>
+      `<div class="vmsg ${errs.length ? 'verr' : 'vwrn'}">${esc(m)}</div>`).join('');
+    return `
+    <div class="plan-card${vclass}">
+      <div><div class="what">${esc(describe(a))}</div><div class="why">${esc(a.reason || '')}</div>${vmsg}${
+        (() => { const s = alsoAffects(a, currentSceneNumber);
+                 return s ? `<div class="spread">${esc(s)}</div>` : ''; })()}</div>
+      <div class="delta">${errs.length ? 'BLOCKED' : (a.kind === 'set_param' ? '→ ' + a.value : '')}</div>
+    </div>`;
+  }).join('');
+  const blocked = plan.actions.filter(a => (a.validation_errors || []).length).length;
+  if (blocked) log(`validation blocked ${blocked} action(s); they will not be transmitted`, 'err');
+  $('planbox').style.display = 'block';
+  log(`plan ready: ${plan.actions.length} change(s). Confirm to transmit.`, 'ok');}
+
 async function engage() {
   const prompt = $('prompt').value.trim();
   if (!prompt) return;
@@ -1985,46 +2128,7 @@ async function engage() {
       clearAffected();
       return;
     }
-    currentPlan = plan;
-    // Light the scenes this plan would also move, so it cannot be skipped the
-    // way a line of small print under a card can be.
-    affectedScenes = scenesAffectedBy(plan);
-    renderScenes({scenes: lastScenes, scene: {number: currentSceneNumber}});
-    if (affectedScenes.size) {
-      log(`blast radius: this also moves scene${affectedScenes.size > 1 ? 's' : ''} ` +
-          `${[...affectedScenes].sort((a, b) => a - b).join(', ')}`, 'warn');
-    }
-    const prevBy = $('planby'); if (prevBy) prevBy.remove();
-    $('plansummary').textContent = plan.summary;
-    // half the value of the settings panel: a wrong-sounding plan should be
-    // attributable to the model that produced it, not to the tool
-    if (plan.backend) {
-      // plan.model is whatever the configured endpoint reported, so text
-      const by = document.createElement('div');
-      by.className = 'answered';
-      by.id = 'planby';
-      by.textContent = `planned by ${plan.backend}`
-        + (plan.model ? ` / ${plan.model}` : '');
-      $('plansummary').after(by);
-    }
-    $('plancards').innerHTML = plan.actions.map(a => {
-      const errs = a.validation_errors || [];
-      const warns = a.validation_warnings || [];
-      const vclass = errs.length ? ' vfail' : (warns.length ? ' vwarn' : '');
-      const vmsg = errs.concat(warns).map(m =>
-        `<div class="vmsg ${errs.length ? 'verr' : 'vwrn'}">${esc(m)}</div>`).join('');
-      return `
-      <div class="plan-card${vclass}">
-        <div><div class="what">${esc(describe(a))}</div><div class="why">${esc(a.reason || '')}</div>${vmsg}${
-          (() => { const s = alsoAffects(a, currentSceneNumber);
-                   return s ? `<div class="spread">${esc(s)}</div>` : ''; })()}</div>
-        <div class="delta">${errs.length ? 'BLOCKED' : (a.kind === 'set_param' ? '→ ' + a.value : '')}</div>
-      </div>`;
-    }).join('');
-    const blocked = plan.actions.filter(a => (a.validation_errors || []).length).length;
-    if (blocked) log(`validation blocked ${blocked} action(s); they will not be transmitted`, 'err');
-    $('planbox').style.display = 'block';
-    log(`plan ready: ${plan.actions.length} change(s). Confirm to transmit.`, 'ok');
+    showPlan(plan);
   } catch (e) {
     log(`plan failed: ${e.message}`, 'err');
   } finally {
@@ -2204,8 +2308,12 @@ async function apply() {
           res.ok ? 'ok' : (res.action ? 'err' : 'warn'));
     });
     $('prompt').value = '';
+    const rescan = fixPending;
+    fixPending = false;
     setTimeout(() => { $('planbox').style.display = 'none';
-                       clearAffected(); refresh(); }, 1500);
+                       clearAffected(); refresh();
+                       // prove it rather than assert it
+                       if (rescan) scanPreset(); }, 1500);
   } catch (e) {
     log(`transmit failed: ${e.message}`, 'err');
   } finally {
