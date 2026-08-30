@@ -22,7 +22,14 @@
     --green: #3dffa0;
     --text: #c9dcea;
     --muted: #5d7a91;
-    font-size: 15px;
+    /* The root everything else multiplies. It was 15px, which is a quiet
+       reduction of every size on the page below what the browser and every
+       other site assume. 16 is the default for a reason. */
+    font-size: 16px;
+    /* Set from the header control and remembered per browser, because how
+       big text needs to be is a fact about the reader and their screen, not
+       something a stylesheet can know. */
+    --ui-scale: 1;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -40,12 +47,18 @@
     /* One scale. There were seventeen different font sizes on this page,
        several of them a hundredth of a rem apart, which is not a hierarchy,
        it is drift. Six steps, each with a job. */
-    --fs-badge: 0.58rem;   /* channel letters, WILL CHANGE */
-    --fs-label: 0.66rem;   /* panel captions and micro uppercase */
-    --fs-hint:  0.73rem;   /* hints, secondary rows, readouts */
-    --fs-body:  0.80rem;   /* controls, inputs, buttons, list rows */
-    --fs-sub:   0.90rem;   /* a group headline, like the amp model */
-    --fs-lead:  1.05rem;   /* scene numbers */
+    /* Sized for reading, not for fitting. The first scale ran from 8.7px to
+       15.75px, which is fine on a 27 inch screen at arm's length and hard
+       work otherwise. Everything is bigger, and the SMALL end is bigger by
+       more than the large end, because that is where the strain was: hints
+       and captions went up by roughly half, headlines by a fifth.
+       --ui-scale multiplies the lot, so the reader can go further. */
+    --fs-badge: calc(0.78rem * var(--ui-scale, 1));
+    --fs-label: calc(0.85rem * var(--ui-scale, 1));
+    --fs-hint:  calc(0.92rem * var(--ui-scale, 1));
+    --fs-body:  calc(1.00rem * var(--ui-scale, 1));
+    --fs-sub:   calc(1.12rem * var(--ui-scale, 1));
+    --fs-lead:  calc(1.30rem * var(--ui-scale, 1));
   }
   .wrap { max-width: 1100px; margin: 0 auto; padding: 28px 20px 60px; }
 
@@ -65,7 +78,7 @@
     filter: drop-shadow(0 0 26px rgba(90,140,255,0.42));
   }
   h1 {
-    font-size: 1.25rem; letter-spacing: 0.35em; color: var(--cyan);
+    font-size: calc(1.5rem * var(--ui-scale, 1)); letter-spacing: 0.35em; color: var(--cyan);
     text-shadow: 0 0 18px rgba(47, 230, 255, 0.55); font-weight: 600;
   }
   h1 span { color: var(--muted); text-shadow: none; }
@@ -713,6 +726,19 @@
      almost nothing visible, because the character is drawn small inside its
      own em box, so it stayed a speck next to the LINK pill however large the
      box got. A path is sized by the numbers we give it. */
+  /* Text size, in the header where it can be found without hunting. Two
+     buttons rather than a slider: the choice is "a bit bigger" repeated until
+     it is right, not a value anyone wants to dial in. */
+  .textsize { display: inline-flex; align-items: baseline; gap: 2px; }
+  .textsize button {
+    background: none; border: 1px solid transparent; color: var(--muted);
+    font-family: inherit; cursor: pointer; padding: 2px 7px; border-radius: 4px;
+    line-height: 1;
+  }
+  .textsize button:hover { color: var(--cyan); border-color: var(--cyan-dim); }
+  #tsdown { font-size: calc(0.82rem * var(--ui-scale, 1)); }
+  #tsup { font-size: calc(1.15rem * var(--ui-scale, 1)); }
+
   .gear {
     background: none; border: none; color: var(--muted); cursor: pointer;
     display: inline-flex; align-items: center; justify-content: center;
@@ -773,6 +799,10 @@
         </div>
       </span>
       <span class="pill off" id="link"><span class="dot"></span>LINK</span>
+      <div class="textsize" role="group" aria-label="text size">
+        <button id="tsdown" title="smaller text" aria-label="smaller text">A</button>
+        <button id="tsup" title="larger text" aria-label="larger text">A</button>
+      </div>
       <button class="gear" id="aiopen" aria-label="AI backend settings">
         <svg viewBox="0 0 24 24" width="21" height="21" fill="none"
              stroke="currentColor" stroke-width="1.7" stroke-linecap="round"
@@ -991,6 +1021,7 @@
 
 <script>
 const $ = id => document.getElementById(id);
+
 let currentPlan = null;
 
 // Model output reaches HTML templates below, and the model can be any
@@ -1716,6 +1747,37 @@ function parseStoreSpec(raw) {
 
 $('slotsave').onclick = saveSlotSpec;
 loadSlotSpec();
+
+// --- text size -----------------------------------------------------------
+// How big text needs to be is a fact about the reader and their screen, so it
+// is theirs to set rather than something a stylesheet can guess. Remembered
+// per browser, and clamped so neither end can make the page unusable.
+const TS_MIN = 0.85, TS_MAX = 1.6, TS_STEP = 0.1;
+
+function textScale(v) {
+  const n = Math.round(Math.min(TS_MAX, Math.max(TS_MIN, v)) * 100) / 100;
+  document.documentElement.style.setProperty('--ui-scale', n);
+  try { localStorage.setItem('tc-ui-scale', String(n)); } catch (e) {}
+  $('tsdown').disabled = n <= TS_MIN;
+  $('tsup').disabled = n >= TS_MAX;
+  return n;
+}
+
+function currentScale() {
+  const v = parseFloat(
+    getComputedStyle(document.documentElement).getPropertyValue('--ui-scale'));
+  return isNaN(v) ? 1 : v;
+}
+
+$('tsup').onclick = () => log(`text size ${Math.round(textScale(currentScale() + TS_STEP) * 100)}%`);
+$('tsdown').onclick = () => log(`text size ${Math.round(textScale(currentScale() - TS_STEP) * 100)}%`);
+
+// A saved preference has to be read back before the first paint the reader
+// sees, or the page visibly resizes under them on every load.
+try {
+  const saved = parseFloat(localStorage.getItem('tc-ui-scale'));
+  if (!isNaN(saved)) textScale(saved);
+} catch (e) { /* a browser that will not store it still renders at 1 */ }
 
 // --- tone recipes --------------------------------------------------------
 // Reading these needs no account and no clicking around a web UI. They live
