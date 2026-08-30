@@ -2,6 +2,82 @@
 
 Notable changes to ToneCommand. Dates are UTC.
 
+## 0.4.0 (2026-08-30)
+
+**It works with the amp switched off.** Design tones on a plane, browse and
+use other people's, and let it fix what it finds wrong. Five new capabilities
+rather than fixes, which is why this is a minor bump and not a patch.
+
+### Added
+- **Design with the rig unplugged.** Exactly one line in the planning path
+  needed hardware, the snapshot read for context, so it now falls back to the
+  last real reading of the session. Everything you build is kept in a DESIGNED
+  PRESETS page and goes out when the FM9 comes back. Reconnecting is a merge,
+  not a hope: a design records the value each action was computed against, and
+  SEND re-reads and compares first, reporting clean, or naming exactly what
+  moved underneath the edits and asking. A queue that applied blindly would
+  overwrite a change made on the front panel in between and nobody would know.
+- **Plan with no reading at all.** A build is not an edit: "a Steve Lukather
+  lead in scene 4 of a new preset" needs nothing from the rig. The planner is
+  told what IS structurally true of every FM9 rather than only what is missing,
+  and asked to state its assumptions rather than refuse. Relative requests are
+  still turned down, because there is nothing to be relative to.
+- **Design for a rig you do not own.** A rig profile describes a preset's
+  shape: which blocks it has, how they are cabled, the scene names, which amp
+  and cab are emulated. Never the parameter values, because a full dump of
+  those IS the preset and many presets came from paid packs. Enough to design
+  against, not enough to reconstruct a tone.
+- **A recipe browser.** Other people's tones, read straight from the public
+  recipes folder with no account and no sign-in. USE validates every step
+  against YOUR device before proposing anything, which is what makes a recipe
+  portable rather than a preset file with extra steps.
+- **A sharing service that cannot lose anything.** service/worker.js: an inbox
+  and a counter, the only two things GitHub cannot do. Content stays in the
+  repository, so if the service is down browsing and using still work. A recipe
+  is written to disk and queued BEFORE any network call, and an entry clears
+  only on an explicit 2xx. Counting transmits rather than downloads, ranked on
+  the last thirty days so a good new tone can surface.
+- **FIX IT on preset health.** One button for the whole report. Levels are
+  arithmetic so the exact change is stated; making a cloned scene its own sound
+  is taste so it goes to the planner. It never applies anything: it fills the
+  plan box behind the same confirm gate as everything else, and the scan
+  re-runs afterwards so "fixed" is a measurement.
+
+### Changed
+- **Sharing no longer opens a GitHub issue.** An issue is not a container for a
+  recipe, the tracker would silt up, and it asked a guitarist to learn a
+  developer's tool before contributing. Recipes save locally and copy to the
+  clipboard, and for anyone who does use GitHub there is a prefilled new FILE
+  in recipes/ where it belongs.
+- **Panels that need the rig are hidden when it is away**, rather than dimmed.
+  Out of the layout and out of the tab order in one move, which removed the
+  bookkeeping that tracked which controls were already disabled. The banner
+  names what went and what still works.
+- **Type sized for reading.** The scale ran 8.7px to 15.75px on a 15px root.
+  It now runs 12.5px to 20.8px on a 16px root, with the small end grown by more
+  than the large end, and an A/A control in the header that multiplies the lot
+  and is remembered per browser.
+
+### Fixed
+- A recipe exported from a design could carry a name the sharing service
+  rejects and that cannot be a filename: to_recipe replaced spaces and nothing
+  else, so "Steve Lukather: Dumble ODS lead" became
+  steve-lukather:-dumble-ods-lead. One slug rule now, in one place.
+- The test suite could write to the real save whitelist. conftest never
+  isolated store_slots.json, so a test that forgot to monkeypatch it wrote to
+  the live file. Pinned session wide beside the .env isolation that exists for
+  exactly the same lesson.
+- Widening the simulator for cab auditioning removed the guard that made a
+  zeroed GET a no-op, so reading a parameter started zeroing it. Sub 09 00
+  carrying zero is the read, whatever the parameter kind.
+
+### Verified
+Hardware: scenes, the routing grid, auditioning, undo and A/B, the health scan
+and its clone check, blast radius, and saving. Simulator and a stub service:
+offline design, the conflict check, recipes, and the zero-loss outbox including
+an item queued while the service was down and flushed when it returned. The
+final transmit of an offline-designed tone has not yet run on hardware.
+
 ## 0.3.1 (2026-08-29)
 
 A patch on the day 0.3.0 shipped, because the first person to run it outside
