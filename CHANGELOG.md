@@ -2,6 +2,21 @@
 
 Notable changes to ToneCommand. Dates are UTC.
 
+## Unreleased
+
+### Fixed (refusal wording, 2026-08-29)
+- A one-action plan is no longer told that its remaining actions were
+  skipped. There were none. 0.3.1 fixed the crash that made this line
+  unreadable; the line itself is still false, and now counts what it skipped.
+- The refusal names the wall it actually hit. It read "no free pass-through
+  cell any of the amp", the raw position enum in a sentence, and one sentence
+  covered three different situations. An empty slot has no grid cells at all,
+  not even pass-through cells (finding 18), so it is pointed at
+  `tools/build_from_scratch.py`, the thing that builds into one. A grid that
+  did not answer is neither case: it says so and prescribes nothing, because
+  sending someone to load a different preset over what may be a cable or
+  FM9-Edit holding the port is worse than saying "unknown".
+
 ## 0.3.1 (2026-08-29)
 
 A patch on the day 0.3.0 shipped, because the first person to run it outside

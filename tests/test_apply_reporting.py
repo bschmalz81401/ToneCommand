@@ -9,7 +9,6 @@ import pytest
 from fastapi.testclient import TestClient
 
 import server
-from fm9.registry import Registry
 from fm9.sim import SimFM9
 
 UI = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text()
@@ -78,14 +77,67 @@ def test_an_empty_preset_is_not_described_as_having_no_free_cell(client,
     assert "no free pass-through cell" not in detail
 
 
-def test_the_position_reads_as_a_phrase_not_an_enum():
-    """It rendered as "no free pass-through cell any of the amp"."""
-    from fm9.device import FM9  # noqa: F401  (Action import path)
-    from server import Action, _no_placement_detail
-    cells = [object()]                    # non-empty: the packed-preset branch
-    a = Action(kind="add_block", block="amp", instance=1)
-    for pos, phrase in (("pre", "before the amp"), ("post", "after the amp"),
-                        ("any", "anywhere on the grid")):
-        got = _no_placement_detail(a, pos, cells)
-        assert phrase in got, got
-        assert f"cell {pos} of the amp" not in got
+@pytest.mark.parametrize("pos,phrase", [
+    ("pre", "before the amp"),
+    ("post", "after the amp"),
+    ("any", "anywhere on the grid"),
+])
+def test_the_position_reads_as_a_phrase_not_an_enum(client, monkeypatch,
+                                                    pos, phrase):
+    """It rendered as "no free pass-through cell any of the amp".
+
+    Driven through /api/apply on a PACKED grid, not by calling the helper: a
+    test that only exercises the helper stays green if the caller goes back to
+    interpolating the raw enum, which is the regression that matters.
+    """
+    packed = [c for c in (server._fm9.read_grid() or []) if not c.is_shunt]
+    monkeypatch.setattr(server._fm9, "read_grid", lambda: packed)
+    results = client.post("/api/apply", json={"actions": [
+        {"kind": "add_block", "block": "wah", "instance": 1,
+         "position": pos}]}).json()["results"]
+    detail = results[0]["detail"]
+    assert results[0]["ok"] is False
+    assert phrase in detail, detail
+    assert f"cell {pos} of the amp" not in detail
+
+
+def test_a_grid_that_did_not_answer_is_not_called_an_empty_preset(client,
+                                                                  monkeypatch):
+    """Finding 18: an empty slot's grid read SUCCEEDS with zero cells. Folding
+    a read that returned nothing at all into "this preset is empty" is a
+    confident wrong diagnosis, and it sends the owner off to load a different
+    preset over what may be a cable or FM9-Edit holding the port."""
+    monkeypatch.setattr(server._fm9, "read_grid", lambda: None)
+    results = client.post("/api/apply", json={"actions": [
+        {"kind": "add_block", "block": "wah", "instance": 1}]}).json()["results"]
+    detail = results[0]["detail"]
+    assert results[0]["ok"] is False
+    assert "did not answer" in detail
+    assert "this preset is empty" not in detail
+    assert "build_from_scratch" not in detail, "do not prescribe a remedy here"
+
+
+def test_a_one_action_plan_is_not_told_its_remaining_actions_were_skipped(
+        client, monkeypatch):
+    """A false sentence sitting under a true refusal. It was invisible while
+    the marker crashed the UI."""
+    monkeypatch.setattr(server._fm9, "read_grid", lambda: [])
+    monkeypatch.setattr(server._fm9, "status_dump", lambda: [])
+    results = client.post("/api/apply", json={"actions": [
+        {"kind": "add_block", "block": "wah", "instance": 1}]}).json()["results"]
+    assert len(results) == 1, [r["detail"] for r in results]
+    assert all("remaining actions skipped" not in r["detail"] for r in results)
+
+
+def test_a_multi_action_plan_still_says_what_it_skipped(client, monkeypatch):
+    """The contract this marker exists for is unchanged, and now it counts."""
+    monkeypatch.setattr(server._fm9, "read_grid", lambda: [])
+    monkeypatch.setattr(server._fm9, "status_dump", lambda: [])
+    results = client.post("/api/apply", json={"actions": [
+        {"kind": "add_block", "block": "wah", "instance": 1},
+        {"kind": "set_param", "block": "wah", "param": "WAH_LEVEL", "value": 0},
+        {"kind": "set_bypass", "block": "wah", "instance": 1, "bypassed": True},
+    ]}).json()["results"]
+    assert results[-1]["action"] is None
+    assert "remaining actions skipped (2)" in results[-1]["detail"]
+    assert len(results) == 2, "the later actions must not have run"

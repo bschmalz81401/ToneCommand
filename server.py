@@ -534,7 +534,7 @@ _POSITION_PHRASE = {"pre": "before the amp", "post": "after the amp",
                     "any": "anywhere on the grid"}
 
 
-def _no_placement_detail(a: Action, pos: str, cells: list) -> str:
+def _no_placement_detail(a: Action, pos: str, cells: list | None) -> str:
     """Why a block could not be placed, in terms of the wall actually hit.
 
     An EMPTY preset is not a full one. It has no grid cells at all, not even
@@ -544,6 +544,14 @@ def _no_placement_detail(a: Action, pos: str, cells: list) -> str:
     one of them is the user's fault.
     """
     where = _POSITION_PHRASE.get(pos, f"at position {pos!r}")
+    if cells is None:
+        # A read that did not answer is a THIRD wall, and the worst one to
+        # get wrong: finding 18 says an empty slot's grid read SUCCEEDS with
+        # zero cells, so folding a timeout into "empty" is a confident wrong
+        # diagnosis that then tells the owner to go and load another preset.
+        return (f"the grid did not answer, so where {a.block} could go is "
+                f"unknown; nothing was sent. Check the FM9 is connected and "
+                f"not in use by FM9-Edit, then retry")
     if not cells:
         return (f"this preset is empty: it has no grid cells at all, not even "
                 f"pass-through cells, so there is nothing to place {a.block} "
@@ -560,7 +568,9 @@ def _add_block(fm9: FM9, a: Action) -> dict:
     blocks = fm9.status_dump() or []
     if any(b.effect_id == eid for b in blocks):
         return {"ok": False, "detail": f"{a.block} {a.instance} already exists in this preset"}
-    cells = fm9.read_grid() or []
+    cells = fm9.read_grid()
+    if cells is None:
+        return {"ok": False, "detail": _no_placement_detail(a, a.position or "any", None)}
     amp_cols = [c.col for c in cells if c.effect_id in (58, 59, 60, 61)]
     amp_col = min(amp_cols) if amp_cols else None
     shunts = [(c.row, c.col) for c in cells if c.is_shunt]
@@ -1286,10 +1296,16 @@ def api_apply(body: ApplyBody):
                     # later actions in the plan target the block that failed
                     # to land; running them would set params and bind pedals
                     # on a block that is not on the grid (hardware-observed
-                    # on 2026-08-20, preset 143: dangling modifier binding)
-                    results.append({"action": None, "ok": False,
-                                    "detail": "remaining actions skipped: "
-                                              "add_block failed"})
+                    # on 2026-08-20, preset 143: dangling modifier binding).
+                    # Only say so when there is something to skip: a one-action
+                    # plan used to be told its remaining actions were skipped,
+                    # which is a false sentence sitting under a true refusal.
+                    remaining = body.actions[body.actions.index(a) + 1:]
+                    if remaining:
+                        results.append({"action": None, "ok": False,
+                                        "detail": f"remaining actions skipped "
+                                                  f"({len(remaining)}): "
+                                                  f"add_block failed"})
                     break
         except FM9NotFound:
             drop_fm9()
