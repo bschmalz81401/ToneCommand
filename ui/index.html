@@ -661,7 +661,10 @@
      the dropdown opened once and then threw for the rest of the session.
      Positioned from the button's rect instead, left edge aligned to it. */
   /* Wider than the preset popover: these rows carry a sentence, not a name. */
-  #audpop { position: fixed; width: 460px; right: auto; }
+  /* Widened with the type scale. At 460px the count wrapped to "331 of" /
+     "331" and the filter placeholder clipped mid-sentence, both of which
+     appeared the moment the text got big enough to read. */
+  #audpop { position: fixed; width: 520px; right: auto; }
   .audtitle { font-size: var(--fs-label); letter-spacing: 0.2em; color: var(--cyan-dim);
               margin-bottom: 7px; }
   .audhead { display: flex; gap: 6px; align-items: center; margin-bottom: 7px; }
@@ -683,9 +686,13 @@
   }
   .prow { flex-wrap: wrap; }
   .audfoot { display: flex; justify-content: space-between; align-items: center;
-             gap: 8px; margin-top: 7px; padding-top: 7px;
+             gap: 12px; margin-top: 7px; padding-top: 7px;
              border-top: 1px solid var(--line); color: var(--dim);
              font-size: var(--fs-label); letter-spacing: 0.05em; }
+  /* "331 of 331" is one fact and reads as nonsense broken over two lines. It
+     is also the short half, so the hint is the one that gives way. */
+  #audcount { flex: 0 0 auto; white-space: nowrap; }
+  .audfoot > span:last-child { min-width: 0; text-align: right; }
 
   /* Saving is the only destructive thing this tool does, so it gets its own
      panel, an explicit list of slots the owner designated, and a confirmation
