@@ -397,13 +397,29 @@
   /* Wide enough for "Master Feedback", the longest label the registry
      produces. Narrower and the two-word names wrap, which reads as a fault
      rather than as a layout. */
-  .knob { display: grid; grid-template-columns: 148px 1fr 68px; gap: 12px;
+  .knob { display: grid; grid-template-columns: 148px 1fr 86px; gap: 12px;
           align-items: center; padding: 6px 0; }
   .knob .k { color: var(--muted); font-size: var(--fs-hint); letter-spacing: 0.04em; }
   .knob .v { color: var(--cyan); font-size: var(--fs-body); text-align: right;
              font-variant-numeric: tabular-nums; }
   .knob .v .u { color: var(--dim); font-size: var(--fs-label); margin-left: 2px; }
   .knob.busy .v { color: var(--amber); }
+  /* A value you can press to put it back. Only rendered where zero is the
+     neutral position, so it is never offered on a gain.
+
+     The padding matters more than it looks: the global button rule sets
+     9px 20px, which is fine on ENGAGE and blows "-15 dB" straight out of a
+     narrow value column. Reset everything the button default brings. */
+  .knob button.v {
+    background: none; border: 1px solid transparent; border-radius: 3px;
+    font-family: inherit; font-size: var(--fs-body); color: var(--cyan);
+    letter-spacing: 0; cursor: pointer; padding: 2px 6px; margin: 0;
+    width: 100%; text-align: right; white-space: nowrap;
+  }
+  .knob button.v:hover { border-color: var(--cyan-dim); }
+  /* Nothing to undo when it is already there. */
+  .knob button.v.at { cursor: default; color: var(--muted); }
+  .knob button.v.at:hover { border-color: transparent; }
   .knob.ro .v { color: var(--muted); }
 
   /* A real range input: draggable, keyboard reachable, and it arrives with
@@ -2783,9 +2799,35 @@ function renderParams(s) {
   positionAud();       // the button just moved; the popover has to follow
 }
 
+// Where does 0 actually MEAN something, rather than just being the bottom of
+// the slider? Two cases, and only two:
+//
+//   decibels          0 dB is unity. Every block's Level lives here.
+//   a symmetric range the EQ bands run -12 to +12 and feedback -99.5 to
+//                     +99.5, so 0 is flat and centre respectively.
+//
+// Gain, Mix and Depth all run 0 to 10 or 0 to 100, where zero is minimum and
+// not a default at all. Offering to "reset" a gain to 0 would be offering to
+// turn the amp off, so those get nothing.
+function neutralOf(m) {
+  if (m.unit === 'db') return 0;
+  if (m.min < 0 && Math.abs(m.min + m.max) < 0.01) return 0;
+  return null;
+}
+
 function knobRow(key, m, value) {
   const unit = UNITS[m.unit] ? `<span class="u">${UNITS[m.unit]}</span>` : '';
-  const val = `<span class="v" data-v="${esc(key)}">${value}${unit}</span>`;
+  // The value doubles as the reset, where there is something to reset TO.
+  // Dragging a slider onto exactly 0.0 dB is a fiddle nobody should have to
+  // do, and it is the single most common thing anyone wants a level to be.
+  const zero = neutralOf(m);
+  const atZero = zero !== null && Math.abs(value - zero) < 0.011;
+  const val = (zero === null)
+    ? `<span class="v" data-v="${esc(key)}">${value}${unit}</span>`
+    : `<button class="v reset${atZero ? ' at' : ''}" data-v="${esc(key)}"
+         data-zero="${zero}" title="${atZero ? 'already at ' + zero
+           + (UNITS[m.unit] || '') : 'set to ' + zero + (UNITS[m.unit] || '')}"
+         >${value}${unit}</button>`;
   const lab = `<span class="k">${esc(m.label)}</span>`;
   // A slider needs a span to map a position onto. Without one it stays a
   // readout: a control we cannot map back would look exactly as trustworthy
@@ -2813,6 +2855,23 @@ $('knobs').addEventListener('input', e => {
   const pct = (el.value - el.min) / (el.max - el.min) * 100;
   el.style.setProperty('--pct', pct + '%');
   row.querySelector('.v').firstChild.nodeValue = el.value;
+});
+
+// Press the value to put it back to neutral. Goes through the same write path
+// as a drag, so it is verified by read-back and covered by undo like anything
+// else.
+$('knobs').addEventListener('click', async e => {
+  const b = e.target.closest('button.v.reset');
+  if (!b || b.classList.contains('at')) return;
+  const m = (lastParams || {})[b.dataset.v];
+  if (!m) return;
+  const row = b.closest('.knob');
+  row.classList.add('busy');
+  b.disabled = true;
+  await blockAction({kind: 'set_param', block: m.family, instance: m.instance,
+                     param: m.param, value: Number(b.dataset.zero)}, null);
+  row.classList.remove('busy');
+  b.disabled = false;
 });
 
 $('knobs').addEventListener('change', async e => {

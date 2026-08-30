@@ -464,3 +464,53 @@ def test_setting_a_reverb_type_lands(client):
     assert r["results"][-1]["ok"]
     after = client.get("/api/state").json()["values"].get("REVERB_TYPE_NAME")
     assert after and after != before
+
+
+# --- putting a level back ------------------------------------------------
+
+def test_zero_is_only_offered_where_zero_means_something():
+    """Two cases and only two: decibels, where 0 is unity, and a range
+    symmetric about zero, where 0 is flat or centre. Gain, Mix and Depth all
+    run 0 to 10 or 0 to 100, where zero is the BOTTOM and not a default at
+    all: offering to reset a gain to 0 would be offering to turn the amp off.
+    """
+    fn = SCRIPT.split("function neutralOf")[1].split("\n}")[0]
+    assert "m.unit === 'db'" in fn
+    assert "m.min < 0" in fn and "Math.abs(m.min + m.max)" in fn
+
+
+def test_the_value_itself_is_the_reset():
+    """Dragging a slider onto exactly 0.0 dB is a fiddle nobody should have to
+    do, and it is the single most common thing anyone wants a level to be."""
+    row = SCRIPT.split("function knobRow")[1].split("\n}")[0]
+    assert "neutralOf(m)" in row
+    assert 'button class="v reset' in row
+    # and it says so rather than relying on the reader guessing
+    assert "'set to '" in row
+
+
+def test_a_value_already_at_zero_offers_nothing():
+    row = SCRIPT.split("function knobRow")[1].split("\n}")[0]
+    assert "atZero" in row and "' at'" in row
+    assert ".knob button.v.at { cursor: default;" in UI
+
+
+def test_the_reset_goes_through_the_same_verified_write():
+    """Not a shortcut around the path everything else uses, so it is read back
+    and covered by undo like a drag."""
+    handler = SCRIPT.split("button.v.reset")[1].split("\n});")[0]
+    assert "blockAction(" in handler and "set_param" in handler
+
+
+def test_the_button_does_not_inherit_the_global_button_padding():
+    """The global rule is 9px 20px, which is right for ENGAGE and blows
+    "-15 dB" straight out of a narrow value column. Every default the button
+    element brings has to be reset here."""
+    style = UI.split("<style>")[1].split("</style>")[0]
+    rule = re.search(r"^\s*\.knob button\.v \{([^}]*)\}", style, re.M).group(1)
+    for prop in ("padding:", "border:", "background:", "font-family:",
+                 "font-size:", "letter-spacing:"):
+        assert prop in rule, prop
+    # and the column has room for a boxed value
+    knob = re.search(r"^\s*\.knob \{ display: grid;([^}]*)\}", style, re.M).group(1)
+    assert int(re.search(r"1fr (\d+)px", knob).group(1)) >= 80
