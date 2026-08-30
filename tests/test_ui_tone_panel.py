@@ -325,8 +325,9 @@ def test_the_list_aligns_to_the_left_edge_of_its_button():
 def test_both_the_control_and_the_list_say_what_they_are():
     """An unlabelled control showing a cab description is just a sentence in a
     box: nothing says it is a cabinet, and nothing says it can be changed."""
+    # "MODEL" beside "CABINET" read as a category rather than a name
     assert '<div class="picklabel">CABINET</div>' in UI
-    assert '<div class="picklabel">MODEL</div>' in UI
+    assert '<div class="picklabel">AMP MODEL</div>' in UI
     assert "'AMP MODEL' : 'CABINET'" in SCRIPT or "'CABINET'" in SCRIPT
     assert 'id="audtitle"' in UI
 
@@ -377,3 +378,24 @@ def test_cab_descriptions_are_not_clipped():
     assert "white-space: normal" in sub
     # and the full text on hover for anything past two lines
     assert 'title="${esc(m.name)}' in SCRIPT
+
+
+def test_the_amp_and_cab_pickers_sit_side_by_side():
+    """Stacked inside a 340px column they were a lopsided tower down one edge,
+    and the cab description had nowhere to go. They are the two facts anyone
+    looks for first, so they get the full width of the panel and read as a
+    pair."""
+    style = UI.split("<style>")[1].split("</style>")[0]
+    picks = re.search(r"^\s*\.picks \{([^}]*)\}", style, re.M).group(1)
+    assert "grid-template-columns: 1fr 1fr" in picks
+    # and they fill their cells equally, which the shrink-to-fit wrapper
+    # prevented until it was told to be a block
+    assert ".pick .aud { display: block; }" in style
+    assert ".pick .audbtn { width: 100%; }" in style
+    # one column when there is genuinely not room for two
+    assert "max-width: 820px) { .picks { grid-template-columns: 1fr; }" in style
+
+
+def test_the_pickers_are_above_the_parameter_columns():
+    """Not inside one of them, which is what made the tower."""
+    assert UI.index('<div id="picks">') < UI.index('<div class="knobs" id="knobs">')

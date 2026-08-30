@@ -224,8 +224,10 @@ def test_the_model_selectors_look_like_selectors():
     """As bare text with a hover border they read as a caption, so nobody
     discovers that the two most interesting facts on the page are also the two
     things easiest to change."""
+    # anchored on the base rule: a plain split started matching
+    # ".pick .audbtn", a later override that only sets a width
     style = UI.split("<style>")[1].split("</style>")[0]
-    rule = style.split(".audbtn {")[1].split("}")[0]
+    rule = re.search(r"^\s*\.audbtn \{([^}]*)\}", style, re.M).group(1)
     assert "border:" in rule and "background:" in rule
 
 

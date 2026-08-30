@@ -329,6 +329,23 @@
   .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
   @media (max-width: 800px) { .grid { grid-template-columns: 1fr; } }
 
+  /* Side by side and equal width, so the two headline facts read as a pair
+     rather than as a tower down one edge. They drop to one column when there
+     is genuinely not room for two. */
+  .picks { display: grid; grid-template-columns: 1fr 1fr; gap: 22px;
+           margin-bottom: 24px; }
+  @media (max-width: 820px) { .picks { grid-template-columns: 1fr; } }
+  .pick { min-width: 0; }
+  /* The wrapper is inline-block and shrink-to-fit elsewhere, which left the
+     amp button sized to its text while the cab filled its cell. Here they are
+     a matched pair, so both fill. */
+  .pick .aud { display: block; }
+  .pick .audbtn { width: 100%; }
+  /* the cab carries a sentence, so it stays at reading size and wraps */
+  .audbtn.sub { font-size: var(--fs-hint); align-items: flex-start; }
+  .audbtn.sub .l { white-space: normal; line-height: 1.5; min-width: 0; }
+  .audbtn.sub::after { margin-top: 5px; }
+
   .knobs { columns: 340px; column-gap: 30px; }
   /* A group split across a column break reads as two groups. */
   .kgroup { break-inside: avoid; margin: 0 0 26px; }
@@ -889,6 +906,7 @@
   </div>
 
   <div class="console needs-rig" data-label="TONE">
+    <div id="picks"></div>
     <div class="knobs" id="knobs"><span class="hint">awaiting link...</span></div>
     <div class="hint">Drag any slider to set it. Changes go to the edit buffer, not to your saved preset.</div>
   </div>
@@ -2604,27 +2622,30 @@ function renderParams(s) {
                                             && meta[k].unit !== 'unverified');
     if (!keys.length) continue;
     let head = `<h4>${esc(title)}</h4>`;
-    // The amp model and the cab were read every poll and then thrown away.
-    // They are the two facts a player actually leads with.
-    if (fam === 'DISTORT') {
-      const model = s.values.AMP_MODEL, cab = s.values.cab;
-      // Both are buttons. They were the two most interesting facts on the
-      // page and the two you were most likely to want to change, and until
-      // now changing either meant leaving for FM9-Edit or the unit itself.
-      // Both get a label. An unlabelled control showing a cab description is
-      // just a sentence in a box: nothing says it is a cabinet, and nothing
-      // says it can be changed.
-      if (model) head += `<div class="picklabel">MODEL</div>
-        <div class="model"><span class="aud"><button class="audbtn" data-aud="amp"
-          title="choose an amp model"><span class="l">${esc(model)}</span></button></span></div>` +
-        (cab ? `<div class="picklabel">CABINET</div>
-          <div class="model sub"><span class="aud"><button class="audbtn"
-           data-aud="cab" title="choose a cabinet"><span class="l">${esc(cab)}</span></button></span></div>`
-             : '');
-    }
     out.push(`<div class="kgroup">${head}${keys.map(k => knobRow(k, meta[k], s.values[k])).join('')}</div>`);
   }
+
+  // The amp and the cab sit ABOVE the columns, side by side, rather than
+  // stacked inside one of them. They are the two facts anyone looks for
+  // first, so they get the full width and read as a pair; stacked in a
+  // 340px column they were a lopsided tower and the cab description had
+  // nowhere to go.
+  const model = s.values.AMP_MODEL, cab = s.values.cab;
+  const picks = (model || cab) ? `<div class="picks">
+    ${model ? `<div class="pick">
+      <div class="picklabel">AMP MODEL</div>
+      <span class="aud"><button class="audbtn" data-aud="amp"
+        title="choose an amp model"><span class="l">${esc(model)}</span></button></span>
+    </div>` : ''}
+    ${cab ? `<div class="pick">
+      <div class="picklabel">CABINET</div>
+      <span class="aud"><button class="audbtn sub" data-aud="cab"
+        title="choose a cabinet"><span class="l">${esc(cab)}</span></button></span>
+    </div>` : ''}
+  </div>` : '';
+
   $('knobs').innerHTML = out.join('') || '<span class="hint">no data</span>';
+  $('picks').innerHTML = picks;
   positionAud();       // the button just moved; the popover has to follow
 }
 
