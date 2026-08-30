@@ -75,7 +75,7 @@ PLAN_SCHEMA = {
                     "kind": {"type": "string",
                              "enum": ["set_param", "set_scene", "set_bypass",
                                       "set_channel", "set_tempo", "set_type",
-                                      "add_block", "bind_pedal",
+                                      "add_block", "bind_pedal", "unbind_pedal",
                                       "rename_preset", "rename_scene", "store"]},
                     "block": {"type": ["string", "null"],
                               "description": "Block name for set_param/set_bypass/set_channel, e.g. amp, gate, input, delay, reverb, cab, drive, peq, geq, comp"},
@@ -173,7 +173,7 @@ Scenes and multi-scene requests:
 - Scenes share the same blocks; each scene stores its own per-block bypass states and channel choices. Block PARAMETERS and TYPES are per-channel, shared across scenes.
 - To build "scene X with effect A, scene Y with effect B": set_scene X, set bypass states for X, then set_scene Y, set bypass states for Y. The device ends on the last selected scene. Note in the summary which scene is which.
 - Adding blocks: use add_block (block name + optional position "pre"/"post" relative to the amp) when a requested effect has no block in the preset. It places the block on a free pass-through point in the signal chain; if the executor reports there is no free spot, relay that honestly. Freshly added blocks may need a set_type and parameter settings next.
-- Expression pedal: use bind_pedal (block + param + optional value = floor percent 0-100) to put a continuous parameter under Pedal 2. Pedal 1 is the player's global volume and must NEVER be referenced or rebound.
+- Expression pedal: use bind_pedal (block + param + optional value = floor percent 0-100) to put a continuous parameter under Pedal 2, and unbind_pedal (block + param) to take it back off. Pedal 1 is the player's global volume and must NEVER be referenced or rebound. unbind_pedal only removes Pedal 2 bindings; anything driven by another source was set up on the FM9 itself and is refused.
 - rename_preset / rename_scene (new name in type_name; scene number in value). Tool-created presets are prefixed FM9AI- automatically.
 - store (slot number in value) persists the edit buffer to a preset slot. Only the slots listed as storable in the reference are allowed; every other slot is refused by the hardware layer, and if the reference says storing is disabled, never propose store. Only propose store when the user explicitly asks to save, and the UI will ask the user to confirm the overwrite separately.
 - If a requested change is impossible, say so in the summary. Never silently substitute a different effect without saying so."""

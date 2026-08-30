@@ -22,13 +22,30 @@
     --green: #3dffa0;
     --text: #c9dcea;
     --muted: #5d7a91;
-    font-size: 15px;
+    /* The root everything else multiplies. It was 15px, which is a quiet
+       reduction of every size on the page below what the browser and every
+       other site assume. 16 is the default for a reason. */
+    font-size: 16px;
+    /* Set from the header control and remembered per browser, because how
+       big text needs to be is a fact about the reader and their screen, not
+       something a stylesheet can know. */
+    --ui-scale: 1;
+    /* Room to breathe. Density reads as "this is for experts" whether or not
+       it is true, and this tool is aimed at guitarists rather than engineers.
+       A longer page costs a scroll; a cramped one costs the reader. */
+    --pad: 26px;      /* inside a panel */
+    --gap: 26px;      /* between panels */
+    --row: 14px;      /* inside a list row */
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     background: var(--bg);
     color: var(--text);
     font-family: "SF Mono", "Menlo", "Cascadia Code", monospace;
+    /* Was `normal`, which on a monospace face at this size sets lines almost
+       touching. Every paragraph on the page was harder to read than it had to
+       be, and none of them were long. */
+    line-height: 1.55;
     min-height: 100vh;
     background-image:
       radial-gradient(ellipse 80% 50% at 50% -10%, rgba(47, 230, 255, 0.08), transparent),
@@ -40,14 +57,20 @@
     /* One scale. There were seventeen different font sizes on this page,
        several of them a hundredth of a rem apart, which is not a hierarchy,
        it is drift. Six steps, each with a job. */
-    --fs-badge: 0.58rem;   /* channel letters, WILL CHANGE */
-    --fs-label: 0.66rem;   /* panel captions and micro uppercase */
-    --fs-hint:  0.73rem;   /* hints, secondary rows, readouts */
-    --fs-body:  0.80rem;   /* controls, inputs, buttons, list rows */
-    --fs-sub:   0.90rem;   /* a group headline, like the amp model */
-    --fs-lead:  1.05rem;   /* scene numbers */
+    /* Sized for reading, not for fitting. The first scale ran from 8.7px to
+       15.75px, which is fine on a 27 inch screen at arm's length and hard
+       work otherwise. Everything is bigger, and the SMALL end is bigger by
+       more than the large end, because that is where the strain was: hints
+       and captions went up by roughly half, headlines by a fifth.
+       --ui-scale multiplies the lot, so the reader can go further. */
+    --fs-badge: calc(0.78rem * var(--ui-scale, 1));
+    --fs-label: calc(0.85rem * var(--ui-scale, 1));
+    --fs-hint:  calc(0.92rem * var(--ui-scale, 1));
+    --fs-body:  calc(1.00rem * var(--ui-scale, 1));
+    --fs-sub:   calc(1.12rem * var(--ui-scale, 1));
+    --fs-lead:  calc(1.30rem * var(--ui-scale, 1));
   }
-  .wrap { max-width: 1100px; margin: 0 auto; padding: 28px 20px 60px; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 34px 26px 80px; }
 
   header {
     display: flex; align-items: baseline; gap: 18px; flex-wrap: wrap;
@@ -65,7 +88,7 @@
     filter: drop-shadow(0 0 26px rgba(90,140,255,0.42));
   }
   h1 {
-    font-size: 1.25rem; letter-spacing: 0.35em; color: var(--cyan);
+    font-size: calc(1.5rem * var(--ui-scale, 1)); letter-spacing: 0.35em; color: var(--cyan);
     text-shadow: 0 0 18px rgba(47, 230, 255, 0.55); font-weight: 600;
   }
   h1 span { color: var(--muted); text-shadow: none; }
@@ -78,6 +101,13 @@
     background: rgba(0,0,0,0.35); color: var(--muted); white-space: nowrap;
   }
   .pill b { color: var(--text); font-weight: 500; }
+  /* A status light you can press. The poll retries on its own, but it retries
+     through a stale view of the MIDI bus, so a device plugged in after the
+     server started is invisible until something rescans. That made this the
+     one piece of state with no way to correct it. */
+  #link { font: inherit; cursor: pointer; }
+  #link:hover { border-color: var(--cyan); color: var(--cyan); }
+  #link.busy { border-color: var(--amber); color: var(--amber); }
   #link.on { border-color: var(--green); color: var(--green);
              box-shadow: 0 0 12px rgba(61, 255, 160, 0.25); }
   #link.off { border-color: var(--red); color: var(--red); }
@@ -87,7 +117,7 @@
 
   /* Scene switcher: shaped like the footswitches it stands in for, because
      this is the one control that gets used while playing. */
-  .scenes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .scenes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 11px; }
   .sc {
     /* min-width:0 or the grid will not shrink the button below its own text,
        so the ellipsis below never fires and the name escapes the box */
@@ -133,13 +163,22 @@
     flex: 1; min-width: 0; overflow: hidden;
     text-overflow: ellipsis; white-space: nowrap; text-align: left;
   }
-  .pillbtn .caret { flex: none; color: var(--cyan-dim); font-size: var(--fs-badge); }
+  /* Drawn, not typed, and the same triangle the amp and cab pickers use.
+     U+25BE is rendered small inside its own em box, so at any font size it
+     came out noticeably smaller than the chevrons beside it. This is the
+     third control on this page to hit that; a glyph is not a shape you can
+     size. */
+  .pillbtn .caret {
+    flex: none; width: 0; height: 0; align-self: center;
+    border-left: 6px solid transparent; border-right: 6px solid transparent;
+    border-top: 7px solid var(--cyan);
+  }
   .pillbtn .lbl { flex: none; color: var(--muted); }
   .pillbtn .pnum {
     flex: none; color: var(--text); font-variant-numeric: tabular-nums;
     min-width: 30px; text-align: right;
   }
-  .pillbtn .caret { margin-left: 7px; color: var(--cyan-dim); font-size: var(--fs-badge); }
+  .pillbtn .caret { margin-left: 9px; }
   .pillbtn:hover { border-color: var(--cyan-dim); }
   .pillbtn.open { border-color: var(--cyan); color: var(--cyan); }
 
@@ -218,17 +257,41 @@
 
   .console {
     background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
-    padding: 18px; margin-bottom: 20px; position: relative;
+    padding: var(--pad); margin-bottom: var(--gap); position: relative;
     box-shadow: 0 0 40px rgba(0,0,0,0.5), inset 0 0 60px rgba(47,230,255,0.03);
   }
   /* A panel name is the label for everything under it, so it was doing the
      most work at the smallest size on the page. Bigger, brighter, and lit,
      so the eye can find the sections before reading any of them. */
-  .console::before {
-    content: attr(data-label); position: absolute; top: -11px; left: 14px;
-    background: var(--bg); padding: 0 9px; font-size: var(--fs-body);
-    letter-spacing: 0.24em; color: var(--cyan); font-weight: 600;
+  /* The label is a real button now, not a ::before, so a panel you are not
+     using can be folded away. Generated in script rather than written into
+     nine places, so they cannot drift apart. */
+  .console::before { content: none; }
+  .phead {
+    position: absolute; top: -11px; left: 14px; z-index: 1;
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--bg); padding: 0 9px; border: none;
+    font-family: inherit; font-size: var(--fs-body); letter-spacing: 0.24em;
+    color: var(--cyan); font-weight: 600; cursor: pointer;
     text-shadow: 0 0 14px rgba(47,230,255,0.45);
+  }
+  .phead:hover { color: #9ff3ff; }
+  .phead:focus-visible { outline: 1px solid var(--cyan-dim); outline-offset: 3px; }
+  /* Points down when open, right when folded, which is the one convention
+     everybody already knows. */
+  .pcaret {
+    width: 0; height: 0; flex: none; transition: transform .15s;
+    border-left: 6px solid transparent; border-right: 6px solid transparent;
+    border-top: 7px solid var(--cyan-dim);
+  }
+  .console.folded .pcaret { transform: rotate(-90deg); }
+  .console.folded .pbody { display: none; }
+  /* A folded panel is a label, so it should not keep a panel's worth of
+     padding underneath it. */
+  .console.folded { padding-top: 14px; padding-bottom: 14px; }
+  .pcount {
+    font-size: var(--fs-label); letter-spacing: 0.08em; color: var(--dim);
+    font-weight: 400; text-shadow: none;
   }
   /* Scenes are the performance surface, so they carry the violet accent all
      the way through: label, border and glow. */
@@ -290,9 +353,73 @@
   .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
   @media (max-width: 800px) { .grid { grid-template-columns: 1fr; } }
 
+  /* Side by side and equal width, so the two headline facts read as a pair
+     rather than as a tower down one edge. They drop to one column when there
+     is genuinely not room for two. */
+  .picks { display: grid; grid-template-columns: 1fr 1fr; gap: 22px;
+           margin-bottom: 24px; }
+  @media (max-width: 820px) { .picks { grid-template-columns: 1fr; } }
+  .pick { min-width: 0; }
+  /* The wrapper is inline-block and shrink-to-fit elsewhere, which left the
+     amp button sized to its text while the cab filled its cell. Here they are
+     a matched pair, so both fill. */
+  .pick .aud { display: block; }
+  .pick .audbtn { width: 100%; }
+  /* the cab carries a sentence, so it stays at reading size and wraps */
+  .audbtn.sub { font-size: var(--fs-hint); align-items: flex-start; }
+  .audbtn.sub .l { white-space: normal; line-height: 1.5; min-width: 0; }
+  .audbtn.sub::after { margin-top: 5px; }
+
   .knobs { columns: 340px; column-gap: 30px; }
+  /* What is driving this parameter, when it is not you. Amber rather than
+     cyan: cyan is "you can move this", and this is the one row you cannot. */
+  .modbadge {
+    display: inline-block; margin-left: 9px; padding: 2px 7px;
+    border-radius: 3px; font-size: var(--fs-badge); letter-spacing: 0.08em;
+    color: var(--amber); background: rgba(255,180,84,0.10);
+    border: 1px solid rgba(255,180,84,0.35); white-space: nowrap;
+    vertical-align: middle; cursor: help;
+  }
+  /* An unnamed source is still a real attachment. It reads as a number
+     because naming an ordinal we have not verified would be inventing a fact
+     about someone's rig, not because the binding is in any doubt. */
+  .modbadge.unk { color: var(--muted); background: rgba(255,255,255,0.04);
+                  border-color: var(--line); }
+  /* Removing a binding is a click on the badge, so it has to look pressable
+     without shouting over the parameter name it sits beside. */
+  /* Amber, like the modifier badge, because it answers the same question:
+     why did that change do nothing. Dimming the group as well, so the state
+     reads from across the room and not only from the badge. */
+  .bypbadge {
+    margin-left: 10px; padding: 2px 8px; border-radius: 3px;
+    font: inherit; font-size: var(--fs-badge); letter-spacing: 0.1em;
+    color: var(--amber); background: rgba(255,180,84,0.10);
+    border: 1px solid rgba(255,180,84,0.45); cursor: pointer;
+    vertical-align: middle;
+  }
+  .bypbadge:hover { background: rgba(255,180,84,0.22); }
+  .bypbadge.busy { opacity: 0.5; }
+  .kgroup.bypassed .knob .k, .kgroup.bypassed .knob .v { color: var(--dim); }
+  .kgroup.bypassed input[type=range] { opacity: 0.45; }
+  button.modbadge { font: inherit; cursor: pointer; }
+  button.modbadge:hover { background: rgba(255,180,84,0.2); }
+  /* Offered on hover, and on keyboard focus, so the row stays a row until you
+     go looking. Twenty of these lit at once would read as the page's main
+     feature, which a pedal assignment is not. */
+  .pedalbtn {
+    margin-left: 8px; padding: 1px 6px; border-radius: 3px;
+    font: inherit; font-size: var(--fs-badge); letter-spacing: 0.06em;
+    color: var(--cyan-dim); background: transparent;
+    border: 1px solid var(--line); cursor: pointer;
+    opacity: 0; transition: opacity .12s;
+  }
+  .knob:hover .pedalbtn, .pedalbtn:focus-visible { opacity: 1; }
+  .pedalbtn:hover { color: var(--cyan); border-color: var(--cyan-dim); }
+  .pedalbtn.busy { opacity: 1; color: var(--amber); border-color: var(--amber); }
+  .knob.modded input[type=range] { opacity: 0.4; cursor: not-allowed; }
+  .knob.modded .v { color: var(--dim); }
   /* A group split across a column break reads as two groups. */
-  .kgroup { break-inside: avoid; margin: 0 0 18px; }
+  .kgroup { break-inside: avoid; margin: 0 0 26px; }
   .kgroup > h4 {
     font-size: var(--fs-label); letter-spacing: 0.22em; color: var(--cyan-dim);
     font-weight: 500; margin: 0 0 2px; text-transform: uppercase;
@@ -303,6 +430,9 @@
     color: var(--text); font-size: var(--fs-sub); margin-bottom: 9px;
     letter-spacing: 0.02em;
   }
+  .typepick { margin: 2px 0 12px; }
+  .typepick .aud { display: block; }
+  .typepick .audbtn { width: 100%; }
   .kgroup .picklabel {
     font-size: var(--fs-label); letter-spacing: 0.2em; color: var(--cyan-dim);
     margin: 11px 0 4px; font-weight: 600;
@@ -311,13 +441,32 @@
     display: block; color: var(--muted); font-size: var(--fs-hint); margin-top: 3px;
     letter-spacing: 0.03em; line-height: 1.45;
   }
-  .knob { display: grid; grid-template-columns: 108px 1fr 62px; gap: 9px;
-          align-items: center; padding: 3px 0; }
+  /* Wide enough for "Master Feedback", the longest label the registry
+     produces. Narrower and the two-word names wrap, which reads as a fault
+     rather than as a layout. */
+  .knob { display: grid; grid-template-columns: 148px 1fr 86px; gap: 12px;
+          align-items: center; padding: 6px 0; }
   .knob .k { color: var(--muted); font-size: var(--fs-hint); letter-spacing: 0.04em; }
   .knob .v { color: var(--cyan); font-size: var(--fs-body); text-align: right;
              font-variant-numeric: tabular-nums; }
   .knob .v .u { color: var(--dim); font-size: var(--fs-label); margin-left: 2px; }
   .knob.busy .v { color: var(--amber); }
+  /* A value you can press to put it back. Only rendered where zero is the
+     neutral position, so it is never offered on a gain.
+
+     The padding matters more than it looks: the global button rule sets
+     9px 20px, which is fine on ENGAGE and blows "-15 dB" straight out of a
+     narrow value column. Reset everything the button default brings. */
+  .knob button.v {
+    background: none; border: 1px solid transparent; border-radius: 3px;
+    font-family: inherit; font-size: var(--fs-body); color: var(--cyan);
+    letter-spacing: 0; cursor: pointer; padding: 2px 6px; margin: 0;
+    width: 100%; text-align: right; white-space: nowrap;
+  }
+  .knob button.v:hover { border-color: var(--cyan-dim); }
+  /* Nothing to undo when it is already there. */
+  .knob button.v.at { cursor: default; color: var(--muted); }
+  .knob button.v.at:hover { border-color: transparent; }
   .knob.ro .v { color: var(--muted); }
 
   /* A real range input: draggable, keyboard reachable, and it arrives with
@@ -351,7 +500,7 @@
      and until now it lived entirely in command-line scripts. */
   .hz { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
   .hz button { flex: 0 0 auto; }
-  .hrow { display: flex; align-items: baseline; gap: 10px; padding: 5px 0;
+  .hrow { display: flex; align-items: baseline; gap: 12px; padding: 9px 0;
           border-bottom: 1px solid rgba(255,255,255,0.04); font-size: var(--fs-hint); }
   .hrow:last-child { border-bottom: none; }
   .hrow .n { color: var(--dim); width: 16px; flex: 0 0 auto; }
@@ -370,6 +519,28 @@
   .hfind.warn { background: rgba(255,180,84,0.07); color: #d8c6a8; }
   .hfind.warn .tag { background: rgba(255,180,84,0.18); color: var(--amber); }
   .hfind.fail { background: rgba(255,92,92,0.08); color: #e3b6b6; }
+  .hfind .txt { flex: 1 1 auto; min-width: 0; }
+  /* One offer for the whole report, not one per row: five buttons down the
+     side of five findings is a form to fill in, and a preset is either right
+     or it is not. It never applies anything. It fills the plan box, the same
+     confirm gate stands in front of it as everything else, and the preset is
+     rescanned afterwards so "fixed" is a measurement rather than a claim. */
+  .fixbar { display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+            margin-top: 14px; }
+  .fixall {
+    flex: 0 0 auto; padding: 9px 20px; font-size: var(--fs-body);
+    letter-spacing: 0.11em; font-weight: 600; border-radius: 4px;
+    border: 1px solid var(--amber); background: var(--amber); color: #1a1206;
+    font-family: inherit; cursor: pointer;
+    box-shadow: 0 0 18px rgba(255,180,84,0.22);
+  }
+  .fixall:hover:not(:disabled) {
+    background: #ffc978; box-shadow: 0 0 24px rgba(255,180,84,0.42);
+  }
+  .fixall:disabled { background: none; color: var(--amber); opacity: 0.5;
+                     cursor: default; box-shadow: none; }
+  .fixnote { color: var(--dim); font-size: var(--fs-hint); flex: 1 1 240px;
+             line-height: 1.5; }
   .hfind.fail .tag { background: rgba(255,92,92,0.20); color: var(--red); }
   /* The bottom rung of the ladder, and the one that never turns green on its
      own. Everything above it is a machine reading a wire. */
@@ -490,7 +661,10 @@
      the dropdown opened once and then threw for the rest of the session.
      Positioned from the button's rect instead, left edge aligned to it. */
   /* Wider than the preset popover: these rows carry a sentence, not a name. */
-  #audpop { position: fixed; width: 460px; right: auto; }
+  /* Widened with the type scale. At 460px the count wrapped to "331 of" /
+     "331" and the filter placeholder clipped mid-sentence, both of which
+     appeared the moment the text got big enough to read. */
+  #audpop { position: fixed; width: 520px; right: auto; }
   .audtitle { font-size: var(--fs-label); letter-spacing: 0.2em; color: var(--cyan-dim);
               margin-bottom: 7px; }
   .audhead { display: flex; gap: 6px; align-items: center; margin-bottom: 7px; }
@@ -512,9 +686,13 @@
   }
   .prow { flex-wrap: wrap; }
   .audfoot { display: flex; justify-content: space-between; align-items: center;
-             gap: 8px; margin-top: 7px; padding-top: 7px;
+             gap: 12px; margin-top: 7px; padding-top: 7px;
              border-top: 1px solid var(--line); color: var(--dim);
              font-size: var(--fs-label); letter-spacing: 0.05em; }
+  /* "331 of 331" is one fact and reads as nonsense broken over two lines. It
+     is also the short half, so the hint is the one that gives way. */
+  #audcount { flex: 0 0 auto; white-space: nowrap; }
+  .audfoot > span:last-child { min-width: 0; text-align: right; }
 
   /* Saving is the only destructive thing this tool does, so it gets its own
      panel, an explicit list of slots the owner designated, and a confirmation
@@ -575,6 +753,168 @@
   .lefoot { margin-top: 11px; padding-top: 9px; color: var(--dim);
             font-size: var(--fs-hint); border-top: 1px dashed var(--line); }
 
+  /* Designed with the rig off, waiting for it to come on. */
+  .drow { display: flex; align-items: flex-start; gap: 14px; padding: var(--row) 0;
+          border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .drow:last-child { border-bottom: none; }
+  .dmain { flex: 1 1 auto; min-width: 0; }
+  .dname { color: var(--text); font-size: var(--fs-body); }
+  .dmeta { color: var(--dim); font-size: var(--fs-hint); margin-top: 3px;
+           line-height: 1.5; }
+  .dmeta b { color: var(--muted); font-weight: 400; }
+  .dacts { display: flex; gap: 7px; flex: 0 0 auto; flex-wrap: wrap; }
+  .dacts button { padding: 5px 12px; font-size: var(--fs-hint); }
+  .dsend { border-color: var(--green); color: var(--green); }
+  .dsend:hover:not(:disabled) { background: rgba(61,255,160,0.12); }
+  .dsend:disabled { opacity: 0.4; cursor: default; }
+  .dshare { border-color: var(--violet); color: var(--violet); }
+  .dshare:hover { background: rgba(185,140,255,0.12); }
+  .ddel { border-color: #4a2a2a; color: var(--muted); }
+  .ddel:hover { border-color: var(--red); color: var(--red); }
+  .dempty { color: var(--dim); font-size: var(--fs-hint); padding: 4px 0 2px; }
+
+  .profrow { display: flex; align-items: center; gap: 9px; flex-wrap: wrap;
+             margin-bottom: 12px; }
+  .profrow .hint { flex: 1 1 260px; }
+  /* Designing for a rig you cannot see is a different activity from designing
+     for your own, so it says so at the top and in a colour nothing else on
+     the page uses for a normal state. */
+  .profbar {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    padding: 9px 12px; margin-bottom: 12px; border-radius: 4px;
+    background: rgba(185,140,255,0.10); border: 1px solid var(--violet-dim);
+    color: #d9c6ff; font-size: var(--fs-hint); line-height: 1.5;
+  }
+  .profbar[hidden] { display: none; }
+  .profbar b { color: var(--violet); font-weight: 500; }
+  .profbar button { padding: 4px 11px; font-size: var(--fs-hint);
+                    border-color: var(--violet-dim); color: var(--violet); }
+  .dforeign { color: var(--violet); }
+
+  .profrow input {
+    background: #0d0f0d; border: 1px solid #1f2a1f; color: var(--fg);
+    font: inherit; font-size: var(--fs-body); padding: 6px 9px;
+    border-radius: 3px; flex: 1 1 260px; min-width: 0;
+  }
+  .rrow { display: flex; align-items: flex-start; gap: 14px; padding: var(--row) 0;
+          border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .rrow:last-child { border-bottom: none; }
+  .rmain { flex: 1 1 auto; min-width: 0; }
+  .rtitle { color: var(--text); font-size: var(--fs-body); }
+  .rmeta { color: var(--dim); font-size: var(--fs-hint); margin-top: 3px;
+           line-height: 1.5; }
+  .rmeta b { color: var(--muted); font-weight: 400; }
+  .rsrc { font-size: var(--fs-badge); letter-spacing: 0.12em; padding: 2px 6px;
+          border-radius: 2px; margin-right: 7px; }
+  .rsrc.shared { background: rgba(185,140,255,0.16); color: var(--violet); }
+  .rsrc.local { background: rgba(47,230,255,0.13); color: var(--cyan-dim); }
+  .ruse { border-color: var(--cyan); color: var(--cyan); flex: 0 0 auto;
+          padding: 5px 14px; font-size: var(--fs-hint); }
+  .ruse:hover { background: rgba(47,230,255,0.12); }
+
+  /* With the rig off, half this page is scenery. Rather than let someone drag
+     a slider that cannot move, the panels that genuinely need hardware dim,
+     stop taking input, and say why. The ones that DO work offline stay at full
+     brightness, because dimming those would be the same lie in the other
+     direction: planning, browsing recipes and reviewing designs are all
+     perfectly good with the unit unplugged. */
+  /* Hidden, not dimmed. A greyed panel still takes up the page and still
+     invites a click, and keeping it reachable meant tracking which controls
+     were already disabled for their own reasons so reconnecting did not
+     switch them on wrongly. display:none removes it from the layout, from
+     the tab order and from that whole class of bug at once. The banner
+     carries the explanation, so nothing has quietly gone missing. */
+  body.rig-off .needs-rig { display: none; }
+  /* These two are inside panels that DO work offline, so they are hidden
+     individually. There is nothing to switch to, and a plan can be built with
+     the rig off but not sent. */
+  body.rig-off #preset { display: none; }
+  body.rig-off #apply { display: none; }
+  .offbanner {
+    display: none; align-items: center; gap: 11px; flex-wrap: wrap;
+    padding: 10px 13px; margin-bottom: 20px; border-radius: 4px;
+    background: rgba(255,180,84,0.09); border: 1px solid rgba(255,180,84,0.4);
+    color: #e6d3b4; font-size: var(--fs-hint); line-height: 1.55;
+  }
+  body.rig-off .offbanner { display: flex; }
+  .offbanner b { color: var(--amber); font-weight: 600; }
+
+  /* A graphic EQ drawn the way one looks. Ten horizontal rows of numbers is
+     not a graphic EQ, it is a spreadsheet of one: the whole point of the
+     control is that the curve is a SHAPE you read at a glance, and every
+     musician has already learned to read it. Faders stand up, zero is a line
+     across the middle, and it gets the full width of its own panel rather
+     than a 340px column of the TONE grid, because a curve squeezed to a
+     third of the page is a curve you have to squint at. */
+  .geq { display: flex; align-items: flex-end; gap: 10px; padding: 6px 0 2px;
+         position: relative; }
+  .geq .band { flex: 1 1 0; min-width: 0; display: flex;
+               flex-direction: column; align-items: center; gap: 7px; }
+  .geq .vfader {
+    -webkit-appearance: none; appearance: none;
+    writing-mode: vertical-lr; direction: rtl;      /* stand it up */
+    width: 24px; height: 150px; background: none; cursor: pointer; margin: 0;
+    font: inherit;
+  }
+  .geq .vfader::-webkit-slider-runnable-track {
+    width: 3px; border-radius: 2px; background: var(--line);
+  }
+  .geq .vfader::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 26px; height: 12px; border-radius: 3px; background: var(--cyan);
+    margin-left: -11.5px;
+    box-shadow: 0 0 9px rgba(47,230,255,0.6); transition: transform .12s;
+  }
+  .geq .vfader:hover::-webkit-slider-thumb { transform: scale(1.12); }
+  .geq .vfader:focus-visible::-webkit-slider-thumb {
+    outline: 2px solid var(--cyan); outline-offset: 2px;
+  }
+  /* Flat is a line you can see, so a curve reads as a departure from it. */
+  .geqzero {
+    position: absolute; left: 0; right: 0; top: 81px; height: 1px;
+    background: rgba(47,230,255,0.16); pointer-events: none;
+  }
+  .geq .bandv {
+    font-size: var(--fs-label); color: var(--cyan);
+    font-variant-numeric: tabular-nums;
+  }
+  .geq .bandv.flat { color: var(--dim); }
+  .geq .bandhz {
+    font-size: var(--fs-label); color: var(--muted); letter-spacing: 0.02em;
+    white-space: nowrap;
+  }
+  .geq .band.busy .bandv { color: var(--amber); }
+  /* The range strip: which part of the spectrum a fader is in, spanning the
+     bands it covers, the way it is silk-screened on a rack EQ. */
+  .geqzones { display: flex; gap: 10px; margin-top: 9px; }
+  .geqzones span {
+    min-width: 0; text-align: center; padding: 5px 2px; border-radius: 3px;
+    font-size: var(--fs-badge); letter-spacing: 0.14em; color: var(--dim);
+    background: rgba(47,230,255,0.045);
+    border-top: 1px solid rgba(47,230,255,0.14);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .geqrest { columns: auto; margin-top: 24px; }
+  .geqbar {
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    margin-bottom: 18px;
+  }
+  .geqbar .lab {
+    font-size: var(--fs-label); letter-spacing: 0.18em; color: var(--cyan-dim);
+    text-transform: uppercase;
+  }
+  .geqbar select {
+    background: #0b1114; border: 1px solid var(--line); color: var(--fg);
+    font: inherit; font-size: var(--fs-hint); padding: 8px 10px;
+    border-radius: 3px; min-width: 250px; cursor: pointer;
+  }
+  @media (max-width: 700px) {
+    .geq { gap: 5px; }
+    .geqzones { gap: 5px; }
+    .geq .vfader { height: 110px; }
+    .geqzero { top: 61px; }
+  }
+
   #log {
     font-size: var(--fs-hint); color: var(--muted); max-height: 180px; overflow-y: auto;
     line-height: 1.7;
@@ -585,7 +925,8 @@
   #log .warn { color: var(--amber); }
   .spin { display: inline-block; animation: spin 0.9s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
-  .hint { color: var(--muted); font-size: var(--fs-hint); margin-top: 10px; letter-spacing: 0.05em; }
+  .hint { color: var(--muted); font-size: var(--fs-hint); margin-top: 16px;
+          letter-spacing: 0.05em; line-height: 1.65; }
 .airow { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .airow select, .airow input {
   background: #0d0f0d; border: 1px solid #1f2a1f; color: var(--fg);
@@ -605,6 +946,19 @@
      almost nothing visible, because the character is drawn small inside its
      own em box, so it stayed a speck next to the LINK pill however large the
      box got. A path is sized by the numbers we give it. */
+  /* Text size, in the header where it can be found without hunting. Two
+     buttons rather than a slider: the choice is "a bit bigger" repeated until
+     it is right, not a value anyone wants to dial in. */
+  .textsize { display: inline-flex; align-items: baseline; gap: 2px; }
+  .textsize button {
+    background: none; border: 1px solid transparent; color: var(--muted);
+    font-family: inherit; cursor: pointer; padding: 2px 7px; border-radius: 4px;
+    line-height: 1;
+  }
+  .textsize button:hover { color: var(--cyan); border-color: var(--cyan-dim); }
+  #tsdown { font-size: calc(0.82rem * var(--ui-scale, 1)); }
+  #tsup { font-size: calc(1.15rem * var(--ui-scale, 1)); }
+
   .gear {
     background: none; border: none; color: var(--muted); cursor: pointer;
     display: inline-flex; align-items: center; justify-content: center;
@@ -654,7 +1008,7 @@
     </a>
     <div class="status">
       <span class="pillwrap">
-        <button class="pill pillbtn" id="preset">PRESET <b>...</b><span class="caret">&#9662;</span></button>
+        <button class="pill pillbtn" id="preset">PRESET <b>...</b><span class="caret"></span></button>
         <div class="pop" id="ppop" hidden>
           <input id="psearch" autocomplete="off" spellcheck="false"
                  placeholder="filter, or type a number">
@@ -664,7 +1018,12 @@
             <button id="prescan">RESCAN</button></div>
         </div>
       </span>
-      <span class="pill off" id="link"><span class="dot"></span>LINK</span>
+      <button class="pill off" id="link" title="click to look for the FM9 again">
+        <span class="dot"></span><span id="linktext">LINK</span></button>
+      <div class="textsize" role="group" aria-label="text size">
+        <button id="tsdown" title="smaller text" aria-label="smaller text">A</button>
+        <button id="tsup" title="larger text" aria-label="larger text">A</button>
+      </div>
       <button class="gear" id="aiopen" aria-label="AI backend settings">
         <svg viewBox="0 0 24 24" width="21" height="21" fill="none"
              stroke="currentColor" stroke-width="1.7" stroke-linecap="round"
@@ -675,11 +1034,20 @@
     </div>
   </header>
 
-  <div class="console perf" data-label="SCENES">
+  <div class="offbanner">
+    <span><b>The FM9 is not connected</b>, so the panels that need it are
+      hidden: scenes, the signal chain, the tone controls, undo and compare,
+      preset health and saving. They come back on their own when it does.
+      Everything still shown works: design tones, browse and edit recipes, and
+      review what is queued. Nothing you build is lost, and it goes out when
+      the rig returns.</span>
+  </div>
+
+  <div class="console perf needs-rig" data-label="SCENES">
     <div class="scenes" id="scenes"></div>
   </div>
 
-  <div class="console" data-label="SIGNAL CHAIN">
+  <div class="console needs-rig" data-label="SIGNAL CHAIN">
     <div class="gridwrap" id="blocks"><span class="hint">awaiting link...</span></div>
     <div class="gridnote">
       <span class="k"><span class="sw" style="background:var(--cyan)"></span>carrying signal</span>
@@ -705,16 +1073,42 @@
     <div id="plancards"></div>
     <div class="plan-actions">
       <button class="confirm" id="apply">TRANSMIT TO FM9</button>
+      <button id="keep">SAVE FOR LATER</button>
       <button class="danger" id="discard">DISCARD</button>
     </div>
   </div>
 
-  <div class="console" data-label="TONE">
-    <div class="knobs" id="knobs"><span class="hint">awaiting link...</span></div>
+  <!-- One long column-flow made you hunt for the reverb. These follow the
+       signal: what makes the sound, then what shapes it, then what sits
+       around it. Each panel folds, so a preset with six effects no longer
+       pushes the amp off the screen. -->
+  <div class="console needs-rig" data-label="AMP &amp; CAB" id="amppanel">
+    <div id="picks"></div>
+    <div class="knobs" id="knobs-amp"><span class="hint">awaiting link...</span></div>
     <div class="hint">Drag any slider to set it. Changes go to the edit buffer, not to your saved preset.</div>
   </div>
 
-  <div class="console" data-label="UNDO / COMPARE">
+  <!-- Its own panel, not a cell of the TONE column grid. A graphic EQ is read
+       as a shape and a shape needs width. -->
+  <div class="console needs-rig" data-label="GRAPHIC EQ" id="geqpanel" style="display:none">
+    <div class="geqbar">
+      <span class="lab">Curve</span><span id="geqbadge"></span>
+      <select id="geqcurve" title="a starting point, written to the bands as an ordinary set of verified writes"></select>
+      <button id="geqflat" title="put every band back to 0 dB">FLATTEN ALL</button>
+    </div>
+    <div id="geqbox"></div>
+    <div class="hint" id="geqhint"></div>
+  </div>
+
+  <div class="console needs-rig" data-label="EFFECTS" id="fxpanel" style="display:none">
+    <div class="knobs" id="knobs-fx"></div>
+  </div>
+
+  <div class="console needs-rig" data-label="DYNAMICS &amp; LEVELS" id="utilpanel" style="display:none">
+    <div class="knobs" id="knobs-util"></div>
+  </div>
+
+  <div class="console needs-rig" data-label="UNDO / COMPARE">
     <div class="abrow">
       <button id="undo" disabled>UNDO</button>
       <span id="undowhat">nothing to undo yet</span>
@@ -729,7 +1123,7 @@
       before every change. Nothing here touches a saved preset.</div>
   </div>
 
-  <div class="console" data-label="PRESET HEALTH">
+  <div class="console needs-rig" data-label="PRESET HEALTH">
     <div class="hz">
       <button id="scan">SCAN THIS PRESET</button>
       <span class="hint" style="margin:0" id="scanhint">Walks every scene to
@@ -739,7 +1133,7 @@
     <div id="hout"></div>
   </div>
 
-  <div class="console" data-label="SAVE TO PRESET">
+  <div class="console needs-rig" data-label="SAVE TO PRESET">
     <div class="savenow" id="savenow"></div>
     <div class="saverow">
       <select id="saveslot"><option>loading slots...</option></select>
@@ -750,6 +1144,37 @@
       is edit buffer only and reversible. This is not: it overwrites whatever is
       stored in the slot, permanently, and
       <span class="savewarn">UNDO does not cover it</span>.</div>
+  </div>
+
+  <div class="console" data-label="TONE RECIPES">
+    <div class="profrow">
+      <input id="rsearch" autocomplete="off" spellcheck="false"
+             placeholder="filter by name, author or what it is for">
+      <button class="small" id="rrefresh">REFRESH</button>
+    </div>
+    <div id="rlist"></div>
+    <div class="hint" id="rshare"></div>
+    <div class="hint">Tones other people have built, shared as instructions
+      rather than as preset files. Reading them needs no account: they live in
+      a public folder and are fetched straight from it. USE validates every
+      step against YOUR device first, then proposes it like any other plan.</div>
+  </div>
+
+  <div class="console" data-label="DESIGNED PRESETS">
+    <div class="profbar" id="profbar" hidden></div>
+    <div class="profrow">
+      <button class="small" id="profexport">SHARE MY RIG</button>
+      <button class="small" id="profimport">DESIGN FOR SOMEONE ELSE</button>
+      <span class="hint" style="margin:0">A rig profile describes which blocks
+        a preset has and how they are wired, never the parameter values, so
+        nobody's paid preset travels with it.</span>
+    </div>
+    <div id="dlist"></div>
+    <div class="hint">Tones you built with the rig switched off. Each one was
+      validated when it was saved, so it would actually run, but nothing has
+      been read back from hardware yet: a design is
+      <span class="savewarn">designed, not verified</span>, until it lands.
+      SEND checks the preset has not moved underneath it first.</div>
   </div>
 
   <div class="console" data-label="LOG" style="margin-top:20px">
@@ -842,6 +1267,7 @@
 
 <script>
 const $ = id => document.getElementById(id);
+
 let currentPlan = null;
 
 // Model output reaches HTML templates below, and the model can be any
@@ -863,10 +1289,58 @@ function log(msg, cls) {
 // because that is how the rig is laid out and how the question arrives: you
 // want the delay a little wetter, not "DELAY_MIX raised". Order is the order
 // they are shown, and anything not listed here is not surfaced.
-const PARAM_GROUPS = [
-  ['DISTORT', 'Amp'], ['INPUT', 'Input gate'], ['DELAY', 'Delay'],
-  ['REVERB', 'Reverb'], ['TREMOLO', 'Tremolo'], ['FUZZ', 'Drive'],
+// What to call each block. The server already reads parameters for far more
+// families than this panel used to show: chorus, phaser, flanger, rotary, wah
+// and the EQs were all arriving in the payload every poll and being filtered
+// out by a hardcoded list of six. Anything present and not named here still
+// appears, under its own family name, because hiding a block that IS in the
+// preset is worse than showing it with a plain label.
+const GROUP_NAMES = {
+  DISTORT: 'Amp', INPUT: 'Input gate', GATE: 'Noise gate', FUZZ: 'Drive',
+  DELAY: 'Delay', MULTITAP: 'Multitap delay', REVERB: 'Reverb',
+  CHORUS: 'Chorus', FLANGER: 'Flanger', PHASER: 'Phaser', ROTARY: 'Rotary',
+  TREMOLO: 'Tremolo', PITCH: 'Pitch', WAH: 'Wah', FILTER: 'Filter',
+  GEQ: 'Graphic EQ', PEQ: 'Parametric EQ', VOLUME: 'Volume', COMP: 'Compressor',
+};
+// The order they appear in, signal-chain-ish rather than alphabetical. Any
+// family not listed follows, so a new one shows up rather than vanishing.
+const GROUP_ORDER = ['INPUT', 'GATE', 'COMP', 'WAH', 'FILTER', 'FUZZ',
+  'DISTORT', 'GEQ', 'PEQ', 'CHORUS', 'FLANGER', 'PHASER', 'ROTARY',
+  'TREMOLO', 'PITCH', 'DELAY', 'MULTITAP', 'REVERB', 'VOLUME'];
+
+// Which panel each family is drawn in. One long column-flow meant hunting for
+// the reverb, so the families are boxed by what they DO:
+//
+//   AMP & CAB          what makes the sound: the drive, the amp, the cab
+//   GRAPHIC EQ         its own panel, because a curve needs the full width
+//   EFFECTS            what a player would call a pedal, wah included
+//   DYNAMICS & LEVELS  the set-once blocks: gates, compressor, EQ, volume
+//
+// A noise gate is not an effect in the sense anyone means it, and neither is
+// a volume block, so they get their own panel rather than being filed under
+// EFFECTS to make a two-way split come out even. Anything not listed lands in
+// DYNAMICS & LEVELS, which is where an unrecognised block is least likely to
+// be mistaken for something it is not.
+const SECTIONS = [
+  ['amppanel',  'knobs-amp',  ['FUZZ', 'DISTORT']],
+  ['fxpanel',   'knobs-fx',   ['WAH', 'FILTER', 'CHORUS', 'FLANGER', 'PHASER',
+                               'ROTARY', 'TREMOLO', 'PITCH', 'DELAY',
+                               'MULTITAP', 'REVERB']],
+  ['utilpanel', 'knobs-util', ['INPUT', 'GATE', 'COMP', 'PEQ', 'VOLUME']],
 ];
+const SECTION_OF = {};
+SECTIONS.forEach(([, box, fams]) => fams.forEach(f => SECTION_OF[f] = box));
+const FALLBACK_BOX = 'knobs-util';
+
+// Blocks whose TYPE we can name. A roster maps ordinal to a real name; where
+// there is none the ordinal is meaningless to a human and no picker is shown.
+// Chorus, phaser, flanger and pitch each have a type enum (27, 17, 31 and 16
+// entries) with NO roster: the FM9 catalogue carries none, the ordering is
+// undocumented, and the display-name query returns a stale constant rather
+// than the current type (docs/PROTOCOL.md finding 5, verified on two firmware
+// versions by two people). Offering "Type 14" would be a number pretending to
+// be a choice.
+const TYPE_PICKERS = {DISTORT: 'amp', FUZZ: 'drive', REVERB: 'reverb'};
 
 // The registry's unit names are internal. Only the ones that mean something
 // to a player get printed; knob_0_10 and numeric are just "a number" and
@@ -1135,6 +1609,7 @@ const audCache = {};          // kind -> banks, fetched once
 let audOpen = null;           // 'amp' | 'cab' | null
 let audCursor = 0;
 let audBank = null;
+let audFamily = null;   // which block the open picker is setting
 let audBusy = false;
 
 async function audModels(kind) {
@@ -1161,7 +1636,7 @@ function renderAud() {
   if (!kind) return;
   const {bank, list} = audMatches(kind);
   audCursor = Math.max(0, Math.min(audCursor, list.length - 1));
-  const cur = kind === 'amp' ? audCurrentAmp() : audCurrentCab();
+  const cur = kind === 'cab' ? audCurrentCab() : audCurrentType(kind);
   $('audlist').innerHTML = list.length ? list.map((m, i) => `
     <button class="prow${i === audCursor ? ' cursor' : ''}${m.ordinal === cur ? ' on' : ''}"
             data-ord="${m.ordinal}" data-i="${i}"
@@ -1175,10 +1650,15 @@ function renderAud() {
   if (c) c.scrollIntoView({block: 'nearest'});
 }
 
-function audCurrentAmp() {
-  const m = (lastState.values || {}).AMP_MODEL;
-  const banks = audCache.amp || [];
-  const found = (banks[0] ? banks[0].models : []).find(x => x.name === m);
+// Which entry is loaded, so the list opens on it rather than at the top of a
+// thousand. Matched by NAME, because the name is what the state payload
+// carries: the ordinal lives on the wire and is not sent up.
+function audCurrentType(kind) {
+  const v = lastState.values || {};
+  const name = kind === 'amp' ? v.AMP_MODEL
+                              : v[`${audFamily}_TYPE_NAME`];
+  const banks = audCache[kind] || [];
+  const found = (banks[0] ? banks[0].models : []).find(x => x.name === name);
   return found ? found.ordinal : -1;
 }
 function audCurrentCab() { return lastCab.ordinal; }
@@ -1203,7 +1683,7 @@ async function openAud(kind, anchor) {
   // put the cursor on what is loaded, so stepping starts from here rather
   // than from the top of a thousand-entry list
   const {list} = audMatches(kind);
-  const cur = kind === 'amp' ? audCurrentAmp() : audCurrentCab();
+  const cur = kind === 'cab' ? audCurrentCab() : audCurrentType(kind);
   const at = list.findIndex(m => m.ordinal === cur);
   if (at >= 0) { audCursor = at; renderAud(); }
   $('audq').focus();
@@ -1232,11 +1712,13 @@ async function audLoad(ordinal) {
   if (audBusy) return;
   audBusy = true;
   const kind = audOpen;
-  const action = kind === 'amp'
-    ? {kind: 'set_type', block: 'DISTORT', instance: 1,
-       type_name: String(ordinal)}
-    : {kind: 'set_cab', block: 'CABINET', instance: 1,
-       value: ordinal, bank: Number(audBank)};
+  // amp, drive and reverb all set a TYPE; only the cab is addressed by bank
+  // and slot, so it is the one with its own action kind.
+  const action = kind === 'cab'
+    ? {kind: 'set_cab', block: 'CABINET', instance: 1,
+       value: ordinal, bank: Number(audBank)}
+    : {kind: 'set_type', block: audFamily || 'DISTORT', instance: 1,
+       type_name: String(ordinal)};
   try {
     const r = await fetch('/api/apply', {
       method: 'POST', headers: {'Content-Type': 'application/json'},
@@ -1286,10 +1768,23 @@ $('audlist').addEventListener('click', e => {
 document.addEventListener('mousedown', e => {
   if (audOpen && !e.target.closest('#audpop') && !e.target.closest('.audbtn')) closeAud();
 });
-$('knobs').addEventListener('click', e => {
+function audOpenFrom(b) {
+  audFamily = b.dataset.fam || null;
+  openAud(b.dataset.aud, b.parentElement);
+}
+// Every container that can hold a control, wired identically. The bug this
+// replaces: the graphic EQ moved into its own panel and its faders stopped
+// working, because the listeners were bound to one element by id and #geqbox
+// is not that element. Nothing caught it, because the markup was right, the
+// write path was right and the API call was right. A handler bound to a
+// specific box is a handler that silently stops covering the next box.
+const CONTROL_BOXES = ['picks', 'knobs-amp', 'geqbox', 'knobs-fx', 'knobs-util'];
+const eachBox = fn => CONTROL_BOXES.forEach(id => { const box = $(id); if (box) fn(box); });
+
+eachBox(box => box.addEventListener('click', e => {
   const b = e.target.closest('.audbtn');
-  if (b) openAud(b.dataset.aud, b.parentElement);
-});
+  if (b) audOpenFrom(b);
+}));
 
 // --- the routing grid, drawn ---------------------------------------------
 // Cells are laid out on a fixed pitch and cables are drawn from the resolved
@@ -1568,6 +2063,487 @@ function parseStoreSpec(raw) {
 $('slotsave').onclick = saveSlotSpec;
 loadSlotSpec();
 
+// --- looking for the rig again -------------------------------------------
+// The five second poll already retries, but through a MIDI bus view that the
+// backend caches for the life of the process, so a device switched on after
+// the server started stays invisible however long you wait. This drops the
+// handle, rescans, and says what it found.
+async function reconnect() {
+  const el = $('link');
+  if (el.classList.contains('busy')) return;
+  el.classList.add('busy');
+  $('linktext').textContent = 'LOOKING';
+  try {
+    const d = await (await fetch('/api/reconnect', {method: 'POST'})).json();
+    if (d.connected) {
+      log(`FM9 found: ${d.preset ? d.preset.label + ' "' + d.preset.name + '"' : 'connected'}`, 'ok');
+    } else {
+      log(`still no FM9: ${d.why || 'not found'}. Check it is powered on and `
+          + `that FM9-Edit is not holding the port.`, 'err');
+    }
+  } catch (e) {
+    log(`could not look for the FM9: ${e.message}`, 'err');
+  } finally {
+    el.classList.remove('busy');
+    $('linktext').textContent = 'LINK';
+    await refresh();
+  }
+}
+
+$('link').onclick = reconnect;
+
+// --- folding panels ------------------------------------------------------
+// The page grew from four panels to nine, and the tone panel from five groups
+// to ten. Not everyone needs the routing grid and the recipe browser open at
+// the same time. Built in script rather than written into nine places in the
+// markup, so a new panel gets this for free and they cannot drift apart.
+const FOLD_KEY = 'tc-folded';
+
+function foldedSet() {
+  try { return new Set(JSON.parse(localStorage.getItem(FOLD_KEY) || '[]')); }
+  catch (e) { return new Set(); }
+}
+
+function rememberFolds(set) {
+  try { localStorage.setItem(FOLD_KEY, JSON.stringify([...set])); } catch (e) {}
+}
+
+function buildPanelHeaders() {
+  const folded = foldedSet();
+  document.querySelectorAll('.console[data-label]').forEach(c => {
+    if (c.querySelector(':scope > .phead')) return;      // already done
+    // The plan box is shown and hidden by the code that fills it, so folding
+    // it would be two mechanisms fighting over the same panel.
+    if (c.id === 'planbox') return;
+    const label = c.dataset.label;
+    const body = document.createElement('div');
+    body.className = 'pbody';
+    while (c.firstChild) body.appendChild(c.firstChild);
+    const head = document.createElement('button');
+    head.className = 'phead';
+    head.type = 'button';
+    head.innerHTML = `<span class="pcaret"></span><span>${esc(label)}</span>`;
+    head.setAttribute('aria-expanded', 'true');
+    c.appendChild(head);
+    c.appendChild(body);
+    head.onclick = () => setFold(c, !c.classList.contains('folded'));
+    if (folded.has(label)) setFold(c, true, true);
+  });
+}
+
+function setFold(c, fold, quiet) {
+  c.classList.toggle('folded', fold);
+  const head = c.querySelector(':scope > .phead');
+  if (head) head.setAttribute('aria-expanded', String(!fold));
+  const set = foldedSet();
+  fold ? set.add(c.dataset.label) : set.delete(c.dataset.label);
+  rememberFolds(set);
+  if (!quiet) log(`${fold ? 'folded' : 'opened'} ${c.dataset.label.toLowerCase()}`);
+}
+
+buildPanelHeaders();
+
+// --- text size -----------------------------------------------------------
+// How big text needs to be is a fact about the reader and their screen, so it
+// is theirs to set rather than something a stylesheet can guess. Remembered
+// per browser, and clamped so neither end can make the page unusable.
+const TS_MIN = 0.85, TS_MAX = 1.6, TS_STEP = 0.1;
+
+function textScale(v) {
+  const n = Math.round(Math.min(TS_MAX, Math.max(TS_MIN, v)) * 100) / 100;
+  document.documentElement.style.setProperty('--ui-scale', n);
+  try { localStorage.setItem('tc-ui-scale', String(n)); } catch (e) {}
+  $('tsdown').disabled = n <= TS_MIN;
+  $('tsup').disabled = n >= TS_MAX;
+  return n;
+}
+
+function currentScale() {
+  const v = parseFloat(
+    getComputedStyle(document.documentElement).getPropertyValue('--ui-scale'));
+  return isNaN(v) ? 1 : v;
+}
+
+$('tsup').onclick = () => log(`text size ${Math.round(textScale(currentScale() + TS_STEP) * 100)}%`);
+$('tsdown').onclick = () => log(`text size ${Math.round(textScale(currentScale() - TS_STEP) * 100)}%`);
+
+// A saved preference has to be read back before the first paint the reader
+// sees, or the page visibly resizes under them on every load.
+try {
+  const saved = parseFloat(localStorage.getItem('tc-ui-scale'));
+  if (!isNaN(saved)) textScale(saved);
+} catch (e) { /* a browser that will not store it still renders at 1 */ }
+
+// --- tone recipes --------------------------------------------------------
+// Reading these needs no account and no clicking around a web UI. They live
+// in a public folder and are fetched straight from it, because the person
+// looking for a tone is a guitarist, not someone who wants to learn what a
+// pull request is.
+let recipeList = [];
+
+async function loadRecipes(refresh) {
+  try {
+    const d = await (await fetch('/api/recipes' + (refresh ? '?refresh=true' : ''))).json();
+    recipeList = d.recipes || [];
+    if (d.shared_error) {
+      // An empty list would read as "nobody has shared anything", which is a
+      // different and much more discouraging statement than "offline".
+      log(`shared recipes unavailable: ${d.shared_error}`, 'warn');
+    }
+    renderRecipes();
+  } catch (e) { /* keeps whatever it last drew */ }
+}
+
+function renderRecipes() {
+  const q = ($('rsearch').value || '').trim().toLowerCase();
+  const words = q.split(/\s+/).filter(Boolean);
+  const hay = r => [r.title, r.name, r.author, r.assumes,
+                    (r.sources || []).join(' ')].join(' ').toLowerCase();
+  const list = recipeList.filter(r => words.every(w => hay(r).includes(w)));
+  if (!list.length) {
+    $('rlist').innerHTML = `<div class="dempty">${recipeList.length
+      ? 'nothing matches' : 'no recipes yet'}</div>`;
+    return;
+  }
+  $('rlist').innerHTML = list.map((r, i) => {
+    const steps = (r.actions || r.steps || []).length;
+    return `<div class="rrow">
+      <div class="rmain">
+        <div class="rtitle">
+          <span class="rsrc ${r._source}">${r._source}</span>${esc(r.title || r.name)}</div>
+        <div class="rmeta">${steps} step${steps === 1 ? '' : 's'}` +
+        (r.author ? ` &middot; by <b>${esc(r.author)}</b>` : '') +
+        // ranked on RECENT plays, so a good new tone can surface rather than
+        // a leaderboard of whatever was posted first
+        (r.recent ? ` &middot; <b>played ${r.recent} time${r.recent === 1 ? '' : 's'}
+           in the last month</b>` : (r.plays ? ` &middot; played ${r.plays}` : '')) +
+        (r.assumes ? `<br>Needs: ${esc(r.assumes)}` : '') + `</div>
+      </div>
+      <button class="ruse" data-r="${recipeList.indexOf(r)}">USE</button>
+    </div>`;
+  }).join('');
+}
+
+async function useRecipe(i) {
+  const r = recipeList[i];
+  if (!r) return;
+  try {
+    const d = await (await fetch('/api/recipes/plan', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({recipe: r})})).json();
+    if (d.error) throw new Error(d.error);
+    // Validated against THIS device before anything is proposed: that is what
+    // makes a recipe portable rather than a preset file with extra steps.
+    showPlan({summary: d.summary, actions: d.actions,
+              recipe: r.name,
+              device: lastState.preset ? {preset: lastState.preset} : null});
+    $('planbox').scrollIntoView({behavior: 'smooth', block: 'center'});
+    if (d.assumes) log(`"${d.summary}" assumes: ${d.assumes}`, 'warn');
+    if (d.blocked) {
+      log(`${d.blocked} step(s) will not run on this preset; they are marked `
+          + `BLOCKED and will not be transmitted`, 'err');
+    }
+    for (const e of (d.ear_checklist || [])) log(`ear check: ${e}`);
+    log(`"${d.summary}" proposed. Review it, then TRANSMIT.`,
+        d.blocked ? 'warn' : 'ok');
+  } catch (e) {
+    log(`could not use that recipe: ${e.message}`, 'err');
+  }
+}
+
+$('rlist').addEventListener('click', e => {
+  const b = e.target.closest('.ruse');
+  if (b) useRecipe(Number(b.dataset.r));
+});
+// What is waiting to be handed over, and whether there is anywhere to hand it
+// to. Both are normal states, and neither is an error worth shouting about.
+async function shareStatus() {
+  try {
+    const d = await (await fetch('/api/share/status')).json();
+    $('rshare').innerHTML = !d.pending ? '' :
+      `<span class="savewarn">${d.pending} item${d.pending === 1 ? '' : 's'}
+       waiting to be shared</span>` +
+      (d.endpoint ? '. Retried automatically; nothing is dropped.'
+                  : '. No sharing service is set up, so they are kept here '
+                    + 'until there is one. Your recipes are already saved.');
+  } catch (e) { /* silent: this only ever adds information */ }
+}
+setInterval(shareStatus, 30000);
+shareStatus();
+
+$('rsearch').addEventListener('input', renderRecipes);
+$('rrefresh').onclick = () => loadRecipes(true);
+loadRecipes(false);
+
+// --- designing for a rig you cannot see ----------------------------------
+// A profile describes a preset's SHAPE: which blocks it has, how they are
+// wired, what the scenes are called. Never the parameter values, because a
+// full dump of those IS the preset, and many presets on a real unit came from
+// paid packs. So absolute requests plan fine against a profile and relative
+// ones cannot, which the planner is told in as many words.
+let profile = null;
+
+async function loadProfile() {
+  try {
+    const d = await (await fetch('/api/profile')).json();
+    profile = d.profile || null;
+    renderProfile();
+  } catch (e) { /* leaves the bar as it was */ }
+}
+
+function renderProfile() {
+  const bar = $('profbar');
+  if (!profile) { bar.hidden = true; return; }
+  bar.hidden = false;
+  bar.innerHTML = `<span>Designing for <b>${esc(profile.preset_name || 'a shared rig')}</b>`
+    + (profile.author ? `, shared by <b>${esc(profile.author)}</b>` : '')
+    + `. This is not your rig: there are no parameter values, so ask for `
+    + `specific settings rather than "a bit more" of anything.</span>
+    <button id="profclear">BACK TO MY RIG</button>`;
+  $('profclear').onclick = () => setProfile(null);
+}
+
+async function setProfile(prof) {
+  try {
+    const d = await (await fetch('/api/profile/load', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({profile: prof})})).json();
+    if (d.error) throw new Error(d.error);
+    profile = d.profile || null;
+    renderProfile();
+    log(profile
+        ? `designing for ${profile.preset_name || 'a shared rig'}`
+          + (profile.author ? ` (${profile.author})` : '')
+        : 'back to designing for your own rig', 'ok');
+  } catch (e) {
+    log(`could not load that profile: ${e.message}`, 'err');
+  }
+}
+
+async function exportProfile() {
+  try {
+    const d = await (await fetch('/api/profile/export', {method: 'POST'})).json();
+    if (d.error) throw new Error(d.error);
+    await navigator.clipboard.writeText(JSON.stringify(d.profile, null, 1));
+    const n = (d.profile.blocks || []).length;
+    log(`rig profile copied: ${n} blocks, no parameter values. `
+        + `Send it to anyone who wants to design for this preset.`, 'ok');
+  } catch (e) {
+    log(`could not build a profile: ${e.message}`, 'err');
+  }
+}
+
+function importProfile() {
+  const raw = window.prompt(
+    'Paste a rig profile. It describes which blocks a preset has and how they '
+    + 'are wired, never the values, so you can design for a rig you do not own.');
+  if (!raw) return;
+  let prof;
+  try { prof = JSON.parse(raw.trim()); }
+  catch (e) { log('that is not a profile: could not read it as JSON', 'err'); return; }
+  setProfile(prof);
+}
+
+$('profexport').onclick = exportProfile;
+$('profimport').onclick = importProfile;
+loadProfile();
+
+// --- designed presets ----------------------------------------------------
+// A plan is data, and validation runs off local files, so a tone can be
+// designed with the rig switched off. What it cannot be is verified: there is
+// nothing to read back from. So a design waits here, says plainly that it is
+// unverified, and checks the preset has not moved underneath it before it is
+// sent.
+let designs = [];
+
+async function loadDesigns() {
+  try {
+    const d = await (await fetch('/api/designs')).json();
+    designs = d.designs || [];
+    renderDesigns(d.connected);
+  } catch (e) { /* the panel keeps whatever it last drew */ }
+}
+
+function renderDesigns(connected) {
+  if (!designs.length) {
+    $('dlist').innerHTML = '<div class="dempty">Nothing designed yet. Build a '
+      + 'plan above and press SAVE FOR LATER, with or without the rig on.</div>';
+    return;
+  }
+  $('dlist').innerHTML = designs.map(d => {
+    const p = d.preset || {};
+    const n = (d.actions || []).length;
+    const warns = (d.actions || []).filter(a => (a.validation_warnings || []).length).length;
+    return `<div class="drow" data-id="${esc(d.id)}">
+      <div class="dmain">
+        <div class="dname">${esc(d.name)}</div>
+        <div class="dmeta">${n} change${n > 1 ? 's' : ''}` +
+        (p.label ? ` for <b>${esc(p.label)}</b>` : '') +
+        ` &middot; ${esc((d.created || '').replace('T', ' '))}` +
+        (d.profile ? ` &middot; <span class="dforeign">for ${esc(d.profile.author || "a shared rig")}</span>`
+                   : (d.offline ? ' &middot; designed offline' : '')) +
+        (warns ? ` &middot; ${warns} warning${warns > 1 ? 's' : ''}` : '') +
+        (d.summary ? `<br>${esc(d.summary)}` : '') + `</div>
+      </div>
+      <div class="dacts">
+        <button class="dsend" data-act="send"${connected ? '' : ' disabled'}
+          title="${connected ? 'check the preset, then propose it'
+                             : 'connect the FM9 to send'}">SEND</button>
+        <button class="dshare" data-act="share"
+          title="contribute this as a recipe">SHARE RECIPE</button>
+        <button class="ddel" data-act="del" title="delete">&#10005;</button>
+      </div></div>`;
+  }).join('');
+}
+
+async function keepPlan() {
+  if (!currentPlan) return;
+  const name = (window.prompt(
+    'Name this design, so you know what it was when you come back to it:',
+    currentPlan.summary || '') || '').trim();
+  if (!name) { log('not saved: a design needs a name', 'warn'); return; }
+  try {
+    const r = await fetch('/api/designs', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        name, summary: currentPlan.summary || '',
+        actions: currentPlan.actions,
+        preset: (currentPlan.device || {}).preset || (lastState.preset || null),
+        // the values these actions were computed against, so reconnecting is
+        // a merge rather than a hope
+        anchor: anchorFor(currentPlan.actions),
+        offline: !!currentPlan.offline,
+        profile: currentPlan.profile || null,
+        backend: currentPlan.backend || null, model: currentPlan.model || null,
+      })});
+    const d = await r.json();
+    if (d.error) throw new Error(d.error);
+    log(`saved "${name}" to designed presets`, 'ok');
+    $('planbox').style.display = 'none';
+    currentPlan = null; clearAffected();
+    await loadDesigns();
+  } catch (e) {
+    log(`could not save the design: ${e.message}`, 'err');
+  }
+}
+
+// Only the parameters this design touches. The whole buffer would be three
+// thousand numbers to detect a change in four, and the four are the ones that
+// matter: the preset moving elsewhere is worth mentioning, not a conflict.
+function anchorFor(actions) {
+  const vals = (currentPlan && currentPlan.values) || lastState.values || {};
+  const out = {};
+  for (const a of actions || []) {
+    if (a.kind === 'set_param' && a.param && vals[a.param] !== undefined) {
+      out[a.param] = vals[a.param];
+    }
+  }
+  return out;
+}
+
+async function sendDesign(id) {
+  const d = designs.find(x => x.id === id);
+  if (!d) return;
+  // A design built against someone else's profile was never anchored to YOUR
+  // rig, so the usual value comparison has nothing to compare. It also names
+  // blocks from their preset, which yours may not have. Validation will catch
+  // a missing block, but the owner should know what they are sending before
+  // it gets that far.
+  if (d.profile && !window.confirm(
+        `"${d.name}" was designed for ${d.profile.author || 'someone else'}'s ` +
+        `rig${d.profile.preset_name ? ' ("' + d.profile.preset_name + '")' : ''}, ` +
+        `not yours.\n\nIt names blocks from their preset and was never ` +
+        `anchored to any value on your unit, so nothing can be checked for ` +
+        `drift. Anything your preset does not have will be refused when it ` +
+        `runs.\n\nPropose it anyway?`)) {
+    log('send cancelled: designed for another rig', 'warn');
+    return;
+  }
+  try {
+    const chk = await (await fetch(`/api/designs/${id}/check`, {method: 'POST'})).json();
+    if (chk.error) throw new Error(chk.error);
+    if (chk.verdict === 'wrong_preset') {
+      log(`cannot send "${d.name}": ${chk.detail}`, 'err');
+      return;
+    }
+    if (chk.verdict === 'conflict') {
+      const lines = chk.moved.map(m => `  ${m.param}: was ${m.was}, now ${m.now}`)
+                             .join('\n');
+      if (!window.confirm(
+            `The rig has moved since "${d.name}" was designed.\n\n${lines}\n\n` +
+            `Sending it will overwrite those with the designed values. Continue?`)) {
+        log('send cancelled: the preset moved since this was designed', 'warn');
+        return;
+      }
+    }
+    // Into the same plan box, behind the same confirm gate, as everything else.
+    showPlan({summary: d.name, actions: d.actions,
+              device: d.preset ? {preset: d.preset} : null});
+    $('planbox').scrollIntoView({behavior: 'smooth', block: 'center'});
+    log(`"${d.name}" checked against the rig and proposed. Confirm to transmit.`,
+        chk.verdict === 'clean' ? 'ok' : 'warn');
+  } catch (e) {
+    log(`could not send "${d.name}": ${e.message}`, 'err');
+  }
+}
+
+async function shareDesign(id) {
+  const d = designs.find(x => x.id === id);
+  try {
+    const got = await (await fetch(`/api/designs/${id}/recipe`)).json();
+    if (got.error) throw new Error(got.error);
+    // It used to open a prefilled GitHub ISSUE, which was wrong three ways: an
+    // issue is not a container for a recipe, the tracker would silt up with
+    // them, and it asked a guitarist to learn a developer's tool before they
+    // could give anything back. It is saved where the browser can find it, and
+    // the two honest ways to pass it on are offered rather than one being
+    // pretended to fit everyone.
+    const saved = await (await fetch('/api/recipes/save', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({recipe: got.recipe})})).json();
+    if (saved.error) throw new Error(saved.error);
+    await loadRecipes(false);
+    let copied = false;
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(got.recipe, null, 1));
+      copied = true;
+    } catch (e) { /* a clipboard the browser would not give us is not a failure */ }
+    log(`recipe saved as recipes/${saved.saved}`
+        + (copied ? ' and copied to the clipboard' : '')
+        + '. Send it to anyone, or contribute it below.', 'ok');
+    if (window.confirm(
+          `Saved as recipes/${saved.saved}.\n\n`
+          + `It is in your own recipes list now, and on the clipboard, so you `
+          + `can send it to anyone however you normally would.\n\n`
+          + `Contribute it to the shared collection? That opens GitHub with the `
+          + `file already filled in; you press one button and it becomes a `
+          + `proposal. It needs a free GitHub account.\n\n`
+          + `Cancel is fine: sending the file to Moncy works just as well.`)) {
+      window.open(saved.pr_url, '_blank', 'noopener');
+    }
+  } catch (e) {
+    log(`could not build the recipe: ${e.message}`, 'err');
+  }
+}
+
+$('dlist').addEventListener('click', async e => {
+  const b = e.target.closest('button[data-act]');
+  if (!b) return;
+  const id = b.closest('.drow').dataset.id;
+  if (b.dataset.act === 'send') return sendDesign(id);
+  if (b.dataset.act === 'share') return shareDesign(id);
+  if (b.dataset.act === 'del') {
+    const d = designs.find(x => x.id === id);
+    if (!window.confirm(`Delete the design "${d ? d.name : id}"?`)) return;
+    await fetch(`/api/designs/${id}`, {method: 'DELETE'});
+    log('design deleted');
+    await loadDesigns();
+  }
+});
+
+$('keep').onclick = keepPlan;
+loadDesigns();
+
 // --- saving -------------------------------------------------------------
 // The one destructive operation in the product. Until now the only way to do
 // it was to type "save this to preset 139" and hope the planner agreed, which
@@ -1724,7 +2700,71 @@ async function scanPreset() {
   }
 }
 
+// The findings currently on screen, so a FIX button can reach its own.
+let lastFindings = [];
+
+// A fix is a PROPOSAL. It never writes: it fills the plan box and stops, so
+// the confirm gate, the validation, the blast radius warning and the undo
+// snapshot all still stand in front of it exactly as they do for a typed
+// prompt. Two shapes, because the two kinds of problem are different:
+// levels are arithmetic and we state the exact numbers, while making a
+// cloned scene its own sound needs taste and goes to the planner.
+async function fixAll() {
+  const findings = lastFindings.filter(f => f.fix && f.fix.how !== 'rescan');
+  if (!findings.length) return;
+  const btn = $('fixall');
+  btn.disabled = true;
+  const was = btn.textContent;
+  try {
+    // Two kinds of problem, handled differently on purpose. A level is
+    // arithmetic and the exact number came from the scan, so it is stated
+    // rather than described to a language model. Making a cloned scene its
+    // own sound is taste, so that goes to the planner.
+    const sure = findings.filter(f => f.fix.how === 'actions')
+                         .flatMap(f => f.fix.actions);
+    const asks = findings.filter(f => f.fix.how === 'prompt');
+
+    let plan = {summary: 'fix what the scan found', actions: sure,
+                device: lastState.preset ? {preset: lastState.preset} : null};
+
+    if (asks.length) {
+      btn.textContent = 'ASKING...';
+      log(`asking the planner to fix ${asks.length} finding` +
+          `${asks.length > 1 ? 's' : ''}...`);
+      const r = await fetch('/api/plan', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({prompt: asks.map(f => f.fix.prompt).join('\n\n')})});
+      const got = await r.json();
+      if (got.error) throw new Error(got.error);
+      if (got.clarification) throw new Error(got.clarification);
+      // the planner's actions first, then the arithmetic, so a level we
+      // computed is not overwritten by one it guessed at
+      plan = Object.assign({}, got, {
+        summary: 'fix what the scan found',
+        actions: (got.actions || []).concat(sure),
+      });
+    }
+    if (!plan.actions.length) throw new Error('nothing to propose');
+    fixPending = true;          // rescan once this lands, to prove it
+    showPlan(plan);
+    $('planbox').scrollIntoView({behavior: 'smooth', block: 'center'});
+  } catch (e) {
+    log(`could not build a fix: ${e.message}`, 'err');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = was;
+  }
+}
+
+// "Fixed" is a measurement, not a claim, so the scan runs again by itself
+// once a fix has actually landed on the unit.
+let fixPending = false;
+
+$('hout').addEventListener('click', e => {
+  if (e.target.closest('#fixall')) fixAll();
+});
 function renderHealth(d) {
+  lastFindings = d.findings || [];
   const rows = d.scenes.map(s => `
     <div class="hrow"><span class="n">${s.number}</span>
       <span class="nm">${esc(s.name)}</span>
@@ -1746,14 +2786,26 @@ function renderHealth(d) {
   const finds = [...d.findings]
     .sort((a, b) => (order[a.severity] ?? 9) - (order[b.severity] ?? 9))
     .map(f => `<div class="hfind ${f.severity}">
-        <span class="tag">${esc(f.kind)}</span><span>${esc(f.detail)}</span></div>`)
+        <span class="tag">${esc(f.kind)}</span>
+        <span class="txt">${esc(f.detail)}</span>
+      </div>`)
     .join('');
+  // One offer, not one per row. Five buttons down the side of five findings
+  // is a form to fill in; a preset is either right or it is not.
+  const fixable = (d.findings || []).filter(f => f.fix && f.fix.how !== 'rescan');
+  const fixbar = fixable.length ? `
+    <div class="fixbar">
+      <button class="fixall" id="fixall">FIX ${fixable.length === (d.findings||[]).length
+        ? 'IT' : 'WHAT CAN BE FIXED'}</button>
+      <span class="fixnote">Proposes the changes. Nothing is sent until you
+        confirm, and the preset is rescanned afterwards to prove it.</span>
+    </div>` : '';
   const clean = d.findings.length ? '' :
     '<div class="hfind warn" style="background:rgba(61,255,160,0.06);color:#a8d8bf">' +
     '<span class="tag" style="background:rgba(61,255,160,0.18);color:var(--green)">clear</span>' +
     '<span>Every named scene has a live signal path, no two scenes are the ' +
     'same, and levels sit inside your conventions.</span></div>';
-  $('hout').innerHTML = rows + finds + clean +
+  $('hout').innerHTML = rows + finds + fixbar + clean +
     `<div class="hears">Ears: pending. Every check above is a machine reading a
      wire. None of them can tell you the tone is good.</div>`;
 }
@@ -1768,23 +2820,32 @@ $('scan').onclick = scanPreset;
 // either. Gig mode still refuses both, as it refuses everything but a scene.
 let blockBusy = false;
 
-async function blockAction(action, btn) {
+// One action or a batch. A graphic EQ curve is ten writes that are one
+// gesture, and sending them as ten calls would take ten undo snapshots and
+// leave nine ways to end up half applied. Batching keeps it a single trip
+// through the same gate, the same verification and the same undo.
+async function blockAction(action, btn, what) {
   if (blockBusy) return;
   blockBusy = true;
+  const actions = Array.isArray(action) ? action : [action];
+  const name = what || describe(actions[0]);
   document.querySelectorAll('.cell').forEach(b => b.style.pointerEvents = 'none');
   if (btn) btn.classList.add('busy');
   try {
     const r = await fetch('/api/apply', {
       method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({actions: [action]}),
+      body: JSON.stringify({actions}),
     });
     const out = await r.json();
     if (out.error) throw new Error(out.error);
-    const res = (out.results || [])[0];
-    if (res && !res.ok) throw new Error(res.detail || 'refused');
-    log(`${describe(action)}: ${res ? res.detail : 'ok'}`, 'ok');
+    const results = (out.results || []).filter(x => x.action);
+    const bad = results.find(x => !x.ok);
+    if (bad) throw new Error(bad.detail || 'refused');
+    const res = results[0];
+    log(`${name}: ${results.length > 1 ? results.length + ' writes verified'
+                                       : (res ? res.detail : 'ok')}`, 'ok');
   } catch (e) {
-    log(`${describe(action)} failed: ${e.message}`, 'err');
+    log(`${name} failed: ${e.message}`, 'err');
   } finally {
     if (btn) btn.classList.remove('busy');
     blockBusy = false;
@@ -1816,7 +2877,8 @@ async function refresh() {
     const r = await fetch('/api/state');
     const s = await r.json();
     if (!s.connected) throw new Error(s.error || 'no link');
-    $('link').className = 'pill on';
+    if (!$('link').classList.contains('busy')) $('link').className = 'pill on';
+    setRigOff(false);
     // the label carries both numbers: the wire number this tool sends and the
     // one the front panel and FM9-Edit show, which differ by one
     if (s.preset && s.preset.number !== currentPresetNumber) {
@@ -1829,15 +2891,31 @@ async function refresh() {
     // what you are actually reading. Rebuild the caret: innerHTML replaces it.
     if (s.preset) $('preset').innerHTML =
       `<span class="lbl">PRESET</span><span class="pnum">${s.preset.editor ?? s.preset.number}</span>` +
-      `<b>${esc(s.preset.name)}</b><span class="caret">&#9662;</span>`;
+      `<b>${esc(s.preset.name)}</b><span class="caret"></span>`;
     renderScenes(s);
     if (s.scene) currentSceneNumber = s.scene.number;
     if (s.preset) loadShared(s.preset.number);
     loadGrid();
     if (!dragging) renderParams(s);
   } catch (e) {
-    $('link').className = 'pill off';
+    if (!$('link').classList.contains('busy')) $('link').className = 'pill off';
+    setRigOff(true);
   }
+}
+
+// One switch, so a panel cannot end up dimmed but still clickable, or bright
+// but dead. Called from the poll, which is the only thing that actually knows.
+function setRigOff(off) {
+  if (document.body.classList.contains('rig-off') === off) return;
+  // One class, and CSS does the rest. Nothing is disabled by hand: a hidden
+  // element is already out of the tab order and out of reach of a click, so
+  // the bookkeeping that used to remember which controls were ALREADY
+  // disabled, and the bug where reconnecting switched those back on, both
+  // stop existing rather than being handled.
+  document.body.classList.toggle('rig-off', off);
+  if (off) log('FM9 not connected: the panels that need it are hidden. '
+               + 'Designing, recipes and everything already saved still work.',
+               'warn');
 }
 
 // --- the tone panel -------------------------------------------------------
@@ -1845,22 +2923,55 @@ async function refresh() {
 // the handle out from under the thumb mid-gesture.
 let dragging = false;
 let lastParams = {};        // key -> metadata, for the write path
+let geqKeys = [];           // the graphic EQ's band keys, in band order
+let lastBypass = {};        // "FAMILY:instance" -> is the block switched off
+let lastMods = {};          // param name -> what is driving it, if anything
 let lastState = {};         // the last state payload, for the audition lists
 let lastCab = {bank: null, ordinal: -1};
 
 function renderParams(s) {
   const meta = s.params || {};
   lastParams = meta;
+  lastMods = s.mods || {};
+  // Which blocks are switched off. The signal chain has always drawn these
+  // dashed; the parameter panels did not know at all, so a bypassed block got
+  // a full set of live-looking sliders. You drag one, the write lands, it
+  // verifies by read-back, and you hear nothing, because the block is not in
+  // the signal. Reported as "changing the drive has no effect", on a preset
+  // whose Drive block was simply switched off.
+  lastBypass = {};
+  for (const b of (s.blocks || [])) {
+    lastBypass[`${b.family}:${b.instance}`] = !!b.bypassed;
+  }
   const movedPreset = (lastState.preset || {}).number !== (s.preset || {}).number;
   lastState = s;
   if (s.cab_sel) lastCab = s.cab_sel;
   if (movedPreset && saveSlots.length) aimAtLoadedPreset();
   if (!Object.keys(meta).length) {
-    $('knobs').innerHTML = '<span class="hint">awaiting link...</span>';
+    // Everything the previous preset put on the page has to go, not just the
+    // parameter columns. The graphic EQ panel is not one of the SECTIONS and
+    // was being left behind with its faders still drawn, and geqKeys still
+    // pointing at them, so FLATTEN ALL stayed live over a page that was
+    // otherwise showing "awaiting link". The amp and cab pickers were left
+    // behind for the same reason, naming a preset no longer loaded.
+    $('knobs-amp').innerHTML = '<span class="hint">awaiting link...</span>';
+    $('picks').innerHTML = '';
+    geqKeys = [];
+    $('geqpanel').style.display = 'none';
+    for (const [panel, box] of SECTIONS.slice(1)) {
+      $(box).innerHTML = '';
+      $(panel).style.display = 'none';
+    }
     return;
   }
-  const out = [];
-  for (const [fam, title] of PARAM_GROUPS) {
+  const out = {};                      // box id -> the groups drawn in it
+  geqKeys = [];                        // rebuilt below if this preset has one
+  const present = [...new Set(Object.values(meta).map(m => m.family))];
+  const fams = [...GROUP_ORDER.filter(f => present.includes(f)),
+                ...present.filter(f => !GROUP_ORDER.includes(f)).sort()];
+  for (const fam of fams) {
+    const title = GROUP_NAMES[fam]
+      || fam.charAt(0) + fam.slice(1).toLowerCase();
     // "unverified" means the registry has not confirmed what this parameter's
     // numbers mean. FUZZ_TYPE is the example: a model selector whose ordinal
     // arrives scaled to 0.08, which is not a fact about anything. A row that
@@ -1869,35 +2980,278 @@ function renderParams(s) {
                                             && s.values[k] !== undefined
                                             && meta[k].unit !== 'unverified');
     if (!keys.length) continue;
-    let head = `<h4>${esc(title)}</h4>`;
-    // The amp model and the cab were read every poll and then thrown away.
-    // They are the two facts a player actually leads with.
-    if (fam === 'DISTORT') {
-      const model = s.values.AMP_MODEL, cab = s.values.cab;
-      // Both are buttons. They were the two most interesting facts on the
-      // page and the two you were most likely to want to change, and until
-      // now changing either meant leaving for FM9-Edit or the unit itself.
-      // Both get a label. An unlabelled control showing a cab description is
-      // just a sentence in a box: nothing says it is a cabinet, and nothing
-      // says it can be changed.
-      if (model) head += `<div class="picklabel">MODEL</div>
-        <div class="model"><span class="aud"><button class="audbtn" data-aud="amp"
-          title="choose an amp model"><span class="l">${esc(model)}</span></button></span></div>` +
-        (cab ? `<div class="picklabel">CABINET</div>
-          <div class="model sub"><span class="aud"><button class="audbtn"
-           data-aud="cab" title="choose a cabinet"><span class="l">${esc(cab)}</span></button></span></div>`
-             : '');
+    // One instance per family reaches this panel, so the first key's is the
+    // one these controls belong to.
+    const inst = meta[keys[0]].instance;
+    const off = lastBypass[`${fam}:${inst}`];
+    let head = `<h4>${esc(title)}${off ? bypassBadge(fam, inst, title) : ''}</h4>`;
+    // A picker for blocks whose type has real names. The amp and cab have
+    // their own row above; this puts the rest beside their own parameters,
+    // which is where you are already looking when you want to change one.
+    const pick = TYPE_PICKERS[fam];
+    if (pick && fam !== 'DISTORT') {
+      const cur = s.values[`${fam}_TYPE_NAME`] || 'choose a type';
+      head += `<div class="typepick"><span class="aud">
+        <button class="audbtn sub" data-aud="${pick}" data-fam="${fam}"
+          title="choose a ${esc(title.toLowerCase())} type"
+          ><span class="l">${esc(cur)}</span></button></span></div>`;
     }
-    out.push(`<div class="kgroup">${head}${keys.map(k => knobRow(k, meta[k], s.values[k])).join('')}</div>`);
+    // The graphic EQ gets faders rather than rows, and it gets them in its
+    // own full-width panel. The bands are the ones with a symmetric range; a
+    // GEQ also carries an output Level, which is an ordinary control and
+    // stays one, so it rides along in the same panel underneath.
+    const bands = fam === 'GEQ'
+      ? keys.filter(k => meta[k].min < 0 && Math.abs(meta[k].min + meta[k].max) < 0.01)
+      : [];
+    const rest = keys.filter(k => !bands.includes(k));
+    if (bands.length) {
+      geqKeys = bands;
+      renderGeq(bands, meta, s.values, rest, off ? bypassBadge(fam, inst, title) : '');
+      continue;                        // it is not one of the TONE columns
+    }
+    const body = rest.map(k => knobRow(k, meta[k], s.values[k])).join('');
+    const box = SECTION_OF[fam] || FALLBACK_BOX;
+    (out[box] = out[box] || []).push(
+      `<div class="kgroup${off ? ' bypassed' : ''}">${head}${body}</div>`);
   }
-  $('knobs').innerHTML = out.join('') || '<span class="hint">no data</span>';
+  if (!geqKeys.length) $('geqpanel').style.display = 'none';
+
+  // The amp and the cab sit ABOVE the columns, side by side, rather than
+  // stacked inside one of them. They are the two facts anyone looks for
+  // first, so they get the full width and read as a pair; stacked in a
+  // 340px column they were a lopsided tower and the cab description had
+  // nowhere to go.
+  const model = s.values.AMP_MODEL, cab = s.values.cab;
+  const picks = (model || cab) ? `<div class="picks">
+    ${model ? `<div class="pick">
+      <div class="picklabel">AMP MODEL</div>
+      <span class="aud"><button class="audbtn" data-aud="amp"
+        title="choose an amp model"><span class="l">${esc(model)}</span></button></span>
+    </div>` : ''}
+    ${cab ? `<div class="pick">
+      <div class="picklabel">CABINET</div>
+      <span class="aud"><button class="audbtn sub" data-aud="cab"
+        title="choose a cabinet"><span class="l">${esc(cab)}</span></button></span>
+    </div>` : ''}
+  </div>` : '';
+
+  // A panel with nothing in it is a claim about the rig. An empty EFFECTS
+  // heading says this preset has effects and they are all at default, which
+  // for a four-block preset is simply untrue, so it does not draw at all.
+  for (const [panel, box] of SECTIONS) {
+    const groups = out[box] || [];
+    $(box).innerHTML = groups.join('');
+    const show = groups.length || (box === 'knobs-amp' && picks);
+    $(panel).style.display = show ? '' : 'none';
+  }
+  if (!(out['knobs-amp'] || []).length && !picks) {
+    $('knobs-amp').innerHTML = '<span class="hint">no data</span>';
+    $('amppanel').style.display = '';
+  }
+  $('picks').innerHTML = picks;
   positionAud();       // the button just moved; the popover has to follow
+}
+
+// Where does 0 actually MEAN something, rather than just being the bottom of
+// the slider? Two cases, and only two:
+//
+//   decibels          0 dB is unity. Every block's Level lives here.
+//   a symmetric range the EQ bands run -12 to +12 and feedback -99.5 to
+//                     +99.5, so 0 is flat and centre respectively.
+//
+// Gain, Mix and Depth all run 0 to 10 or 0 to 100, where zero is minimum and
+// not a default at all. Offering to "reset" a gain to 0 would be offering to
+// turn the amp off, so those get nothing.
+function neutralOf(m) {
+  if (m.unit === 'db') return 0;
+  if (m.min < 0 && Math.abs(m.min + m.max) < 0.01) return 0;
+  return null;
+}
+
+// Faders standing up, zero a line across the middle, and under them a strip
+// saying which part of the spectrum each fader is in. The markup carries
+// data-key exactly as a knob row does, so the same write path serves both and
+// there is no second way to set a parameter.
+// What a band label can honestly say.
+//
+// The catalogue gives each band a displayLabel, but they are not ascending
+// and one value appears twice ("1.6K" at band 5, "1600" at band 7). The
+// reason is GEQ_TYPE: an eighteen-value enum, read as 4 on this rig, which
+// selects the band layout. One label per parameter cannot describe eighteen
+// layouts, so the catalogue's frequencies are not frequencies for the EQ
+// actually loaded, and a wrong number on a fader is worse than no number.
+//
+// What IS true of every graphic EQ ever built is that the bands ascend in
+// frequency left to right. So the strip names the region rather than the
+// centre: that answers "what range am I in" without inventing a spec. If the
+// GEQ_TYPE roster is ever harvested (issue #5 is the same problem for the
+// modulation blocks), real centres can replace this.
+const GEQ_ZONES = ['LOW', 'LOW MID', 'MID', 'HIGH MID', 'HIGH'];
+
+// Starting points, not factory settings. These are curves this project drew;
+// nothing here comes off the FM9, and the hint under the panel says so. Each
+// is a shape over ten positions, resampled if the loaded EQ has a different
+// band count, then clamped to whatever the bands actually allow.
+const GEQ_CURVES = [
+  ['Flat',                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]],
+  ['Scooped, modern high gain', [3, 2.5, 0.5, -3, -5, -4.5, -1.5, 2, 3, 2]],
+  ['Mid push, cut through a mix', [-2, -1, 0.5, 2.5, 4, 4, 2, 0, -1, -2]],
+  ['Tighten the low end',     [-6, -4, -1.5, 0, 0, 0, 0, 0, 0, 0]],
+  ['Warm, take the fizz off', [0, 0, 0, 0, 0, -0.5, -1.5, -3, -5, -6]],
+  ['Bright, more presence',   [0, 0, 0, 0, 0.5, 1.5, 2.5, 3, 3, 2]],
+  ['Clean up a boxy tone',    [-1, -2, -3.5, -3, -1.5, 0, 0.5, 1, 1, 0]],
+];
+
+// Sample a ten-point shape at n evenly spaced positions, so a curve drawn for
+// ten bands still means the same shape on a seven or eleven band EQ.
+function sampleCurve(shape, n) {
+  if (n === shape.length) return shape.slice();
+  return Array.from({length: n}, (_, i) => {
+    const x = n === 1 ? 0 : i / (n - 1) * (shape.length - 1);
+    const lo = Math.floor(x), hi = Math.min(shape.length - 1, lo + 1);
+    return Math.round((shape[lo] + (shape[hi] - shape[lo]) * (x - lo)) * 2) / 2;
+  });
+}
+
+function renderGeq(keys, meta, values, rest, badge) {
+  const n = keys.length;
+  const bands = keys.map((k, i) => {
+    const m = meta[k], v = values[k];
+    const flat = Math.abs(v) < 0.05;
+    const zone = GEQ_ZONES[Math.min(GEQ_ZONES.length - 1,
+                                    Math.floor(i / n * GEQ_ZONES.length))];
+    return `<div class="band" data-key="${esc(k)}">
+      <input type="range" class="vfader" min="${m.min}" max="${m.max}"
+             step="0.5" value="${v}" aria-label="band ${i + 1} of ${n}, ${zone}"
+             title="Band ${i + 1} of ${n} (${zone}): ${m.min} to ${m.max} dB">
+      <span class="bandv${flat ? ' flat' : ''}">${v > 0 ? '+' : ''}${v}</span>
+      <span class="bandhz">${i + 1}</span>
+    </div>`;
+  }).join('');
+  // One cell per zone, grown to the number of bands it actually covers, so
+  // the strip lines up with the faders above it however many there are.
+  const span = {};
+  keys.forEach((k, i) => {
+    const z = GEQ_ZONES[Math.min(GEQ_ZONES.length - 1,
+                                 Math.floor(i / n * GEQ_ZONES.length))];
+    span[z] = (span[z] || 0) + 1;
+  });
+  const zones = GEQ_ZONES.filter(z => span[z])
+    .map(z => `<span style="flex:${span[z]} 1 0">${z}</span>`).join('');
+  $('geqbox').innerHTML = `<div class="geq"><div class="geqzero"></div>${bands}</div>
+    <div class="geqzones">${zones}</div>
+    <div class="knobs geqrest">${rest.map(k => knobRow(k, meta[k], values[k])).join('')}</div>`;
+  $('geqhint').textContent = `${n} bands, low on the left. The curves above are `
+    + `starting points drawn by this tool, not FM9 factory settings; each one `
+    + `is written band by band and read back, and UNDO covers the lot.`;
+  $('geqpanel').style.display = '';
+  $('geqbadge').innerHTML = badge || '';
+  if (!$('geqcurve').options.length) {
+    $('geqcurve').innerHTML = '<option value="">pick a starting point...</option>'
+      + GEQ_CURVES.map(([name], i) => `<option value="${i}">${esc(name)}</option>`).join('');
+  }
+}
+
+// One click, every band. Ten separate drags to get back to flat is the kind
+// of chore that stops people experimenting in the first place.
+async function geqSet(vals, what) {
+  if (!geqKeys.length) return;
+  const meta = lastParams || {};
+  const actions = geqKeys.map((k, i) => {
+    const m = meta[k];
+    if (!m) return null;
+    return {kind: 'set_param', block: m.family, instance: m.instance,
+            param: m.param,
+            value: Math.max(m.min, Math.min(m.max, vals[i]))};
+  }).filter(Boolean);
+  if (!actions.length) return;
+  $('geqbox').querySelectorAll('.band').forEach(b => b.classList.add('busy'));
+  await blockAction(actions, null, what);
+}
+
+$('geqflat').onclick = () => geqSet(geqKeys.map(() => 0), 'graphic EQ: flatten all');
+
+$('geqcurve').onchange = e => {
+  const c = GEQ_CURVES[Number(e.target.value)];
+  e.target.value = '';                 // it is an action, not a stored setting
+  if (c) geqSet(sampleCurve(c[1], geqKeys.length), `graphic EQ: ${c[0]}`);
+};
+
+// A parameter under a modifier is not yours to set. The FM9 sources it from
+// the pedal, envelope or LFO the modifier names, and the value stored on the
+// block stops being what you hear, so a slider drawn for it is a control that
+// does nothing: you drag it, the number moves, the sound does not. That is
+// the worst kind of control, and it is exactly how you end up believing the
+// tool is broken. The row says what is driving it instead.
+//
+// This is also the only honest answer to "is that a pedal wah or an auto
+// wah". The FM9 does not have an auto-wah type: a wah is whatever its sweep
+// is attached to. Read the attachment and you have the answer.
+function modBadge(key) {
+  const d = lastMods[key];
+  if (!d) return '';
+  // Ours to remove, or theirs. A source this tool cannot name is one the
+  // owner set up on the FM9 itself, and quietly offering to delete somebody's
+  // own routing from a page that cannot even say what it is would be the
+  // opposite of safe. Those stay text.
+  if (!d.known) {
+    return `<span class="modbadge unk"
+      title="This parameter is driven by ${esc(d.source_name)} on modifier slot ${d.slot}. The FM9 takes its value from there, so setting it here will not change what you hear. This binding was made on the FM9, not here, so it is cleared there too."
+      >${esc(d.source_name)}</span>`;
+  }
+  return `<button class="modbadge" data-unbind="${esc(key)}"
+    title="Driven by ${esc(d.source_name)} on modifier slot ${d.slot}. Click to remove the binding and give the parameter back its own value."
+    >${esc(d.source_name)}</button>`;
+}
+
+// A block that is switched off is not in the signal, so nothing you change in
+// its panel is audible. Sliders stay live on purpose: dialling a block in
+// before engaging it is ordinary work, and disabling them would forbid it.
+// What was missing was any way to KNOW, and the badge is also the way to fix
+// it, because "engage it" is the next thing anyone wants.
+function bypassBadge(fam, inst, title) {
+  return `<button class="bypbadge" data-engage="${esc(fam)}:${inst}"
+    title="${esc(title)} is bypassed, so it is not in the signal and nothing here is audible yet. Click to engage it."
+    >BYPASSED</button>`;
+}
+
+// Which parameters a pedal can drive. A selector is a list of names, not a
+// range, so sweeping one with a foot is meaningless and the server refuses
+// it; asking here as well keeps the button off rows where it could only fail.
+// "unverified" is here as well as "enum" because a selector does not always
+// declare itself one: FUZZ_TYPE is a model selector whose unit is
+// `unverified`, and the server refuses it as a selector while this rule, had
+// it only looked for `enum`, would have offered the button. Nothing draws
+// that row today, so the mismatch was invisible; it was still two rules for
+// one question, drifting apart.
+function pedalable(key, m) {
+  if (lastMods[key]) return false;
+  if (m.unit === 'enum' || m.unit === 'unverified') return false;
+  return (m.max - m.min) > 0;
+}
+
+function pedalBtn(key, m) {
+  if (!pedalable(key, m)) return '';
+  return `<button class="pedalbtn" data-bind="${esc(key)}"
+    title="Put ${esc(m.label)} under Pedal 2, so the pedal sweeps it while you play. Pedal 1 is your global volume and is never touched."
+    aria-label="assign Pedal 2 to ${esc(m.label)}">P2</button>`;
 }
 
 function knobRow(key, m, value) {
   const unit = UNITS[m.unit] ? `<span class="u">${UNITS[m.unit]}</span>` : '';
-  const val = `<span class="v" data-v="${esc(key)}">${value}${unit}</span>`;
-  const lab = `<span class="k">${esc(m.label)}</span>`;
+  const mod = lastMods[key];
+  // The value doubles as the reset, where there is something to reset TO.
+  // Dragging a slider onto exactly 0.0 dB is a fiddle nobody should have to
+  // do, and it is the single most common thing anyone wants a level to be.
+  const zero = neutralOf(m);
+  const atZero = zero !== null && Math.abs(value - zero) < 0.011;
+  const val = (zero === null)
+    ? `<span class="v" data-v="${esc(key)}">${value}${unit}</span>`
+    : `<button class="v reset${atZero ? ' at' : ''}" data-v="${esc(key)}"
+         data-zero="${zero}" title="${atZero ? 'already at ' + zero
+           + (UNITS[m.unit] || '') : 'set to ' + zero + (UNITS[m.unit] || '')}"
+         >${value}${unit}</button>`;
+  const lab = `<span class="k">${esc(m.label)}${modBadge(key)}${pedalBtn(key, m)}</span>`;
   // A slider needs a span to map a position onto. Without one it stays a
   // readout: a control we cannot map back would look exactly as trustworthy
   // as one we can.
@@ -1906,6 +3260,15 @@ function knobRow(key, m, value) {
     return `<div class="knob ro" title="no range published for this one, so it is read only">${lab}<div class="flat"></div>${val}</div>`;
   }
   const pct = Math.max(0, Math.min(100, (value - m.min) / span * 100));
+  // Drawn, so you can see where the modifier's floor sits, but not draggable:
+  // a write here verifies and still changes nothing audible.
+  if (mod) {
+    return `<div class="knob modded ro" data-mod="${esc(key)}">${lab}
+      <input type="range" min="${m.min}" max="${m.max}" value="${value}"
+             style="--pct:${pct}%" disabled
+             aria-label="${esc(m.label)}, driven by ${esc(mod.source_name)}">
+      <span class="v">${value}${unit}</span></div>`;
+  }
   return `<div class="knob" data-key="${esc(key)}">${lab}
     <input type="range" min="${m.min}" max="${m.max}" step="${stepFor(span)}"
            value="${value}" style="--pct:${pct}%"
@@ -1916,22 +3279,91 @@ function knobRow(key, m, value) {
 // Track fills live under the thumb, but nothing is transmitted until the drag
 // ends. Sending on every input event would put a SysEx write on the wire for
 // each pixel of travel, which is how you flood a MIDI port.
-$('knobs').addEventListener('input', e => {
+//
+// The row is found BEFORE dragging is set, and both handlers give up if there
+// is not one. Ordering, because `dragging` suppresses the whole parameter
+// repaint: a throw between setting it and clearing it leaves it true forever,
+// and the panel silently stops updating for the rest of the session with no
+// error anyone would connect to it. The modded row is exactly a row shape
+// with no data-key, one removed `disabled` attribute away from reaching here.
+eachBox(box => box.addEventListener('input', e => {
   const el = e.target;
   if (el.type !== 'range') return;
+  const row = el.closest('[data-key]');
+  if (!row) return;
   dragging = true;
-  const row = el.closest('.knob');
   const pct = (el.value - el.min) / (el.max - el.min) * 100;
   el.style.setProperty('--pct', pct + '%');
-  row.querySelector('.v').firstChild.nodeValue = el.value;
-});
+  const read = row.querySelector('.v, .bandv');
+  if (read) read.textContent = (row.classList.contains('band') && el.value > 0
+                                ? '+' : '') + el.value;
+}));
 
-$('knobs').addEventListener('change', async e => {
+// Assigning and removing Pedal 2. Both confirm first, and the wording is the
+// point: UNDO covers parameters, bypass and channel, and a modifier slot is
+// none of those, so the button is the only way back and the dialog has to say
+// so rather than letting the UNDO button imply otherwise.
+eachBox(box => box.addEventListener('click', async e => {
+  const bind = e.target.closest('button[data-bind]');
+  const undo = e.target.closest('button[data-unbind]');
+  const b = bind || undo;
+  if (!b) return;
+  const key = b.dataset.bind || b.dataset.unbind;
+  const m = (lastParams || {})[key];
+  if (!m) return;
+  const what = `${m.label} on ${GROUP_NAMES[m.family] || m.family}`;
+  const msg = bind
+    ? `Put ${what} under Pedal 2?\n\nThe pedal will sweep it while you play. `
+      + `Two things to know:\n\n`
+      + `\u2022 UNDO does not cover this. The P2 badge on the row removes it.\n`
+      + `\u2022 The sweep cannot be verified by reading the FM9 (a dead `
+      + `binding reads identically to a live one), so check it with your `
+      + `foot: it can come out reversed.`
+    : `Remove Pedal 2 from ${what}?\n\nThe parameter goes back to its own `
+      + `value, the one shown on the slider.`;
+  if (!window.confirm(msg)) return;
+  b.classList.add('busy');
+  await blockAction({kind: bind ? 'bind_pedal' : 'unbind_pedal',
+                     block: m.family, instance: m.instance, param: m.param},
+                    null, `${bind ? 'assign' : 'remove'} Pedal 2: ${what}`);
+}));
+
+// One click from "nothing I do here is audible" to "now it is". Goes through
+// blockAction like every other write, so it is verified and logged the same.
+eachBox(box => box.addEventListener('click', async e => {
+  const b = e.target.closest('button[data-engage]');
+  if (!b) return;
+  const [fam, inst] = b.dataset.engage.split(':');
+  b.classList.add('busy');
+  await blockAction({kind: 'set_bypass', block: fam, instance: Number(inst),
+                     bypassed: false}, null);
+}));
+
+// Press the value to put it back to neutral. Goes through the same write path
+// as a drag, so it is verified by read-back and covered by undo like anything
+// else.
+eachBox(box => box.addEventListener('click', async e => {
+  const b = e.target.closest('button.v.reset');
+  if (!b || b.classList.contains('at')) return;
+  const m = (lastParams || {})[b.dataset.v];
+  if (!m) return;
+  const row = b.closest('[data-key]');
+  if (!row) return;
+  row.classList.add('busy');
+  b.disabled = true;
+  await blockAction({kind: 'set_param', block: m.family, instance: m.instance,
+                     param: m.param, value: Number(b.dataset.zero)}, null);
+  row.classList.remove('busy');
+  b.disabled = false;
+}));
+
+eachBox(box => box.addEventListener('change', async e => {
   const el = e.target;
   if (el.type !== 'range') return;
-  const row = el.closest('.knob');
+  dragging = false;                    // first, and unconditionally
+  const row = el.closest('[data-key]');
+  if (!row) return;
   const m = (lastParams || {})[row.dataset.key];
-  dragging = false;
   if (!m) return;
   row.classList.add('busy');
   el.disabled = true;
@@ -1939,7 +3371,7 @@ $('knobs').addEventListener('change', async e => {
                      param: m.param, value: Number(el.value)}, null);
   row.classList.remove('busy');
   el.disabled = false;
-});
+}));
 
 function describe(a) {
   // The server sends action:null for notes about the plan rather than about
@@ -1956,15 +3388,74 @@ function describe(a) {
   if (a.kind === 'set_type') return `${a.block} ${a.instance}: model → ${a.type_name}`;
   if (a.kind === 'add_block') return `ADD ${a.block} ${a.instance}${a.position ? ' (' + a.position + '-amp)' : ''}`;
   if (a.kind === 'bind_pedal') return `Pedal 2 → ${a.block} ${a.instance} ${a.param}${a.value ? ' (floor ' + a.value + '%)' : ''}`;
+  // Without its own branch this fell through to the set_param wording and
+  // rendered as "Mix: null", because an unbind carries no value. Reachable
+  // from the planner, which is allowed to propose one.
+  if (a.kind === 'unbind_pedal') return `Pedal 2 ✕ ${a.block} ${a.instance} ${a.param}`;
   if (a.kind === 'rename_preset') return `Rename preset → "${a.type_name}"`;
   if (a.kind === 'rename_scene') return `Rename scene ${a.value} → "${a.type_name}"`;
   // danger first, and one parenthetical rather than two: the slot label
   // already carries "(FM9-Edit n)"
   if (a.kind === 'store') return `OVERWRITES slot ${a.slot_label || a.value}`;
+  // A graphic EQ band's catalogue label is a frequency that is not this EQ's
+  // frequency (see GEQ_ZONES). It is not drawn on the fader and it must not
+  // reach the log either, or the one place that records what was written to
+  // the rig records it under a wrong name.
+  const band = geqKeys.indexOf(a.param);
+  if (band >= 0) return `Graphic EQ band ${band + 1}: ${a.value > 0 ? '+' : ''}${a.value}`;
   const m = lastParams[a.param];
   if (m) return `${m.label}: ${a.value}`;
   return `${a.block} ${a.instance} / ${a.param}: set to ${a.value}`;
 }
+
+// One renderer for every plan, however it was produced. Extracted so a
+// health fix lands in exactly the same box, behind exactly the same
+// confirm gate, as a plan a language model wrote.
+// Which recipe a plan came from, if any, so a transmit can be counted.
+let planRecipe = null;
+
+function showPlan(plan) {
+  planRecipe = plan.recipe || null;
+  currentPlan = plan;
+  // Light the scenes this plan would also move, so it cannot be skipped the
+  // way a line of small print under a card can be.
+  affectedScenes = scenesAffectedBy(plan);
+  renderScenes({scenes: lastScenes, scene: {number: currentSceneNumber}});
+  if (affectedScenes.size) {
+    log(`blast radius: this also moves scene${affectedScenes.size > 1 ? 's' : ''} ` +
+        `${[...affectedScenes].sort((a, b) => a - b).join(', ')}`, 'warn');
+  }
+  const prevBy = $('planby'); if (prevBy) prevBy.remove();
+  $('plansummary').textContent = plan.summary;
+  // half the value of the settings panel: a wrong-sounding plan should be
+  // attributable to the model that produced it, not to the tool
+  if (plan.backend) {
+    // plan.model is whatever the configured endpoint reported, so text
+    const by = document.createElement('div');
+    by.className = 'answered';
+    by.id = 'planby';
+    by.textContent = `planned by ${plan.backend}`
+      + (plan.model ? ` / ${plan.model}` : '');
+    $('plansummary').after(by);
+  }
+  $('plancards').innerHTML = plan.actions.map(a => {
+    const errs = a.validation_errors || [];
+    const warns = a.validation_warnings || [];
+    const vclass = errs.length ? ' vfail' : (warns.length ? ' vwarn' : '');
+    const vmsg = errs.concat(warns).map(m =>
+      `<div class="vmsg ${errs.length ? 'verr' : 'vwrn'}">${esc(m)}</div>`).join('');
+    return `
+    <div class="plan-card${vclass}">
+      <div><div class="what">${esc(describe(a))}</div><div class="why">${esc(a.reason || '')}</div>${vmsg}${
+        (() => { const s = alsoAffects(a, currentSceneNumber);
+                 return s ? `<div class="spread">${esc(s)}</div>` : ''; })()}</div>
+      <div class="delta">${errs.length ? 'BLOCKED' : (a.kind === 'set_param' ? '→ ' + a.value : '')}</div>
+    </div>`;
+  }).join('');
+  const blocked = plan.actions.filter(a => (a.validation_errors || []).length).length;
+  if (blocked) log(`validation blocked ${blocked} action(s); they will not be transmitted`, 'err');
+  $('planbox').style.display = 'block';
+  log(`plan ready: ${plan.actions.length} change(s). Confirm to transmit.`, 'ok');}
 
 async function engage() {
   const prompt = $('prompt').value.trim();
@@ -1985,46 +3476,7 @@ async function engage() {
       clearAffected();
       return;
     }
-    currentPlan = plan;
-    // Light the scenes this plan would also move, so it cannot be skipped the
-    // way a line of small print under a card can be.
-    affectedScenes = scenesAffectedBy(plan);
-    renderScenes({scenes: lastScenes, scene: {number: currentSceneNumber}});
-    if (affectedScenes.size) {
-      log(`blast radius: this also moves scene${affectedScenes.size > 1 ? 's' : ''} ` +
-          `${[...affectedScenes].sort((a, b) => a - b).join(', ')}`, 'warn');
-    }
-    const prevBy = $('planby'); if (prevBy) prevBy.remove();
-    $('plansummary').textContent = plan.summary;
-    // half the value of the settings panel: a wrong-sounding plan should be
-    // attributable to the model that produced it, not to the tool
-    if (plan.backend) {
-      // plan.model is whatever the configured endpoint reported, so text
-      const by = document.createElement('div');
-      by.className = 'answered';
-      by.id = 'planby';
-      by.textContent = `planned by ${plan.backend}`
-        + (plan.model ? ` / ${plan.model}` : '');
-      $('plansummary').after(by);
-    }
-    $('plancards').innerHTML = plan.actions.map(a => {
-      const errs = a.validation_errors || [];
-      const warns = a.validation_warnings || [];
-      const vclass = errs.length ? ' vfail' : (warns.length ? ' vwarn' : '');
-      const vmsg = errs.concat(warns).map(m =>
-        `<div class="vmsg ${errs.length ? 'verr' : 'vwrn'}">${esc(m)}</div>`).join('');
-      return `
-      <div class="plan-card${vclass}">
-        <div><div class="what">${esc(describe(a))}</div><div class="why">${esc(a.reason || '')}</div>${vmsg}${
-          (() => { const s = alsoAffects(a, currentSceneNumber);
-                   return s ? `<div class="spread">${esc(s)}</div>` : ''; })()}</div>
-        <div class="delta">${errs.length ? 'BLOCKED' : (a.kind === 'set_param' ? '→ ' + a.value : '')}</div>
-      </div>`;
-    }).join('');
-    const blocked = plan.actions.filter(a => (a.validation_errors || []).length).length;
-    if (blocked) log(`validation blocked ${blocked} action(s); they will not be transmitted`, 'err');
-    $('planbox').style.display = 'block';
-    log(`plan ready: ${plan.actions.length} change(s). Confirm to transmit.`, 'ok');
+    showPlan(plan);
   } catch (e) {
     log(`plan failed: ${e.message}`, 'err');
   } finally {
@@ -2203,9 +3655,23 @@ async function apply() {
       log(`${describe(res.action)}: ${res.detail}${extra}`,
           res.ok ? 'ok' : (res.action ? 'err' : 'warn'));
     });
+    // Transmits, not downloads. This is the moment a recipe actually reached
+    // somebody's rig, which is a far better signal than a fetch and much
+    // harder to inflate by refreshing a page. Queued locally, so a gig with
+    // no internet still counts once there is some.
+    if (planRecipe && out.results.some(x => x.ok)) {
+      fetch('/api/share/used', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({name: planRecipe})}).catch(() => {});
+      planRecipe = null;
+    }
     $('prompt').value = '';
+    const rescan = fixPending;
+    fixPending = false;
     setTimeout(() => { $('planbox').style.display = 'none';
-                       clearAffected(); refresh(); }, 1500);
+                       clearAffected(); refresh();
+                       // prove it rather than assert it
+                       if (rescan) scanPreset(); }, 1500);
   } catch (e) {
     log(`transmit failed: ${e.message}`, 'err');
   } finally {

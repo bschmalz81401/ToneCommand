@@ -116,7 +116,12 @@ class Tab:
         tabs = [t for t in _devtools() if t["type"] == "page"]
         if not tabs:
             sys.exit("no page target in chrome")
-        return websockets.connect(tabs[0]["webSocketDebuggerUrl"], max_size=64 << 20)
+        # ping_interval=None because the operations worth probing are the slow
+        # ones. A health scan walks eight scenes and takes the better part of a
+        # minute, and the library's 20s keepalive killed the connection
+        # mid-scan: the rig did the work, the probe never saw the result.
+        return websockets.connect(tabs[0]["webSocketDebuggerUrl"],
+                                  max_size=64 << 20, ping_interval=None)
 
     async def send(self, method: str, **params):
         self.n += 1

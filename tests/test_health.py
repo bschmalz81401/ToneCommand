@@ -174,3 +174,69 @@ def test_levels_are_reported_side_by_side_and_never_summed(client):
     for s in d["scenes"]:
         assert "amp_db" in s and "vol" in s
     assert not any(k in s for s in d["scenes"] for k in ("level", "loudness"))
+
+
+# --- a finding can propose its own repair ---
+
+def test_a_level_finding_states_the_exact_change():
+    """Arithmetic, not taste. The target came from the scan that just ran, so
+    it is stated in the action vocabulary rather than described to a language
+    model and hoped for."""
+    scenes = [{"number": n, "name": f"S{n}", "alive": True, "why": "",
+               "amp_db": (-18 if n != 2 else -14), "vol": 10, "unread": [],
+               "_print": (f"u{n}",)} for n in range(1, 9)]
+    hot = [f for f in health._cross_scene(scenes, 3.0, 6.0) if f["kind"] == "hot"]
+    assert hot and hot[0]["fix"]["how"] == "actions"
+    kinds = [a["kind"] for a in hot[0]["fix"]["actions"]]
+    # the scene first: amp level lives on the CHANNEL, so you have to be
+    # standing on the scene before the write means anything
+    assert kinds == ["set_scene", "set_param"]
+    assert hot[0]["fix"]["actions"][1]["value"] == -18
+
+
+def test_a_clone_asks_the_planner_rather_than_guessing():
+    """Making a scene its own sound is taste. What it must not do is invent
+    numbers, so it hands over a grounded sentence instead."""
+    scenes = [{"number": n, "name": f"S{n}", "alive": True, "why": "",
+               "amp_db": None, "vol": None, "unread": [],
+               "_print": ("same",) if n in (3, 4) else (f"u{n}",)}
+              for n in range(1, 9)]
+    clone = [f for f in health._cross_scene(scenes, 3.0, 6.0)
+             if f["kind"] == "clone"][0]
+    assert clone["fix"]["how"] == "prompt"
+    assert "Do not add blocks" in clone["fix"]["prompt"]
+
+
+def test_a_wide_spread_is_offered_no_fix():
+    """The scene 1-5 loudness staircase is a convention here. Offering to
+    flatten it would be offering to undo the thing the preset was built for."""
+    scenes = [{"number": n, "name": f"S{n}", "alive": True, "why": "",
+               "amp_db": -30 + n * 3, "vol": 10, "unread": [], "_print": (f"u{n}",)}
+              for n in range(1, 9)]
+    spread = [f for f in health._cross_scene(scenes, 3.0, 6.0)
+              if f["kind"] == "spread"]
+    assert spread and spread[0]["fix"] is None
+
+
+def test_the_fix_proposes_and_never_transmits():
+    """The whole safety model depends on this: a fix fills the plan box and
+    stops, so the confirm gate, validation, the blast radius warning and the
+    undo snapshot all still stand in front of it."""
+    from pathlib import Path
+    ui = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text()
+    script = ui.split("<script>")[1]
+    fn = script.split("async function fixAll()")[1].split("\n}\n")[0]
+    assert "showPlan(" in fn
+    assert "/api/apply" not in fn, "a fix must never write"
+    # and one button for the report, not one per finding
+    assert "id=\"fixall\"" in script and "data-fix=" not in script
+
+
+def test_fixed_is_measured_not_claimed():
+    """The scan runs again by itself once a fix has actually landed."""
+    from pathlib import Path
+    ui = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text()
+    script = ui.split("<script>")[1]
+    assert "fixPending = true" in script
+    apply_fn = script.split("async function apply()")[1].split("\n}\n")[0]
+    assert "scanPreset()" in apply_fn

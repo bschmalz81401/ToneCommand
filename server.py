@@ -9,6 +9,8 @@ nothing is ever written to a preset slot on the unit.
 from __future__ import annotations
 
 import threading
+import uuid
+import time
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -17,7 +19,8 @@ from pydantic import BaseModel
 
 from fm9.device import FM9, FM9NotFound
 from fm9.registry import Registry
-from fm9 import ai_settings, editbuffer, health, planner
+from fm9 import (ai_settings, designs, editbuffer, health, planner,
+                 recipes as recipebook, rigprofile, share)
 from tools import path_audit
 from fm9 import protocol as proto
 
@@ -57,10 +60,81 @@ INTEREST = {
     "PHASER": [2, 5, 6, 11, 12],
     "FLANGER": [1, 3, 4, 11, 12],
     "CHORUS": [2, 4, 10, 11],
-    "WAH": [6, 10],
+    # The sweep itself (5) matters more than the level: it is the parameter a
+    # pedal or an envelope is attached to, so leaving it off the page meant
+    # the one control that answers "is this a pedal wah or an auto-wah" was
+    # never drawn. 1/2 bound the sweep, 3 is the resonance.
+    "WAH": [5, 1, 2, 3, 6, 10],
     "TREMOLO": [2, 3, 7],
     "ROTARY": [0, 5, 6],
 }
+
+
+# What drives a parameter, when something other than the stored value does.
+#
+# Only ordinal 11 is grounded: this tool binds it and reads it back in
+# _bind_pedal, so Pedal 2 is a fact rather than a guess. Every other source is
+# reported by its number. The display-name query would be the obvious way to
+# name the rest and it is a trap: for modifier source enums it returns "NONE"
+# regardless of the actual source (docs/PROTOCOL.md finding 5). Naming an
+# unknown ordinal would be inventing a fact about someone's rig, so it stays a
+# number until a roster is harvested off the FM9's own screen.
+MOD_SOURCES = {11: "Pedal 2"}   # PEDAL_2_SOURCE; kept in step by test
+
+
+def read_modifiers(fm9: FM9) -> dict:
+    """Which parameters are driven by something other than their own value.
+
+    A modifier takes the parameter over: the FM9 sources it from the pedal,
+    envelope or LFO, and the value stored on the block stops being what you
+    hear. So a slider we draw for a modified parameter is a control that does
+    nothing, which is the worst kind, and the page has to say so.
+
+    All 32 slots read in about 0.14s, cheap enough for the state poll.
+    """
+    from fm9 import protocol as fp
+    out = {}
+    for slot in range(1, fp.MOD_SLOT_COUNT + 1):
+        # Per slot, because one unreadable slot is a gap in this map and not a
+        # reason to lose the other thirty-one.
+        try:
+            vals = fm9.bulk_read(fp.mod_slot_eid(slot))
+            if not vals or len(vals) <= fp.MOD_PID_TARGET_PARAM:
+                continue
+            eid = vals[fp.MOD_PID_TARGET_EFFECT]
+            # A never-used slot is all zeroes, and effect id 0 is not a block.
+            if not eid:
+                continue
+            fam = reg.family_of_effect_id(eid)
+            if not fam:
+                continue
+            fname, inst = fam
+            spec = reg.spec(fname, vals[fp.MOD_PID_TARGET_PARAM], inst)
+            src = vals[fp.MOD_PID_SOURCE]
+        except Exception:
+            continue
+        out[spec.name] = {
+            "slot": slot,
+            "source": int(src),
+            "source_name": MOD_SOURCES.get(src, f"source #{src}"),
+            "known": src in MOD_SOURCES,
+        }
+    return out
+
+
+def _safe_modifiers(fm9: FM9) -> dict:
+    """read_modifiers, but never the reason a poll fails."""
+    try:
+        return read_modifiers(fm9)
+    except Exception:
+        return {}
+
+
+#: Last time the MIDI bus was re-enumerated, so a disconnected poll can look
+#: for a newly arrived device without doing it several times a second when
+#: more than one endpoint asks at once.
+_last_rescan = {"at": 0.0}
+RESCAN_EVERY = 2.0
 
 
 def get_fm9() -> FM9:
@@ -71,8 +145,40 @@ def get_fm9() -> FM9:
             from fm9.sim import SimFM9
             _fm9 = SimFM9(reg)     # virtual device: UI/planner dev offline
         else:
+            # Look at the bus again before trying. Without this the retry is
+            # pointless: the rtmidi backend enumerates through a CoreMIDI
+            # client it holds for the life of the process, so a device plugged
+            # in after startup is invisible however many times we reconstruct.
+            # Reloading costs about eleven milliseconds and leaks nothing,
+            # which is well worth paying on a poll that is failing anyway.
+            now = time.monotonic()
+            if now - _last_rescan["at"] >= RESCAN_EVERY:
+                _last_rescan["at"] = now
+                rescan_midi()
             _fm9 = FM9(reg)
     return _fm9
+
+
+def rescan_midi() -> None:
+    """Make mido look at the MIDI bus again.
+
+    FM9.__init__ calls mido.get_input_names() fresh every time, so it looked
+    like discovery could not go stale. It can: the rtmidi backend holds a
+    CoreMIDI client for the life of the process and enumerates through it, so
+    a server started while the FM9 was switched off never sees it appear. The
+    device was plugged in, visible to every other process on the machine, and
+    invisible to this one until it was restarted.
+
+    Reloading the backend builds a new client, which is the only way to pick
+    up a port that arrived after startup.
+    """
+    try:
+        import mido
+        mido.set_backend("mido.backends.rtmidi", load=True)
+    except Exception:
+        # A backend that will not reload is no worse than before: the next
+        # open still tries, it just may not see a newly arrived port.
+        pass
 
 
 def drop_fm9():
@@ -189,6 +295,18 @@ def scene_names(fm9: FM9) -> list[dict]:
 
 def snapshot(fm9: FM9) -> dict:
     preset = fm9.current_preset()
+    if preset is None:
+        # Nothing came back. An open port is not a connected device: pulling
+        # the USB leaves the handle valid and every read simply times out, so
+        # the old code built a snapshot with no preset, no scene and no blocks
+        # and still reported connected, leaving the link light green over an
+        # empty page.
+        #
+        # Raised BEFORE the rest of the reads rather than after, because the
+        # rest are eight scene names and a status dump, each waiting out its
+        # own timeout: finding out slowly would freeze the poll for ten
+        # seconds an unplugged device does not deserve.
+        raise FM9NotFound("the FM9 stopped answering; is it still plugged in?")
     scene = fm9.scene_name()
     blocks = fm9.status_dump() or []
     out_blocks = []
@@ -233,6 +351,18 @@ def snapshot(fm9: FM9) -> dict:
                 if fname == "DISTORT" and base + 10 < len(vals):
                     values["AMP_MODEL"] = reg.amp_roster.get(
                         str(vals[base + 10]), f"ordinal {vals[base + 10]}")
+                # The same trick for every other block whose type has real
+                # names. Read the wire and map through the roster, never the
+                # display-name query: that returns a stale constant rather
+                # than the current type (docs/PROTOCOL.md finding 5).
+                tp = TYPE_PARAMS.get(fname)
+                if tp and fname != "DISTORT":
+                    pid, roster_attr = tp
+                    if base + pid < len(vals):
+                        roster = getattr(reg, roster_attr) or {}
+                        wire = vals[base + pid]
+                        values[f"{fname}_TYPE_NAME"] = roster.get(
+                            str(wire), f"ordinal {wire}")
                 for pid in INTEREST[fname]:
                     s = reg.spec(fname, pid, inst)
                     idx = base + pid
@@ -248,7 +378,7 @@ def snapshot(fm9: FM9) -> dict:
                             # like the unit rather than like our variable names
                             "label": (s.label or s.name.split("_", 1)[-1]),
                         }
-    return {
+    out_state = {
         "connected": True,
         # label, not just number: the wire numbers presets 0-511 and every
         # tool the owner cross-checks against numbers them 1-512.
@@ -264,7 +394,22 @@ def snapshot(fm9: FM9) -> dict:
         "values": values,
         "cab_sel": meta.pop("__cab__", None),
         "params": meta,
+        # Read every poll rather than cached against the preset number: a
+        # modifier can be added or removed from the front panel without the
+        # preset changing, and a stale "nothing is bound here" is exactly the
+        # statement this exists to stop the page making.
+        #
+        # Wrapped because /api/state turns ANY exception into drop_fm9() and a
+        # red link light. Knowing what drives a parameter is a convenience;
+        # losing the whole page and the port because one modifier read
+        # hiccuped is not a trade worth making.
+        "mods": _safe_modifiers(fm9),
     }
+    # Remember the last reading taken from real hardware, so a design can be
+    # planned against something true when the rig is off.
+    _last_snapshot["state"] = out_state
+    _last_snapshot["at"] = time.strftime("%Y-%m-%dT%H:%M:%S")
+    return out_state
 
 
 def state_text(snap: dict) -> str:
@@ -360,6 +505,29 @@ def logo():
     return FileResponse(ROOT / "ui" / "logo.png", media_type="image/png")
 
 
+@app.post("/api/reconnect")
+def api_reconnect():
+    """Look for the FM9 again, now.
+
+    The five second poll retries on its own, but it retries through a stale
+    view of the MIDI bus, so it can never find a device that appeared after
+    the server started. This drops the handle, rescans, and reports what it
+    found, which is also the honest answer when it finds nothing.
+    """
+    with _lock:
+        drop_fm9()
+        rescan_midi()
+        try:
+            snap = snapshot(get_fm9())
+        except FM9NotFound as e:
+            drop_fm9()
+            return {"connected": False, "why": str(e)}
+        except Exception as e:
+            drop_fm9()
+            return {"connected": False, "why": str(e)}
+    return {"connected": True, "preset": snap.get("preset")}
+
+
 @app.get("/api/state")
 def api_state():
     with _lock:
@@ -376,16 +544,71 @@ def api_state():
 
 @app.post("/api/plan")
 def api_plan(body: PromptBody):
+    # A loaded profile outranks both the live device and the remembered
+    # reading: you asked to design for someone else's rig, so designing for
+    # your own instead would be answering a different question.
+    if _profile["loaded"]:
+        prof = _profile["loaded"]
+        try:
+            with _settings_lock:
+                result = planner.plan(body.prompt,
+                                      rigprofile.as_state_text(prof),
+                                      PARAM_REFERENCE)
+        except Exception as e:
+            return JSONResponse({"error": str(e)}, status_code=502)
+        result["device"] = {"preset": {"name": prof.get("preset_name"),
+                                       "label": "shared profile"},
+                            "scene": None}
+        result["offline"] = True
+        result["profile"] = {"author": prof.get("author"),
+                             "preset_name": prof.get("preset_name"),
+                             "captured": prof.get("captured")}
+        result["values"] = {}      # a profile carries none, by design
+        for a in result.get("actions", []):
+            errs, warns = validate_action(Action(**a))
+            a["validation_errors"] = errs
+            a["validation_warnings"] = warns
+            if a.get("block"):
+                try:
+                    a["effect_id"] = reg.resolve_block(
+                        a["block"], int(a.get("instance") or 1))[1]
+                except Exception:
+                    pass
+        return result
+
+    offline = False
     with _lock:
         try:
             snap = snapshot(get_fm9())
         except FM9NotFound:
             drop_fm9()
-            return JSONResponse({"error": "FM9 not connected"}, status_code=503)
+            # The device is the only hardware dependency in this whole path:
+            # the planner, validation and the grounding catalogs are all local.
+            # So with a real reading of a preset to stand on, planning works
+            # unplugged. Without one it does not, and inventing state is the
+            # exact thing this project refuses everywhere else.
+            snap = _last_snapshot["state"]
+            offline = True
+    # Three kinds of context, in descending order of how much is known:
+    # a live or remembered reading, or nothing at all. The last is not a
+    # refusal: a request that stands on its own, like building a tone from
+    # scratch into a named scene, needs nothing from the rig. What the
+    # planner must never do is answer a RELATIVE request against a zero,
+    # so it is told exactly what it has rather than being handed an
+    # empty-looking state and left to assume.
+    context = state_text(snap) if snap else rigprofile.as_blank_text()
     try:
         with _settings_lock:
-            result = planner.plan(body.prompt, state_text(snap), PARAM_REFERENCE)
-        result["device"] = {"preset": snap["preset"], "scene": snap["scene"]}
+            result = planner.plan(body.prompt, context, PARAM_REFERENCE)
+        result["device"] = ({"preset": snap["preset"], "scene": snap["scene"]}
+                            if snap else {"preset": None, "scene": None})
+        # Say so loudly. A plan built against a remembered reading is not the
+        # same object as one built against a live one, and the difference has
+        # to survive all the way to the button.
+        result["offline"] = offline
+        result["anchored_at"] = _last_snapshot["at"] if offline else None
+        result["no_state"] = snap is None
+        result["values"] = snap.get("values", {}) if snap else {}
         for a in result.get("actions", []):
             errs, warns = validate_action(Action(**a))
             a["validation_errors"] = errs
@@ -464,7 +687,7 @@ def validate_action(a: Action) -> tuple[list[str], list[str]]:
     if a.kind == "add_block":
         if a.position not in (None, "pre", "post", "any"):
             errors.append(f"position must be pre/post/any, got {a.position!r}")
-    elif a.kind == "bind_pedal":
+    elif a.kind in ("bind_pedal", "unbind_pedal"):
         spec = reg.find_param(fam, a.param or "")
         if spec is None:
             for (f, pid), pdata in reg.params.items():
@@ -525,7 +748,69 @@ def validate_action(a: Action) -> tuple[list[str], list[str]]:
             "pedal-binding curve direction is NOT verified on this hardware "
             "(issue #11): sweep may be reversed or dead; confirm by ear "
             "immediately after applying")
+    # Writing to a parameter a modifier owns lands, verifies by read-back, and
+    # changes nothing anybody can hear: the FM9 sources the value from the
+    # pedal, envelope or LFO instead. The browser already refuses to draw a
+    # slider for one, but a plan can still name it, and "verified" on a change
+    # with no audible effect is the most misleading thing this tool can say.
+    # Same failure, different cause: a bypassed block is not in the signal, so
+    # a write to it lands, verifies, and changes nothing anyone can hear. The
+    # symptom that found it was "changing the drive has no effect", on a preset
+    # whose Drive block was simply switched off.
+    if a.kind == "set_param":
+        state = _last_snapshot.get("state") or {}
+        for b in state.get("blocks") or []:
+            if b.get("family") == fam and b.get("instance") == a.instance \
+                    and b.get("bypassed"):
+                warnings.append(
+                    f"{fam} {a.instance} is BYPASSED (as of the last reading), "
+                    f"so it is not in the signal. The write will land and "
+                    f"verify, and you will hear no difference until the block "
+                    f"is engaged.")
+                break
+    if a.kind == "set_param" and a.param:
+        driven = ((_last_snapshot.get("state") or {}).get("mods") or {}).get(a.param)
+        if driven:
+            warnings.append(
+                f"{a.param} is driven by {driven['source_name']} on modifier "
+                f"slot {driven['slot']} (as of the last reading). The write "
+                f"will land and verify, and you will hear no difference, "
+                f"because the FM9 takes this parameter from the modifier. "
+                f"Remove the binding first if you meant to set it by hand.")
     return errors, warnings
+
+
+#: Where a block was asked to go, as a phrase rather than an enum. Interpolating
+#: the raw value produced "no free pass-through cell any of the amp".
+_POSITION_PHRASE = {"pre": "before the amp", "post": "after the amp",
+                    "any": "anywhere on the grid"}
+
+
+def _no_placement_detail(a: Action, pos: str, cells: list | None) -> str:
+    """Why a block could not be placed, in terms of the wall actually hit.
+
+    An EMPTY preset is not a full one. It has no grid cells at all, not even
+    the pass-through shunts (PROTOCOL finding 18), so "no free pass-through
+    cell" describes a preset packed with blocks and says nothing useful about
+    a slot that is simply blank. The two need different answers, because only
+    one of them is the user's fault.
+    """
+    where = _POSITION_PHRASE.get(pos, f"at position {pos!r}")
+    if cells is None:
+        # A read that did not answer is a THIRD wall, and the worst one to
+        # get wrong: finding 18 says an empty slot's grid read SUCCEEDS with
+        # zero cells, so folding a timeout into "empty" is a confident wrong
+        # diagnosis that then tells the owner to go and load another preset.
+        return (f"the grid did not answer, so where {a.block} could go is "
+                f"unknown; nothing was sent. Check the FM9 is connected and "
+                f"not in use by FM9-Edit, then retry")
+    if not cells:
+        return (f"this preset is empty: it has no grid cells at all, not even "
+                f"pass-through cells, so there is nothing to place {a.block} "
+                f"onto. Load a preset with a signal chain, or build one from "
+                f"scratch with tools/build_from_scratch.py")
+    return (f"no free pass-through cell {where} to place {a.block} on; "
+            f"refusing rather than rewiring the grid")
 
 
 def _add_block(fm9: FM9, a: Action) -> dict:
@@ -535,7 +820,9 @@ def _add_block(fm9: FM9, a: Action) -> dict:
     blocks = fm9.status_dump() or []
     if any(b.effect_id == eid for b in blocks):
         return {"ok": False, "detail": f"{a.block} {a.instance} already exists in this preset"}
-    cells = fm9.read_grid() or []
+    cells = fm9.read_grid()
+    if cells is None:
+        return {"ok": False, "detail": _no_placement_detail(a, a.position or "any", None)}
     amp_cols = [c.col for c in cells if c.effect_id in (58, 59, 60, 61)]
     amp_col = min(amp_cols) if amp_cols else None
     shunts = [(c.row, c.col) for c in cells if c.is_shunt]
@@ -545,9 +832,7 @@ def _add_block(fm9: FM9, a: Action) -> dict:
     elif pos == "post" and amp_col is not None:
         shunts = [(r, c) for r, c in shunts if c > amp_col]
     if not shunts:
-        return {"ok": False,
-                "detail": f"no free pass-through cell {pos} of the amp to place "
-                          f"{a.block} on; refusing rather than rewiring the grid"}
+        return {"ok": False, "detail": _no_placement_detail(a, pos, cells)}
     row, col = sorted(shunts, key=lambda rc: rc[1])[0]
     fm9.place_block(row + 1, col + 1, eid)
     after = fm9.read_grid() or []
@@ -584,36 +869,148 @@ def _add_block(fm9: FM9, a: Action) -> dict:
                       f"in and out" if ok else "placement failed grid verification"}
 
 
+def _resolve_param(fam: str, name: str, instance: int):
+    """A parameter by name within a family, however the caller spelled it."""
+    for (f, pid), pdata in reg.params.items():
+        if f == fam and pdata.get("name") == name:
+            return reg.spec(f, pid, instance)
+    return reg.find_param(fam, name) if name else None
+
+
+#: Pedal 2. Pedal 1 is the player's global volume and is never referenced by
+#: anything here, in either direction.
+PEDAL_2_SOURCE = 11
+
+#: Slots this tool wrote WITHOUT a donor curve, per preset.
+#:
+#: A slot built from MOD_DEFAULT_FIELDS is indistinguishable on the wire from
+#: one the device built, so the next bind would happily clone it and report
+#: "curve cloned from slot N" about a curve that is really this project's
+#: linear default. The provenance would launder itself one slot at a time.
+#: Remembered rather than read, because the wire cannot answer it.
+_synthetic_slots: dict = {"preset": None, "slots": set()}
+
+
+def _synthetic_for(preset: int | None) -> set:
+    """Reset the memory when the loaded preset changes: slot numbers mean
+    nothing across presets."""
+    if _synthetic_slots["preset"] != preset:
+        _synthetic_slots["preset"] = preset
+        _synthetic_slots["slots"] = set()
+    return _synthetic_slots["slots"]
+
+
 def _bind_pedal(fm9: FM9, a: Action) -> dict:
-    """Bind Pedal 2 to a continuous parameter using the first free modifier
-    slot, with an initialized transfer curve and optional floor percent."""
+    """Put a continuous parameter under Pedal 2.
+
+    Two things this deliberately does NOT claim.
+
+    It does not verify the sweep. Live modulation is invisible to every read
+    the protocol offers, and a dead binding reads byte-identical to a live one
+    (findings 12 and 17), so a field read-back proves the slot was written and
+    nothing whatsoever about whether the pedal moves the parameter. The only
+    verification is a foot and an ear.
+
+    It does not claim to be undoable. The undo snapshot covers parameters,
+    bypass and channel; a modifier slot is none of those. Removing the binding
+    is what takes it back, which is why unbinding exists as its own action
+    rather than being left to UNDO.
+    """
     from fm9 import protocol as fp
     fam, eid = reg.resolve_block(a.block or "", a.instance)
-    spec = None
-    for (f, pid), pdata in reg.params.items():
-        if f == fam and pdata.get("name") == a.param:
-            spec = reg.spec(f, pid, a.instance)
-            break
-    if spec is None and a.param:
-        spec = reg.find_param(fam, a.param)
+    spec = _resolve_param(fam, a.param or "", a.instance)
     if spec is None:
         return {"ok": False, "detail": f"unknown param {a.param}"}
-    slot = None
-    for m in range(1, 17):
-        vals = fm9.bulk_read(fp.mod_slot_eid(m))
-        if vals and len(vals) > fp.MOD_PID_TARGET_EFFECT and                 vals[fp.MOD_PID_TARGET_EFFECT] == 0:
-            slot = m
-            break
+
+    slot, free = None, 0
+    for m in range(1, fp.MOD_SLOT_COUNT + 1):
+        vals = fm9.read_modifier(m)
+        if vals and len(vals) > fp.MOD_PID_TARGET_EFFECT:
+            if vals[fp.MOD_PID_TARGET_EFFECT] == eid and \
+                    vals[fp.MOD_PID_TARGET_PARAM] == spec.param_id:
+                return {"ok": False,
+                        "detail": f"{spec.name} is already on modifier slot {m}"}
+            if vals[fp.MOD_PID_TARGET_EFFECT] == 0:
+                free += 1
+                if slot is None:
+                    slot = m
     if slot is None:
-        return {"ok": False, "detail": "no free modifier slot"}
+        return {"ok": False,
+                "detail": f"all {fp.MOD_SLOT_COUNT} modifier slots are in use; "
+                          f"remove a binding to free one"}
+
+    # Clone the curve off a slot the device itself built, where the preset has
+    # one. Finding 12: from scratch comes out reversed or dead. Slots this
+    # tool built without a donor are excluded, or a default would launder
+    # itself into something the log calls a clone.
+    preset = fm9.current_preset()
+    synthetic = _synthetic_for(preset[0] if preset else None)
+    found = fm9.find_donor_slot(skip={slot} | synthetic)
+    donor_slot, donor = found if found else (None, None)
     floor = (a.value or 0.0) / 100.0
-    fm9.bind_modifier(slot, eid, spec.param_id, 11, min_norm=floor, max_norm=1.0)
-    vals = fm9.bulk_read(fp.mod_slot_eid(slot))
-    ok = bool(vals) and vals[fp.MOD_PID_TARGET_EFFECT] == eid and         vals[fp.MOD_PID_TARGET_PARAM] == spec.param_id and vals[fp.MOD_PID_SOURCE] == 11
-    return {"ok": ok,
+    cloned = fm9.bind_modifier(slot, eid, spec.param_id, PEDAL_2_SOURCE,
+                               donor=donor,
+                               min_norm=floor if a.value else None)
+
+    vals = fm9.read_modifier(slot) or []
+    written = (len(vals) > fp.MOD_PID_TARGET_PARAM
+               and vals[fp.MOD_PID_TARGET_EFFECT] == eid
+               and vals[fp.MOD_PID_TARGET_PARAM] == spec.param_id
+               and vals[fp.MOD_PID_SOURCE] == PEDAL_2_SOURCE)
+    if not written:
+        return {"ok": False, "detail": "the slot did not take the binding"}
+    if cloned:
+        how = f"curve cloned from slot {donor_slot}"
+    else:
+        synthetic.add(slot)
+        how = ("no slot to clone from, so the curve is this project's linear "
+               "default: finding 12 says from-scratch bindings come out "
+               "reversed or dead about as often as not")
+    return {"ok": True,
             "detail": f"Pedal 2 -> {spec.name} on modifier slot {slot}"
-                      f"{f', floor {a.value:.0f}%' if a.value else ''}"
-                      if ok else "bind failed verification"}
+                      f"{f', floor {a.value:.0f}%' if a.value else ''} "
+                      f"({how}). The slot is written; the SWEEP is unverified "
+                      f"and cannot be read. Rock the pedal and listen. "
+                      f"{free - 1} of {fp.MOD_SLOT_COUNT} slots still free.",
+            "unverifiable": True}
+
+
+def _unbind_pedal(fm9: FM9, a: Action) -> dict:
+    """Take a parameter back off its modifier, so its own value governs again.
+
+    The way back from a bind. Refuses to detach a source this project cannot
+    name, because an unrecognised source is one the owner set up on the front
+    panel, and silently removing someone's own routing is not an undo.
+    """
+    from fm9 import protocol as fp
+    fam, eid = reg.resolve_block(a.block or "", a.instance)
+    spec = _resolve_param(fam, a.param or "", a.instance)
+    if spec is None:
+        return {"ok": False, "detail": f"unknown param {a.param}"}
+    for m in range(1, fp.MOD_SLOT_COUNT + 1):
+        vals = fm9.read_modifier(m)
+        if not vals or len(vals) <= fp.MOD_PID_TARGET_PARAM:
+            continue
+        if vals[fp.MOD_PID_TARGET_EFFECT] != eid or \
+                vals[fp.MOD_PID_TARGET_PARAM] != spec.param_id:
+            continue
+        src = vals[fp.MOD_PID_SOURCE]
+        if src != PEDAL_2_SOURCE:
+            return {"ok": False,
+                    "detail": f"{spec.name} is driven by source #{src}, not "
+                              f"Pedal 2. That binding was made somewhere this "
+                              f"tool cannot read, so it is not this tool's to "
+                              f"remove: clear it on the FM9."}
+        fm9.clear_modifier(m)
+        preset = fm9.current_preset()
+        _synthetic_for(preset[0] if preset else None).discard(m)
+        vals = fm9.read_modifier(m) or []
+        gone = (len(vals) > fp.MOD_PID_TARGET_EFFECT
+                and vals[fp.MOD_PID_TARGET_EFFECT] == 0)
+        return {"ok": gone,
+                "detail": f"Pedal 2 removed from {spec.name} (slot {m})" if gone
+                          else "the slot did not clear"}
+    return {"ok": False, "detail": f"{spec.name} has no modifier on it"}
 
 
 def run_action(fm9: FM9, a: Action) -> dict:
@@ -656,6 +1053,8 @@ def run_action(fm9: FM9, a: Action) -> dict:
         return _add_block(fm9, a)
     if a.kind == "bind_pedal":
         return _bind_pedal(fm9, a)
+    if a.kind == "unbind_pedal":
+        return _unbind_pedal(fm9, a)
     if a.kind == "set_cab":
         # Bank and slot are two parameters on the CABINET block, and the slot
         # ordinal lives in the RAW wire value rather than on the 0-1023 display
@@ -907,6 +1306,10 @@ def api_preset(body: PresetBody):
 
 _shared_cache: dict = {"preset": None, "map": None}
 
+#: The last state read from real hardware, kept so a design can be planned
+#: against a true reading rather than an invented one when the rig is off.
+_last_snapshot: dict = {"state": None, "at": None}
+
 
 # --- undo and A/B ----------------------------------------------------------
 # In memory and lost on restart, deliberately. An undo history that outlived
@@ -1022,11 +1425,18 @@ def api_models(kind: str = "amp"):
     this is trying to beat: on the unit you turn a knob through a thousand
     entries because there is nowhere to type.
     """
-    if kind == "amp":
-        return {"kind": "amp", "banks": [{
-            "bank": None, "name": "AMP",
+    # Every block whose TYPE we can actually name. A roster maps an ordinal to
+    # a real name; without one the ordinal is meaningless to a human, so those
+    # blocks get no picker rather than a list of numbers.
+    ROSTERS = {"amp": ("amp_roster", "AMP"), "drive": ("drive_roster", "DRIVE"),
+               "reverb": ("reverb_roster", "REVERB")}
+    if kind in ROSTERS:
+        attr, label = ROSTERS[kind]
+        roster = getattr(reg, attr) or {}
+        return {"kind": kind, "banks": [{
+            "bank": None, "name": label,
             "models": [{"ordinal": int(o), "name": n}
-                       for o, n in sorted(reg.amp_roster.items(), key=lambda x: int(x[0]))]}]}
+                       for o, n in sorted(roster.items(), key=lambda x: int(x[0]))]}]}
     if kind == "cab":
         out = []
         for b in sorted(reg.cab_rosters, key=int):
@@ -1152,6 +1562,264 @@ def api_gig(body: dict):
     return {"gig_mode": _gig_mode["on"]}
 
 
+class DesignBody(BaseModel):
+    name: str
+    summary: str = ""
+    author: str = ""
+    actions: list[dict]
+    preset: dict | None = None
+    anchor: dict | None = None
+    offline: bool = False
+    profile: dict | None = None
+    backend: str | None = None
+    model: str | None = None
+
+
+#: A profile loaded from someone else, replacing live state as the thing the
+#: planner designs against. Session only: it is a lens, not a setting.
+_profile: dict = {"loaded": None}
+
+
+@app.get("/api/recipes")
+def api_recipes(refresh: bool = False):
+    """Every recipe: the ones shared in the repository, and your own.
+
+    Reading needs no account. Recipes live in a public folder, so the app
+    fetches them directly rather than sending anyone to a web UI to click
+    around, which is what asking a guitarist to file an issue amounted to.
+    """
+    if refresh:
+        recipebook._cache["items"] = None
+    shared, why = recipebook.fetch_shared()
+    mine = recipebook.read_local()
+    seen = {r.get("_file") for r in mine}
+    items = mine + [r for r in shared if r.get("_file") not in seen]
+    # Ranking is a nicety. A catalogue that will not load because a counter is
+    # down is a broken tool, so this is merged in if it arrives and ignored if
+    # it does not.
+    stats, _ = share.fetch_stats()
+    for r in items:
+        s = stats.get(r.get("name")) or {}
+        r["plays"] = s.get("plays")
+        r["recent"] = s.get("recent")
+    items.sort(key=lambda r: (-(r.get("recent") or 0), -(r.get("plays") or 0),
+                              (r.get("title") or "").lower()))
+    return {"recipes": items, "shared_error": why, "repo": recipebook.REPO,
+            "ranked": bool(stats)}
+
+
+class RecipeBody(BaseModel):
+    recipe: dict
+
+
+@app.post("/api/recipes/plan")
+def api_recipe_plan(body: RecipeBody):
+    """Turn a recipe into a plan for THIS rig, validated before anything runs.
+
+    A recipe names blocks and models by their grounded names, so validation
+    against this device's schema is what makes one portable. A step naming a
+    block you do not have is reported here rather than failing on the wire.
+    """
+    actions = []
+    for a in recipebook.steps_of(body.recipe):
+        try:
+            errs, warns = validate_action(Action(**a))
+        except Exception as e:
+            errs, warns = [f"step could not be read: {e}"], []
+        item = {**a, "validation_errors": errs, "validation_warnings": warns}
+        if a.get("block"):
+            try:
+                item["effect_id"] = reg.resolve_block(
+                    a["block"], int(a.get("instance") or 1))[1]
+            except Exception:
+                pass
+        if a.get("kind") == "store" and isinstance(a.get("value"), (int, float)):
+            item["slot_label"] = proto.slot_label(int(a["value"]))
+        actions.append(item)
+    blocked = sum(1 for a in actions if a["validation_errors"])
+    return {"summary": body.recipe.get("title") or body.recipe.get("name"),
+            "actions": actions, "blocked": blocked,
+            "assumes": body.recipe.get("assumes"),
+            "ear_checklist": body.recipe.get("ear_checklist") or []}
+
+
+@app.get("/api/share/status")
+def api_share_status():
+    """What is waiting to be handed over, and whether there is anywhere to
+    hand it to. Both are normal states."""
+    return {"endpoint": share.endpoint() or None,
+            "pending": len(share.pending()),
+            "entries": [{k: e[k] for k in
+                         ("id", "kind", "queued", "attempts", "last_error")}
+                        for e in share.pending()[:20]]}
+
+
+@app.post("/api/share/sync")
+def api_share_sync():
+    """Try to flush the outbox. Safe to call as often as you like."""
+    out = share.sync()
+    share.forget_accepted()
+    return out
+
+
+class UseBody(BaseModel):
+    name: str
+
+
+@app.post("/api/share/used")
+def api_share_used(body: UseBody):
+    """A recipe actually reached hardware. Queued like everything else, so a
+    gig with the laptop offline still counts once it is back."""
+    share.queue("use", {"name": body.name, "id": uuid.uuid4().hex})
+    return {"queued": True, "pending": len(share.pending())}
+
+
+@app.post("/api/recipes/save")
+def api_recipe_save(body: RecipeBody):
+    """Keep a recipe of your own, and say how to pass it on."""
+    try:
+        path = recipebook.save_local(body.recipe)
+    except OSError as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+    # Queued only AFTER the file is on disk. By the time any network call is
+    # attempted the work is already safe and already visible in the app's own
+    # browser, which is what makes losing it impossible.
+    share.queue("recipe", body.recipe)
+    sent = share.sync()
+    return {"saved": path.name, "dir": str(path.parent),
+            # a prefilled NEW FILE in recipes/, not a new issue
+            "pr_url": recipebook.pr_url(body.recipe),
+            "share": sent}
+
+
+@app.get("/api/profile")
+def api_profile():
+    """The profile currently loaded, if any."""
+    return {"profile": _profile["loaded"]}
+
+
+@app.post("/api/profile/export")
+def api_profile_export():
+    """Describe the loaded preset's SHAPE, for someone else to design against.
+
+    Structure only, never values. A full parameter dump would be the preset
+    itself, and many presets on a real unit came from paid packs. See
+    docs/RECIPES.md: nothing paid is ever redistributed.
+    """
+    with _lock:
+        try:
+            fm9 = get_fm9()
+            snap = snapshot(fm9)
+            try:
+                cells = fm9.read_grid() or []
+                status = {b.effect_id: b for b in fm9.status_dump() or []}
+                w = path_audit.walk(cells, status, reg)
+                grid = {"rows": 0, "cols": 0, "cells": []}
+                for c in cells:
+                    if c.effect_id is None and not c.is_shunt:
+                        continue
+                    eid = w["resolved"].get((c.row, c.col)) if c.effect_id else None
+                    fam = reg.family_of_effect_id(eid) if eid else None
+                    grid["cells"].append({
+                        "row": c.row, "col": c.col,
+                        "shunt": bool(c.effect_id is None and c.is_shunt),
+                        "family": fam[0] if fam else None,
+                        "instance": fam[1] if fam else None,
+                        "feeds": [r for r in range(8)
+                                  if c.cable_in_mask & (1 << (r + 1))]})
+                grid["rows"] = 1 + max((c["row"] for c in grid["cells"]), default=0)
+                grid["cols"] = 1 + max((c["col"] for c in grid["cells"]), default=0)
+            except Exception:
+                grid = None
+        except FM9NotFound:
+            drop_fm9()
+            return JSONResponse({"error": "FM9 not connected"}, status_code=503)
+    return {"profile": rigprofile.build(snap, grid)}
+
+
+class ProfileBody(BaseModel):
+    profile: dict | None = None
+
+
+@app.post("/api/profile/load")
+def api_profile_load(body: ProfileBody):
+    """Design against someone else's rig. Pass null to go back to your own."""
+    if body.profile is None:
+        _profile["loaded"] = None
+        return {"profile": None}
+    why = rigprofile.check(body.profile)
+    if why:
+        return JSONResponse({"error": why}, status_code=400)
+    _profile["loaded"] = body.profile
+    return {"profile": body.profile}
+
+
+@app.get("/api/designs")
+def api_designs():
+    """Everything designed and not yet sent, newest first."""
+    return {"designs": designs.listing(),
+            "connected": _fm9 is not None}
+
+
+@app.post("/api/designs")
+def api_design_save(body: DesignBody):
+    """Keep a validated plan until there is a device to send it to.
+
+    Validation is re-run here rather than trusted from the browser: a design
+    is only worth saving if it would actually run, and the browser is not the
+    place that decides that.
+    """
+    actions = []
+    for a in body.actions:
+        errs, warns = validate_action(Action(**a))
+        actions.append({**a, "validation_errors": errs,
+                        "validation_warnings": warns})
+    try:
+        rec = designs.save({
+            "name": body.name, "summary": body.summary, "author": body.author,
+            "actions": actions, "preset": body.preset, "anchor": body.anchor,
+            "offline": body.offline, "profile": body.profile,
+            "backend": body.backend,
+            "model": body.model,
+        })
+    except ValueError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+    return {"design": rec}
+
+
+@app.delete("/api/designs/{design_id}")
+def api_design_delete(design_id: str):
+    try:
+        return {"deleted": designs.delete(design_id)}
+    except ValueError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+
+
+@app.get("/api/designs/{design_id}/recipe")
+def api_design_recipe(design_id: str):
+    """The shareable form: how to build the tone, never the tone file."""
+    d = designs.load(design_id)
+    if d is None:
+        return JSONResponse({"error": "no such design"}, status_code=404)
+    return {"recipe": designs.to_recipe(d)}
+
+
+@app.post("/api/designs/{design_id}/check")
+def api_design_check(design_id: str):
+    """Has the rig moved since this was designed? Reads, never writes."""
+    d = designs.load(design_id)
+    if d is None:
+        return JSONResponse({"error": "no such design"}, status_code=404)
+    with _lock:
+        try:
+            snap = snapshot(get_fm9())
+        except FM9NotFound:
+            drop_fm9()
+            return JSONResponse({"error": "FM9 not connected"}, status_code=503)
+    return designs.check(d, (snap.get("preset") or {}).get("number"),
+                         snap.get("values", {}))
+
+
 @app.get("/api/gig")
 def api_gig_state():
     return {"gig_mode": _gig_mode["on"]}
@@ -1263,10 +1931,16 @@ def api_apply(body: ApplyBody):
                     # later actions in the plan target the block that failed
                     # to land; running them would set params and bind pedals
                     # on a block that is not on the grid (hardware-observed
-                    # on 2026-08-20, preset 143: dangling modifier binding)
-                    results.append({"action": None, "ok": False,
-                                    "detail": "remaining actions skipped: "
-                                              "add_block failed"})
+                    # on 2026-08-20, preset 143: dangling modifier binding).
+                    # Only say so when there is something to skip: a one-action
+                    # plan used to be told its remaining actions were skipped,
+                    # which is a false sentence sitting under a true refusal.
+                    remaining = body.actions[body.actions.index(a) + 1:]
+                    if remaining:
+                        results.append({"action": None, "ok": False,
+                                        "detail": f"remaining actions skipped "
+                                                  f"({len(remaining)}): "
+                                                  f"add_block failed"})
                     break
         except FM9NotFound:
             drop_fm9()

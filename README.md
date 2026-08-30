@@ -11,7 +11,7 @@ Balance era tone with the flanger on the expression pedal", review the exact
 parameter changes it proposes, confirm, and they land on the hardware over
 USB MIDI with read-back verification.
 
-![The ToneCommand interface: scenes, the live routing grid, the command bar and the tone panel](docs/img/ui-full.png)
+![The ToneCommand interface: scenes, the live routing grid, the command bar, the amp and cab panel and the graphic EQ](docs/img/ui-full.png)
 
 *Everything above is live from a connected FM9. The cyan path is the signal
 actually reaching the output; the dashed blocks are bypassed but still passing
@@ -62,9 +62,57 @@ cabs, searchable by name **and** by what the cab actually is, because
 Every step loads on the unit and is covered by UNDO, because an audition you
 cannot back out of is a trap rather than a feature.
 
+### A graphic EQ drawn the way one looks
+
+![The graphic EQ: ten vertical faders over a range strip, with a curve picker and FLATTEN ALL](docs/img/graphic-eq.png)
+
+Ten horizontal rows of numbers is a spreadsheet of an EQ, not an EQ. The point
+of the control is that the curve is a **shape** you read at a glance, and every
+musician already knows how to read it. So: faders standing up, zero a line
+across the middle, the whole width of its own panel.
+
+Seven starting curves and one click back to flat. A curve is written as a
+single batch, so it takes one undo snapshot and cannot land half applied.
+Those curves are ones this project drew, not FM9 factory settings, and the
+panel says so.
+
+The bands are **numbered**, not labelled with frequencies. `GEQ_TYPE` is an
+eighteen-value enum selecting the band layout and the catalogue carries one
+label per parameter, so those frequencies cannot all be right for the EQ you
+have loaded, and they are neither ascending nor unique. The strip underneath
+names the region instead, which is true of every graphic EQ ever built.
+
+### Why did that change do nothing?
+
+![Bypassed blocks badged, a modifier-driven parameter naming its source, and P2 buttons on every bindable row](docs/img/pedal-and-bypass.png)
+
+The most misleading thing a tone tool can say is "verified" about a change you
+cannot hear. There are two ways to get one, and this shows both.
+
+**A bypassed block** is not in the signal, so a write to it lands, verifies by
+read-back, and changes nothing. The signal chain always drew those dashed; the
+parameter panels did not know at all, and gave a switched-off block a full set
+of live-looking sliders. Now they carry a badge, and the badge is also the fix:
+one click engages the block.
+
+**A modifier-driven parameter** is worse, because the FM9 sources its value
+from a pedal or an envelope and the number stored on the block stops mattering.
+Those rows name what drives them and are not draggable. This is also the only
+honest answer to "is that a pedal wah or an auto wah": the FM9 has no auto-wah
+type, so a wah is whatever its sweep is attached to. Read the attachment and
+the question answers itself.
+
+Hover any continuous row for **P2** to put it under Pedal 2, several at once if
+you like, one modifier slot each. The binding clones its curve off a slot the
+device itself built rather than inventing one, and it never claims the sweep
+works: live modulation is invisible to every read the protocol offers, and a
+dead binding reads byte-identical to a live one. Check it with your foot.
+
+Pedal 1 is your global volume and is never referenced, in either direction.
+
 ### Blast radius
 
-![Seven scenes lit amber with WILL CHANGE badges](docs/img/blast-radius.png)
+![Three scenes lit amber with WILL CHANGE badges, beside the one you are standing in](docs/img/blast-radius.png)
 
 FM9 parameters live on the **channel**, not on the scene. Turning up the mid in
 scene 1 moves every other scene sharing that channel, which is the single
