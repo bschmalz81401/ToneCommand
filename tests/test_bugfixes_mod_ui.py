@@ -58,9 +58,19 @@ def test_an_unbind_has_its_own_wording():
 
 def test_the_planner_can_propose_both_directions():
     """Binding without unbinding would mean a plan could create a binding that
-    only the browser could remove."""
-    planner = Path("fm9/planner.py").read_text()
-    assert planner.count('"unbind_pedal"') >= 2, "schema and the filter"
+    only the browser could remove.
+
+    This once asserted the name appeared twice, in the schema and again in the
+    filter that validates replies against it. #30 removed that duplication by
+    deriving the filter from the schema, which is the better answer to the same
+    worry: a kind cannot now be offered to the model and rejected on the way
+    back, because there is one list.
+    """
+    from fm9.planner import ACTION_KINDS, PLAN_SCHEMA
+    assert "unbind_pedal" in ACTION_KINDS
+    assert "bind_pedal" in ACTION_KINDS
+    assert Path("fm9/planner.py").read_text().count('"unbind_pedal"') == 1, \
+        "one source of truth; do not reintroduce the second list"
 
 
 # --- a convenience must not be able to take down the page ------------------
