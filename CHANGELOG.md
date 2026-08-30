@@ -29,6 +29,216 @@ Notable changes to ToneCommand. Dates are UTC.
   parameters, since that is where the collision is; an enum write of ordinal 0
   is a real write and still lands.
 
+## 0.5.0 (2026-08-30)
+
+A graphic EQ you can read, panels organised by what a block does, and the
+answer to "why did that change do nothing". That last one turned out to be
+three separate causes wearing the same disguise.
+
+### Added
+- **The graphic EQ is drawn as a graphic EQ.** Vertical faders, zero as a line
+  across the middle, in its own full width panel rather than a 340px column of
+  the tone grid. Ten rows of numbers is a spreadsheet of an EQ, not an EQ: the
+  point of the control is that the curve is a shape you read at a glance.
+- **Seven starting curves and one click back to flat.** Scooped, mid push,
+  tighten the low end, warm, bright, clean up a boxy tone, and flat. A curve is
+  one batched write, so it takes one undo snapshot and cannot end up half
+  applied. These are curves this project drew and the panel says so; nothing
+  here comes off the FM9.
+- **The bands are numbered and the strip names the region** (LOW through HIGH)
+  rather than carrying frequencies. The catalogue gives each band a frequency
+  label, but they are not ascending and one value appears twice, because
+  GEQ_TYPE is an eighteen value enum selecting the band layout and one label
+  per parameter cannot describe eighteen layouts. A wrong frequency on a fader
+  is worse than a number that is simply true.
+- **Four panels instead of one column flow**: AMP & CAB, GRAPHIC EQ, EFFECTS,
+  DYNAMICS & LEVELS. Two sections would not cover the rig: a noise gate, a
+  compressor and a volume block are not effects in the sense a player means,
+  and filing them under EFFECTS to make a two way split come out even would be
+  a tidy looking lie about what those blocks are. Each folds, so a preset with
+  six effects no longer pushes the amp off the screen.
+- **The page says what is driving each parameter.** All 32 modifier slots are
+  read on every poll (about 0.14s), and a driven parameter shows its source and
+  is not draggable. This is also the only honest answer to "is that a pedal wah
+  or an auto wah": the FM9 has no auto wah type, a wah is whatever its sweep is
+  attached to.
+- **Assign and remove Pedal 2 from any continuous parameter.** Hover a row for
+  the P2 button; the badge on a bound row removes it. Several parameters can
+  share Pedal 2, one modifier slot each, and the reply says how many of the 32
+  are left. Pedal 1 is the player's global volume and is never referenced.
+- **The wah sweep, frequency limits and resonance are on the page.** The wah
+  whitelist was Level and Drive, so the one parameter that answers the pedal
+  question was never drawn.
+
+### Fixed
+- **Modifier writes followed the wrong sequence.** Finding 17 is targets last:
+  the slot's own fields as continuous writes first, then target effect, target
+  param and source as discrete writes. The code did the opposite, which is the
+  shape finding 16 describes: reads healthy, survives a store, and comes back
+  with target and source zeroed once the preset reloads.
+- **Modifier bindings are cloned, not invented.** Finding 12 says a binding
+  written from scratch comes out reversed or dead, and the working practice is
+  to clone a proven slot. A slot this tool builds from defaults is now excluded
+  from the donor pool, or a default would launder itself into something the log
+  calls a clone, one slot at a time.
+- **Binding no longer claims the sweep works.** Live modulation is invisible to
+  every read the protocol offers and a dead binding reads byte identical to a
+  live one, so a field read back proves the slot was written and nothing about
+  whether the pedal moves anything.
+- **A bypassed block looked exactly like an engaged one in the parameter
+  panels.** The signal chain drew it dashed; the panels had no idea, so a
+  switched off block got a full set of live looking sliders. You drag one, the
+  write lands, it verifies, and you hear nothing. Reported as "changing the
+  drive pedal has no effect", on a preset whose Drive block was simply off.
+  Bypassed groups now carry a badge that is also the fix: one click engages the
+  block.
+- **The planner is warned about both silent write cases**, a bypassed block and
+  a modifier driven parameter. "Verified" on a change with no audible effect is
+  the most misleading thing this tool can say.
+- **The graphic EQ faders were dead on arrival.** Moving the EQ into its own
+  panel left the listeners bound to the old container by id. Markup right,
+  write path right, API call right, control does nothing, and 501 tests passed
+  over it because none of them dragged anything. Every control container is now
+  wired through one list.
+- **A row without a data-key could freeze the parameter panel for the rest of
+  the session.** Both drag handlers read the row before clearing the flag that
+  suppresses repainting, so a throw between the two left it set. The modifier
+  driven row is exactly such a row shape.
+- **A modifier read could drop the link.** Any exception from the state poll
+  becomes a disconnect and a red light; 32 unguarded reads were added to that
+  path. Guarded per slot and at the call site.
+- **Going offline left the EQ panel live**, faders drawn and FLATTEN ALL armed
+  over a page reading "awaiting link", and left the amp and cab pickers naming
+  a preset no longer loaded.
+- **The catalogue's band label reached the log**, so a fader that deliberately
+  shows no frequency was recorded as "250: 2" in the one place that records
+  what was written to the rig.
+- **unbind_pedal rendered as "Mix: null"** in plan cards, having no describe()
+  branch of its own.
+- **The pedal button and the server disagreed about what is bindable.**
+  FUZZ_TYPE is a selector whose unit is `unverified` rather than `enum`.
+- **path_audit assumed unidentified blocks pass signal and said nothing.** A
+  scene called alive on the strength of an assumption is a weaker claim than
+  one called alive without it, and the difference was invisible. Found while
+  diagnosing a silent preset that turned out to contain two engaged blocks with
+  no registry entry.
+
+## 0.4.1 (2026-08-30)
+
+Three connection bugs, all found by plugging a cable in and out. Between them
+the app could not tell you the truth about whether your rig was there.
+
+### Fixed
+- **A device plugged in after the server started was invisible.** `FM9.__init__`
+  calls `mido.get_input_names()` fresh on every attempt, so discovery looked
+  like it could not go stale. The rtmidi backend enumerates through a CoreMIDI
+  client it holds for the life of the process, so a server started while the
+  FM9 was off never saw it appear however long the poll retried. The tell was
+  exact: a fresh python process listed the FM9 and opened it happily while the
+  running server, same machine, same moment, reported not connected.
+- **Reconnection is automatic.** `get_fm9()` re-enumerates the bus before
+  rebuilding the handle, throttled to once every two seconds. Plugging the
+  cable in reconnects within one poll with nothing to press. A reload was
+  measured at about eleven milliseconds with no file descriptor leak before
+  being put in a loop.
+- **An unplugged device still reported connected.** An open MIDI port is not a
+  connected device: pulling the USB leaves the handle valid, writes go nowhere
+  and reads simply time out. `snapshot()` took that at face value and returned
+  connected with no preset, no scene and no blocks, so the link light stayed
+  green over an empty page. It now gives up the moment `current_preset()` comes
+  back empty, and gives up BEFORE the eight scene names and the status dump,
+  each of which would otherwise wait out its own timeout and freeze the poll
+  for ten seconds on a device that is not there.
+
+### Added
+- The LINK pill is a button. Automatic reconnection is the mechanism; this is
+  for the person who has just plugged something in and wants to press
+  something. A failed look says why, including to check FM9-Edit is not
+  holding the port.
+
+### Verified
+On hardware, both directions: the cable out turns the link red and hides the
+panels that need the rig, and the cable back in turns it green again on its
+own. Also closed the loop 0.4.0 left open, designing a change, checking it for
+drift against the live unit, transmitting it, reading Mid back at 6.25 from
+5.0, and undoing it back to 5.0.
+
+## 0.4.0 (2026-08-30)
+
+**It works with the amp switched off.** Design tones on a plane, browse and
+use other people's, and let it fix what it finds wrong. Five new capabilities
+rather than fixes, which is why this is a minor bump and not a patch.
+
+### Added
+- **Design with the rig unplugged.** Exactly one line in the planning path
+  needed hardware, the snapshot read for context, so it now falls back to the
+  last real reading of the session. Everything you build is kept in a DESIGNED
+  PRESETS page and goes out when the FM9 comes back. Reconnecting is a merge,
+  not a hope: a design records the value each action was computed against, and
+  SEND re-reads and compares first, reporting clean, or naming exactly what
+  moved underneath the edits and asking. A queue that applied blindly would
+  overwrite a change made on the front panel in between and nobody would know.
+- **Plan with no reading at all.** A build is not an edit: "a Steve Lukather
+  lead in scene 4 of a new preset" needs nothing from the rig. The planner is
+  told what IS structurally true of every FM9 rather than only what is missing,
+  and asked to state its assumptions rather than refuse. Relative requests are
+  still turned down, because there is nothing to be relative to.
+- **Design for a rig you do not own.** A rig profile describes a preset's
+  shape: which blocks it has, how they are cabled, the scene names, which amp
+  and cab are emulated. Never the parameter values, because a full dump of
+  those IS the preset and many presets came from paid packs. Enough to design
+  against, not enough to reconstruct a tone.
+- **A recipe browser.** Other people's tones, read straight from the public
+  recipes folder with no account and no sign-in. USE validates every step
+  against YOUR device before proposing anything, which is what makes a recipe
+  portable rather than a preset file with extra steps.
+- **A sharing service that cannot lose anything.** service/worker.js: an inbox
+  and a counter, the only two things GitHub cannot do. Content stays in the
+  repository, so if the service is down browsing and using still work. A recipe
+  is written to disk and queued BEFORE any network call, and an entry clears
+  only on an explicit 2xx. Counting transmits rather than downloads, ranked on
+  the last thirty days so a good new tone can surface.
+- **FIX IT on preset health.** One button for the whole report. Levels are
+  arithmetic so the exact change is stated; making a cloned scene its own sound
+  is taste so it goes to the planner. It never applies anything: it fills the
+  plan box behind the same confirm gate as everything else, and the scan
+  re-runs afterwards so "fixed" is a measurement.
+
+### Changed
+- **Sharing no longer opens a GitHub issue.** An issue is not a container for a
+  recipe, the tracker would silt up, and it asked a guitarist to learn a
+  developer's tool before contributing. Recipes save locally and copy to the
+  clipboard, and for anyone who does use GitHub there is a prefilled new FILE
+  in recipes/ where it belongs.
+- **Panels that need the rig are hidden when it is away**, rather than dimmed.
+  Out of the layout and out of the tab order in one move, which removed the
+  bookkeeping that tracked which controls were already disabled. The banner
+  names what went and what still works.
+- **Type sized for reading.** The scale ran 8.7px to 15.75px on a 15px root.
+  It now runs 12.5px to 20.8px on a 16px root, with the small end grown by more
+  than the large end, and an A/A control in the header that multiplies the lot
+  and is remembered per browser.
+
+### Fixed
+- A recipe exported from a design could carry a name the sharing service
+  rejects and that cannot be a filename: to_recipe replaced spaces and nothing
+  else, so "Steve Lukather: Dumble ODS lead" became
+  steve-lukather:-dumble-ods-lead. One slug rule now, in one place.
+- The test suite could write to the real save whitelist. conftest never
+  isolated store_slots.json, so a test that forgot to monkeypatch it wrote to
+  the live file. Pinned session wide beside the .env isolation that exists for
+  exactly the same lesson.
+- Widening the simulator for cab auditioning removed the guard that made a
+  zeroed GET a no-op, so reading a parameter started zeroing it. Sub 09 00
+  carrying zero is the read, whatever the parameter kind.
+
+### Verified
+Hardware: scenes, the routing grid, auditioning, undo and A/B, the health scan
+and its clone check, blast radius, and saving. Simulator and a stub service:
+offline design, the conflict check, recipes, and the zero-loss outbox including
+an item queued while the service was down and flushed when it returned. The
+final transmit of an offline-designed tone has not yet run on hardware.
+
 ## 0.3.1 (2026-08-29)
 
 A patch on the day 0.3.0 shipped, because the first person to run it outside

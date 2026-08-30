@@ -84,7 +84,11 @@ def _default_preset(number: int, reg: Registry) -> dict:
     grid = {}
     chain = [(2, 1, 37), (2, 2, None), (2, 3, 58), (2, 4, 62), (2, 5, None),
              (2, 6, 70), (2, 7, None), (2, 8, 118), (2, 9, 46), (2, 10, 66),
-             (2, 11, 42)]   # ...fuzz, comp, reverb: realistic recipe targets
+             (2, 11, 42), (2, 12, 50)]
+    # ...fuzz, comp, reverb: realistic recipe targets. The graphic EQ (50) is
+    # here because it is the one block the UI draws differently, as faders
+    # rather than rows, and a renderer nothing exercises is a renderer nobody
+    # notices breaking.
     prev_row = None
     for row, col, eid in chain:
         c = _Cell(eid if eid else None, is_shunt=eid is None)

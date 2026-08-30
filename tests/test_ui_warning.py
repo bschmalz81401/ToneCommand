@@ -217,15 +217,17 @@ def test_the_signal_chain_comes_before_the_prompt():
     assert order.index("SIGNAL CHAIN") < order.index("COMMAND")
     assert order.index("SCENES") < order.index("SIGNAL CHAIN")
     # undo is reached after a change, not before one
-    assert order.index("UNDO / COMPARE") > order.index("TONE")
+    assert order.index("UNDO / COMPARE") > order.index("AMP &amp; CAB")
 
 
 def test_the_model_selectors_look_like_selectors():
     """As bare text with a hover border they read as a caption, so nobody
     discovers that the two most interesting facts on the page are also the two
     things easiest to change."""
+    # anchored on the base rule: a plain split started matching
+    # ".pick .audbtn", a later override that only sets a width
     style = UI.split("<style>")[1].split("</style>")[0]
-    rule = style.split(".audbtn {")[1].split("}")[0]
+    rule = re.search(r"^\s*\.audbtn \{([^}]*)\}", style, re.M).group(1)
     assert "border:" in rule and "background:" in rule
 
 
@@ -287,3 +289,19 @@ def test_the_app_carries_the_mark():
     assert 'rel="icon"' in UI
     style = UI.split("<style>")[1].split("</style>")[0]
     assert ".brand {" in style
+
+
+def test_every_dropdown_arrow_is_the_same_drawn_triangle():
+    """The third control on this page to hit the same thing. U+25BE is
+    rendered small inside its own em box, so the preset caret came out
+    noticeably smaller than the amp and cab chevrons beside it whatever font
+    size it was given. A glyph is not a shape you can size.
+    """
+    style = UI.split("<style>")[1].split("</style>")[0]
+    caret = re.search(r"^\s*\.pillbtn \.caret \{([^}]*)\}", style, re.M).group(1)
+    chevron = re.search(r"^\s*\.audbtn::after \{([^}]*)\}", style, re.M).group(1)
+    for rule in (caret, chevron):
+        assert "border-left: 6px solid transparent" in rule
+        assert "border-top: 7px solid" in rule
+    # and no glyph left behind to show through the triangle
+    assert "&#9662;" not in UI

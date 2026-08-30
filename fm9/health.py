@@ -203,7 +203,20 @@ def scan(fm9, reg, read_levels: bool = True) -> dict:
 
 
 def _cross_scene(scenes: list[dict], hot_db, spread_db) -> list[dict]:
-    """The checks that need more than one scene to be visible at all."""
+    """The checks that need more than one scene to be visible at all.
+
+    Each finding carries a `fix` describing what could be done about it, in
+    one of two shapes:
+
+      actions  we know the exact change, so we say it in the action vocabulary
+               and nothing has to be invented. Levels are arithmetic.
+      prompt   the repair needs taste rather than arithmetic, so it is handed
+               to the planner as a precise, grounded sentence.
+
+    A fix is never applied here. It is a PROPOSAL, and it lands in the same
+    plan-and-confirm path as anything else, which is what keeps the blast
+    radius warning, validation, undo and the transmit gate in front of it.
+    """
     out: list[dict] = []
 
     # --- the same scene twice ---
@@ -219,6 +232,19 @@ def _cross_scene(scenes: list[dict], hot_db, spread_db) -> list[dict]:
         named = ", ".join(f'{m["number"]} "{m["name"]}"' for m in members)
         out.append({
             "kind": "clone", "severity": "warn", "scenes": nums,
+            "fix": {
+                "how": "prompt",
+                "label": f"Make scene {nums[-1]} its own sound",
+                "prompt": (
+                    f"Scenes {', '.join(str(n) for n in nums)} of this preset "
+                    f"are identical: the same blocks, the same bypass states "
+                    f"and the same channels, so they are one sound under "
+                    f"{len(nums)} names. Scene {nums[-1]} is called "
+                    f"\"{members[-1]['name']}\". Change scene {nums[-1]} so "
+                    f"it earns that name and is audibly different from scene "
+                    f"{nums[0]}, using bypass and channel changes on the "
+                    f"blocks already in this preset. Do not add blocks."),
+            },
             "detail": f"scenes {named} are identical: same blocks, same bypass "
                       f"states, same channels. Parameters live on the channel, "
                       f"so these are the same sound, and every footswitch past "
@@ -230,6 +256,17 @@ def _cross_scene(scenes: list[dict], hot_db, spread_db) -> list[dict]:
         if not s["alive"]:
             out.append({
                 "kind": "dead", "severity": "fail", "scenes": [s["number"]],
+                "fix": {
+                    "how": "prompt",
+                    "label": f"Get scene {s['number']} making sound again",
+                    "prompt": (
+                        f"Scene {s['number']} of this preset makes no sound. "
+                        f"Walking the grid from the Input block to the Output "
+                        f"block finds no live path, and the reason is: "
+                        f"{s['why']}. Re-engage whatever blocks are bypassed "
+                        f"on that scene so signal reaches an engaged Output. "
+                        f"Do not add blocks and do not rewire the grid."),
+                },
                 "detail": f"scene {s['number']} \"{s['name']}\" has no live "
                           f"signal path: {s['why']}",
             })
@@ -241,6 +278,7 @@ def _cross_scene(scenes: list[dict], hot_db, spread_db) -> list[dict]:
         where = "; ".join(f"scene {n}: {', '.join(w)}" for n, w in missed)
         out.append({
             "kind": "incomplete", "severity": "warn",
+            "fix": {"how": "rescan", "label": "Scan again"},
             "scenes": [n for n, _ in missed],
             "detail": f"some values did not read back after {READ_TRIES} tries "
                       f"({where}). Those cells are unknown, not empty, and the "
@@ -263,11 +301,36 @@ def _cross_scene(scenes: list[dict], hot_db, spread_db) -> list[dict]:
                     "detail": f"scene {n} amp level is {round(v - ref, 2)} dB "
                               f"above the reference ({ref} dB), past the "
                               f"{hot_db} dB the conventions allow",
+                    # Arithmetic, not taste, so the exact change is stated
+                    # rather than described to a language model. Two actions
+                    # because amp level lives on the CHANNEL: you have to be
+                    # standing on the scene before writing it, and the blast
+                    # radius warning will then say which other scenes share
+                    # that channel and are coming with it.
+                    "fix": {
+                        "how": "actions",
+                        "label": f"Bring scene {n} down to {ref} dB",
+                        "actions": [
+                            {"kind": "set_scene", "value": n,
+                             "reason": f"the level lives on scene {n}'s channel"},
+                            {"kind": "set_param", "block": "DISTORT",
+                             "instance": 1, "param": "DISTORT_LEVEL",
+                             "value": ref,
+                             "reason": f"{round(v - ref, 2)} dB above the "
+                                       f"reference, past the {hot_db} dB "
+                                       f"convention"},
+                        ],
+                    },
                 })
         spread = max(vals) - min(vals)
         if spread > spread_db:
             out.append({
                 "kind": "spread", "severity": "warn",
+                # Deliberately no fix. A wide spread is often the point: the
+                # scene 1-5 loudness staircase is a convention here, not a
+                # fault, and offering to flatten it would be offering to undo
+                # the thing the preset was built to do.
+                "fix": None,
                 "scenes": [n for n, _ in levels],
                 "detail": f"amp level spans {round(spread, 2)} dB across the "
                           f"preset, wider than the {spread_db} dB convention",
