@@ -9,6 +9,7 @@ nothing is ever written to a preset slot on the unit.
 from __future__ import annotations
 
 import threading
+import time
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -17,7 +18,7 @@ from pydantic import BaseModel
 
 from fm9.device import FM9, FM9NotFound
 from fm9.registry import Registry
-from fm9 import ai_settings, editbuffer, health, planner
+from fm9 import ai_settings, designs, editbuffer, health, planner
 from tools import path_audit
 from fm9 import protocol as proto
 
@@ -248,7 +249,7 @@ def snapshot(fm9: FM9) -> dict:
                             # like the unit rather than like our variable names
                             "label": (s.label or s.name.split("_", 1)[-1]),
                         }
-    return {
+    out_state = {
         "connected": True,
         # label, not just number: the wire numbers presets 0-511 and every
         # tool the owner cross-checks against numbers them 1-512.
@@ -265,6 +266,11 @@ def snapshot(fm9: FM9) -> dict:
         "cab_sel": meta.pop("__cab__", None),
         "params": meta,
     }
+    # Remember the last reading taken from real hardware, so a design can be
+    # planned against something true when the rig is off.
+    _last_snapshot["state"] = out_state
+    _last_snapshot["at"] = time.strftime("%Y-%m-%dT%H:%M:%S")
+    return out_state
 
 
 def state_text(snap: dict) -> str:
@@ -376,16 +382,35 @@ def api_state():
 
 @app.post("/api/plan")
 def api_plan(body: PromptBody):
+    offline = False
     with _lock:
         try:
             snap = snapshot(get_fm9())
         except FM9NotFound:
             drop_fm9()
-            return JSONResponse({"error": "FM9 not connected"}, status_code=503)
+            # The device is the only hardware dependency in this whole path:
+            # the planner, validation and the grounding catalogs are all local.
+            # So with a real reading of a preset to stand on, planning works
+            # unplugged. Without one it does not, and inventing state is the
+            # exact thing this project refuses everywhere else.
+            snap = _last_snapshot["state"]
+            if snap is None:
+                return JSONResponse(
+                    {"error": "FM9 not connected, and no preset has been read "
+                              "yet in this session. Connect once so there is a "
+                              "real reading to design against."},
+                    status_code=503)
+            offline = True
     try:
         with _settings_lock:
             result = planner.plan(body.prompt, state_text(snap), PARAM_REFERENCE)
         result["device"] = {"preset": snap["preset"], "scene": snap["scene"]}
+        # Say so loudly. A plan built against a remembered reading is not the
+        # same object as one built against a live one, and the difference has
+        # to survive all the way to the button.
+        result["offline"] = offline
+        result["anchored_at"] = _last_snapshot["at"] if offline else None
+        result["values"] = snap.get("values", {})
         for a in result.get("actions", []):
             errs, warns = validate_action(Action(**a))
             a["validation_errors"] = errs
@@ -907,6 +932,10 @@ def api_preset(body: PresetBody):
 
 _shared_cache: dict = {"preset": None, "map": None}
 
+#: The last state read from real hardware, kept so a design can be planned
+#: against a true reading rather than an invented one when the rig is off.
+_last_snapshot: dict = {"state": None, "at": None}
+
 
 # --- undo and A/B ----------------------------------------------------------
 # In memory and lost on restart, deliberately. An undo history that outlived
@@ -1150,6 +1179,83 @@ def api_gig(body: dict):
     """Performance lockout: while on, only scene changes reach hardware."""
     _gig_mode["on"] = bool(body.get("on"))
     return {"gig_mode": _gig_mode["on"]}
+
+
+class DesignBody(BaseModel):
+    name: str
+    summary: str = ""
+    author: str = ""
+    actions: list[dict]
+    preset: dict | None = None
+    anchor: dict | None = None
+    offline: bool = False
+    backend: str | None = None
+    model: str | None = None
+
+
+@app.get("/api/designs")
+def api_designs():
+    """Everything designed and not yet sent, newest first."""
+    return {"designs": designs.listing(),
+            "connected": _fm9 is not None}
+
+
+@app.post("/api/designs")
+def api_design_save(body: DesignBody):
+    """Keep a validated plan until there is a device to send it to.
+
+    Validation is re-run here rather than trusted from the browser: a design
+    is only worth saving if it would actually run, and the browser is not the
+    place that decides that.
+    """
+    actions = []
+    for a in body.actions:
+        errs, warns = validate_action(Action(**a))
+        actions.append({**a, "validation_errors": errs,
+                        "validation_warnings": warns})
+    try:
+        rec = designs.save({
+            "name": body.name, "summary": body.summary, "author": body.author,
+            "actions": actions, "preset": body.preset, "anchor": body.anchor,
+            "offline": body.offline, "backend": body.backend,
+            "model": body.model,
+        })
+    except ValueError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+    return {"design": rec}
+
+
+@app.delete("/api/designs/{design_id}")
+def api_design_delete(design_id: str):
+    try:
+        return {"deleted": designs.delete(design_id)}
+    except ValueError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+
+
+@app.get("/api/designs/{design_id}/recipe")
+def api_design_recipe(design_id: str):
+    """The shareable form: how to build the tone, never the tone file."""
+    d = designs.load(design_id)
+    if d is None:
+        return JSONResponse({"error": "no such design"}, status_code=404)
+    return {"recipe": designs.to_recipe(d)}
+
+
+@app.post("/api/designs/{design_id}/check")
+def api_design_check(design_id: str):
+    """Has the rig moved since this was designed? Reads, never writes."""
+    d = designs.load(design_id)
+    if d is None:
+        return JSONResponse({"error": "no such design"}, status_code=404)
+    with _lock:
+        try:
+            snap = snapshot(get_fm9())
+        except FM9NotFound:
+            drop_fm9()
+            return JSONResponse({"error": "FM9 not connected"}, status_code=503)
+    return designs.check(d, (snap.get("preset") or {}).get("number"),
+                         snap.get("values", {}))
 
 
 @app.get("/api/gig")

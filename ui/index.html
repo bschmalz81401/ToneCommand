@@ -597,6 +597,26 @@
   .lefoot { margin-top: 11px; padding-top: 9px; color: var(--dim);
             font-size: var(--fs-hint); border-top: 1px dashed var(--line); }
 
+  /* Designed with the rig off, waiting for it to come on. */
+  .drow { display: flex; align-items: flex-start; gap: 12px; padding: 10px 0;
+          border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .drow:last-child { border-bottom: none; }
+  .dmain { flex: 1 1 auto; min-width: 0; }
+  .dname { color: var(--text); font-size: var(--fs-body); }
+  .dmeta { color: var(--dim); font-size: var(--fs-hint); margin-top: 3px;
+           line-height: 1.5; }
+  .dmeta b { color: var(--muted); font-weight: 400; }
+  .dacts { display: flex; gap: 7px; flex: 0 0 auto; flex-wrap: wrap; }
+  .dacts button { padding: 5px 12px; font-size: var(--fs-hint); }
+  .dsend { border-color: var(--green); color: var(--green); }
+  .dsend:hover:not(:disabled) { background: rgba(61,255,160,0.12); }
+  .dsend:disabled { opacity: 0.4; cursor: default; }
+  .dshare { border-color: var(--violet); color: var(--violet); }
+  .dshare:hover { background: rgba(185,140,255,0.12); }
+  .ddel { border-color: #4a2a2a; color: var(--muted); }
+  .ddel:hover { border-color: var(--red); color: var(--red); }
+  .dempty { color: var(--dim); font-size: var(--fs-hint); padding: 4px 0 2px; }
+
   #log {
     font-size: var(--fs-hint); color: var(--muted); max-height: 180px; overflow-y: auto;
     line-height: 1.7;
@@ -727,6 +747,7 @@
     <div id="plancards"></div>
     <div class="plan-actions">
       <button class="confirm" id="apply">TRANSMIT TO FM9</button>
+      <button id="keep">SAVE FOR LATER</button>
       <button class="danger" id="discard">DISCARD</button>
     </div>
   </div>
@@ -772,6 +793,15 @@
       is edit buffer only and reversible. This is not: it overwrites whatever is
       stored in the slot, permanently, and
       <span class="savewarn">UNDO does not cover it</span>.</div>
+  </div>
+
+  <div class="console" data-label="DESIGNED PRESETS">
+    <div id="dlist"></div>
+    <div class="hint">Tones you built with the rig switched off. Each one was
+      validated when it was saved, so it would actually run, but nothing has
+      been read back from hardware yet: a design is
+      <span class="savewarn">designed, not verified</span>, until it lands.
+      SEND checks the preset has not moved underneath it first.</div>
   </div>
 
   <div class="console" data-label="LOG" style="margin-top:20px">
@@ -1589,6 +1619,174 @@ function parseStoreSpec(raw) {
 
 $('slotsave').onclick = saveSlotSpec;
 loadSlotSpec();
+
+// --- designed presets ----------------------------------------------------
+// A plan is data, and validation runs off local files, so a tone can be
+// designed with the rig switched off. What it cannot be is verified: there is
+// nothing to read back from. So a design waits here, says plainly that it is
+// unverified, and checks the preset has not moved underneath it before it is
+// sent.
+let designs = [];
+
+async function loadDesigns() {
+  try {
+    const d = await (await fetch('/api/designs')).json();
+    designs = d.designs || [];
+    renderDesigns(d.connected);
+  } catch (e) { /* the panel keeps whatever it last drew */ }
+}
+
+function renderDesigns(connected) {
+  if (!designs.length) {
+    $('dlist').innerHTML = '<div class="dempty">Nothing designed yet. Build a '
+      + 'plan above and press SAVE FOR LATER, with or without the rig on.</div>';
+    return;
+  }
+  $('dlist').innerHTML = designs.map(d => {
+    const p = d.preset || {};
+    const n = (d.actions || []).length;
+    const warns = (d.actions || []).filter(a => (a.validation_warnings || []).length).length;
+    return `<div class="drow" data-id="${esc(d.id)}">
+      <div class="dmain">
+        <div class="dname">${esc(d.name)}</div>
+        <div class="dmeta">${n} change${n > 1 ? 's' : ''}` +
+        (p.label ? ` for <b>${esc(p.label)}</b>` : '') +
+        ` &middot; ${esc((d.created || '').replace('T', ' '))}` +
+        (d.offline ? ' &middot; designed offline' : '') +
+        (warns ? ` &middot; ${warns} warning${warns > 1 ? 's' : ''}` : '') +
+        (d.summary ? `<br>${esc(d.summary)}` : '') + `</div>
+      </div>
+      <div class="dacts">
+        <button class="dsend" data-act="send"${connected ? '' : ' disabled'}
+          title="${connected ? 'check the preset, then propose it'
+                             : 'connect the FM9 to send'}">SEND</button>
+        <button class="dshare" data-act="share"
+          title="contribute this as a recipe">SHARE RECIPE</button>
+        <button class="ddel" data-act="del" title="delete">&#10005;</button>
+      </div></div>`;
+  }).join('');
+}
+
+async function keepPlan() {
+  if (!currentPlan) return;
+  const name = (window.prompt(
+    'Name this design, so you know what it was when you come back to it:',
+    currentPlan.summary || '') || '').trim();
+  if (!name) { log('not saved: a design needs a name', 'warn'); return; }
+  try {
+    const r = await fetch('/api/designs', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        name, summary: currentPlan.summary || '',
+        actions: currentPlan.actions,
+        preset: (currentPlan.device || {}).preset || (lastState.preset || null),
+        // the values these actions were computed against, so reconnecting is
+        // a merge rather than a hope
+        anchor: anchorFor(currentPlan.actions),
+        offline: !!currentPlan.offline,
+        backend: currentPlan.backend || null, model: currentPlan.model || null,
+      })});
+    const d = await r.json();
+    if (d.error) throw new Error(d.error);
+    log(`saved "${name}" to designed presets`, 'ok');
+    $('planbox').style.display = 'none';
+    currentPlan = null; clearAffected();
+    await loadDesigns();
+  } catch (e) {
+    log(`could not save the design: ${e.message}`, 'err');
+  }
+}
+
+// Only the parameters this design touches. The whole buffer would be three
+// thousand numbers to detect a change in four, and the four are the ones that
+// matter: the preset moving elsewhere is worth mentioning, not a conflict.
+function anchorFor(actions) {
+  const vals = (currentPlan && currentPlan.values) || lastState.values || {};
+  const out = {};
+  for (const a of actions || []) {
+    if (a.kind === 'set_param' && a.param && vals[a.param] !== undefined) {
+      out[a.param] = vals[a.param];
+    }
+  }
+  return out;
+}
+
+async function sendDesign(id) {
+  const d = designs.find(x => x.id === id);
+  if (!d) return;
+  try {
+    const chk = await (await fetch(`/api/designs/${id}/check`, {method: 'POST'})).json();
+    if (chk.error) throw new Error(chk.error);
+    if (chk.verdict === 'wrong_preset') {
+      log(`cannot send "${d.name}": ${chk.detail}`, 'err');
+      return;
+    }
+    if (chk.verdict === 'conflict') {
+      const lines = chk.moved.map(m => `  ${m.param}: was ${m.was}, now ${m.now}`)
+                             .join('\n');
+      if (!window.confirm(
+            `The rig has moved since "${d.name}" was designed.\n\n${lines}\n\n` +
+            `Sending it will overwrite those with the designed values. Continue?`)) {
+        log('send cancelled: the preset moved since this was designed', 'warn');
+        return;
+      }
+    }
+    // Into the same plan box, behind the same confirm gate, as everything else.
+    showPlan({summary: d.name, actions: d.actions,
+              device: d.preset ? {preset: d.preset} : null});
+    $('planbox').scrollIntoView({behavior: 'smooth', block: 'center'});
+    log(`"${d.name}" checked against the rig and proposed. Confirm to transmit.`,
+        chk.verdict === 'clean' ? 'ok' : 'warn');
+  } catch (e) {
+    log(`could not send "${d.name}": ${e.message}`, 'err');
+  }
+}
+
+async function shareDesign(id) {
+  const d = designs.find(x => x.id === id);
+  try {
+    const got = await (await fetch(`/api/designs/${id}/recipe`)).json();
+    if (got.error) throw new Error(got.error);
+    const body =
+      `**${d.name}**\n\n${d.summary || ''}\n\n` +
+      `A recipe is how to build a tone, not the tone file. Validated against ` +
+      `the receiver's own device before anything is sent.\n\n` +
+      '```json\n' + JSON.stringify(got.recipe, null, 1) + '\n```\n';
+    const url = 'https://github.com/monzta1/ToneCommand/issues/new'
+      + `?title=${encodeURIComponent('Recipe: ' + d.name)}`
+      + `&labels=recipe&body=${encodeURIComponent(body)}`;
+    if (url.length > 7500) {
+      // GitHub truncates a very long query, and a half a recipe is worse than
+      // none, so hand it over instead of quietly losing steps.
+      await navigator.clipboard.writeText(JSON.stringify(got.recipe, null, 1));
+      log('recipe copied to the clipboard: too long for a prefilled issue, '
+          + 'paste it into a new one', 'warn');
+      return;
+    }
+    window.open(url, '_blank', 'noopener');
+    log(`opened a prefilled recipe issue for "${d.name}"`, 'ok');
+  } catch (e) {
+    log(`could not build the recipe: ${e.message}`, 'err');
+  }
+}
+
+$('dlist').addEventListener('click', async e => {
+  const b = e.target.closest('button[data-act]');
+  if (!b) return;
+  const id = b.closest('.drow').dataset.id;
+  if (b.dataset.act === 'send') return sendDesign(id);
+  if (b.dataset.act === 'share') return shareDesign(id);
+  if (b.dataset.act === 'del') {
+    const d = designs.find(x => x.id === id);
+    if (!window.confirm(`Delete the design "${d ? d.name : id}"?`)) return;
+    await fetch(`/api/designs/${id}`, {method: 'DELETE'});
+    log('design deleted');
+    await loadDesigns();
+  }
+});
+
+$('keep').onclick = keepPlan;
+loadDesigns();
 
 // --- saving -------------------------------------------------------------
 // The one destructive operation in the product. Until now the only way to do
