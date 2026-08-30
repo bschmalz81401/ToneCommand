@@ -635,6 +635,27 @@
                     border-color: var(--violet-dim); color: var(--violet); }
   .dforeign { color: var(--violet); }
 
+  .profrow input {
+    background: #0d0f0d; border: 1px solid #1f2a1f; color: var(--fg);
+    font: inherit; font-size: var(--fs-body); padding: 6px 9px;
+    border-radius: 3px; flex: 1 1 260px; min-width: 0;
+  }
+  .rrow { display: flex; align-items: flex-start; gap: 12px; padding: 10px 0;
+          border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .rrow:last-child { border-bottom: none; }
+  .rmain { flex: 1 1 auto; min-width: 0; }
+  .rtitle { color: var(--text); font-size: var(--fs-body); }
+  .rmeta { color: var(--dim); font-size: var(--fs-hint); margin-top: 3px;
+           line-height: 1.5; }
+  .rmeta b { color: var(--muted); font-weight: 400; }
+  .rsrc { font-size: var(--fs-badge); letter-spacing: 0.12em; padding: 2px 6px;
+          border-radius: 2px; margin-right: 7px; }
+  .rsrc.shared { background: rgba(185,140,255,0.16); color: var(--violet); }
+  .rsrc.local { background: rgba(47,230,255,0.13); color: var(--cyan-dim); }
+  .ruse { border-color: var(--cyan); color: var(--cyan); flex: 0 0 auto;
+          padding: 5px 14px; font-size: var(--fs-hint); }
+  .ruse:hover { background: rgba(47,230,255,0.12); }
+
   #log {
     font-size: var(--fs-hint); color: var(--muted); max-height: 180px; overflow-y: auto;
     line-height: 1.7;
@@ -811,6 +832,19 @@
       is edit buffer only and reversible. This is not: it overwrites whatever is
       stored in the slot, permanently, and
       <span class="savewarn">UNDO does not cover it</span>.</div>
+  </div>
+
+  <div class="console" data-label="TONE RECIPES">
+    <div class="profrow">
+      <input id="rsearch" autocomplete="off" spellcheck="false"
+             placeholder="filter by name, author or what it is for">
+      <button class="small" id="rrefresh">REFRESH</button>
+    </div>
+    <div id="rlist"></div>
+    <div class="hint">Tones other people have built, shared as instructions
+      rather than as preset files. Reading them needs no account: they live in
+      a public folder and are fetched straight from it. USE validates every
+      step against YOUR device first, then proposes it like any other plan.</div>
   </div>
 
   <div class="console" data-label="DESIGNED PRESETS">
@@ -1646,6 +1680,86 @@ function parseStoreSpec(raw) {
 $('slotsave').onclick = saveSlotSpec;
 loadSlotSpec();
 
+// --- tone recipes --------------------------------------------------------
+// Reading these needs no account and no clicking around a web UI. They live
+// in a public folder and are fetched straight from it, because the person
+// looking for a tone is a guitarist, not someone who wants to learn what a
+// pull request is.
+let recipeList = [];
+
+async function loadRecipes(refresh) {
+  try {
+    const d = await (await fetch('/api/recipes' + (refresh ? '?refresh=true' : ''))).json();
+    recipeList = d.recipes || [];
+    if (d.shared_error) {
+      // An empty list would read as "nobody has shared anything", which is a
+      // different and much more discouraging statement than "offline".
+      log(`shared recipes unavailable: ${d.shared_error}`, 'warn');
+    }
+    renderRecipes();
+  } catch (e) { /* keeps whatever it last drew */ }
+}
+
+function renderRecipes() {
+  const q = ($('rsearch').value || '').trim().toLowerCase();
+  const words = q.split(/\s+/).filter(Boolean);
+  const hay = r => [r.title, r.name, r.author, r.assumes,
+                    (r.sources || []).join(' ')].join(' ').toLowerCase();
+  const list = recipeList.filter(r => words.every(w => hay(r).includes(w)));
+  if (!list.length) {
+    $('rlist').innerHTML = `<div class="dempty">${recipeList.length
+      ? 'nothing matches' : 'no recipes yet'}</div>`;
+    return;
+  }
+  $('rlist').innerHTML = list.map((r, i) => {
+    const steps = (r.actions || r.steps || []).length;
+    return `<div class="rrow">
+      <div class="rmain">
+        <div class="rtitle">
+          <span class="rsrc ${r._source}">${r._source}</span>${esc(r.title || r.name)}</div>
+        <div class="rmeta">${steps} step${steps === 1 ? '' : 's'}` +
+        (r.author ? ` &middot; by <b>${esc(r.author)}</b>` : '') +
+        (r.assumes ? `<br>Needs: ${esc(r.assumes)}` : '') + `</div>
+      </div>
+      <button class="ruse" data-r="${recipeList.indexOf(r)}">USE</button>
+    </div>`;
+  }).join('');
+}
+
+async function useRecipe(i) {
+  const r = recipeList[i];
+  if (!r) return;
+  try {
+    const d = await (await fetch('/api/recipes/plan', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({recipe: r})})).json();
+    if (d.error) throw new Error(d.error);
+    // Validated against THIS device before anything is proposed: that is what
+    // makes a recipe portable rather than a preset file with extra steps.
+    showPlan({summary: d.summary, actions: d.actions,
+              device: lastState.preset ? {preset: lastState.preset} : null});
+    $('planbox').scrollIntoView({behavior: 'smooth', block: 'center'});
+    if (d.assumes) log(`"${d.summary}" assumes: ${d.assumes}`, 'warn');
+    if (d.blocked) {
+      log(`${d.blocked} step(s) will not run on this preset; they are marked `
+          + `BLOCKED and will not be transmitted`, 'err');
+    }
+    for (const e of (d.ear_checklist || [])) log(`ear check: ${e}`);
+    log(`"${d.summary}" proposed. Review it, then TRANSMIT.`,
+        d.blocked ? 'warn' : 'ok');
+  } catch (e) {
+    log(`could not use that recipe: ${e.message}`, 'err');
+  }
+}
+
+$('rlist').addEventListener('click', e => {
+  const b = e.target.closest('.ruse');
+  if (b) useRecipe(Number(b.dataset.r));
+});
+$('rsearch').addEventListener('input', renderRecipes);
+$('rrefresh').onclick = () => loadRecipes(true);
+loadRecipes(false);
+
 // --- designing for a rig you cannot see ----------------------------------
 // A profile describes a preset's SHAPE: which blocks it has, how they are
 // wired, what the scenes are called. Never the parameter values, because a
@@ -1863,24 +1977,35 @@ async function shareDesign(id) {
   try {
     const got = await (await fetch(`/api/designs/${id}/recipe`)).json();
     if (got.error) throw new Error(got.error);
-    const body =
-      `**${d.name}**\n\n${d.summary || ''}\n\n` +
-      `A recipe is how to build a tone, not the tone file. Validated against ` +
-      `the receiver's own device before anything is sent.\n\n` +
-      '```json\n' + JSON.stringify(got.recipe, null, 1) + '\n```\n';
-    const url = 'https://github.com/monzta1/ToneCommand/issues/new'
-      + `?title=${encodeURIComponent('Recipe: ' + d.name)}`
-      + `&labels=recipe&body=${encodeURIComponent(body)}`;
-    if (url.length > 7500) {
-      // GitHub truncates a very long query, and a half a recipe is worse than
-      // none, so hand it over instead of quietly losing steps.
+    // It used to open a prefilled GitHub ISSUE, which was wrong three ways: an
+    // issue is not a container for a recipe, the tracker would silt up with
+    // them, and it asked a guitarist to learn a developer's tool before they
+    // could give anything back. It is saved where the browser can find it, and
+    // the two honest ways to pass it on are offered rather than one being
+    // pretended to fit everyone.
+    const saved = await (await fetch('/api/recipes/save', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({recipe: got.recipe})})).json();
+    if (saved.error) throw new Error(saved.error);
+    await loadRecipes(false);
+    let copied = false;
+    try {
       await navigator.clipboard.writeText(JSON.stringify(got.recipe, null, 1));
-      log('recipe copied to the clipboard: too long for a prefilled issue, '
-          + 'paste it into a new one', 'warn');
-      return;
+      copied = true;
+    } catch (e) { /* a clipboard the browser would not give us is not a failure */ }
+    log(`recipe saved as recipes/${saved.saved}`
+        + (copied ? ' and copied to the clipboard' : '')
+        + '. Send it to anyone, or contribute it below.', 'ok');
+    if (window.confirm(
+          `Saved as recipes/${saved.saved}.\n\n`
+          + `It is in your own recipes list now, and on the clipboard, so you `
+          + `can send it to anyone however you normally would.\n\n`
+          + `Contribute it to the shared collection? That opens GitHub with the `
+          + `file already filled in; you press one button and it becomes a `
+          + `proposal. It needs a free GitHub account.\n\n`
+          + `Cancel is fine: sending the file to Moncy works just as well.`)) {
+      window.open(saved.pr_url, '_blank', 'noopener');
     }
-    window.open(url, '_blank', 'noopener');
-    log(`opened a prefilled recipe issue for "${d.name}"`, 'ok');
   } catch (e) {
     log(`could not build the recipe: ${e.message}`, 'err');
   }

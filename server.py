@@ -18,7 +18,8 @@ from pydantic import BaseModel
 
 from fm9.device import FM9, FM9NotFound
 from fm9.registry import Registry
-from fm9 import ai_settings, designs, editbuffer, health, planner, rigprofile
+from fm9 import (ai_settings, designs, editbuffer, health, planner,
+                 recipes as recipebook, rigprofile)
 from tools import path_audit
 from fm9 import protocol as proto
 
@@ -1233,6 +1234,70 @@ class DesignBody(BaseModel):
 #: A profile loaded from someone else, replacing live state as the thing the
 #: planner designs against. Session only: it is a lens, not a setting.
 _profile: dict = {"loaded": None}
+
+
+@app.get("/api/recipes")
+def api_recipes(refresh: bool = False):
+    """Every recipe: the ones shared in the repository, and your own.
+
+    Reading needs no account. Recipes live in a public folder, so the app
+    fetches them directly rather than sending anyone to a web UI to click
+    around, which is what asking a guitarist to file an issue amounted to.
+    """
+    if refresh:
+        recipebook._cache["items"] = None
+    shared, why = recipebook.fetch_shared()
+    mine = recipebook.read_local()
+    seen = {r.get("_file") for r in mine}
+    items = mine + [r for r in shared if r.get("_file") not in seen]
+    return {"recipes": items, "shared_error": why, "repo": recipebook.REPO}
+
+
+class RecipeBody(BaseModel):
+    recipe: dict
+
+
+@app.post("/api/recipes/plan")
+def api_recipe_plan(body: RecipeBody):
+    """Turn a recipe into a plan for THIS rig, validated before anything runs.
+
+    A recipe names blocks and models by their grounded names, so validation
+    against this device's schema is what makes one portable. A step naming a
+    block you do not have is reported here rather than failing on the wire.
+    """
+    actions = []
+    for a in recipebook.steps_of(body.recipe):
+        try:
+            errs, warns = validate_action(Action(**a))
+        except Exception as e:
+            errs, warns = [f"step could not be read: {e}"], []
+        item = {**a, "validation_errors": errs, "validation_warnings": warns}
+        if a.get("block"):
+            try:
+                item["effect_id"] = reg.resolve_block(
+                    a["block"], int(a.get("instance") or 1))[1]
+            except Exception:
+                pass
+        if a.get("kind") == "store" and isinstance(a.get("value"), (int, float)):
+            item["slot_label"] = proto.slot_label(int(a["value"]))
+        actions.append(item)
+    blocked = sum(1 for a in actions if a["validation_errors"])
+    return {"summary": body.recipe.get("title") or body.recipe.get("name"),
+            "actions": actions, "blocked": blocked,
+            "assumes": body.recipe.get("assumes"),
+            "ear_checklist": body.recipe.get("ear_checklist") or []}
+
+
+@app.post("/api/recipes/save")
+def api_recipe_save(body: RecipeBody):
+    """Keep a recipe of your own, and say how to pass it on."""
+    try:
+        path = recipebook.save_local(body.recipe)
+    except OSError as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+    return {"saved": path.name, "dir": str(path.parent),
+            # a prefilled NEW FILE in recipes/, not a new issue
+            "pr_url": recipebook.pr_url(body.recipe)}
 
 
 @app.get("/api/profile")
