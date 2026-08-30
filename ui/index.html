@@ -656,6 +656,33 @@
           padding: 5px 14px; font-size: var(--fs-hint); }
   .ruse:hover { background: rgba(47,230,255,0.12); }
 
+  /* With the rig off, half this page is scenery. Rather than let someone drag
+     a slider that cannot move, the panels that genuinely need hardware dim,
+     stop taking input, and say why. The ones that DO work offline stay at full
+     brightness, because dimming those would be the same lie in the other
+     direction: planning, browsing recipes and reviewing designs are all
+     perfectly good with the unit unplugged. */
+  .needs-rig { position: relative; transition: opacity .18s; }
+  body.rig-off .needs-rig { opacity: 0.34; pointer-events: none; user-select: none; }
+  body.rig-off .needs-rig::after {
+    content: 'NEEDS THE FM9'; position: absolute; top: -11px; right: 14px;
+    background: var(--bg); padding: 0 9px; font-size: var(--fs-label);
+    letter-spacing: 0.2em; color: var(--amber); font-weight: 600;
+  }
+  /* The preset pill is the same story: nothing to switch to. */
+  body.rig-off #preset { opacity: 0.4; pointer-events: none; }
+  /* And TRANSMIT, the one control on a panel that otherwise works offline. A
+     plan can be built with the rig off; it just cannot be sent. */
+  body.rig-off #apply { opacity: 0.4; pointer-events: none; }
+  .offbanner {
+    display: none; align-items: center; gap: 11px; flex-wrap: wrap;
+    padding: 10px 13px; margin-bottom: 20px; border-radius: 4px;
+    background: rgba(255,180,84,0.09); border: 1px solid rgba(255,180,84,0.4);
+    color: #e6d3b4; font-size: var(--fs-hint); line-height: 1.55;
+  }
+  body.rig-off .offbanner { display: flex; }
+  .offbanner b { color: var(--amber); font-weight: 600; }
+
   #log {
     font-size: var(--fs-hint); color: var(--muted); max-height: 180px; overflow-y: auto;
     line-height: 1.7;
@@ -756,11 +783,18 @@
     </div>
   </header>
 
-  <div class="console perf" data-label="SCENES">
+  <div class="offbanner">
+    <span><b>The FM9 is not connected.</b> The panels marked below need it and
+      are greyed out. You can still design tones, browse and edit recipes, and
+      review what is waiting to go out: everything you build is kept, and it
+      sends when the rig comes back.</span>
+  </div>
+
+  <div class="console perf needs-rig" data-label="SCENES">
     <div class="scenes" id="scenes"></div>
   </div>
 
-  <div class="console" data-label="SIGNAL CHAIN">
+  <div class="console needs-rig" data-label="SIGNAL CHAIN">
     <div class="gridwrap" id="blocks"><span class="hint">awaiting link...</span></div>
     <div class="gridnote">
       <span class="k"><span class="sw" style="background:var(--cyan)"></span>carrying signal</span>
@@ -791,12 +825,12 @@
     </div>
   </div>
 
-  <div class="console" data-label="TONE">
+  <div class="console needs-rig" data-label="TONE">
     <div class="knobs" id="knobs"><span class="hint">awaiting link...</span></div>
     <div class="hint">Drag any slider to set it. Changes go to the edit buffer, not to your saved preset.</div>
   </div>
 
-  <div class="console" data-label="UNDO / COMPARE">
+  <div class="console needs-rig" data-label="UNDO / COMPARE">
     <div class="abrow">
       <button id="undo" disabled>UNDO</button>
       <span id="undowhat">nothing to undo yet</span>
@@ -811,7 +845,7 @@
       before every change. Nothing here touches a saved preset.</div>
   </div>
 
-  <div class="console" data-label="PRESET HEALTH">
+  <div class="console needs-rig" data-label="PRESET HEALTH">
     <div class="hz">
       <button id="scan">SCAN THIS PRESET</button>
       <span class="hint" style="margin:0" id="scanhint">Walks every scene to
@@ -821,7 +855,7 @@
     <div id="hout"></div>
   </div>
 
-  <div class="console" data-label="SAVE TO PRESET">
+  <div class="console needs-rig" data-label="SAVE TO PRESET">
     <div class="savenow" id="savenow"></div>
     <div class="saverow">
       <select id="saveslot"><option>loading slots...</option></select>
@@ -2376,6 +2410,7 @@ async function refresh() {
     const s = await r.json();
     if (!s.connected) throw new Error(s.error || 'no link');
     $('link').className = 'pill on';
+    setRigOff(false);
     // the label carries both numbers: the wire number this tool sends and the
     // one the front panel and FM9-Edit show, which differ by one
     if (s.preset && s.preset.number !== currentPresetNumber) {
@@ -2396,7 +2431,24 @@ async function refresh() {
     if (!dragging) renderParams(s);
   } catch (e) {
     $('link').className = 'pill off';
+    setRigOff(true);
   }
+}
+
+// One switch, so a panel cannot end up dimmed but still clickable, or bright
+// but dead. Called from the poll, which is the only thing that actually knows.
+function setRigOff(off) {
+  if (document.body.classList.contains('rig-off') === off) return;
+  document.body.classList.toggle('rig-off', off);
+  // Disabling for real as well as visually: a dimmed control you can still
+  // reach by keyboard is a trap rather than a hint.
+  document.querySelectorAll('.needs-rig button, .needs-rig input, '
+    + '.needs-rig select, #apply').forEach(el => {
+    if (off) { el.dataset.wasDisabled = el.disabled ? '1' : ''; el.disabled = true; }
+    else if (!el.dataset.wasDisabled) { el.disabled = false; }
+  });
+  if (off) log('FM9 not connected: panels that need it are greyed out. '
+               + 'Designing, recipes and everything already saved still work.', 'warn');
 }
 
 // --- the tone panel -------------------------------------------------------

@@ -1,0 +1,71 @@
+{
+ "recipe_version": 1,
+ "name": "steve-lukather:-dumble-ods-lead",
+ "title": "Steve Lukather: Dumble ODS lead",
+ "device": "FM9",
+ "author": "",
+ "summary": "Steve Lukather: Dumble ODS lead",
+ "steps": [
+  {
+   "kind": "set_scene",
+   "instance": 0,
+   "value": 4,
+   "reason": "Scene-specific request \u2014 scene 4 must be active before making the parameter edits below."
+  },
+  {
+   "kind": "set_type",
+   "block": "amp",
+   "instance": 1,
+   "type_name": "ODS-100 HRM",
+   "reason": "Steve Lukather is closely associated with the Dumble Overdrive Special; ODS-100 HRM models the Dumble HRM OD channel, a smooth, singing lead voice matching his tone."
+  },
+  {
+   "kind": "set_param",
+   "block": "amp",
+   "instance": 1,
+   "param": "DISTORT_DRIVE",
+   "value": 6.5,
+   "reason": "Moderate-high gain for a sustaining, creamy Dumble-style lead without turning to mush."
+  },
+  {
+   "kind": "set_param",
+   "block": "amp",
+   "instance": 1,
+   "param": "DISTORT_BASS",
+   "value": 5.5,
+   "reason": "Balanced low end so the lead stays tight and doesn't muddy the mix."
+  },
+  {
+   "kind": "set_param",
+   "block": "amp",
+   "instance": 1,
+   "param": "DISTORT_MID",
+   "value": 6.5,
+   "reason": "Healthy midrange for the vocal, cutting-lead character typical of Lukather's tone."
+  },
+  {
+   "kind": "set_param",
+   "block": "amp",
+   "instance": 1,
+   "param": "DISTORT_TREBLE",
+   "value": 5,
+   "reason": "Neutral treble to keep the tone smooth rather than glassy."
+  },
+  {
+   "kind": "set_param",
+   "block": "amp",
+   "instance": 1,
+   "param": "DISTORT_PRESENCE",
+   "value": 5.5,
+   "reason": "Adds clarity and note definition on top without harshness."
+  },
+  {
+   "kind": "set_param",
+   "block": "amp",
+   "instance": 1,
+   "param": "DISTORT_MASTER",
+   "value": 5,
+   "reason": "Sets a usable output level for the lead voice; adjust to taste for volume balance against other scenes."
+  }
+ ]
+}
