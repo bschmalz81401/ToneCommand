@@ -163,13 +163,22 @@
     flex: 1; min-width: 0; overflow: hidden;
     text-overflow: ellipsis; white-space: nowrap; text-align: left;
   }
-  .pillbtn .caret { flex: none; color: var(--cyan-dim); font-size: var(--fs-badge); }
+  /* Drawn, not typed, and the same triangle the amp and cab pickers use.
+     U+25BE is rendered small inside its own em box, so at any font size it
+     came out noticeably smaller than the chevrons beside it. This is the
+     third control on this page to hit that; a glyph is not a shape you can
+     size. */
+  .pillbtn .caret {
+    flex: none; width: 0; height: 0; align-self: center;
+    border-left: 6px solid transparent; border-right: 6px solid transparent;
+    border-top: 7px solid var(--cyan);
+  }
   .pillbtn .lbl { flex: none; color: var(--muted); }
   .pillbtn .pnum {
     flex: none; color: var(--text); font-variant-numeric: tabular-nums;
     min-width: 30px; text-align: right;
   }
-  .pillbtn .caret { margin-left: 7px; color: var(--cyan-dim); font-size: var(--fs-badge); }
+  .pillbtn .caret { margin-left: 9px; }
   .pillbtn:hover { border-color: var(--cyan-dim); }
   .pillbtn.open { border-color: var(--cyan); color: var(--cyan); }
 
@@ -809,7 +818,7 @@
     </a>
     <div class="status">
       <span class="pillwrap">
-        <button class="pill pillbtn" id="preset">PRESET <b>...</b><span class="caret">&#9662;</span></button>
+        <button class="pill pillbtn" id="preset">PRESET <b>...</b><span class="caret"></span></button>
         <div class="pop" id="ppop" hidden>
           <input id="psearch" autocomplete="off" spellcheck="false"
                  placeholder="filter, or type a number">
@@ -2538,7 +2547,7 @@ async function refresh() {
     // what you are actually reading. Rebuild the caret: innerHTML replaces it.
     if (s.preset) $('preset').innerHTML =
       `<span class="lbl">PRESET</span><span class="pnum">${s.preset.editor ?? s.preset.number}</span>` +
-      `<b>${esc(s.preset.name)}</b><span class="caret">&#9662;</span>`;
+      `<b>${esc(s.preset.name)}</b><span class="caret"></span>`;
     renderScenes(s);
     if (s.scene) currentSceneNumber = s.scene.number;
     if (s.preset) loadShared(s.preset.number);

@@ -287,3 +287,19 @@ def test_the_app_carries_the_mark():
     assert 'rel="icon"' in UI
     style = UI.split("<style>")[1].split("</style>")[0]
     assert ".brand {" in style
+
+
+def test_every_dropdown_arrow_is_the_same_drawn_triangle():
+    """The third control on this page to hit the same thing. U+25BE is
+    rendered small inside its own em box, so the preset caret came out
+    noticeably smaller than the amp and cab chevrons beside it whatever font
+    size it was given. A glyph is not a shape you can size.
+    """
+    style = UI.split("<style>")[1].split("</style>")[0]
+    caret = re.search(r"^\s*\.pillbtn \.caret \{([^}]*)\}", style, re.M).group(1)
+    chevron = re.search(r"^\s*\.audbtn::after \{([^}]*)\}", style, re.M).group(1)
+    for rule in (caret, chevron):
+        assert "border-left: 6px solid transparent" in rule
+        assert "border-top: 7px solid" in rule
+    # and no glyph left behind to show through the triangle
+    assert "&#9662;" not in UI
