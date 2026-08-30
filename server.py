@@ -214,6 +214,18 @@ def scene_names(fm9: FM9) -> list[dict]:
 
 def snapshot(fm9: FM9) -> dict:
     preset = fm9.current_preset()
+    if preset is None:
+        # Nothing came back. An open port is not a connected device: pulling
+        # the USB leaves the handle valid and every read simply times out, so
+        # the old code built a snapshot with no preset, no scene and no blocks
+        # and still reported connected, leaving the link light green over an
+        # empty page.
+        #
+        # Raised BEFORE the rest of the reads rather than after, because the
+        # rest are eight scene names and a status dump, each waiting out its
+        # own timeout: finding out slowly would freeze the poll for ten
+        # seconds an unplugged device does not deserve.
+        raise FM9NotFound("the FM9 stopped answering; is it still plugged in?")
     scene = fm9.scene_name()
     blocks = fm9.status_dump() or []
     out_blocks = []

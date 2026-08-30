@@ -137,3 +137,50 @@ def test_the_poll_does_not_stamp_over_a_reconnect_in_progress():
     """The five second poll rewrites the pill's class, which would wipe the
     busy state mid-look and make the button appear to do nothing."""
     assert SCRIPT.count("classList.contains('busy')") >= 2
+
+
+# --- an open port is not a connected device ------------------------------
+
+def test_a_device_that_stops_answering_is_reported_as_gone():
+    """Pulling the USB leaves the handle valid and every read simply times
+    out, so the old snapshot came back with no preset, no scene and no blocks
+    and still said connected. The link light stayed green over an empty page.
+    """
+    import pytest
+    import server
+    from fm9.device import FM9NotFound
+    from fm9.sim import SimFM9
+
+    dev = SimFM9(server.reg)
+    with dev:
+        dev.current_preset = lambda *a, **k: None     # the cable is out
+        with pytest.raises(FM9NotFound, match="stopped answering"):
+            server.snapshot(dev)
+
+
+def test_it_gives_up_before_the_expensive_reads():
+    """The rest of a snapshot is eight scene names, a status dump and a bulk
+    read per family, each waiting out its own timeout. Finding out slowly
+    would freeze the poll for ten seconds an unplugged device does not
+    deserve."""
+    import inspect
+    import server
+    src = inspect.getsource(server.snapshot)
+    head = src.split("raise FM9NotFound")[0]
+    assert "scene_name()" not in head and "status_dump()" not in head
+
+
+def test_the_state_endpoint_turns_that_into_a_clean_disconnect(monkeypatch):
+    """And drops the handle, so the next poll builds a fresh one and can pick
+    the device up again the moment it comes back."""
+    import server
+    from fastapi.testclient import TestClient
+    from fm9.device import FM9NotFound
+    dropped = {"n": 0}
+    monkeypatch.setattr(server, "get_fm9",
+                        lambda: (_ for _ in ()).throw(FM9NotFound("gone")))
+    monkeypatch.setattr(server, "drop_fm9",
+                        lambda: dropped.update(n=dropped["n"] + 1))
+    d = TestClient(server.app).get("/api/state").json()
+    assert d == {"connected": False}
+    assert dropped["n"] == 1
