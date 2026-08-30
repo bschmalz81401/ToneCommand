@@ -217,7 +217,7 @@ def test_the_signal_chain_comes_before_the_prompt():
     assert order.index("SIGNAL CHAIN") < order.index("COMMAND")
     assert order.index("SCENES") < order.index("SIGNAL CHAIN")
     # undo is reached after a change, not before one
-    assert order.index("UNDO / COMPARE") > order.index("TONE")
+    assert order.index("UNDO / COMPARE") > order.index("AMP &amp; CAB")
 
 
 def test_the_model_selectors_look_like_selectors():

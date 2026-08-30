@@ -60,10 +60,74 @@ INTEREST = {
     "PHASER": [2, 5, 6, 11, 12],
     "FLANGER": [1, 3, 4, 11, 12],
     "CHORUS": [2, 4, 10, 11],
-    "WAH": [6, 10],
+    # The sweep itself (5) matters more than the level: it is the parameter a
+    # pedal or an envelope is attached to, so leaving it off the page meant
+    # the one control that answers "is this a pedal wah or an auto-wah" was
+    # never drawn. 1/2 bound the sweep, 3 is the resonance.
+    "WAH": [5, 1, 2, 3, 6, 10],
     "TREMOLO": [2, 3, 7],
     "ROTARY": [0, 5, 6],
 }
+
+
+# What drives a parameter, when something other than the stored value does.
+#
+# Only ordinal 11 is grounded: this tool binds it and reads it back in
+# _bind_pedal, so Pedal 2 is a fact rather than a guess. Every other source is
+# reported by its number. The display-name query would be the obvious way to
+# name the rest and it is a trap: for modifier source enums it returns "NONE"
+# regardless of the actual source (docs/PROTOCOL.md finding 5). Naming an
+# unknown ordinal would be inventing a fact about someone's rig, so it stays a
+# number until a roster is harvested off the FM9's own screen.
+MOD_SOURCES = {11: "Pedal 2"}   # PEDAL_2_SOURCE; kept in step by test
+
+
+def read_modifiers(fm9: FM9) -> dict:
+    """Which parameters are driven by something other than their own value.
+
+    A modifier takes the parameter over: the FM9 sources it from the pedal,
+    envelope or LFO, and the value stored on the block stops being what you
+    hear. So a slider we draw for a modified parameter is a control that does
+    nothing, which is the worst kind, and the page has to say so.
+
+    All 32 slots read in about 0.14s, cheap enough for the state poll.
+    """
+    from fm9 import protocol as fp
+    out = {}
+    for slot in range(1, fp.MOD_SLOT_COUNT + 1):
+        # Per slot, because one unreadable slot is a gap in this map and not a
+        # reason to lose the other thirty-one.
+        try:
+            vals = fm9.bulk_read(fp.mod_slot_eid(slot))
+            if not vals or len(vals) <= fp.MOD_PID_TARGET_PARAM:
+                continue
+            eid = vals[fp.MOD_PID_TARGET_EFFECT]
+            # A never-used slot is all zeroes, and effect id 0 is not a block.
+            if not eid:
+                continue
+            fam = reg.family_of_effect_id(eid)
+            if not fam:
+                continue
+            fname, inst = fam
+            spec = reg.spec(fname, vals[fp.MOD_PID_TARGET_PARAM], inst)
+            src = vals[fp.MOD_PID_SOURCE]
+        except Exception:
+            continue
+        out[spec.name] = {
+            "slot": slot,
+            "source": int(src),
+            "source_name": MOD_SOURCES.get(src, f"source #{src}"),
+            "known": src in MOD_SOURCES,
+        }
+    return out
+
+
+def _safe_modifiers(fm9: FM9) -> dict:
+    """read_modifiers, but never the reason a poll fails."""
+    try:
+        return read_modifiers(fm9)
+    except Exception:
+        return {}
 
 
 #: Last time the MIDI bus was re-enumerated, so a disconnected poll can look
@@ -330,6 +394,16 @@ def snapshot(fm9: FM9) -> dict:
         "values": values,
         "cab_sel": meta.pop("__cab__", None),
         "params": meta,
+        # Read every poll rather than cached against the preset number: a
+        # modifier can be added or removed from the front panel without the
+        # preset changing, and a stale "nothing is bound here" is exactly the
+        # statement this exists to stop the page making.
+        #
+        # Wrapped because /api/state turns ANY exception into drop_fm9() and a
+        # red link light. Knowing what drives a parameter is a convenience;
+        # losing the whole page and the port because one modifier read
+        # hiccuped is not a trade worth making.
+        "mods": _safe_modifiers(fm9),
     }
     # Remember the last reading taken from real hardware, so a design can be
     # planned against something true when the rig is off.
@@ -613,7 +687,7 @@ def validate_action(a: Action) -> tuple[list[str], list[str]]:
     if a.kind == "add_block":
         if a.position not in (None, "pre", "post", "any"):
             errors.append(f"position must be pre/post/any, got {a.position!r}")
-    elif a.kind == "bind_pedal":
+    elif a.kind in ("bind_pedal", "unbind_pedal"):
         spec = reg.find_param(fam, a.param or "")
         if spec is None:
             for (f, pid), pdata in reg.params.items():
@@ -674,6 +748,35 @@ def validate_action(a: Action) -> tuple[list[str], list[str]]:
             "pedal-binding curve direction is NOT verified on this hardware "
             "(issue #11): sweep may be reversed or dead; confirm by ear "
             "immediately after applying")
+    # Writing to a parameter a modifier owns lands, verifies by read-back, and
+    # changes nothing anybody can hear: the FM9 sources the value from the
+    # pedal, envelope or LFO instead. The browser already refuses to draw a
+    # slider for one, but a plan can still name it, and "verified" on a change
+    # with no audible effect is the most misleading thing this tool can say.
+    # Same failure, different cause: a bypassed block is not in the signal, so
+    # a write to it lands, verifies, and changes nothing anyone can hear. The
+    # symptom that found it was "changing the drive has no effect", on a preset
+    # whose Drive block was simply switched off.
+    if a.kind == "set_param":
+        state = _last_snapshot.get("state") or {}
+        for b in state.get("blocks") or []:
+            if b.get("family") == fam and b.get("instance") == a.instance \
+                    and b.get("bypassed"):
+                warnings.append(
+                    f"{fam} {a.instance} is BYPASSED (as of the last reading), "
+                    f"so it is not in the signal. The write will land and "
+                    f"verify, and you will hear no difference until the block "
+                    f"is engaged.")
+                break
+    if a.kind == "set_param" and a.param:
+        driven = ((_last_snapshot.get("state") or {}).get("mods") or {}).get(a.param)
+        if driven:
+            warnings.append(
+                f"{a.param} is driven by {driven['source_name']} on modifier "
+                f"slot {driven['slot']} (as of the last reading). The write "
+                f"will land and verify, and you will hear no difference, "
+                f"because the FM9 takes this parameter from the modifier. "
+                f"Remove the binding first if you meant to set it by hand.")
     return errors, warnings
 
 
@@ -733,36 +836,148 @@ def _add_block(fm9: FM9, a: Action) -> dict:
                       f"in and out" if ok else "placement failed grid verification"}
 
 
+def _resolve_param(fam: str, name: str, instance: int):
+    """A parameter by name within a family, however the caller spelled it."""
+    for (f, pid), pdata in reg.params.items():
+        if f == fam and pdata.get("name") == name:
+            return reg.spec(f, pid, instance)
+    return reg.find_param(fam, name) if name else None
+
+
+#: Pedal 2. Pedal 1 is the player's global volume and is never referenced by
+#: anything here, in either direction.
+PEDAL_2_SOURCE = 11
+
+#: Slots this tool wrote WITHOUT a donor curve, per preset.
+#:
+#: A slot built from MOD_DEFAULT_FIELDS is indistinguishable on the wire from
+#: one the device built, so the next bind would happily clone it and report
+#: "curve cloned from slot N" about a curve that is really this project's
+#: linear default. The provenance would launder itself one slot at a time.
+#: Remembered rather than read, because the wire cannot answer it.
+_synthetic_slots: dict = {"preset": None, "slots": set()}
+
+
+def _synthetic_for(preset: int | None) -> set:
+    """Reset the memory when the loaded preset changes: slot numbers mean
+    nothing across presets."""
+    if _synthetic_slots["preset"] != preset:
+        _synthetic_slots["preset"] = preset
+        _synthetic_slots["slots"] = set()
+    return _synthetic_slots["slots"]
+
+
 def _bind_pedal(fm9: FM9, a: Action) -> dict:
-    """Bind Pedal 2 to a continuous parameter using the first free modifier
-    slot, with an initialized transfer curve and optional floor percent."""
+    """Put a continuous parameter under Pedal 2.
+
+    Two things this deliberately does NOT claim.
+
+    It does not verify the sweep. Live modulation is invisible to every read
+    the protocol offers, and a dead binding reads byte-identical to a live one
+    (findings 12 and 17), so a field read-back proves the slot was written and
+    nothing whatsoever about whether the pedal moves the parameter. The only
+    verification is a foot and an ear.
+
+    It does not claim to be undoable. The undo snapshot covers parameters,
+    bypass and channel; a modifier slot is none of those. Removing the binding
+    is what takes it back, which is why unbinding exists as its own action
+    rather than being left to UNDO.
+    """
     from fm9 import protocol as fp
     fam, eid = reg.resolve_block(a.block or "", a.instance)
-    spec = None
-    for (f, pid), pdata in reg.params.items():
-        if f == fam and pdata.get("name") == a.param:
-            spec = reg.spec(f, pid, a.instance)
-            break
-    if spec is None and a.param:
-        spec = reg.find_param(fam, a.param)
+    spec = _resolve_param(fam, a.param or "", a.instance)
     if spec is None:
         return {"ok": False, "detail": f"unknown param {a.param}"}
-    slot = None
-    for m in range(1, 17):
-        vals = fm9.bulk_read(fp.mod_slot_eid(m))
-        if vals and len(vals) > fp.MOD_PID_TARGET_EFFECT and                 vals[fp.MOD_PID_TARGET_EFFECT] == 0:
-            slot = m
-            break
+
+    slot, free = None, 0
+    for m in range(1, fp.MOD_SLOT_COUNT + 1):
+        vals = fm9.read_modifier(m)
+        if vals and len(vals) > fp.MOD_PID_TARGET_EFFECT:
+            if vals[fp.MOD_PID_TARGET_EFFECT] == eid and \
+                    vals[fp.MOD_PID_TARGET_PARAM] == spec.param_id:
+                return {"ok": False,
+                        "detail": f"{spec.name} is already on modifier slot {m}"}
+            if vals[fp.MOD_PID_TARGET_EFFECT] == 0:
+                free += 1
+                if slot is None:
+                    slot = m
     if slot is None:
-        return {"ok": False, "detail": "no free modifier slot"}
+        return {"ok": False,
+                "detail": f"all {fp.MOD_SLOT_COUNT} modifier slots are in use; "
+                          f"remove a binding to free one"}
+
+    # Clone the curve off a slot the device itself built, where the preset has
+    # one. Finding 12: from scratch comes out reversed or dead. Slots this
+    # tool built without a donor are excluded, or a default would launder
+    # itself into something the log calls a clone.
+    preset = fm9.current_preset()
+    synthetic = _synthetic_for(preset[0] if preset else None)
+    found = fm9.find_donor_slot(skip={slot} | synthetic)
+    donor_slot, donor = found if found else (None, None)
     floor = (a.value or 0.0) / 100.0
-    fm9.bind_modifier(slot, eid, spec.param_id, 11, min_norm=floor, max_norm=1.0)
-    vals = fm9.bulk_read(fp.mod_slot_eid(slot))
-    ok = bool(vals) and vals[fp.MOD_PID_TARGET_EFFECT] == eid and         vals[fp.MOD_PID_TARGET_PARAM] == spec.param_id and vals[fp.MOD_PID_SOURCE] == 11
-    return {"ok": ok,
+    cloned = fm9.bind_modifier(slot, eid, spec.param_id, PEDAL_2_SOURCE,
+                               donor=donor,
+                               min_norm=floor if a.value else None)
+
+    vals = fm9.read_modifier(slot) or []
+    written = (len(vals) > fp.MOD_PID_TARGET_PARAM
+               and vals[fp.MOD_PID_TARGET_EFFECT] == eid
+               and vals[fp.MOD_PID_TARGET_PARAM] == spec.param_id
+               and vals[fp.MOD_PID_SOURCE] == PEDAL_2_SOURCE)
+    if not written:
+        return {"ok": False, "detail": "the slot did not take the binding"}
+    if cloned:
+        how = f"curve cloned from slot {donor_slot}"
+    else:
+        synthetic.add(slot)
+        how = ("no slot to clone from, so the curve is this project's linear "
+               "default: finding 12 says from-scratch bindings come out "
+               "reversed or dead about as often as not")
+    return {"ok": True,
             "detail": f"Pedal 2 -> {spec.name} on modifier slot {slot}"
-                      f"{f', floor {a.value:.0f}%' if a.value else ''}"
-                      if ok else "bind failed verification"}
+                      f"{f', floor {a.value:.0f}%' if a.value else ''} "
+                      f"({how}). The slot is written; the SWEEP is unverified "
+                      f"and cannot be read. Rock the pedal and listen. "
+                      f"{free - 1} of {fp.MOD_SLOT_COUNT} slots still free.",
+            "unverifiable": True}
+
+
+def _unbind_pedal(fm9: FM9, a: Action) -> dict:
+    """Take a parameter back off its modifier, so its own value governs again.
+
+    The way back from a bind. Refuses to detach a source this project cannot
+    name, because an unrecognised source is one the owner set up on the front
+    panel, and silently removing someone's own routing is not an undo.
+    """
+    from fm9 import protocol as fp
+    fam, eid = reg.resolve_block(a.block or "", a.instance)
+    spec = _resolve_param(fam, a.param or "", a.instance)
+    if spec is None:
+        return {"ok": False, "detail": f"unknown param {a.param}"}
+    for m in range(1, fp.MOD_SLOT_COUNT + 1):
+        vals = fm9.read_modifier(m)
+        if not vals or len(vals) <= fp.MOD_PID_TARGET_PARAM:
+            continue
+        if vals[fp.MOD_PID_TARGET_EFFECT] != eid or \
+                vals[fp.MOD_PID_TARGET_PARAM] != spec.param_id:
+            continue
+        src = vals[fp.MOD_PID_SOURCE]
+        if src != PEDAL_2_SOURCE:
+            return {"ok": False,
+                    "detail": f"{spec.name} is driven by source #{src}, not "
+                              f"Pedal 2. That binding was made somewhere this "
+                              f"tool cannot read, so it is not this tool's to "
+                              f"remove: clear it on the FM9."}
+        fm9.clear_modifier(m)
+        preset = fm9.current_preset()
+        _synthetic_for(preset[0] if preset else None).discard(m)
+        vals = fm9.read_modifier(m) or []
+        gone = (len(vals) > fp.MOD_PID_TARGET_EFFECT
+                and vals[fp.MOD_PID_TARGET_EFFECT] == 0)
+        return {"ok": gone,
+                "detail": f"Pedal 2 removed from {spec.name} (slot {m})" if gone
+                          else "the slot did not clear"}
+    return {"ok": False, "detail": f"{spec.name} has no modifier on it"}
 
 
 def run_action(fm9: FM9, a: Action) -> dict:
@@ -805,6 +1020,8 @@ def run_action(fm9: FM9, a: Action) -> dict:
         return _add_block(fm9, a)
     if a.kind == "bind_pedal":
         return _bind_pedal(fm9, a)
+    if a.kind == "unbind_pedal":
+        return _unbind_pedal(fm9, a)
     if a.kind == "set_cab":
         # Bank and slot are two parameters on the CABINET block, and the slot
         # ordinal lives in the RAW wire value rather than on the 0-1023 display

@@ -16,6 +16,7 @@ offline stay at full brightness. Dimming those would be the same lie in the
 other direction, since designing tones, browsing recipes and reviewing what is
 queued are all perfectly good with the unit unplugged.
 """
+import html
 import re
 from pathlib import Path
 
@@ -29,13 +30,14 @@ def _panels(with_class: bool):
     for m in re.finditer(r'<div class="console([^"]*)" data-label="([^"]+)"', UI):
         has = "needs-rig" in m.group(1)
         if has == with_class:
-            out.append(m.group(2))
+            out.append(html.unescape(m.group(2)))
     return out
 
 
 def test_the_panels_that_need_hardware_are_marked():
     marked = set(_panels(True))
-    assert marked == {"SCENES", "SIGNAL CHAIN", "TONE", "UNDO / COMPARE",
+    assert marked == {"SCENES", "SIGNAL CHAIN", "AMP & CAB", "GRAPHIC EQ",
+                      "EFFECTS", "DYNAMICS & LEVELS", "UNDO / COMPARE",
                       "PRESET HEALTH", "SAVE TO PRESET"}, marked
 
 

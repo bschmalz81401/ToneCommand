@@ -91,8 +91,8 @@ def test_a_parameter_with_no_span_stays_a_readout():
 def test_the_write_happens_on_change_not_on_input():
     """input fires for every pixel of travel. Writing there would put a SysEx
     message on the wire for each one, which is how a MIDI port is flooded."""
-    change = SCRIPT.split("$('knobs').addEventListener('change'")[1].split("\n});")[0]
-    inp = SCRIPT.split("$('knobs').addEventListener('input'")[1].split("\n});")[0]
+    change = SCRIPT.split("eachBox(box => box.addEventListener('change'")[1].split("\n}));")[0]
+    inp = SCRIPT.split("eachBox(box => box.addEventListener('input'")[1].split("\n}));")[0]
     assert "set_param" in change, "nothing is transmitted when the drag ends"
     assert "set_param" not in inp and "fetch" not in inp, \
         "the input handler must only move the track fill"
@@ -102,7 +102,7 @@ def test_the_poll_does_not_repaint_under_a_moving_thumb():
     """State refreshes every five seconds. Re-rendering mid-drag would replace
     the element being dragged and drop the gesture."""
     assert "if (!dragging) renderParams(s)" in SCRIPT
-    inp = SCRIPT.split("$('knobs').addEventListener('input'")[1].split("\n});")[0]
+    inp = SCRIPT.split("eachBox(box => box.addEventListener('input'")[1].split("\n}));")[0]
     assert "dragging = true" in inp
 
 
@@ -140,7 +140,7 @@ def test_the_panel_is_grouped_by_block():
 def test_it_is_not_called_telemetry():
     # the heading itself, not the comment that records why it changed
     assert 'data-label="AMP TELEMETRY"' not in UI
-    assert 'data-label="TONE"' in UI
+    assert 'data-label="AMP &amp; CAB"' in UI
 
 
 def test_both_control_surfaces_say_what_they_do():
@@ -402,7 +402,7 @@ def test_the_amp_and_cab_pickers_sit_side_by_side():
 
 def test_the_pickers_are_above_the_parameter_columns():
     """Not inside one of them, which is what made the tower."""
-    assert UI.index('<div id="picks">') < UI.index('<div class="knobs" id="knobs">')
+    assert UI.index('<div id="picks">') < UI.index('<div class="knobs" id="knobs-amp">')
 
 
 # --- every block in the preset, not a hardcoded six ---

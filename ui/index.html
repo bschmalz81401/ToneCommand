@@ -371,6 +371,53 @@
   .audbtn.sub::after { margin-top: 5px; }
 
   .knobs { columns: 340px; column-gap: 30px; }
+  /* What is driving this parameter, when it is not you. Amber rather than
+     cyan: cyan is "you can move this", and this is the one row you cannot. */
+  .modbadge {
+    display: inline-block; margin-left: 9px; padding: 2px 7px;
+    border-radius: 3px; font-size: var(--fs-badge); letter-spacing: 0.08em;
+    color: var(--amber); background: rgba(255,180,84,0.10);
+    border: 1px solid rgba(255,180,84,0.35); white-space: nowrap;
+    vertical-align: middle; cursor: help;
+  }
+  /* An unnamed source is still a real attachment. It reads as a number
+     because naming an ordinal we have not verified would be inventing a fact
+     about someone's rig, not because the binding is in any doubt. */
+  .modbadge.unk { color: var(--muted); background: rgba(255,255,255,0.04);
+                  border-color: var(--line); }
+  /* Removing a binding is a click on the badge, so it has to look pressable
+     without shouting over the parameter name it sits beside. */
+  /* Amber, like the modifier badge, because it answers the same question:
+     why did that change do nothing. Dimming the group as well, so the state
+     reads from across the room and not only from the badge. */
+  .bypbadge {
+    margin-left: 10px; padding: 2px 8px; border-radius: 3px;
+    font: inherit; font-size: var(--fs-badge); letter-spacing: 0.1em;
+    color: var(--amber); background: rgba(255,180,84,0.10);
+    border: 1px solid rgba(255,180,84,0.45); cursor: pointer;
+    vertical-align: middle;
+  }
+  .bypbadge:hover { background: rgba(255,180,84,0.22); }
+  .bypbadge.busy { opacity: 0.5; }
+  .kgroup.bypassed .knob .k, .kgroup.bypassed .knob .v { color: var(--dim); }
+  .kgroup.bypassed input[type=range] { opacity: 0.45; }
+  button.modbadge { font: inherit; cursor: pointer; }
+  button.modbadge:hover { background: rgba(255,180,84,0.2); }
+  /* Offered on hover, and on keyboard focus, so the row stays a row until you
+     go looking. Twenty of these lit at once would read as the page's main
+     feature, which a pedal assignment is not. */
+  .pedalbtn {
+    margin-left: 8px; padding: 1px 6px; border-radius: 3px;
+    font: inherit; font-size: var(--fs-badge); letter-spacing: 0.06em;
+    color: var(--cyan-dim); background: transparent;
+    border: 1px solid var(--line); cursor: pointer;
+    opacity: 0; transition: opacity .12s;
+  }
+  .knob:hover .pedalbtn, .pedalbtn:focus-visible { opacity: 1; }
+  .pedalbtn:hover { color: var(--cyan); border-color: var(--cyan-dim); }
+  .pedalbtn.busy { opacity: 1; color: var(--amber); border-color: var(--amber); }
+  .knob.modded input[type=range] { opacity: 0.4; cursor: not-allowed; }
+  .knob.modded .v { color: var(--dim); }
   /* A group split across a column break reads as two groups. */
   .kgroup { break-inside: avoid; margin: 0 0 26px; }
   .kgroup > h4 {
@@ -785,6 +832,82 @@
   body.rig-off .offbanner { display: flex; }
   .offbanner b { color: var(--amber); font-weight: 600; }
 
+  /* A graphic EQ drawn the way one looks. Ten horizontal rows of numbers is
+     not a graphic EQ, it is a spreadsheet of one: the whole point of the
+     control is that the curve is a SHAPE you read at a glance, and every
+     musician has already learned to read it. Faders stand up, zero is a line
+     across the middle, and it gets the full width of its own panel rather
+     than a 340px column of the TONE grid, because a curve squeezed to a
+     third of the page is a curve you have to squint at. */
+  .geq { display: flex; align-items: flex-end; gap: 10px; padding: 6px 0 2px;
+         position: relative; }
+  .geq .band { flex: 1 1 0; min-width: 0; display: flex;
+               flex-direction: column; align-items: center; gap: 7px; }
+  .geq .vfader {
+    -webkit-appearance: none; appearance: none;
+    writing-mode: vertical-lr; direction: rtl;      /* stand it up */
+    width: 24px; height: 150px; background: none; cursor: pointer; margin: 0;
+    font: inherit;
+  }
+  .geq .vfader::-webkit-slider-runnable-track {
+    width: 3px; border-radius: 2px; background: var(--line);
+  }
+  .geq .vfader::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 26px; height: 12px; border-radius: 3px; background: var(--cyan);
+    margin-left: -11.5px;
+    box-shadow: 0 0 9px rgba(47,230,255,0.6); transition: transform .12s;
+  }
+  .geq .vfader:hover::-webkit-slider-thumb { transform: scale(1.12); }
+  .geq .vfader:focus-visible::-webkit-slider-thumb {
+    outline: 2px solid var(--cyan); outline-offset: 2px;
+  }
+  /* Flat is a line you can see, so a curve reads as a departure from it. */
+  .geqzero {
+    position: absolute; left: 0; right: 0; top: 81px; height: 1px;
+    background: rgba(47,230,255,0.16); pointer-events: none;
+  }
+  .geq .bandv {
+    font-size: var(--fs-label); color: var(--cyan);
+    font-variant-numeric: tabular-nums;
+  }
+  .geq .bandv.flat { color: var(--dim); }
+  .geq .bandhz {
+    font-size: var(--fs-label); color: var(--muted); letter-spacing: 0.02em;
+    white-space: nowrap;
+  }
+  .geq .band.busy .bandv { color: var(--amber); }
+  /* The range strip: which part of the spectrum a fader is in, spanning the
+     bands it covers, the way it is silk-screened on a rack EQ. */
+  .geqzones { display: flex; gap: 10px; margin-top: 9px; }
+  .geqzones span {
+    min-width: 0; text-align: center; padding: 5px 2px; border-radius: 3px;
+    font-size: var(--fs-badge); letter-spacing: 0.14em; color: var(--dim);
+    background: rgba(47,230,255,0.045);
+    border-top: 1px solid rgba(47,230,255,0.14);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .geqrest { columns: auto; margin-top: 24px; }
+  .geqbar {
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    margin-bottom: 18px;
+  }
+  .geqbar .lab {
+    font-size: var(--fs-label); letter-spacing: 0.18em; color: var(--cyan-dim);
+    text-transform: uppercase;
+  }
+  .geqbar select {
+    background: #0b1114; border: 1px solid var(--line); color: var(--fg);
+    font: inherit; font-size: var(--fs-hint); padding: 8px 10px;
+    border-radius: 3px; min-width: 250px; cursor: pointer;
+  }
+  @media (max-width: 700px) {
+    .geq { gap: 5px; }
+    .geqzones { gap: 5px; }
+    .geq .vfader { height: 110px; }
+    .geqzero { top: 61px; }
+  }
+
   #log {
     font-size: var(--fs-hint); color: var(--muted); max-height: 180px; overflow-y: auto;
     line-height: 1.7;
@@ -948,10 +1071,34 @@
     </div>
   </div>
 
-  <div class="console needs-rig" data-label="TONE">
+  <!-- One long column-flow made you hunt for the reverb. These follow the
+       signal: what makes the sound, then what shapes it, then what sits
+       around it. Each panel folds, so a preset with six effects no longer
+       pushes the amp off the screen. -->
+  <div class="console needs-rig" data-label="AMP &amp; CAB" id="amppanel">
     <div id="picks"></div>
-    <div class="knobs" id="knobs"><span class="hint">awaiting link...</span></div>
+    <div class="knobs" id="knobs-amp"><span class="hint">awaiting link...</span></div>
     <div class="hint">Drag any slider to set it. Changes go to the edit buffer, not to your saved preset.</div>
+  </div>
+
+  <!-- Its own panel, not a cell of the TONE column grid. A graphic EQ is read
+       as a shape and a shape needs width. -->
+  <div class="console needs-rig" data-label="GRAPHIC EQ" id="geqpanel" style="display:none">
+    <div class="geqbar">
+      <span class="lab">Curve</span><span id="geqbadge"></span>
+      <select id="geqcurve" title="a starting point, written to the bands as an ordinary set of verified writes"></select>
+      <button id="geqflat" title="put every band back to 0 dB">FLATTEN ALL</button>
+    </div>
+    <div id="geqbox"></div>
+    <div class="hint" id="geqhint"></div>
+  </div>
+
+  <div class="console needs-rig" data-label="EFFECTS" id="fxpanel" style="display:none">
+    <div class="knobs" id="knobs-fx"></div>
+  </div>
+
+  <div class="console needs-rig" data-label="DYNAMICS &amp; LEVELS" id="utilpanel" style="display:none">
+    <div class="knobs" id="knobs-util"></div>
   </div>
 
   <div class="console needs-rig" data-label="UNDO / COMPARE">
@@ -1153,6 +1300,30 @@ const GROUP_NAMES = {
 const GROUP_ORDER = ['INPUT', 'GATE', 'COMP', 'WAH', 'FILTER', 'FUZZ',
   'DISTORT', 'GEQ', 'PEQ', 'CHORUS', 'FLANGER', 'PHASER', 'ROTARY',
   'TREMOLO', 'PITCH', 'DELAY', 'MULTITAP', 'REVERB', 'VOLUME'];
+
+// Which panel each family is drawn in. One long column-flow meant hunting for
+// the reverb, so the families are boxed by what they DO:
+//
+//   AMP & CAB          what makes the sound: the drive, the amp, the cab
+//   GRAPHIC EQ         its own panel, because a curve needs the full width
+//   EFFECTS            what a player would call a pedal, wah included
+//   DYNAMICS & LEVELS  the set-once blocks: gates, compressor, EQ, volume
+//
+// A noise gate is not an effect in the sense anyone means it, and neither is
+// a volume block, so they get their own panel rather than being filed under
+// EFFECTS to make a two-way split come out even. Anything not listed lands in
+// DYNAMICS & LEVELS, which is where an unrecognised block is least likely to
+// be mistaken for something it is not.
+const SECTIONS = [
+  ['amppanel',  'knobs-amp',  ['FUZZ', 'DISTORT']],
+  ['fxpanel',   'knobs-fx',   ['WAH', 'FILTER', 'CHORUS', 'FLANGER', 'PHASER',
+                               'ROTARY', 'TREMOLO', 'PITCH', 'DELAY',
+                               'MULTITAP', 'REVERB']],
+  ['utilpanel', 'knobs-util', ['INPUT', 'GATE', 'COMP', 'PEQ', 'VOLUME']],
+];
+const SECTION_OF = {};
+SECTIONS.forEach(([, box, fams]) => fams.forEach(f => SECTION_OF[f] = box));
+const FALLBACK_BOX = 'knobs-util';
 
 // Blocks whose TYPE we can name. A roster maps ordinal to a real name; where
 // there is none the ordinal is meaningless to a human and no picker is shown.
@@ -1594,14 +1765,19 @@ function audOpenFrom(b) {
   audFamily = b.dataset.fam || null;
   openAud(b.dataset.aud, b.parentElement);
 }
-$('knobs').addEventListener('click', e => {
+// Every container that can hold a control, wired identically. The bug this
+// replaces: the graphic EQ moved into its own panel and its faders stopped
+// working, because the listeners were bound to one element by id and #geqbox
+// is not that element. Nothing caught it, because the markup was right, the
+// write path was right and the API call was right. A handler bound to a
+// specific box is a handler that silently stops covering the next box.
+const CONTROL_BOXES = ['picks', 'knobs-amp', 'geqbox', 'knobs-fx', 'knobs-util'];
+const eachBox = fn => CONTROL_BOXES.forEach(id => { const box = $(id); if (box) fn(box); });
+
+eachBox(box => box.addEventListener('click', e => {
   const b = e.target.closest('.audbtn');
   if (b) audOpenFrom(b);
-});
-$('picks').addEventListener('click', e => {
-  const b = e.target.closest('.audbtn');
-  if (b) audOpenFrom(b);
-});
+}));
 
 // --- the routing grid, drawn ---------------------------------------------
 // Cells are laid out on a fixed pitch and cables are drawn from the resolved
@@ -2637,23 +2813,32 @@ $('scan').onclick = scanPreset;
 // either. Gig mode still refuses both, as it refuses everything but a scene.
 let blockBusy = false;
 
-async function blockAction(action, btn) {
+// One action or a batch. A graphic EQ curve is ten writes that are one
+// gesture, and sending them as ten calls would take ten undo snapshots and
+// leave nine ways to end up half applied. Batching keeps it a single trip
+// through the same gate, the same verification and the same undo.
+async function blockAction(action, btn, what) {
   if (blockBusy) return;
   blockBusy = true;
+  const actions = Array.isArray(action) ? action : [action];
+  const name = what || describe(actions[0]);
   document.querySelectorAll('.cell').forEach(b => b.style.pointerEvents = 'none');
   if (btn) btn.classList.add('busy');
   try {
     const r = await fetch('/api/apply', {
       method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({actions: [action]}),
+      body: JSON.stringify({actions}),
     });
     const out = await r.json();
     if (out.error) throw new Error(out.error);
-    const res = (out.results || [])[0];
-    if (res && !res.ok) throw new Error(res.detail || 'refused');
-    log(`${describe(action)}: ${res ? res.detail : 'ok'}`, 'ok');
+    const results = (out.results || []).filter(x => x.action);
+    const bad = results.find(x => !x.ok);
+    if (bad) throw new Error(bad.detail || 'refused');
+    const res = results[0];
+    log(`${name}: ${results.length > 1 ? results.length + ' writes verified'
+                                       : (res ? res.detail : 'ok')}`, 'ok');
   } catch (e) {
-    log(`${describe(action)} failed: ${e.message}`, 'err');
+    log(`${name} failed: ${e.message}`, 'err');
   } finally {
     if (btn) btn.classList.remove('busy');
     blockBusy = false;
@@ -2731,21 +2916,49 @@ function setRigOff(off) {
 // the handle out from under the thumb mid-gesture.
 let dragging = false;
 let lastParams = {};        // key -> metadata, for the write path
+let geqKeys = [];           // the graphic EQ's band keys, in band order
+let lastBypass = {};        // "FAMILY:instance" -> is the block switched off
+let lastMods = {};          // param name -> what is driving it, if anything
 let lastState = {};         // the last state payload, for the audition lists
 let lastCab = {bank: null, ordinal: -1};
 
 function renderParams(s) {
   const meta = s.params || {};
   lastParams = meta;
+  lastMods = s.mods || {};
+  // Which blocks are switched off. The signal chain has always drawn these
+  // dashed; the parameter panels did not know at all, so a bypassed block got
+  // a full set of live-looking sliders. You drag one, the write lands, it
+  // verifies by read-back, and you hear nothing, because the block is not in
+  // the signal. Reported as "changing the drive has no effect", on a preset
+  // whose Drive block was simply switched off.
+  lastBypass = {};
+  for (const b of (s.blocks || [])) {
+    lastBypass[`${b.family}:${b.instance}`] = !!b.bypassed;
+  }
   const movedPreset = (lastState.preset || {}).number !== (s.preset || {}).number;
   lastState = s;
   if (s.cab_sel) lastCab = s.cab_sel;
   if (movedPreset && saveSlots.length) aimAtLoadedPreset();
   if (!Object.keys(meta).length) {
-    $('knobs').innerHTML = '<span class="hint">awaiting link...</span>';
+    // Everything the previous preset put on the page has to go, not just the
+    // parameter columns. The graphic EQ panel is not one of the SECTIONS and
+    // was being left behind with its faders still drawn, and geqKeys still
+    // pointing at them, so FLATTEN ALL stayed live over a page that was
+    // otherwise showing "awaiting link". The amp and cab pickers were left
+    // behind for the same reason, naming a preset no longer loaded.
+    $('knobs-amp').innerHTML = '<span class="hint">awaiting link...</span>';
+    $('picks').innerHTML = '';
+    geqKeys = [];
+    $('geqpanel').style.display = 'none';
+    for (const [panel, box] of SECTIONS.slice(1)) {
+      $(box).innerHTML = '';
+      $(panel).style.display = 'none';
+    }
     return;
   }
-  const out = [];
+  const out = {};                      // box id -> the groups drawn in it
+  geqKeys = [];                        // rebuilt below if this preset has one
   const present = [...new Set(Object.values(meta).map(m => m.family))];
   const fams = [...GROUP_ORDER.filter(f => present.includes(f)),
                 ...present.filter(f => !GROUP_ORDER.includes(f)).sort()];
@@ -2760,7 +2973,11 @@ function renderParams(s) {
                                             && s.values[k] !== undefined
                                             && meta[k].unit !== 'unverified');
     if (!keys.length) continue;
-    let head = `<h4>${esc(title)}</h4>`;
+    // One instance per family reaches this panel, so the first key's is the
+    // one these controls belong to.
+    const inst = meta[keys[0]].instance;
+    const off = lastBypass[`${fam}:${inst}`];
+    let head = `<h4>${esc(title)}${off ? bypassBadge(fam, inst, title) : ''}</h4>`;
     // A picker for blocks whose type has real names. The amp and cab have
     // their own row above; this puts the rest beside their own parameters,
     // which is where you are already looking when you want to change one.
@@ -2772,8 +2989,25 @@ function renderParams(s) {
           title="choose a ${esc(title.toLowerCase())} type"
           ><span class="l">${esc(cur)}</span></button></span></div>`;
     }
-    out.push(`<div class="kgroup">${head}${keys.map(k => knobRow(k, meta[k], s.values[k])).join('')}</div>`);
+    // The graphic EQ gets faders rather than rows, and it gets them in its
+    // own full-width panel. The bands are the ones with a symmetric range; a
+    // GEQ also carries an output Level, which is an ordinary control and
+    // stays one, so it rides along in the same panel underneath.
+    const bands = fam === 'GEQ'
+      ? keys.filter(k => meta[k].min < 0 && Math.abs(meta[k].min + meta[k].max) < 0.01)
+      : [];
+    const rest = keys.filter(k => !bands.includes(k));
+    if (bands.length) {
+      geqKeys = bands;
+      renderGeq(bands, meta, s.values, rest, off ? bypassBadge(fam, inst, title) : '');
+      continue;                        // it is not one of the TONE columns
+    }
+    const body = rest.map(k => knobRow(k, meta[k], s.values[k])).join('');
+    const box = SECTION_OF[fam] || FALLBACK_BOX;
+    (out[box] = out[box] || []).push(
+      `<div class="kgroup${off ? ' bypassed' : ''}">${head}${body}</div>`);
   }
+  if (!geqKeys.length) $('geqpanel').style.display = 'none';
 
   // The amp and the cab sit ABOVE the columns, side by side, rather than
   // stacked inside one of them. They are the two facts anyone looks for
@@ -2794,7 +3028,19 @@ function renderParams(s) {
     </div>` : ''}
   </div>` : '';
 
-  $('knobs').innerHTML = out.join('') || '<span class="hint">no data</span>';
+  // A panel with nothing in it is a claim about the rig. An empty EFFECTS
+  // heading says this preset has effects and they are all at default, which
+  // for a four-block preset is simply untrue, so it does not draw at all.
+  for (const [panel, box] of SECTIONS) {
+    const groups = out[box] || [];
+    $(box).innerHTML = groups.join('');
+    const show = groups.length || (box === 'knobs-amp' && picks);
+    $(panel).style.display = show ? '' : 'none';
+  }
+  if (!(out['knobs-amp'] || []).length && !picks) {
+    $('knobs-amp').innerHTML = '<span class="hint">no data</span>';
+    $('amppanel').style.display = '';
+  }
   $('picks').innerHTML = picks;
   positionAud();       // the button just moved; the popover has to follow
 }
@@ -2815,8 +3061,178 @@ function neutralOf(m) {
   return null;
 }
 
+// Faders standing up, zero a line across the middle, and under them a strip
+// saying which part of the spectrum each fader is in. The markup carries
+// data-key exactly as a knob row does, so the same write path serves both and
+// there is no second way to set a parameter.
+// What a band label can honestly say.
+//
+// The catalogue gives each band a displayLabel, but they are not ascending
+// and one value appears twice ("1.6K" at band 5, "1600" at band 7). The
+// reason is GEQ_TYPE: an eighteen-value enum, read as 4 on this rig, which
+// selects the band layout. One label per parameter cannot describe eighteen
+// layouts, so the catalogue's frequencies are not frequencies for the EQ
+// actually loaded, and a wrong number on a fader is worse than no number.
+//
+// What IS true of every graphic EQ ever built is that the bands ascend in
+// frequency left to right. So the strip names the region rather than the
+// centre: that answers "what range am I in" without inventing a spec. If the
+// GEQ_TYPE roster is ever harvested (issue #5 is the same problem for the
+// modulation blocks), real centres can replace this.
+const GEQ_ZONES = ['LOW', 'LOW MID', 'MID', 'HIGH MID', 'HIGH'];
+
+// Starting points, not factory settings. These are curves this project drew;
+// nothing here comes off the FM9, and the hint under the panel says so. Each
+// is a shape over ten positions, resampled if the loaded EQ has a different
+// band count, then clamped to whatever the bands actually allow.
+const GEQ_CURVES = [
+  ['Flat',                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]],
+  ['Scooped, modern high gain', [3, 2.5, 0.5, -3, -5, -4.5, -1.5, 2, 3, 2]],
+  ['Mid push, cut through a mix', [-2, -1, 0.5, 2.5, 4, 4, 2, 0, -1, -2]],
+  ['Tighten the low end',     [-6, -4, -1.5, 0, 0, 0, 0, 0, 0, 0]],
+  ['Warm, take the fizz off', [0, 0, 0, 0, 0, -0.5, -1.5, -3, -5, -6]],
+  ['Bright, more presence',   [0, 0, 0, 0, 0.5, 1.5, 2.5, 3, 3, 2]],
+  ['Clean up a boxy tone',    [-1, -2, -3.5, -3, -1.5, 0, 0.5, 1, 1, 0]],
+];
+
+// Sample a ten-point shape at n evenly spaced positions, so a curve drawn for
+// ten bands still means the same shape on a seven or eleven band EQ.
+function sampleCurve(shape, n) {
+  if (n === shape.length) return shape.slice();
+  return Array.from({length: n}, (_, i) => {
+    const x = n === 1 ? 0 : i / (n - 1) * (shape.length - 1);
+    const lo = Math.floor(x), hi = Math.min(shape.length - 1, lo + 1);
+    return Math.round((shape[lo] + (shape[hi] - shape[lo]) * (x - lo)) * 2) / 2;
+  });
+}
+
+function renderGeq(keys, meta, values, rest, badge) {
+  const n = keys.length;
+  const bands = keys.map((k, i) => {
+    const m = meta[k], v = values[k];
+    const flat = Math.abs(v) < 0.05;
+    const zone = GEQ_ZONES[Math.min(GEQ_ZONES.length - 1,
+                                    Math.floor(i / n * GEQ_ZONES.length))];
+    return `<div class="band" data-key="${esc(k)}">
+      <input type="range" class="vfader" min="${m.min}" max="${m.max}"
+             step="0.5" value="${v}" aria-label="band ${i + 1} of ${n}, ${zone}"
+             title="Band ${i + 1} of ${n} (${zone}): ${m.min} to ${m.max} dB">
+      <span class="bandv${flat ? ' flat' : ''}">${v > 0 ? '+' : ''}${v}</span>
+      <span class="bandhz">${i + 1}</span>
+    </div>`;
+  }).join('');
+  // One cell per zone, grown to the number of bands it actually covers, so
+  // the strip lines up with the faders above it however many there are.
+  const span = {};
+  keys.forEach((k, i) => {
+    const z = GEQ_ZONES[Math.min(GEQ_ZONES.length - 1,
+                                 Math.floor(i / n * GEQ_ZONES.length))];
+    span[z] = (span[z] || 0) + 1;
+  });
+  const zones = GEQ_ZONES.filter(z => span[z])
+    .map(z => `<span style="flex:${span[z]} 1 0">${z}</span>`).join('');
+  $('geqbox').innerHTML = `<div class="geq"><div class="geqzero"></div>${bands}</div>
+    <div class="geqzones">${zones}</div>
+    <div class="knobs geqrest">${rest.map(k => knobRow(k, meta[k], values[k])).join('')}</div>`;
+  $('geqhint').textContent = `${n} bands, low on the left. The curves above are `
+    + `starting points drawn by this tool, not FM9 factory settings; each one `
+    + `is written band by band and read back, and UNDO covers the lot.`;
+  $('geqpanel').style.display = '';
+  $('geqbadge').innerHTML = badge || '';
+  if (!$('geqcurve').options.length) {
+    $('geqcurve').innerHTML = '<option value="">pick a starting point...</option>'
+      + GEQ_CURVES.map(([name], i) => `<option value="${i}">${esc(name)}</option>`).join('');
+  }
+}
+
+// One click, every band. Ten separate drags to get back to flat is the kind
+// of chore that stops people experimenting in the first place.
+async function geqSet(vals, what) {
+  if (!geqKeys.length) return;
+  const meta = lastParams || {};
+  const actions = geqKeys.map((k, i) => {
+    const m = meta[k];
+    if (!m) return null;
+    return {kind: 'set_param', block: m.family, instance: m.instance,
+            param: m.param,
+            value: Math.max(m.min, Math.min(m.max, vals[i]))};
+  }).filter(Boolean);
+  if (!actions.length) return;
+  $('geqbox').querySelectorAll('.band').forEach(b => b.classList.add('busy'));
+  await blockAction(actions, null, what);
+}
+
+$('geqflat').onclick = () => geqSet(geqKeys.map(() => 0), 'graphic EQ: flatten all');
+
+$('geqcurve').onchange = e => {
+  const c = GEQ_CURVES[Number(e.target.value)];
+  e.target.value = '';                 // it is an action, not a stored setting
+  if (c) geqSet(sampleCurve(c[1], geqKeys.length), `graphic EQ: ${c[0]}`);
+};
+
+// A parameter under a modifier is not yours to set. The FM9 sources it from
+// the pedal, envelope or LFO the modifier names, and the value stored on the
+// block stops being what you hear, so a slider drawn for it is a control that
+// does nothing: you drag it, the number moves, the sound does not. That is
+// the worst kind of control, and it is exactly how you end up believing the
+// tool is broken. The row says what is driving it instead.
+//
+// This is also the only honest answer to "is that a pedal wah or an auto
+// wah". The FM9 does not have an auto-wah type: a wah is whatever its sweep
+// is attached to. Read the attachment and you have the answer.
+function modBadge(key) {
+  const d = lastMods[key];
+  if (!d) return '';
+  // Ours to remove, or theirs. A source this tool cannot name is one the
+  // owner set up on the FM9 itself, and quietly offering to delete somebody's
+  // own routing from a page that cannot even say what it is would be the
+  // opposite of safe. Those stay text.
+  if (!d.known) {
+    return `<span class="modbadge unk"
+      title="This parameter is driven by ${esc(d.source_name)} on modifier slot ${d.slot}. The FM9 takes its value from there, so setting it here will not change what you hear. This binding was made on the FM9, not here, so it is cleared there too."
+      >${esc(d.source_name)}</span>`;
+  }
+  return `<button class="modbadge" data-unbind="${esc(key)}"
+    title="Driven by ${esc(d.source_name)} on modifier slot ${d.slot}. Click to remove the binding and give the parameter back its own value."
+    >${esc(d.source_name)}</button>`;
+}
+
+// A block that is switched off is not in the signal, so nothing you change in
+// its panel is audible. Sliders stay live on purpose: dialling a block in
+// before engaging it is ordinary work, and disabling them would forbid it.
+// What was missing was any way to KNOW, and the badge is also the way to fix
+// it, because "engage it" is the next thing anyone wants.
+function bypassBadge(fam, inst, title) {
+  return `<button class="bypbadge" data-engage="${esc(fam)}:${inst}"
+    title="${esc(title)} is bypassed, so it is not in the signal and nothing here is audible yet. Click to engage it."
+    >BYPASSED</button>`;
+}
+
+// Which parameters a pedal can drive. A selector is a list of names, not a
+// range, so sweeping one with a foot is meaningless and the server refuses
+// it; asking here as well keeps the button off rows where it could only fail.
+// "unverified" is here as well as "enum" because a selector does not always
+// declare itself one: FUZZ_TYPE is a model selector whose unit is
+// `unverified`, and the server refuses it as a selector while this rule, had
+// it only looked for `enum`, would have offered the button. Nothing draws
+// that row today, so the mismatch was invisible; it was still two rules for
+// one question, drifting apart.
+function pedalable(key, m) {
+  if (lastMods[key]) return false;
+  if (m.unit === 'enum' || m.unit === 'unverified') return false;
+  return (m.max - m.min) > 0;
+}
+
+function pedalBtn(key, m) {
+  if (!pedalable(key, m)) return '';
+  return `<button class="pedalbtn" data-bind="${esc(key)}"
+    title="Put ${esc(m.label)} under Pedal 2, so the pedal sweeps it while you play. Pedal 1 is your global volume and is never touched."
+    aria-label="assign Pedal 2 to ${esc(m.label)}">P2</button>`;
+}
+
 function knobRow(key, m, value) {
   const unit = UNITS[m.unit] ? `<span class="u">${UNITS[m.unit]}</span>` : '';
+  const mod = lastMods[key];
   // The value doubles as the reset, where there is something to reset TO.
   // Dragging a slider onto exactly 0.0 dB is a fiddle nobody should have to
   // do, and it is the single most common thing anyone wants a level to be.
@@ -2828,7 +3244,7 @@ function knobRow(key, m, value) {
          data-zero="${zero}" title="${atZero ? 'already at ' + zero
            + (UNITS[m.unit] || '') : 'set to ' + zero + (UNITS[m.unit] || '')}"
          >${value}${unit}</button>`;
-  const lab = `<span class="k">${esc(m.label)}</span>`;
+  const lab = `<span class="k">${esc(m.label)}${modBadge(key)}${pedalBtn(key, m)}</span>`;
   // A slider needs a span to map a position onto. Without one it stays a
   // readout: a control we cannot map back would look exactly as trustworthy
   // as one we can.
@@ -2837,6 +3253,15 @@ function knobRow(key, m, value) {
     return `<div class="knob ro" title="no range published for this one, so it is read only">${lab}<div class="flat"></div>${val}</div>`;
   }
   const pct = Math.max(0, Math.min(100, (value - m.min) / span * 100));
+  // Drawn, so you can see where the modifier's floor sits, but not draggable:
+  // a write here verifies and still changes nothing audible.
+  if (mod) {
+    return `<div class="knob modded ro" data-mod="${esc(key)}">${lab}
+      <input type="range" min="${m.min}" max="${m.max}" value="${value}"
+             style="--pct:${pct}%" disabled
+             aria-label="${esc(m.label)}, driven by ${esc(mod.source_name)}">
+      <span class="v">${value}${unit}</span></div>`;
+  }
   return `<div class="knob" data-key="${esc(key)}">${lab}
     <input type="range" min="${m.min}" max="${m.max}" step="${stepFor(span)}"
            value="${value}" style="--pct:${pct}%"
@@ -2847,39 +3272,91 @@ function knobRow(key, m, value) {
 // Track fills live under the thumb, but nothing is transmitted until the drag
 // ends. Sending on every input event would put a SysEx write on the wire for
 // each pixel of travel, which is how you flood a MIDI port.
-$('knobs').addEventListener('input', e => {
+//
+// The row is found BEFORE dragging is set, and both handlers give up if there
+// is not one. Ordering, because `dragging` suppresses the whole parameter
+// repaint: a throw between setting it and clearing it leaves it true forever,
+// and the panel silently stops updating for the rest of the session with no
+// error anyone would connect to it. The modded row is exactly a row shape
+// with no data-key, one removed `disabled` attribute away from reaching here.
+eachBox(box => box.addEventListener('input', e => {
   const el = e.target;
   if (el.type !== 'range') return;
+  const row = el.closest('[data-key]');
+  if (!row) return;
   dragging = true;
-  const row = el.closest('.knob');
   const pct = (el.value - el.min) / (el.max - el.min) * 100;
   el.style.setProperty('--pct', pct + '%');
-  row.querySelector('.v').firstChild.nodeValue = el.value;
-});
+  const read = row.querySelector('.v, .bandv');
+  if (read) read.textContent = (row.classList.contains('band') && el.value > 0
+                                ? '+' : '') + el.value;
+}));
+
+// Assigning and removing Pedal 2. Both confirm first, and the wording is the
+// point: UNDO covers parameters, bypass and channel, and a modifier slot is
+// none of those, so the button is the only way back and the dialog has to say
+// so rather than letting the UNDO button imply otherwise.
+eachBox(box => box.addEventListener('click', async e => {
+  const bind = e.target.closest('button[data-bind]');
+  const undo = e.target.closest('button[data-unbind]');
+  const b = bind || undo;
+  if (!b) return;
+  const key = b.dataset.bind || b.dataset.unbind;
+  const m = (lastParams || {})[key];
+  if (!m) return;
+  const what = `${m.label} on ${GROUP_NAMES[m.family] || m.family}`;
+  const msg = bind
+    ? `Put ${what} under Pedal 2?\n\nThe pedal will sweep it while you play. `
+      + `Two things to know:\n\n`
+      + `\u2022 UNDO does not cover this. The P2 badge on the row removes it.\n`
+      + `\u2022 The sweep cannot be verified by reading the FM9 (a dead `
+      + `binding reads identically to a live one), so check it with your `
+      + `foot: it can come out reversed.`
+    : `Remove Pedal 2 from ${what}?\n\nThe parameter goes back to its own `
+      + `value, the one shown on the slider.`;
+  if (!window.confirm(msg)) return;
+  b.classList.add('busy');
+  await blockAction({kind: bind ? 'bind_pedal' : 'unbind_pedal',
+                     block: m.family, instance: m.instance, param: m.param},
+                    null, `${bind ? 'assign' : 'remove'} Pedal 2: ${what}`);
+}));
+
+// One click from "nothing I do here is audible" to "now it is". Goes through
+// blockAction like every other write, so it is verified and logged the same.
+eachBox(box => box.addEventListener('click', async e => {
+  const b = e.target.closest('button[data-engage]');
+  if (!b) return;
+  const [fam, inst] = b.dataset.engage.split(':');
+  b.classList.add('busy');
+  await blockAction({kind: 'set_bypass', block: fam, instance: Number(inst),
+                     bypassed: false}, null);
+}));
 
 // Press the value to put it back to neutral. Goes through the same write path
 // as a drag, so it is verified by read-back and covered by undo like anything
 // else.
-$('knobs').addEventListener('click', async e => {
+eachBox(box => box.addEventListener('click', async e => {
   const b = e.target.closest('button.v.reset');
   if (!b || b.classList.contains('at')) return;
   const m = (lastParams || {})[b.dataset.v];
   if (!m) return;
-  const row = b.closest('.knob');
+  const row = b.closest('[data-key]');
+  if (!row) return;
   row.classList.add('busy');
   b.disabled = true;
   await blockAction({kind: 'set_param', block: m.family, instance: m.instance,
                      param: m.param, value: Number(b.dataset.zero)}, null);
   row.classList.remove('busy');
   b.disabled = false;
-});
+}));
 
-$('knobs').addEventListener('change', async e => {
+eachBox(box => box.addEventListener('change', async e => {
   const el = e.target;
   if (el.type !== 'range') return;
-  const row = el.closest('.knob');
+  dragging = false;                    // first, and unconditionally
+  const row = el.closest('[data-key]');
+  if (!row) return;
   const m = (lastParams || {})[row.dataset.key];
-  dragging = false;
   if (!m) return;
   row.classList.add('busy');
   el.disabled = true;
@@ -2887,7 +3364,7 @@ $('knobs').addEventListener('change', async e => {
                      param: m.param, value: Number(el.value)}, null);
   row.classList.remove('busy');
   el.disabled = false;
-});
+}));
 
 function describe(a) {
   // The server sends action:null for notes about the plan rather than about
@@ -2904,11 +3381,21 @@ function describe(a) {
   if (a.kind === 'set_type') return `${a.block} ${a.instance}: model → ${a.type_name}`;
   if (a.kind === 'add_block') return `ADD ${a.block} ${a.instance}${a.position ? ' (' + a.position + '-amp)' : ''}`;
   if (a.kind === 'bind_pedal') return `Pedal 2 → ${a.block} ${a.instance} ${a.param}${a.value ? ' (floor ' + a.value + '%)' : ''}`;
+  // Without its own branch this fell through to the set_param wording and
+  // rendered as "Mix: null", because an unbind carries no value. Reachable
+  // from the planner, which is allowed to propose one.
+  if (a.kind === 'unbind_pedal') return `Pedal 2 ✕ ${a.block} ${a.instance} ${a.param}`;
   if (a.kind === 'rename_preset') return `Rename preset → "${a.type_name}"`;
   if (a.kind === 'rename_scene') return `Rename scene ${a.value} → "${a.type_name}"`;
   // danger first, and one parenthetical rather than two: the slot label
   // already carries "(FM9-Edit n)"
   if (a.kind === 'store') return `OVERWRITES slot ${a.slot_label || a.value}`;
+  // A graphic EQ band's catalogue label is a frequency that is not this EQ's
+  // frequency (see GEQ_ZONES). It is not drawn on the fader and it must not
+  // reach the log either, or the one place that records what was written to
+  // the rig records it under a wrong name.
+  const band = geqKeys.indexOf(a.param);
+  if (band >= 0) return `Graphic EQ band ${band + 1}: ${a.value > 0 ? '+' : ''}${a.value}`;
   const m = lastParams[a.param];
   if (m) return `${m.label}: ${a.value}`;
   return `${a.block} ${a.instance} / ${a.param}: set to ${a.value}`;
