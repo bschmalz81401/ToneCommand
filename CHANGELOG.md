@@ -2,6 +2,46 @@
 
 Notable changes to ToneCommand. Dates are UTC.
 
+## 0.4.1 (2026-08-30)
+
+Three connection bugs, all found by plugging a cable in and out. Between them
+the app could not tell you the truth about whether your rig was there.
+
+### Fixed
+- **A device plugged in after the server started was invisible.** `FM9.__init__`
+  calls `mido.get_input_names()` fresh on every attempt, so discovery looked
+  like it could not go stale. The rtmidi backend enumerates through a CoreMIDI
+  client it holds for the life of the process, so a server started while the
+  FM9 was off never saw it appear however long the poll retried. The tell was
+  exact: a fresh python process listed the FM9 and opened it happily while the
+  running server, same machine, same moment, reported not connected.
+- **Reconnection is automatic.** `get_fm9()` re-enumerates the bus before
+  rebuilding the handle, throttled to once every two seconds. Plugging the
+  cable in reconnects within one poll with nothing to press. A reload was
+  measured at about eleven milliseconds with no file descriptor leak before
+  being put in a loop.
+- **An unplugged device still reported connected.** An open MIDI port is not a
+  connected device: pulling the USB leaves the handle valid, writes go nowhere
+  and reads simply time out. `snapshot()` took that at face value and returned
+  connected with no preset, no scene and no blocks, so the link light stayed
+  green over an empty page. It now gives up the moment `current_preset()` comes
+  back empty, and gives up BEFORE the eight scene names and the status dump,
+  each of which would otherwise wait out its own timeout and freeze the poll
+  for ten seconds on a device that is not there.
+
+### Added
+- The LINK pill is a button. Automatic reconnection is the mechanism; this is
+  for the person who has just plugged something in and wants to press
+  something. A failed look says why, including to check FM9-Edit is not
+  holding the port.
+
+### Verified
+On hardware, both directions: the cable out turns the link red and hides the
+panels that need the rig, and the cable back in turns it green again on its
+own. Also closed the loop 0.4.0 left open, designing a change, checking it for
+drift against the live unit, transmitting it, reading Mid back at 6.25 from
+5.0, and undoing it back to 5.0.
+
 ## 0.4.0 (2026-08-30)
 
 **It works with the amp switched off.** Design tones on a plane, browse and
