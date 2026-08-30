@@ -30,12 +30,22 @@
        big text needs to be is a fact about the reader and their screen, not
        something a stylesheet can know. */
     --ui-scale: 1;
+    /* Room to breathe. Density reads as "this is for experts" whether or not
+       it is true, and this tool is aimed at guitarists rather than engineers.
+       A longer page costs a scroll; a cramped one costs the reader. */
+    --pad: 26px;      /* inside a panel */
+    --gap: 26px;      /* between panels */
+    --row: 14px;      /* inside a list row */
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     background: var(--bg);
     color: var(--text);
     font-family: "SF Mono", "Menlo", "Cascadia Code", monospace;
+    /* Was `normal`, which on a monospace face at this size sets lines almost
+       touching. Every paragraph on the page was harder to read than it had to
+       be, and none of them were long. */
+    line-height: 1.55;
     min-height: 100vh;
     background-image:
       radial-gradient(ellipse 80% 50% at 50% -10%, rgba(47, 230, 255, 0.08), transparent),
@@ -60,7 +70,7 @@
     --fs-sub:   calc(1.12rem * var(--ui-scale, 1));
     --fs-lead:  calc(1.30rem * var(--ui-scale, 1));
   }
-  .wrap { max-width: 1100px; margin: 0 auto; padding: 28px 20px 60px; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 34px 26px 80px; }
 
   header {
     display: flex; align-items: baseline; gap: 18px; flex-wrap: wrap;
@@ -107,7 +117,7 @@
 
   /* Scene switcher: shaped like the footswitches it stands in for, because
      this is the one control that gets used while playing. */
-  .scenes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .scenes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 11px; }
   .sc {
     /* min-width:0 or the grid will not shrink the button below its own text,
        so the ellipsis below never fires and the name escapes the box */
@@ -238,7 +248,7 @@
 
   .console {
     background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
-    padding: 18px; margin-bottom: 20px; position: relative;
+    padding: var(--pad); margin-bottom: var(--gap); position: relative;
     box-shadow: 0 0 40px rgba(0,0,0,0.5), inset 0 0 60px rgba(47,230,255,0.03);
   }
   /* A panel name is the label for everything under it, so it was doing the
@@ -312,7 +322,7 @@
 
   .knobs { columns: 340px; column-gap: 30px; }
   /* A group split across a column break reads as two groups. */
-  .kgroup { break-inside: avoid; margin: 0 0 18px; }
+  .kgroup { break-inside: avoid; margin: 0 0 26px; }
   .kgroup > h4 {
     font-size: var(--fs-label); letter-spacing: 0.22em; color: var(--cyan-dim);
     font-weight: 500; margin: 0 0 2px; text-transform: uppercase;
@@ -331,8 +341,11 @@
     display: block; color: var(--muted); font-size: var(--fs-hint); margin-top: 3px;
     letter-spacing: 0.03em; line-height: 1.45;
   }
-  .knob { display: grid; grid-template-columns: 108px 1fr 62px; gap: 9px;
-          align-items: center; padding: 3px 0; }
+  /* Wide enough for "Master Feedback", the longest label the registry
+     produces. Narrower and the two-word names wrap, which reads as a fault
+     rather than as a layout. */
+  .knob { display: grid; grid-template-columns: 148px 1fr 68px; gap: 12px;
+          align-items: center; padding: 6px 0; }
   .knob .k { color: var(--muted); font-size: var(--fs-hint); letter-spacing: 0.04em; }
   .knob .v { color: var(--cyan); font-size: var(--fs-body); text-align: right;
              font-variant-numeric: tabular-nums; }
@@ -371,7 +384,7 @@
      and until now it lived entirely in command-line scripts. */
   .hz { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
   .hz button { flex: 0 0 auto; }
-  .hrow { display: flex; align-items: baseline; gap: 10px; padding: 5px 0;
+  .hrow { display: flex; align-items: baseline; gap: 12px; padding: 9px 0;
           border-bottom: 1px solid rgba(255,255,255,0.04); font-size: var(--fs-hint); }
   .hrow:last-child { border-bottom: none; }
   .hrow .n { color: var(--dim); width: 16px; flex: 0 0 auto; }
@@ -618,7 +631,7 @@
             font-size: var(--fs-hint); border-top: 1px dashed var(--line); }
 
   /* Designed with the rig off, waiting for it to come on. */
-  .drow { display: flex; align-items: flex-start; gap: 12px; padding: 10px 0;
+  .drow { display: flex; align-items: flex-start; gap: 14px; padding: var(--row) 0;
           border-bottom: 1px solid rgba(255,255,255,0.05); }
   .drow:last-child { border-bottom: none; }
   .dmain { flex: 1 1 auto; min-width: 0; }
@@ -660,7 +673,7 @@
     font: inherit; font-size: var(--fs-body); padding: 6px 9px;
     border-radius: 3px; flex: 1 1 260px; min-width: 0;
   }
-  .rrow { display: flex; align-items: flex-start; gap: 12px; padding: 10px 0;
+  .rrow { display: flex; align-items: flex-start; gap: 14px; padding: var(--row) 0;
           border-bottom: 1px solid rgba(255,255,255,0.05); }
   .rrow:last-child { border-bottom: none; }
   .rmain { flex: 1 1 auto; min-width: 0; }
@@ -713,7 +726,8 @@
   #log .warn { color: var(--amber); }
   .spin { display: inline-block; animation: spin 0.9s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
-  .hint { color: var(--muted); font-size: var(--fs-hint); margin-top: 10px; letter-spacing: 0.05em; }
+  .hint { color: var(--muted); font-size: var(--fs-hint); margin-top: 16px;
+          letter-spacing: 0.05em; line-height: 1.65; }
 .airow { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .airow select, .airow input {
   background: #0d0f0d; border: 1px solid #1f2a1f; color: var(--fg);
