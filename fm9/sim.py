@@ -313,8 +313,17 @@ class SimFM9Core:
         # 200 to it read back as exactly 200 (2026-08-29). Restricting this to
         # enums made cab auditioning untestable here while it worked on the
         # unit, which is the wrong way round for a test double.
+        # The zeroed GET is byte-identical to a discrete write of zero:
+        # build_get_param sends this same sub 0x09 with value 0.0. Hardware
+        # treats it as a query and does NOT write, so a continuous parameter
+        # written with exactly 0.0 is a NO-OP here too. Only the echo goes
+        # back. Without this the sim answered a read by destroying the value
+        # being read, which test_zeroed_get_is_noop exists to catch and only
+        # caught on a slow enough machine: the settle window served the read
+        # from a pre-write snapshot and hid the damage on a fast one.
+        if val == 0.0 and self._param_kind(eid, pid) == "float":
+            return [self._echo(eid, pid)]
         self.st.set_block_param(eid, pid, int(round(val)))
-        # continuous + value 0.0 => the zeroed GET: a NO-OP (hardware-observed)
         return [self._echo(eid, pid)]
 
     def _set_continuous(self, b):
