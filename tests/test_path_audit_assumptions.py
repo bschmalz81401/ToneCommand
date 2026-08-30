@@ -12,7 +12,7 @@ verdict was clean, but nothing in the output said so either way.
 """
 from fm9.registry import Registry
 from fm9.sim import SimFM9
-from tools.path_audit import scene_alive, walk
+from fm9.signal_path import scene_alive, walk
 
 
 def _state(dev):

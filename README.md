@@ -404,6 +404,13 @@ Original findings from this project's hardware verification (FM9 firmware
     were confirmed; row 2 needs its own encoding, item 7). Verified on
     fw 12.00 by building Input -> amp -> cab -> Output across columns 1-4
     and confirming the result audible by ear.
+12. **Cable removal is the draw message with op 0x02.** The routing message
+    (sub 0x35) carries an op byte; 0x01 connects and 0x02 disconnects, with
+    the identical geometry encoding. Verified on fw 12.00: it clears the
+    destination mask, survives repeated remove/redraw cycles, is idempotent
+    rather than a toggle, and is SELECTIVE - on a cell fed by two sources it
+    clears only the named source bit. Prior belief, ours included, was that
+    removal was a different and unknown message.
 
 ## Grounding Data
 

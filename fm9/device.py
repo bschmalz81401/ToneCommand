@@ -16,6 +16,7 @@ from . import protocol as p
 from .adapter import Capabilities, ReadPath
 from .registry import Registry, ParamSpec
 from .safety import sysex_guard
+from .signal_path import scene_alive
 
 RESULT_CODES = {
     0x00: "ok",
@@ -625,6 +626,110 @@ class FM9:
             self._drain()
             self._send(p.build_set_param_discrete(eid, pid, 0))
             time.sleep(0.15)
+
+    def splice_block(self, row_1based: int, at_col: int, effect_id: int,
+                     settle: float = 0.35) -> dict:
+        """Insert a block into a PACKED row, shifting neighbours right.
+
+        add_block can only replace a free pass-through cell, and real presets
+        keep none before the amp (issue #10). Splicing needs three things that
+        are now all verified on hardware:
+
+        - blocks displace without loss. Clear-and-reinsert keeps the whole
+          parameter array, every channel, plus the selected channel and the
+          bypass state (finding 25).
+        - cables can be REMOVED, selectively (finding 24).
+        - same-row draws work on rows 2-5 (findings 6 and 20).
+
+        The slack comes from a shunt to the right: cables only ever run to the
+        next column, so nothing can be inserted between two adjacent blocks
+        without moving one of them, and a shunt is the one cell that can be
+        overwritten for free. Shunts cannot be re-inserted, so this spends one
+        each time, and refuses when the row has none left rather than
+        rearranging someone's preset on a guess.
+
+        Returns a report; never raises for a refusal.
+        """
+        cells = {(c.row + 1, c.col + 1): c for c in (self.read_grid() or [])}
+        row = row_1based
+        occupied = sorted(c for (r, c) in cells if r == row)
+        if not occupied:
+            return {"ok": False, "detail": f"row {row} is empty; nothing to splice into"}
+        if (row, at_col) not in cells:
+            return {"ok": False,
+                    "detail": f"row {row} col {at_col} is already free - place "
+                              "the block directly instead of splicing"}
+
+        # Slack is the first column to the right that can absorb the shift: an
+        # empty cell (nothing lost) or a shunt (spent, and shunts cannot be
+        # re-inserted). Without one, the row would have to push a block off the
+        # end of the grid.
+        slack = next((c for c in range(at_col + 1, p.GRID_COLS + 1)
+                      if (row, c) not in cells or cells[(row, c)].is_shunt), None)
+        if slack is None:
+            return {"ok": False,
+                    "detail": f"no free or pass-through cell right of col "
+                              f"{at_col} on row {row} to take up the shift; "
+                              "refusing rather than displacing a block off the "
+                              "end of the grid"}
+        spent_shunt = (row, slack) in cells
+
+        # Cross-row feeds into the shift span would be silently broken: the
+        # cables we redraw are same-row only, and multi-row geometry is not
+        # fully decoded.
+        foreign = [c for c in range(at_col, slack + 1)
+                   if (row, c) in cells
+                   and cells[(row, c)].cable_in_mask & ~(1 << row)]
+        if foreign:
+            return {"ok": False,
+                    "detail": f"cells {foreign} on row {row} are fed from another "
+                              "row; splicing would break routing this code does "
+                              "not model"}
+
+        moved = []
+        for col in range(slack - 1, at_col - 1, -1):
+            cell = cells.get((row, col))
+            if cell is None or cell.effect_id is None:
+                continue                       # a shunt in the span: let it die
+            self.place_block(row, col, 0)      # clear frees the cell AND its cables
+            time.sleep(settle)
+            self.place_block(row, col + 1, cell.effect_id)
+            time.sleep(settle)
+            moved.append((cell.effect_id, col, col + 1))
+
+        self.place_block(row, at_col, effect_id)
+        time.sleep(settle)
+
+        # Clearing destroys cables, so redraw the whole disturbed span.
+        after = {(c.row + 1, c.col + 1): c for c in (self.read_grid() or [])}
+        span = sorted(c for (r, c) in after if r == row and c >= max(1, at_col - 1))
+        for a, b in zip(span, span[1:]):
+            if b == a + 1:
+                self.connect_cells(row, a, row)
+                time.sleep(settle)
+
+        cells_after = self.read_grid() or []
+        final = {(c.row + 1, c.col + 1): c for c in cells_after}
+        placed = final.get((row, at_col))
+        # "nothing breaks" has to be proven by walking Input to Output over the
+        # real cable masks. Counting members, or even counting cells with no
+        # input cable, passes for a block that is present and stranded off the
+        # path - the silent-preset class this project keeps meeting.
+        st = {b.effect_id: b for b in self.status_dump() or []}
+        alive, why = scene_alive(cells_after, st, self.reg)
+        landed = placed is not None and placed.effect_id == effect_id
+        return {
+            "ok": landed and alive,
+            "placed_at": (row, at_col),
+            "moved": moved,
+            "slack_col": slack,
+            "spent_a_shunt": spent_shunt,
+            "alive": alive,
+            "detail": (f"spliced in, live signal path confirmed: {why}"
+                       if landed and alive else
+                       f"block did not land at row {row} col {at_col}" if not landed
+                       else f"NO LIVE SIGNAL PATH after splice: {why}"),
+        }
 
     def connect_cells(self, src_row: int, src_col: int, dest_row: int,
                       disconnect: bool = False):
