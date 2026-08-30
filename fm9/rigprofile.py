@@ -108,17 +108,31 @@ def as_blank_text() -> str:
     exactly what it does and does not have, in the same shape as a profile.
     """
     return (
-        "No device is connected and no preset has been read this session, so "
-        "there is NO current state at all: no blocks, no scenes, no parameter "
-        "values.\n"
-        "You can still plan a request that stands on its own: building a tone "
-        "from scratch, choosing amp and cab models by name, setting named "
-        "values, naming a preset or a scene, storing to a numbered slot.\n"
-        "You CANNOT plan anything relative, because there is nothing to be "
-        "relative to. Anything of the form more, less, tighter, brighter, a "
-        "bit of, or any instruction about a block you were not told exists, "
-        "has to be refused rather than guessed at. Say what you would need "
-        "read from the device to answer it.")
+        "No device is connected and no preset has been read this session.\n"
+        "\n"
+        "WHAT IS STILL TRUE, because it is true of every FM9 rather than of "
+        "one preset:\n"
+        "- Every preset has scenes 1 to 8. set_scene is always answerable.\n"
+        "- The block families and their channels are fixed and are listed in "
+        "the parameter reference you were given. An amp, a cab, drive, delay "
+        "and reverb are addressable by name on any FM9.\n"
+        "- Every amp and cab model in the catalogue can be named.\n"
+        "\n"
+        "WHAT IS NOT KNOWN: which of those blocks this particular preset "
+        "actually has on its grid, and every current value.\n"
+        "\n"
+        "So PLAN a request that stands on its own: build a tone from scratch, "
+        "choose amp and cab models by name, set named values, rename a preset "
+        "or a scene. Propose it on the standard blocks and say in the summary "
+        "which ones you assumed. A block this preset does not have is caught "
+        "by validation and by read-back before anything is trusted, so an "
+        "assumption stated out loud is useful and a refusal is not.\n"
+        "\n"
+        "REFUSE anything RELATIVE, because there is nothing to be relative "
+        "to. More, less, tighter, brighter, a bit of, warmer than it is: say "
+        "what you would need read from the device instead of guessing. Being "
+        "asked for an absolute value you can supply is not a relative "
+        "request.")
 
 
 def as_state_text(profile: dict) -> str:

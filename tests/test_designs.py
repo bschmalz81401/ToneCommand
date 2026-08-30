@@ -158,10 +158,13 @@ def test_a_request_that_stands_on_its_own_plans_with_no_rig_at_all(monkeypatch):
                         {"summary": "ok", "clarification": None, "actions": []})
     d = TestClient(server.app).post("/api/plan", json={"prompt": "lukather lead"}).json()
     assert d["no_state"] is True and d["offline"] is True
-    # and it is TOLD what it does not have, rather than handed an empty state
-    # and left to plan a relative request against a zero
-    assert "no current state at all" in seen["state"].lower()
-    assert "cannot plan anything relative" in seen["state"].lower()
+    # and it is TOLD what it does and does not have, rather than handed an
+    # empty state and left to plan a relative request against a zero. Asserts
+    # the intent, not the wording: pinning the exact sentence broke the moment
+    # the context was improved, which is the test's fault and not the code's.
+    ctx = seen["state"].lower()
+    assert "no preset has been read" in ctx
+    assert "relative" in ctx and "refuse" in ctx
 
 
 def test_a_profile_outranks_the_remembered_reading(monkeypatch):
@@ -226,3 +229,25 @@ def test_sending_a_design_built_for_another_rig_asks_first():
     fn = ui.split("<script>")[1].split("async function sendDesign")[1].split("\n}\n")[0]
     assert "d.profile && !window.confirm" in fn
     assert "not yours" in fn
+
+
+def test_the_blank_context_says_what_IS_true_not_only_what_is_missing():
+    """Found by running the thing end to end.
+
+    The first version listed only absences, so the planner reasonably
+    concluded nothing was addressable and refused a perfectly answerable
+    request: "build a Vox AC30 clean in scene 2, gain 3, bass 4.5" came back
+    with zero actions and "there are no known blocks, scenes, or channels to
+    act on". Every FM9 has scenes 1 to 8 and a fixed block vocabulary, and
+    those are facts about the device rather than about one preset. Saying so
+    turned the same prompt into eight actions with none blocked.
+    """
+    from fm9 import rigprofile
+    text = rigprofile.as_blank_text().lower()
+    assert "scenes 1 to 8" in text
+    assert "addressable" in text
+    # and an assumption stated out loud beats a refusal, because validation
+    # and read-back catch a wrong one before anything is trusted
+    assert "which ones you assumed" in text
+    # while relative requests are still refused
+    assert "refuse anything relative" in text
