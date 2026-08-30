@@ -359,6 +359,9 @@
     color: var(--text); font-size: var(--fs-sub); margin-bottom: 9px;
     letter-spacing: 0.02em;
   }
+  .typepick { margin: 2px 0 12px; }
+  .typepick .aud { display: block; }
+  .typepick .audbtn { width: 100%; }
   .kgroup .picklabel {
     font-size: var(--fs-label); letter-spacing: 0.2em; color: var(--cyan-dim);
     margin: 11px 0 4px; font-weight: 600;
@@ -1092,10 +1095,34 @@ function log(msg, cls) {
 // because that is how the rig is laid out and how the question arrives: you
 // want the delay a little wetter, not "DELAY_MIX raised". Order is the order
 // they are shown, and anything not listed here is not surfaced.
-const PARAM_GROUPS = [
-  ['DISTORT', 'Amp'], ['INPUT', 'Input gate'], ['DELAY', 'Delay'],
-  ['REVERB', 'Reverb'], ['TREMOLO', 'Tremolo'], ['FUZZ', 'Drive'],
-];
+// What to call each block. The server already reads parameters for far more
+// families than this panel used to show: chorus, phaser, flanger, rotary, wah
+// and the EQs were all arriving in the payload every poll and being filtered
+// out by a hardcoded list of six. Anything present and not named here still
+// appears, under its own family name, because hiding a block that IS in the
+// preset is worse than showing it with a plain label.
+const GROUP_NAMES = {
+  DISTORT: 'Amp', INPUT: 'Input gate', GATE: 'Noise gate', FUZZ: 'Drive',
+  DELAY: 'Delay', MULTITAP: 'Multitap delay', REVERB: 'Reverb',
+  CHORUS: 'Chorus', FLANGER: 'Flanger', PHASER: 'Phaser', ROTARY: 'Rotary',
+  TREMOLO: 'Tremolo', PITCH: 'Pitch', WAH: 'Wah', FILTER: 'Filter',
+  GEQ: 'Graphic EQ', PEQ: 'Parametric EQ', VOLUME: 'Volume', COMP: 'Compressor',
+};
+// The order they appear in, signal-chain-ish rather than alphabetical. Any
+// family not listed follows, so a new one shows up rather than vanishing.
+const GROUP_ORDER = ['INPUT', 'GATE', 'COMP', 'WAH', 'FILTER', 'FUZZ',
+  'DISTORT', 'GEQ', 'PEQ', 'CHORUS', 'FLANGER', 'PHASER', 'ROTARY',
+  'TREMOLO', 'PITCH', 'DELAY', 'MULTITAP', 'REVERB', 'VOLUME'];
+
+// Blocks whose TYPE we can name. A roster maps ordinal to a real name; where
+// there is none the ordinal is meaningless to a human and no picker is shown.
+// Chorus, phaser, flanger and pitch each have a type enum (27, 17, 31 and 16
+// entries) with NO roster: the FM9 catalogue carries none, the ordering is
+// undocumented, and the display-name query returns a stale constant rather
+// than the current type (docs/PROTOCOL.md finding 5, verified on two firmware
+// versions by two people). Offering "Type 14" would be a number pretending to
+// be a choice.
+const TYPE_PICKERS = {DISTORT: 'amp', FUZZ: 'drive', REVERB: 'reverb'};
 
 // The registry's unit names are internal. Only the ones that mean something
 // to a player get printed; knob_0_10 and numeric are just "a number" and
@@ -1364,6 +1391,7 @@ const audCache = {};          // kind -> banks, fetched once
 let audOpen = null;           // 'amp' | 'cab' | null
 let audCursor = 0;
 let audBank = null;
+let audFamily = null;   // which block the open picker is setting
 let audBusy = false;
 
 async function audModels(kind) {
@@ -1390,7 +1418,7 @@ function renderAud() {
   if (!kind) return;
   const {bank, list} = audMatches(kind);
   audCursor = Math.max(0, Math.min(audCursor, list.length - 1));
-  const cur = kind === 'amp' ? audCurrentAmp() : audCurrentCab();
+  const cur = kind === 'cab' ? audCurrentCab() : audCurrentType(kind);
   $('audlist').innerHTML = list.length ? list.map((m, i) => `
     <button class="prow${i === audCursor ? ' cursor' : ''}${m.ordinal === cur ? ' on' : ''}"
             data-ord="${m.ordinal}" data-i="${i}"
@@ -1404,10 +1432,15 @@ function renderAud() {
   if (c) c.scrollIntoView({block: 'nearest'});
 }
 
-function audCurrentAmp() {
-  const m = (lastState.values || {}).AMP_MODEL;
-  const banks = audCache.amp || [];
-  const found = (banks[0] ? banks[0].models : []).find(x => x.name === m);
+// Which entry is loaded, so the list opens on it rather than at the top of a
+// thousand. Matched by NAME, because the name is what the state payload
+// carries: the ordinal lives on the wire and is not sent up.
+function audCurrentType(kind) {
+  const v = lastState.values || {};
+  const name = kind === 'amp' ? v.AMP_MODEL
+                              : v[`${audFamily}_TYPE_NAME`];
+  const banks = audCache[kind] || [];
+  const found = (banks[0] ? banks[0].models : []).find(x => x.name === name);
   return found ? found.ordinal : -1;
 }
 function audCurrentCab() { return lastCab.ordinal; }
@@ -1432,7 +1465,7 @@ async function openAud(kind, anchor) {
   // put the cursor on what is loaded, so stepping starts from here rather
   // than from the top of a thousand-entry list
   const {list} = audMatches(kind);
-  const cur = kind === 'amp' ? audCurrentAmp() : audCurrentCab();
+  const cur = kind === 'cab' ? audCurrentCab() : audCurrentType(kind);
   const at = list.findIndex(m => m.ordinal === cur);
   if (at >= 0) { audCursor = at; renderAud(); }
   $('audq').focus();
@@ -1461,11 +1494,13 @@ async function audLoad(ordinal) {
   if (audBusy) return;
   audBusy = true;
   const kind = audOpen;
-  const action = kind === 'amp'
-    ? {kind: 'set_type', block: 'DISTORT', instance: 1,
-       type_name: String(ordinal)}
-    : {kind: 'set_cab', block: 'CABINET', instance: 1,
-       value: ordinal, bank: Number(audBank)};
+  // amp, drive and reverb all set a TYPE; only the cab is addressed by bank
+  // and slot, so it is the one with its own action kind.
+  const action = kind === 'cab'
+    ? {kind: 'set_cab', block: 'CABINET', instance: 1,
+       value: ordinal, bank: Number(audBank)}
+    : {kind: 'set_type', block: audFamily || 'DISTORT', instance: 1,
+       type_name: String(ordinal)};
   try {
     const r = await fetch('/api/apply', {
       method: 'POST', headers: {'Content-Type': 'application/json'},
@@ -1515,9 +1550,17 @@ $('audlist').addEventListener('click', e => {
 document.addEventListener('mousedown', e => {
   if (audOpen && !e.target.closest('#audpop') && !e.target.closest('.audbtn')) closeAud();
 });
+function audOpenFrom(b) {
+  audFamily = b.dataset.fam || null;
+  openAud(b.dataset.aud, b.parentElement);
+}
 $('knobs').addEventListener('click', e => {
   const b = e.target.closest('.audbtn');
-  if (b) openAud(b.dataset.aud, b.parentElement);
+  if (b) audOpenFrom(b);
+});
+$('picks').addEventListener('click', e => {
+  const b = e.target.closest('.audbtn');
+  if (b) audOpenFrom(b);
 });
 
 // --- the routing grid, drawn ---------------------------------------------
@@ -2612,7 +2655,12 @@ function renderParams(s) {
     return;
   }
   const out = [];
-  for (const [fam, title] of PARAM_GROUPS) {
+  const present = [...new Set(Object.values(meta).map(m => m.family))];
+  const fams = [...GROUP_ORDER.filter(f => present.includes(f)),
+                ...present.filter(f => !GROUP_ORDER.includes(f)).sort()];
+  for (const fam of fams) {
+    const title = GROUP_NAMES[fam]
+      || fam.charAt(0) + fam.slice(1).toLowerCase();
     // "unverified" means the registry has not confirmed what this parameter's
     // numbers mean. FUZZ_TYPE is the example: a model selector whose ordinal
     // arrives scaled to 0.08, which is not a fact about anything. A row that
@@ -2622,6 +2670,17 @@ function renderParams(s) {
                                             && meta[k].unit !== 'unverified');
     if (!keys.length) continue;
     let head = `<h4>${esc(title)}</h4>`;
+    // A picker for blocks whose type has real names. The amp and cab have
+    // their own row above; this puts the rest beside their own parameters,
+    // which is where you are already looking when you want to change one.
+    const pick = TYPE_PICKERS[fam];
+    if (pick && fam !== 'DISTORT') {
+      const cur = s.values[`${fam}_TYPE_NAME`] || 'choose a type';
+      head += `<div class="typepick"><span class="aud">
+        <button class="audbtn sub" data-aud="${pick}" data-fam="${fam}"
+          title="choose a ${esc(title.toLowerCase())} type"
+          ><span class="l">${esc(cur)}</span></button></span></div>`;
+    }
     out.push(`<div class="kgroup">${head}${keys.map(k => knobRow(k, meta[k], s.values[k])).join('')}</div>`);
   }
 

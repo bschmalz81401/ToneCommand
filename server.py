@@ -287,6 +287,18 @@ def snapshot(fm9: FM9) -> dict:
                 if fname == "DISTORT" and base + 10 < len(vals):
                     values["AMP_MODEL"] = reg.amp_roster.get(
                         str(vals[base + 10]), f"ordinal {vals[base + 10]}")
+                # The same trick for every other block whose type has real
+                # names. Read the wire and map through the roster, never the
+                # display-name query: that returns a stale constant rather
+                # than the current type (docs/PROTOCOL.md finding 5).
+                tp = TYPE_PARAMS.get(fname)
+                if tp and fname != "DISTORT":
+                    pid, roster_attr = tp
+                    if base + pid < len(vals):
+                        roster = getattr(reg, roster_attr) or {}
+                        wire = vals[base + pid]
+                        values[f"{fname}_TYPE_NAME"] = roster.get(
+                            str(wire), f"ordinal {wire}")
                 for pid in INTEREST[fname]:
                     s = reg.spec(fname, pid, inst)
                     idx = base + pid
@@ -1163,11 +1175,18 @@ def api_models(kind: str = "amp"):
     this is trying to beat: on the unit you turn a knob through a thousand
     entries because there is nowhere to type.
     """
-    if kind == "amp":
-        return {"kind": "amp", "banks": [{
-            "bank": None, "name": "AMP",
+    # Every block whose TYPE we can actually name. A roster maps an ordinal to
+    # a real name; without one the ordinal is meaningless to a human, so those
+    # blocks get no picker rather than a list of numbers.
+    ROSTERS = {"amp": ("amp_roster", "AMP"), "drive": ("drive_roster", "DRIVE"),
+               "reverb": ("reverb_roster", "REVERB")}
+    if kind in ROSTERS:
+        attr, label = ROSTERS[kind]
+        roster = getattr(reg, attr) or {}
+        return {"kind": kind, "banks": [{
+            "bank": None, "name": label,
             "models": [{"ordinal": int(o), "name": n}
-                       for o, n in sorted(reg.amp_roster.items(), key=lambda x: int(x[0]))]}]}
+                       for o, n in sorted(roster.items(), key=lambda x: int(x[0]))]}]}
     if kind == "cab":
         out = []
         for b in sorted(reg.cab_rosters, key=int):
