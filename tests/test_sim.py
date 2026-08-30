@@ -203,3 +203,40 @@ def test_undecoded_territory_is_reported(fm9):
     rep = "\n".join(sorted(fm9.sim_core.undecoded))
     assert "modifier slot" in rep and "issue #11" in rep
     assert "cable" in rep and "not" in rep
+
+
+def test_the_zeroed_get_is_a_noop_regardless_of_timing(fm9, monkeypatch):
+    """test_zeroed_get_is_noop passed on a fast machine for the wrong reason.
+
+    The simulator models hardware's asynchronous writes: a write snapshots the
+    pre-write buffer and reads inside SETTLE are served from it. That window
+    was answering the read from the snapshot, so the value looked intact while
+    the live buffer had already been zeroed by the very GET being tested. On
+    CI, slow enough for the window to lapse first, the read hit the live
+    buffer and returned 0.0 - failing on main at v0.3.1 and on every open PR.
+
+    Pinned with the window removed, so the assertion is about the no-op rather
+    than about how quickly the test ran.
+    """
+    import fm9.sim as sim
+    monkeypatch.setattr(sim, "SETTLE", 0.0)
+    spec = fm9.reg.spec("DISTORT", 11)
+    fm9.set_param_display(spec, 4.86)
+    fm9._drain()
+    fm9._send(p.build_get_param(58, 11))
+    assert fm9.get_param_display(spec) == 4.86
+
+
+def test_a_discrete_write_of_zero_to_an_enum_still_lands(fm9, monkeypatch):
+    """The no-op is scoped to continuous parameters, because that is where the
+    GET collides. An enum set to ordinal 0 is a real write and must survive."""
+    import fm9.sim as sim
+    monkeypatch.setattr(sim, "SETTLE", 0.0)
+    spec = fm9.reg.spec("DISTORT", 10)         # DISTORT_TYPE, an enum
+    assert spec.kind == "enum"
+    fm9.set_param_ordinal(spec, 3)
+    fm9._drain()
+    assert fm9.get_param_wire(spec) == 3
+    fm9.set_param_ordinal(spec, 0)
+    fm9._drain()
+    assert fm9.get_param_wire(spec) == 0, "an enum write of 0 is a real write"
