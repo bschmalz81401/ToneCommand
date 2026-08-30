@@ -98,3 +98,42 @@ def test_the_banner_says_what_still_works():
     # and says what still works, since "not connected" alone reads as
     # "nothing works", which is wrong and discouraging
     assert "design" in banner and "lost" in banner
+
+
+# --- the one piece of state with no way to correct it --------------------
+
+def test_the_link_pill_is_a_button():
+    """A status light you cannot press is useless when the status is wrong,
+    and it was wrong in a way nothing could fix: the poll retries, but through
+    a MIDI bus view the backend caches for the life of the process, so an FM9
+    switched on after the server started stayed invisible however long you
+    waited. Restarting the server was the only cure."""
+    assert re.search(r'<button class="pill off" id="link"', UI)
+    assert "$('link').onclick = reconnect" in SCRIPT
+
+
+def test_reconnecting_rescans_the_bus_rather_than_just_retrying():
+    """Retrying through the same stale client would find the same nothing."""
+    import inspect
+    import server
+    assert hasattr(server, "rescan_midi")
+    src = inspect.getsource(server.rescan_midi)
+    assert "set_backend" in src and "load=True" in src
+    endpoint = inspect.getsource(server.api_reconnect)
+    assert "drop_fm9()" in endpoint and "rescan_midi()" in endpoint
+
+
+def test_a_failed_reconnect_says_why():
+    """"Still nothing" is an answer; a silent no-op is not."""
+    import inspect
+    import server
+    src = inspect.getsource(server.api_reconnect)
+    assert '"why"' in src
+    fn = SCRIPT.split("async function reconnect()")[1].split("\n}\n")[0]
+    assert "still no FM9" in fn and "FM9-Edit is not holding the port" in fn
+
+
+def test_the_poll_does_not_stamp_over_a_reconnect_in_progress():
+    """The five second poll rewrites the pill's class, which would wipe the
+    busy state mid-look and make the button appear to do nothing."""
+    assert SCRIPT.count("classList.contains('busy')") >= 2

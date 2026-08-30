@@ -91,6 +91,13 @@
     background: rgba(0,0,0,0.35); color: var(--muted); white-space: nowrap;
   }
   .pill b { color: var(--text); font-weight: 500; }
+  /* A status light you can press. The poll retries on its own, but it retries
+     through a stale view of the MIDI bus, so a device plugged in after the
+     server started is invisible until something rescans. That made this the
+     one piece of state with no way to correct it. */
+  #link { font: inherit; cursor: pointer; }
+  #link:hover { border-color: var(--cyan); color: var(--cyan); }
+  #link.busy { border-color: var(--amber); color: var(--amber); }
   #link.on { border-color: var(--green); color: var(--green);
              box-shadow: 0 0 12px rgba(61, 255, 160, 0.25); }
   #link.off { border-color: var(--red); color: var(--red); }
@@ -798,7 +805,8 @@
             <button id="prescan">RESCAN</button></div>
         </div>
       </span>
-      <span class="pill off" id="link"><span class="dot"></span>LINK</span>
+      <button class="pill off" id="link" title="click to look for the FM9 again">
+        <span class="dot"></span><span id="linktext">LINK</span></button>
       <div class="textsize" role="group" aria-label="text size">
         <button id="tsdown" title="smaller text" aria-label="smaller text">A</button>
         <button id="tsup" title="larger text" aria-label="larger text">A</button>
@@ -1748,6 +1756,35 @@ function parseStoreSpec(raw) {
 $('slotsave').onclick = saveSlotSpec;
 loadSlotSpec();
 
+// --- looking for the rig again -------------------------------------------
+// The five second poll already retries, but through a MIDI bus view that the
+// backend caches for the life of the process, so a device switched on after
+// the server started stays invisible however long you wait. This drops the
+// handle, rescans, and says what it found.
+async function reconnect() {
+  const el = $('link');
+  if (el.classList.contains('busy')) return;
+  el.classList.add('busy');
+  $('linktext').textContent = 'LOOKING';
+  try {
+    const d = await (await fetch('/api/reconnect', {method: 'POST'})).json();
+    if (d.connected) {
+      log(`FM9 found: ${d.preset ? d.preset.label + ' "' + d.preset.name + '"' : 'connected'}`, 'ok');
+    } else {
+      log(`still no FM9: ${d.why || 'not found'}. Check it is powered on and `
+          + `that FM9-Edit is not holding the port.`, 'err');
+    }
+  } catch (e) {
+    log(`could not look for the FM9: ${e.message}`, 'err');
+  } finally {
+    el.classList.remove('busy');
+    $('linktext').textContent = 'LINK';
+    await refresh();
+  }
+}
+
+$('link').onclick = reconnect;
+
 // --- text size -----------------------------------------------------------
 // How big text needs to be is a fact about the reader and their screen, so it
 // is theirs to set rather than something a stylesheet can guess. Remembered
@@ -2473,7 +2510,7 @@ async function refresh() {
     const r = await fetch('/api/state');
     const s = await r.json();
     if (!s.connected) throw new Error(s.error || 'no link');
-    $('link').className = 'pill on';
+    if (!$('link').classList.contains('busy')) $('link').className = 'pill on';
     setRigOff(false);
     // the label carries both numbers: the wire number this tool sends and the
     // one the front panel and FM9-Edit show, which differ by one
@@ -2494,7 +2531,7 @@ async function refresh() {
     loadGrid();
     if (!dragging) renderParams(s);
   } catch (e) {
-    $('link').className = 'pill off';
+    if (!$('link').classList.contains('busy')) $('link').className = 'pill off';
     setRigOff(true);
   }
 }

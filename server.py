@@ -78,6 +78,28 @@ def get_fm9() -> FM9:
     return _fm9
 
 
+def rescan_midi() -> None:
+    """Make mido look at the MIDI bus again.
+
+    FM9.__init__ calls mido.get_input_names() fresh every time, so it looked
+    like discovery could not go stale. It can: the rtmidi backend holds a
+    CoreMIDI client for the life of the process and enumerates through it, so
+    a server started while the FM9 was switched off never sees it appear. The
+    device was plugged in, visible to every other process on the machine, and
+    invisible to this one until it was restarted.
+
+    Reloading the backend builds a new client, which is the only way to pick
+    up a port that arrived after startup.
+    """
+    try:
+        import mido
+        mido.set_backend("mido.backends.rtmidi", load=True)
+    except Exception:
+        # A backend that will not reload is no worse than before: the next
+        # open still tries, it just may not see a newly arrived port.
+        pass
+
+
 def drop_fm9():
     global _fm9
     if _fm9 is not None:
@@ -366,6 +388,29 @@ def index():
 def logo():
     """The mark, for the page header and the browser tab."""
     return FileResponse(ROOT / "ui" / "logo.png", media_type="image/png")
+
+
+@app.post("/api/reconnect")
+def api_reconnect():
+    """Look for the FM9 again, now.
+
+    The five second poll retries on its own, but it retries through a stale
+    view of the MIDI bus, so it can never find a device that appeared after
+    the server started. This drops the handle, rescans, and reports what it
+    found, which is also the honest answer when it finds nothing.
+    """
+    with _lock:
+        drop_fm9()
+        rescan_midi()
+        try:
+            snap = snapshot(get_fm9())
+        except FM9NotFound as e:
+            drop_fm9()
+            return {"connected": False, "why": str(e)}
+        except Exception as e:
+            drop_fm9()
+            return {"connected": False, "why": str(e)}
+    return {"connected": True, "preset": snap.get("preset")}
 
 
 @app.get("/api/state")
