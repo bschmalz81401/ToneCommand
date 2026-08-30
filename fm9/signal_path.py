@@ -46,9 +46,24 @@ def scene_alive(cells, st, reg) -> tuple[bool, str]:
 
     Thin wrapper over walk(), kept because it is the shape every existing
     caller uses and because a verdict is what an audit wants.
+
+    Any block on the live path that the registry cannot name is carried in the
+    reason. `passes` assumes an unknown block passes signal, which is right for
+    almost every block and is still an assumption; a scene called alive on the
+    strength of one is a weaker claim than a scene called alive without one,
+    and the difference has to be visible. Folded into `why` rather than added
+    as a return value so it reaches every existing caller, the health scan and
+    the JSON report included.
     """
     w = walk(cells, st, reg)
-    return w["alive"], w["why"]
+    why, unknown = w["why"], w.get("assumed") or []
+    if w["alive"] and unknown:
+        ids = ", ".join(str(e) for e in unknown)
+        why = (f"alive, ASSUMING {len(unknown)} unidentified "
+               f"block{'s' if len(unknown) > 1 else ''} pass signal "
+               f"(effect id {ids}); this tool has no entry for "
+               f"{'them' if len(unknown) > 1 else 'it'}")
+    return w["alive"], why
 
 
 def walk(cells, st, reg) -> dict:
@@ -73,6 +88,13 @@ def walk(cells, st, reg) -> dict:
         got = reg.family_of_effect_id(eid) if eid else None
         return got[0] if got else None
 
+    # Hops this walk could not identify. `passes` assumes an unknown block
+    # passes signal, which is right for almost every block and is still an
+    # ASSUMPTION, so a path that leans on one is not the same claim as a path
+    # that does not. Reported rather than folded into "alive": a verdict whose
+    # confidence you cannot see is the thing this whole tool exists to avoid.
+    unknown_hops = set()
+
     def passes(eid, is_shunt):
         """Does this hop pass signal in the current scene?"""
         if is_shunt or eid is None:
@@ -84,6 +106,8 @@ def walk(cells, st, reg) -> dict:
             return engaged          # no thru on source blocks
         if f == "FDBKRET":
             return engaged          # no grid input; bypass = dead end
+        if f is None:
+            unknown_hops.add(eid)
         return True                 # engaged or bypassed-with-thru
 
     starts = [pos for pos, (eid, sh, _) in by_pos.items()
@@ -111,8 +135,13 @@ def walk(cells, st, reg) -> dict:
         live.update(jumped); frontier = list(jumped)
 
     def done(alive, why):
+        # only the unknowns actually ON the live path matter; one sitting in a
+        # dead branch says nothing about whether this scene makes sound
+        on_path = sorted(eid for pos, (eid, _s, _m) in by_pos.items()
+                         if pos in live and eid in unknown_hops)
         return {"alive": alive, "why": why, "live": live,
-                "resolved": resolved, "by_pos": by_pos}
+                "resolved": resolved, "by_pos": by_pos,
+                "assumed": on_path}
 
     outs = [pos for pos, (eid, sh, _) in by_pos.items() if fam(eid) == "OUTPUT"]
     if not outs:

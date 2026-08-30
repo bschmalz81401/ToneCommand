@@ -75,7 +75,7 @@ PLAN_SCHEMA = {
                     "kind": {"type": "string",
                              "enum": ["set_param", "set_scene", "set_bypass",
                                       "set_channel", "set_tempo", "set_type",
-                                      "add_block", "bind_pedal",
+                                      "add_block", "bind_pedal", "unbind_pedal",
                                       "rename_preset", "rename_scene", "store"]},
                     "block": {"type": ["string", "null"],
                               "description": "Block name for set_param/set_bypass/set_channel, e.g. amp, gate, input, delay, reverb, cab, drive, peq, geq, comp"},
@@ -108,6 +108,48 @@ PLAN_SCHEMA = {
     "additionalProperties": False,
 }
 
+_ACTION_SCHEMA = PLAN_SCHEMA["properties"]["actions"]["items"]
+
+#: The action kinds, straight from the schema. Was hand-copied in two other
+#: places; the prompt's copy had drifted to six of eleven.
+ACTION_KINDS = tuple(_ACTION_SCHEMA["properties"]["kind"]["enum"])
+
+_JSON_TYPE_NAMES = {"string": "str", "integer": "int", "number": "number",
+                    "boolean": "bool", "null": "null"}
+
+
+def _type_label(spec: dict) -> str:
+    """A JSON Schema type as the prompt spells it: `str`, `number|null`."""
+    declared = spec.get("type", "string")
+    if isinstance(declared, list):
+        return "|".join(_JSON_TYPE_NAMES.get(t, t) for t in declared)
+    return _JSON_TYPE_NAMES.get(declared, declared)
+
+
+def plan_shape_line() -> str:
+    """The reply shape the prompt asks for, derived from PLAN_SCHEMA.
+
+    This line used to be hand-written, and it had drifted: it advertised six
+    action kinds while the schema and the validator both accepted eleven, so
+    a model was told add_block, bind_pedal, the renames and store did not
+    exist. On the Grok backend the contradiction was flat-out visible, since
+    --json-schema enforces PLAN_SCHEMA while the prose said six.
+
+    Deriving it kills the class rather than the instance: the prompt cannot
+    disagree with the schema again, because there is only one list left.
+    """
+    fields = []
+    for name, spec in _ACTION_SCHEMA["properties"].items():
+        if name == "kind":
+            fields.append(f'"kind": "{"|".join(ACTION_KINDS)}"')
+        else:
+            fields.append(f'"{name}": {_type_label(spec)}')
+    top = PLAN_SCHEMA["properties"]
+    return ('{"summary": ' + _type_label(top["summary"])
+            + ', "actions": [{' + ", ".join(fields) + '}], "clarification": '
+            + _type_label(top["clarification"]) + '}')
+
+
 SYSTEM = """You translate a guitarist's natural-language tone requests into concrete Fractal FM9 parameter changes.
 
 You receive the current device state (preset, scene, blocks present with bypass state, and current values of common parameters) and a reference list of controllable parameters with their display ranges. Respond only with a plan.
@@ -131,7 +173,7 @@ Scenes and multi-scene requests:
 - Scenes share the same blocks; each scene stores its own per-block bypass states and channel choices. Block PARAMETERS and TYPES are per-channel, shared across scenes.
 - To build "scene X with effect A, scene Y with effect B": set_scene X, set bypass states for X, then set_scene Y, set bypass states for Y. The device ends on the last selected scene. Note in the summary which scene is which.
 - Adding blocks: use add_block (block name + optional position "pre"/"post" relative to the amp) when a requested effect has no block in the preset. It places the block on a free pass-through point in the signal chain; if the executor reports there is no free spot, relay that honestly. Freshly added blocks may need a set_type and parameter settings next.
-- Expression pedal: use bind_pedal (block + param + optional value = floor percent 0-100) to put a continuous parameter under Pedal 2. Pedal 1 is the player's global volume and must NEVER be referenced or rebound.
+- Expression pedal: use bind_pedal (block + param + optional value = floor percent 0-100) to put a continuous parameter under Pedal 2, and unbind_pedal (block + param) to take it back off. Pedal 1 is the player's global volume and must NEVER be referenced or rebound. unbind_pedal only removes Pedal 2 bindings; anything driven by another source was set up on the FM9 itself and is refused.
 - rename_preset / rename_scene (new name in type_name; scene number in value). Tool-created presets are prefixed FM9AI- automatically.
 - store (slot number in value) persists the edit buffer to a preset slot. Only the slots listed as storable in the reference are allowed; every other slot is refused by the hardware layer, and if the reference says storing is disabled, never propose store. Only propose store when the user explicitly asks to save, and the UI will ask the user to confirm the overwrite separately.
 - If a requested change is impossible, say so in the summary. Never silently substitute a different effect without saying so."""
@@ -335,10 +377,7 @@ def _validate(plan_obj: dict) -> dict:
     actions = plan_obj.get("actions") or []
     clean = []
     for a in actions:
-        if not isinstance(a, dict) or a.get("kind") not in (
-                "set_param", "set_scene", "set_bypass", "set_channel",
-                "set_tempo", "set_type", "add_block", "bind_pedal",
-                "rename_preset", "rename_scene", "store"):
+        if not isinstance(a, dict) or a.get("kind") not in ACTION_KINDS:
             continue
         a.setdefault("block", None)
         a.setdefault("param", None)
@@ -452,10 +491,7 @@ def _full_prompt(prompt: str, device_state: str, param_reference: str) -> str:
         f"Request: {prompt}\n\n"
         "Respond with ONLY a single JSON object, no markdown fences and no "
         "other text, with this shape:\n"
-        '{"summary": str, "actions": [{"kind": "set_param|set_scene|set_bypass|'
-        'set_channel|set_tempo|set_type", "block": str|null, "instance": int, '
-        '"param": str|null, "value": number|null, "bypassed": bool|null, '
-        '"type_name": str|null, "position": str|null, "reason": str}], "clarification": str|null}'
+        + plan_shape_line()
     )
 
 

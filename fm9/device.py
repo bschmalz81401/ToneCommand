@@ -536,32 +536,96 @@ class FM9:
         """Read the display name of a modifier slot's current source."""
         return self.read_display_name(p.mod_slot_eid(slot_1based), p.MOD_PID_SOURCE)
 
+    def read_modifier(self, slot_1based: int) -> list[int] | None:
+        """The slot's raw field values, as the device holds them."""
+        return self.bulk_read(p.mod_slot_eid(slot_1based))
+
+    def find_donor_slot(self, skip: set[int] | None = None) -> tuple[int, list[int]] | None:
+        """A modifier slot in this preset that the DEVICE built, to copy the
+        transfer curve from.
+
+        Finding 12: bindings written from scratch come out reversed or dead,
+        and the working practice is to clone a proven slot and retarget only
+        its target ids. A slot the owner made on the front panel is proven by
+        the fact that it exists and works, which is a stronger guarantee than
+        anything this project can construct out of defaults.
+
+        `skip` is how the caller keeps its OWN from-scratch slots out of the
+        pool. A slot this tool built out of MOD_DEFAULT_FIELDS looks exactly
+        like a device-built one from here, so cloning it would launder a
+        default into something the log calls a clone, one slot at a time.
+        """
+        skip = skip or set()
+        for slot in range(1, p.MOD_SLOT_COUNT + 1):
+            if slot in skip:
+                continue
+            vals = self.read_modifier(slot)
+            if vals and len(vals) > p.MOD_PID_TARGET_PARAM \
+                    and vals[p.MOD_PID_TARGET_EFFECT]:
+                return slot, vals
+        return None
+
     def bind_modifier(self, slot_1based: int, target_effect_id: int,
                       target_param_id: int, source_ordinal: int,
-                      min_norm: float = 0.0, max_norm: float = 1.0):
+                      donor: list[int] | None = None,
+                      min_norm: float | None = None,
+                      max_norm: float | None = None) -> bool:
         """Bind a modifier slot: pedal/controller source -> block parameter.
-        Edit buffer only.
+        Edit buffer only. Returns whether a donor curve was used.
 
-        CRITICAL: a fresh (never-used) modifier slot has ALL fields zeroed,
-        including the transfer curve (mid/end/slope/scale/offset). A zero
-        curve maps every source position to zero, so the binding silently
-        does nothing. This initializes the curve to linear defaults every
-        time; callers may then override min/max for range floors."""
+        The write ORDER is not a style choice. Finding 17: rewrite the slot's
+        own fields as continuous writes FIRST, then the target effect id, the
+        target param id and the source as discrete writes, in that order.
+        Verified across sixteen presets, two of them ear-confirmed. The
+        earlier code here did it the other way round, targets first and a
+        partial curve after, which is the shape finding 16 describes: it reads
+        healthy immediately, survives a store, and comes back with target and
+        source zeroed once the preset reloads.
+
+        A fresh slot is ALL zeroes, curve included, and a zero curve maps
+        every pedal position to zero, so a bind that does not write the curve
+        is a bind that silently does nothing.
+        """
         eid = p.mod_slot_eid(slot_1based)
+        if donor:
+            fields = {pid: donor[pid] / 65534 for pid in p.MOD_FIELD_PIDS
+                      if pid < len(donor)}
+        else:
+            fields = dict(p.MOD_DEFAULT_FIELDS)
+        # The caller's range floor outranks the donor's, since that is the one
+        # thing they asked for by name.
+        if min_norm is not None:
+            fields[p.MOD_PID_MIN] = min_norm
+        if max_norm is not None:
+            fields[p.MOD_PID_MAX] = max_norm
+
+        for pid in p.MOD_FIELD_PIDS:
+            if pid not in fields:
+                continue
+            self._drain()
+            self._send(p.build_set_param_continuous(eid, pid, fields[pid]))
+            time.sleep(0.08)
         for pid, val in ((p.MOD_PID_TARGET_EFFECT, target_effect_id),
                          (p.MOD_PID_TARGET_PARAM, target_param_id),
                          (p.MOD_PID_SOURCE, source_ordinal)):
             self._drain()
             self._send(p.build_set_param_discrete(eid, pid, val))
             time.sleep(0.15)
-        # linear transfer curve: start 0, mid 0.5, end 1.0, slope/scale/offset
-        # centered, plus caller's range. Field pids per forgefx-midi map.
-        curve = ((1, min_norm), (2, max_norm), (3, 0.0), (4, 0.5), (5, 1.0),
-                 (6, 0.5), (13, 0.5), (14, 0.5))
-        for pid, val in curve:
+        return bool(donor)
+
+    def clear_modifier(self, slot_1based: int) -> None:
+        """Detach a modifier slot, leaving the parameter to its own value.
+
+        Zeroing the target and the source is what the device itself does to a
+        slot that fails its load-time validation (finding 16), so it is the
+        device's own idea of an empty slot rather than ours.
+        """
+        eid = p.mod_slot_eid(slot_1based)
+        for pid in (p.MOD_PID_TARGET_EFFECT, p.MOD_PID_TARGET_PARAM,
+                    p.MOD_PID_SOURCE):
             self._drain()
-            self._send(p.build_set_param_continuous(eid, pid, val))
-            time.sleep(0.08)
+            self._send(p.build_set_param_discrete(eid, pid, 0))
+            time.sleep(0.15)
 
     def splice_block(self, row_1based: int, at_col: int, effect_id: int,
                      settle: float = 0.35) -> dict:
