@@ -108,6 +108,48 @@ PLAN_SCHEMA = {
     "additionalProperties": False,
 }
 
+_ACTION_SCHEMA = PLAN_SCHEMA["properties"]["actions"]["items"]
+
+#: The action kinds, straight from the schema. Was hand-copied in two other
+#: places; the prompt's copy had drifted to six of eleven.
+ACTION_KINDS = tuple(_ACTION_SCHEMA["properties"]["kind"]["enum"])
+
+_JSON_TYPE_NAMES = {"string": "str", "integer": "int", "number": "number",
+                    "boolean": "bool", "null": "null"}
+
+
+def _type_label(spec: dict) -> str:
+    """A JSON Schema type as the prompt spells it: `str`, `number|null`."""
+    declared = spec.get("type", "string")
+    if isinstance(declared, list):
+        return "|".join(_JSON_TYPE_NAMES.get(t, t) for t in declared)
+    return _JSON_TYPE_NAMES.get(declared, declared)
+
+
+def plan_shape_line() -> str:
+    """The reply shape the prompt asks for, derived from PLAN_SCHEMA.
+
+    This line used to be hand-written, and it had drifted: it advertised six
+    action kinds while the schema and the validator both accepted eleven, so
+    a model was told add_block, bind_pedal, the renames and store did not
+    exist. On the Grok backend the contradiction was flat-out visible, since
+    --json-schema enforces PLAN_SCHEMA while the prose said six.
+
+    Deriving it kills the class rather than the instance: the prompt cannot
+    disagree with the schema again, because there is only one list left.
+    """
+    fields = []
+    for name, spec in _ACTION_SCHEMA["properties"].items():
+        if name == "kind":
+            fields.append(f'"kind": "{"|".join(ACTION_KINDS)}"')
+        else:
+            fields.append(f'"{name}": {_type_label(spec)}')
+    top = PLAN_SCHEMA["properties"]
+    return ('{"summary": ' + _type_label(top["summary"])
+            + ', "actions": [{' + ", ".join(fields) + '}], "clarification": '
+            + _type_label(top["clarification"]) + '}')
+
+
 SYSTEM = """You translate a guitarist's natural-language tone requests into concrete Fractal FM9 parameter changes.
 
 You receive the current device state (preset, scene, blocks present with bypass state, and current values of common parameters) and a reference list of controllable parameters with their display ranges. Respond only with a plan.
@@ -335,10 +377,7 @@ def _validate(plan_obj: dict) -> dict:
     actions = plan_obj.get("actions") or []
     clean = []
     for a in actions:
-        if not isinstance(a, dict) or a.get("kind") not in (
-                "set_param", "set_scene", "set_bypass", "set_channel",
-                "set_tempo", "set_type", "add_block", "bind_pedal",
-                "unbind_pedal", "rename_preset", "rename_scene", "store"):
+        if not isinstance(a, dict) or a.get("kind") not in ACTION_KINDS:
             continue
         a.setdefault("block", None)
         a.setdefault("param", None)
@@ -452,10 +491,7 @@ def _full_prompt(prompt: str, device_state: str, param_reference: str) -> str:
         f"Request: {prompt}\n\n"
         "Respond with ONLY a single JSON object, no markdown fences and no "
         "other text, with this shape:\n"
-        '{"summary": str, "actions": [{"kind": "set_param|set_scene|set_bypass|'
-        'set_channel|set_tempo|set_type", "block": str|null, "instance": int, '
-        '"param": str|null, "value": number|null, "bypassed": bool|null, '
-        '"type_name": str|null, "position": str|null, "reason": str}], "clarification": str|null}'
+        + plan_shape_line()
     )
 
 
