@@ -2,6 +2,100 @@
 
 Notable changes to ToneCommand. Dates are UTC.
 
+## 0.5.0 (2026-08-30)
+
+A graphic EQ you can read, panels organised by what a block does, and the
+answer to "why did that change do nothing". That last one turned out to be
+three separate causes wearing the same disguise.
+
+### Added
+- **The graphic EQ is drawn as a graphic EQ.** Vertical faders, zero as a line
+  across the middle, in its own full width panel rather than a 340px column of
+  the tone grid. Ten rows of numbers is a spreadsheet of an EQ, not an EQ: the
+  point of the control is that the curve is a shape you read at a glance.
+- **Seven starting curves and one click back to flat.** Scooped, mid push,
+  tighten the low end, warm, bright, clean up a boxy tone, and flat. A curve is
+  one batched write, so it takes one undo snapshot and cannot end up half
+  applied. These are curves this project drew and the panel says so; nothing
+  here comes off the FM9.
+- **The bands are numbered and the strip names the region** (LOW through HIGH)
+  rather than carrying frequencies. The catalogue gives each band a frequency
+  label, but they are not ascending and one value appears twice, because
+  GEQ_TYPE is an eighteen value enum selecting the band layout and one label
+  per parameter cannot describe eighteen layouts. A wrong frequency on a fader
+  is worse than a number that is simply true.
+- **Four panels instead of one column flow**: AMP & CAB, GRAPHIC EQ, EFFECTS,
+  DYNAMICS & LEVELS. Two sections would not cover the rig: a noise gate, a
+  compressor and a volume block are not effects in the sense a player means,
+  and filing them under EFFECTS to make a two way split come out even would be
+  a tidy looking lie about what those blocks are. Each folds, so a preset with
+  six effects no longer pushes the amp off the screen.
+- **The page says what is driving each parameter.** All 32 modifier slots are
+  read on every poll (about 0.14s), and a driven parameter shows its source and
+  is not draggable. This is also the only honest answer to "is that a pedal wah
+  or an auto wah": the FM9 has no auto wah type, a wah is whatever its sweep is
+  attached to.
+- **Assign and remove Pedal 2 from any continuous parameter.** Hover a row for
+  the P2 button; the badge on a bound row removes it. Several parameters can
+  share Pedal 2, one modifier slot each, and the reply says how many of the 32
+  are left. Pedal 1 is the player's global volume and is never referenced.
+- **The wah sweep, frequency limits and resonance are on the page.** The wah
+  whitelist was Level and Drive, so the one parameter that answers the pedal
+  question was never drawn.
+
+### Fixed
+- **Modifier writes followed the wrong sequence.** Finding 17 is targets last:
+  the slot's own fields as continuous writes first, then target effect, target
+  param and source as discrete writes. The code did the opposite, which is the
+  shape finding 16 describes: reads healthy, survives a store, and comes back
+  with target and source zeroed once the preset reloads.
+- **Modifier bindings are cloned, not invented.** Finding 12 says a binding
+  written from scratch comes out reversed or dead, and the working practice is
+  to clone a proven slot. A slot this tool builds from defaults is now excluded
+  from the donor pool, or a default would launder itself into something the log
+  calls a clone, one slot at a time.
+- **Binding no longer claims the sweep works.** Live modulation is invisible to
+  every read the protocol offers and a dead binding reads byte identical to a
+  live one, so a field read back proves the slot was written and nothing about
+  whether the pedal moves anything.
+- **A bypassed block looked exactly like an engaged one in the parameter
+  panels.** The signal chain drew it dashed; the panels had no idea, so a
+  switched off block got a full set of live looking sliders. You drag one, the
+  write lands, it verifies, and you hear nothing. Reported as "changing the
+  drive pedal has no effect", on a preset whose Drive block was simply off.
+  Bypassed groups now carry a badge that is also the fix: one click engages the
+  block.
+- **The planner is warned about both silent write cases**, a bypassed block and
+  a modifier driven parameter. "Verified" on a change with no audible effect is
+  the most misleading thing this tool can say.
+- **The graphic EQ faders were dead on arrival.** Moving the EQ into its own
+  panel left the listeners bound to the old container by id. Markup right,
+  write path right, API call right, control does nothing, and 501 tests passed
+  over it because none of them dragged anything. Every control container is now
+  wired through one list.
+- **A row without a data-key could freeze the parameter panel for the rest of
+  the session.** Both drag handlers read the row before clearing the flag that
+  suppresses repainting, so a throw between the two left it set. The modifier
+  driven row is exactly such a row shape.
+- **A modifier read could drop the link.** Any exception from the state poll
+  becomes a disconnect and a red light; 32 unguarded reads were added to that
+  path. Guarded per slot and at the call site.
+- **Going offline left the EQ panel live**, faders drawn and FLATTEN ALL armed
+  over a page reading "awaiting link", and left the amp and cab pickers naming
+  a preset no longer loaded.
+- **The catalogue's band label reached the log**, so a fader that deliberately
+  shows no frequency was recorded as "250: 2" in the one place that records
+  what was written to the rig.
+- **unbind_pedal rendered as "Mix: null"** in plan cards, having no describe()
+  branch of its own.
+- **The pedal button and the server disagreed about what is bindable.**
+  FUZZ_TYPE is a selector whose unit is `unverified` rather than `enum`.
+- **path_audit assumed unidentified blocks pass signal and said nothing.** A
+  scene called alive on the strength of an assumption is a weaker claim than
+  one called alive without it, and the difference was invisible. Found while
+  diagnosing a silent preset that turned out to contain two engaged blocks with
+  no registry entry.
+
 ## 0.4.1 (2026-08-30)
 
 Three connection bugs, all found by plugging a cable in and out. Between them
