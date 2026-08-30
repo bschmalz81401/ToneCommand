@@ -66,6 +66,13 @@ INTEREST = {
 }
 
 
+#: Last time the MIDI bus was re-enumerated, so a disconnected poll can look
+#: for a newly arrived device without doing it several times a second when
+#: more than one endpoint asks at once.
+_last_rescan = {"at": 0.0}
+RESCAN_EVERY = 2.0
+
+
 def get_fm9() -> FM9:
     global _fm9
     if _fm9 is None:
@@ -74,6 +81,16 @@ def get_fm9() -> FM9:
             from fm9.sim import SimFM9
             _fm9 = SimFM9(reg)     # virtual device: UI/planner dev offline
         else:
+            # Look at the bus again before trying. Without this the retry is
+            # pointless: the rtmidi backend enumerates through a CoreMIDI
+            # client it holds for the life of the process, so a device plugged
+            # in after startup is invisible however many times we reconstruct.
+            # Reloading costs about eleven milliseconds and leaks nothing,
+            # which is well worth paying on a poll that is failing anyway.
+            now = time.monotonic()
+            if now - _last_rescan["at"] >= RESCAN_EVERY:
+                _last_rescan["at"] = now
+                rescan_midi()
             _fm9 = FM9(reg)
     return _fm9
 

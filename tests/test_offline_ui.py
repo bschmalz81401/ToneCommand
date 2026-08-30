@@ -184,3 +184,46 @@ def test_the_state_endpoint_turns_that_into_a_clean_disconnect(monkeypatch):
     d = TestClient(server.app).get("/api/state").json()
     assert d == {"connected": False}
     assert dropped["n"] == 1
+
+
+def test_a_reconnect_attempt_rescans_the_bus_first(monkeypatch):
+    """Without this the retry is pointless. get_fm9 rebuilds the FM9 object
+    when the handle is gone, but the rtmidi backend enumerates through a
+    CoreMIDI client it holds for the life of the process, so reconstructing
+    against a stale client finds the same nothing however many times it runs.
+    """
+    import server
+    monkeypatch.setattr(server, "_fm9", None)
+    monkeypatch.setattr(server, "_last_rescan", {"at": 0.0})
+    monkeypatch.delenv("TONECOMMAND_SIM", raising=False)
+    calls = {"n": 0}
+    monkeypatch.setattr(server, "rescan_midi",
+                        lambda: calls.update(n=calls["n"] + 1))
+    monkeypatch.setattr(server, "FM9", lambda reg: object())
+    server.get_fm9()
+    assert calls["n"] == 1, "the bus was not re-enumerated before retrying"
+
+
+def test_rescanning_is_throttled(monkeypatch):
+    """Several endpoints can ask at once while disconnected, and re-enumerating
+    several times a second would be waste for no gain."""
+    import server
+    monkeypatch.setattr(server, "_last_rescan", {"at": 0.0})
+    monkeypatch.delenv("TONECOMMAND_SIM", raising=False)
+    calls = {"n": 0}
+    monkeypatch.setattr(server, "rescan_midi",
+                        lambda: calls.update(n=calls["n"] + 1))
+    monkeypatch.setattr(server, "FM9", lambda reg: object())
+    for _ in range(5):
+        monkeypatch.setattr(server, "_fm9", None)
+        server.get_fm9()
+    assert calls["n"] == 1, "rescanned once per burst, not once per call"
+    assert server.RESCAN_EVERY >= 1.0
+
+
+def test_reconnecting_needs_no_button():
+    """The button stays, because a person who has just plugged something in
+    wants to press something. But it is a shortcut, not the mechanism."""
+    import inspect
+    import server
+    assert "rescan_midi()" in inspect.getsource(server.get_fm9)
