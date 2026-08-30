@@ -30,3 +30,4 @@ tonecommand.egg-info/
 ai_settings.json
 store_slots.json
 designs/
+outbox.json

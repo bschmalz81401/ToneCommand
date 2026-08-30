@@ -841,6 +841,7 @@
       <button class="small" id="rrefresh">REFRESH</button>
     </div>
     <div id="rlist"></div>
+    <div class="hint" id="rshare"></div>
     <div class="hint">Tones other people have built, shared as instructions
       rather than as preset files. Reading them needs no account: they live in
       a public folder and are fetched straight from it. USE validates every
@@ -1719,6 +1720,10 @@ function renderRecipes() {
           <span class="rsrc ${r._source}">${r._source}</span>${esc(r.title || r.name)}</div>
         <div class="rmeta">${steps} step${steps === 1 ? '' : 's'}` +
         (r.author ? ` &middot; by <b>${esc(r.author)}</b>` : '') +
+        // ranked on RECENT plays, so a good new tone can surface rather than
+        // a leaderboard of whatever was posted first
+        (r.recent ? ` &middot; <b>played ${r.recent} time${r.recent === 1 ? '' : 's'}
+           in the last month</b>` : (r.plays ? ` &middot; played ${r.plays}` : '')) +
         (r.assumes ? `<br>Needs: ${esc(r.assumes)}` : '') + `</div>
       </div>
       <button class="ruse" data-r="${recipeList.indexOf(r)}">USE</button>
@@ -1737,6 +1742,7 @@ async function useRecipe(i) {
     // Validated against THIS device before anything is proposed: that is what
     // makes a recipe portable rather than a preset file with extra steps.
     showPlan({summary: d.summary, actions: d.actions,
+              recipe: r.name,
               device: lastState.preset ? {preset: lastState.preset} : null});
     $('planbox').scrollIntoView({behavior: 'smooth', block: 'center'});
     if (d.assumes) log(`"${d.summary}" assumes: ${d.assumes}`, 'warn');
@@ -1756,6 +1762,22 @@ $('rlist').addEventListener('click', e => {
   const b = e.target.closest('.ruse');
   if (b) useRecipe(Number(b.dataset.r));
 });
+// What is waiting to be handed over, and whether there is anywhere to hand it
+// to. Both are normal states, and neither is an error worth shouting about.
+async function shareStatus() {
+  try {
+    const d = await (await fetch('/api/share/status')).json();
+    $('rshare').innerHTML = !d.pending ? '' :
+      `<span class="savewarn">${d.pending} item${d.pending === 1 ? '' : 's'}
+       waiting to be shared</span>` +
+      (d.endpoint ? '. Retried automatically; nothing is dropped.'
+                  : '. No sharing service is set up, so they are kept here '
+                    + 'until there is one. Your recipes are already saved.');
+  } catch (e) { /* silent: this only ever adds information */ }
+}
+setInterval(shareStatus, 30000);
+shareStatus();
+
 $('rsearch').addEventListener('input', renderRecipes);
 $('rrefresh').onclick = () => loadRecipes(true);
 loadRecipes(false);
@@ -2506,7 +2528,11 @@ function describe(a) {
 // One renderer for every plan, however it was produced. Extracted so a
 // health fix lands in exactly the same box, behind exactly the same
 // confirm gate, as a plan a language model wrote.
+// Which recipe a plan came from, if any, so a transmit can be counted.
+let planRecipe = null;
+
 function showPlan(plan) {
+  planRecipe = plan.recipe || null;
   currentPlan = plan;
   // Light the scenes this plan would also move, so it cannot be skipped the
   // way a line of small print under a card can be.
@@ -2746,6 +2772,16 @@ async function apply() {
       log(`${describe(res.action)}: ${res.detail}${extra}`,
           res.ok ? 'ok' : (res.action ? 'err' : 'warn'));
     });
+    // Transmits, not downloads. This is the moment a recipe actually reached
+    // somebody's rig, which is a far better signal than a fetch and much
+    // harder to inflate by refreshing a page. Queued locally, so a gig with
+    // no internet still counts once there is some.
+    if (planRecipe && out.results.some(x => x.ok)) {
+      fetch('/api/share/used', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({name: planRecipe})}).catch(() => {});
+      planRecipe = null;
+    }
     $('prompt').value = '';
     const rescan = fixPending;
     fixPending = false;

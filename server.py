@@ -9,6 +9,7 @@ nothing is ever written to a preset slot on the unit.
 from __future__ import annotations
 
 import threading
+import uuid
 import time
 from pathlib import Path
 
@@ -19,7 +20,7 @@ from pydantic import BaseModel
 from fm9.device import FM9, FM9NotFound
 from fm9.registry import Registry
 from fm9 import (ai_settings, designs, editbuffer, health, planner,
-                 recipes as recipebook, rigprofile)
+                 recipes as recipebook, rigprofile, share)
 from tools import path_audit
 from fm9 import protocol as proto
 
@@ -1250,7 +1251,18 @@ def api_recipes(refresh: bool = False):
     mine = recipebook.read_local()
     seen = {r.get("_file") for r in mine}
     items = mine + [r for r in shared if r.get("_file") not in seen]
-    return {"recipes": items, "shared_error": why, "repo": recipebook.REPO}
+    # Ranking is a nicety. A catalogue that will not load because a counter is
+    # down is a broken tool, so this is merged in if it arrives and ignored if
+    # it does not.
+    stats, _ = share.fetch_stats()
+    for r in items:
+        s = stats.get(r.get("name")) or {}
+        r["plays"] = s.get("plays")
+        r["recent"] = s.get("recent")
+    items.sort(key=lambda r: (-(r.get("recent") or 0), -(r.get("plays") or 0),
+                              (r.get("title") or "").lower()))
+    return {"recipes": items, "shared_error": why, "repo": recipebook.REPO,
+            "ranked": bool(stats)}
 
 
 class RecipeBody(BaseModel):
@@ -1288,6 +1300,37 @@ def api_recipe_plan(body: RecipeBody):
             "ear_checklist": body.recipe.get("ear_checklist") or []}
 
 
+@app.get("/api/share/status")
+def api_share_status():
+    """What is waiting to be handed over, and whether there is anywhere to
+    hand it to. Both are normal states."""
+    return {"endpoint": share.endpoint() or None,
+            "pending": len(share.pending()),
+            "entries": [{k: e[k] for k in
+                         ("id", "kind", "queued", "attempts", "last_error")}
+                        for e in share.pending()[:20]]}
+
+
+@app.post("/api/share/sync")
+def api_share_sync():
+    """Try to flush the outbox. Safe to call as often as you like."""
+    out = share.sync()
+    share.forget_accepted()
+    return out
+
+
+class UseBody(BaseModel):
+    name: str
+
+
+@app.post("/api/share/used")
+def api_share_used(body: UseBody):
+    """A recipe actually reached hardware. Queued like everything else, so a
+    gig with the laptop offline still counts once it is back."""
+    share.queue("use", {"name": body.name, "id": uuid.uuid4().hex})
+    return {"queued": True, "pending": len(share.pending())}
+
+
 @app.post("/api/recipes/save")
 def api_recipe_save(body: RecipeBody):
     """Keep a recipe of your own, and say how to pass it on."""
@@ -1295,9 +1338,15 @@ def api_recipe_save(body: RecipeBody):
         path = recipebook.save_local(body.recipe)
     except OSError as e:
         return JSONResponse({"error": str(e)}, status_code=500)
+    # Queued only AFTER the file is on disk. By the time any network call is
+    # attempted the work is already safe and already visible in the app's own
+    # browser, which is what makes losing it impossible.
+    share.queue("recipe", body.recipe)
+    sent = share.sync()
     return {"saved": path.name, "dir": str(path.parent),
             # a prefilled NEW FILE in recipes/, not a new issue
-            "pr_url": recipebook.pr_url(body.recipe)}
+            "pr_url": recipebook.pr_url(body.recipe),
+            "share": sent}
 
 
 @app.get("/api/profile")
