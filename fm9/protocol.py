@@ -270,6 +270,21 @@ MOD_PID_MAX = 2
 MOD_PID_TARGET_EFFECT = 8
 MOD_PID_TARGET_PARAM = 9
 
+#: The slot's own fields, in the order finding 17 verified. Everything in
+#: 1..14 except the two target pids, which are written afterwards and
+#: discretely. Writing past pid 14 corrupted a slot and triggered the device's
+#: load-time clear, so the range is a boundary, not a guess.
+MOD_FIELD_PIDS = (1, 2, 3, 4, 5, 6, 7, 10, 11, 12, 13, 14)
+
+#: The subset of those fields this project has defaults for: a linear transfer
+#: curve. Pids 7 and 10-12 are absent deliberately. Nobody here knows what
+#: they mean, and a continuous write of 0.0 is the zeroed-GET (a read, not a
+#: write), so they cannot even be zeroed on purpose. That gap IS finding 12:
+#: a slot built from these alone is the from-scratch case with the reversed or
+#: dead sweeps. Clone a working slot instead wherever the preset has one.
+MOD_DEFAULT_FIELDS = {1: 0.0, 2: 1.0, 3: 0.0, 4: 0.5, 5: 1.0, 6: 0.5,
+                      13: 0.5, 14: 0.5}
+
 
 def mod_slot_eid(slot_1based: int) -> int:
     if not 1 <= slot_1based <= MOD_SLOT_COUNT:

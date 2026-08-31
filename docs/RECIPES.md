@@ -4,6 +4,24 @@ A recipe is HOW to build a tone, not the tone file itself: a named,
 cited, replayable list of ToneCommand actions. You share the knowledge;
 everyone replays it on their own unit against their own base preset.
 
+## Finding and sharing them
+
+**Reading needs no account.** Recipes live in this repository's `recipes/`
+folder, which is public, so the app fetches them straight out of it and
+browses them in place. Nobody signs in, nobody clicks through a web UI.
+
+**Sharing has two paths**, because the two halves of this are not equally
+hard and pretending one route fits everyone is what went wrong first. SHARE
+RECIPE saves the file into your own `recipes/` folder and puts it on the
+clipboard, so you can pass it on however you already talk to people. If you
+do use GitHub, it will also open a prefilled new file in `recipes/`, where
+one button turns it into a proposal.
+
+It used to open a prefilled GitHub *issue*. That was wrong three ways at
+once: an issue is not a container for a recipe, the tracker would silt up
+with them, and it asked a guitarist to learn a developer's tool before they
+could give anything back.
+
 ## Why recipes and not preset files
 
 - Preset files carry other people's paid work; recipes carry facts and

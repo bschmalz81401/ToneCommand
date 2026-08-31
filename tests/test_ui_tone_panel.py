@@ -91,8 +91,8 @@ def test_a_parameter_with_no_span_stays_a_readout():
 def test_the_write_happens_on_change_not_on_input():
     """input fires for every pixel of travel. Writing there would put a SysEx
     message on the wire for each one, which is how a MIDI port is flooded."""
-    change = SCRIPT.split("$('knobs').addEventListener('change'")[1].split("\n});")[0]
-    inp = SCRIPT.split("$('knobs').addEventListener('input'")[1].split("\n});")[0]
+    change = SCRIPT.split("eachBox(box => box.addEventListener('change'")[1].split("\n}));")[0]
+    inp = SCRIPT.split("eachBox(box => box.addEventListener('input'")[1].split("\n}));")[0]
     assert "set_param" in change, "nothing is transmitted when the drag ends"
     assert "set_param" not in inp and "fetch" not in inp, \
         "the input handler must only move the track fill"
@@ -102,7 +102,7 @@ def test_the_poll_does_not_repaint_under_a_moving_thumb():
     """State refreshes every five seconds. Re-rendering mid-drag would replace
     the element being dragged and drop the gesture."""
     assert "if (!dragging) renderParams(s)" in SCRIPT
-    inp = SCRIPT.split("$('knobs').addEventListener('input'")[1].split("\n});")[0]
+    inp = SCRIPT.split("eachBox(box => box.addEventListener('input'")[1].split("\n}));")[0]
     assert "dragging = true" in inp
 
 
@@ -126,17 +126,21 @@ def test_the_amp_model_and_cab_are_shown(client):
 
 def test_the_panel_is_grouped_by_block():
     """A flat list of thirty values is a wall. The question always arrives
-    attached to a block: the delay a little wetter, the gate tighter."""
-    assert "PARAM_GROUPS" in SCRIPT
-    groups = SCRIPT.split("const PARAM_GROUPS = [")[1].split("];")[0]
+    attached to a block: the delay a little wetter, the gate tighter.
+
+    The groups are no longer a hardcoded list, so this checks the naming and
+    ordering tables that replaced it rather than the list that is gone.
+    """
+    names = SCRIPT.split("const GROUP_NAMES = {")[1].split("};")[0]
+    order = SCRIPT.split("const GROUP_ORDER = [")[1].split("];")[0]
     for fam in ("DISTORT", "INPUT", "DELAY", "REVERB"):
-        assert f"'{fam}'" in groups
+        assert fam in names and f"'{fam}'" in order
 
 
 def test_it_is_not_called_telemetry():
     # the heading itself, not the comment that records why it changed
     assert 'data-label="AMP TELEMETRY"' not in UI
-    assert 'data-label="TONE"' in UI
+    assert 'data-label="AMP &amp; CAB"' in UI
 
 
 def test_both_control_surfaces_say_what_they_do():
@@ -325,8 +329,9 @@ def test_the_list_aligns_to_the_left_edge_of_its_button():
 def test_both_the_control_and_the_list_say_what_they_are():
     """An unlabelled control showing a cab description is just a sentence in a
     box: nothing says it is a cabinet, and nothing says it can be changed."""
+    # "MODEL" beside "CABINET" read as a category rather than a name
     assert '<div class="picklabel">CABINET</div>' in UI
-    assert '<div class="picklabel">MODEL</div>' in UI
+    assert '<div class="picklabel">AMP MODEL</div>' in UI
     assert "'AMP MODEL' : 'CABINET'" in SCRIPT or "'CABINET'" in SCRIPT
     assert 'id="audtitle"' in UI
 
@@ -377,3 +382,135 @@ def test_cab_descriptions_are_not_clipped():
     assert "white-space: normal" in sub
     # and the full text on hover for anything past two lines
     assert 'title="${esc(m.name)}' in SCRIPT
+
+
+def test_the_amp_and_cab_pickers_sit_side_by_side():
+    """Stacked inside a 340px column they were a lopsided tower down one edge,
+    and the cab description had nowhere to go. They are the two facts anyone
+    looks for first, so they get the full width of the panel and read as a
+    pair."""
+    style = UI.split("<style>")[1].split("</style>")[0]
+    picks = re.search(r"^\s*\.picks \{([^}]*)\}", style, re.M).group(1)
+    assert "grid-template-columns: 1fr 1fr" in picks
+    # and they fill their cells equally, which the shrink-to-fit wrapper
+    # prevented until it was told to be a block
+    assert ".pick .aud { display: block; }" in style
+    assert ".pick .audbtn { width: 100%; }" in style
+    # one column when there is genuinely not room for two
+    assert "max-width: 820px) { .picks { grid-template-columns: 1fr; }" in style
+
+
+def test_the_pickers_are_above_the_parameter_columns():
+    """Not inside one of them, which is what made the tower."""
+    assert UI.index('<div id="picks">') < UI.index('<div class="knobs" id="knobs-amp">')
+
+
+# --- every block in the preset, not a hardcoded six ---
+
+def test_the_panel_shows_whatever_the_preset_has(client):
+    """The server already read chorus, phaser, flanger, rotary, wah and the
+    EQs on every poll. The panel filtered them out with a list of six family
+    names, so a preset with a chorus in it offered no way to touch it."""
+    assert "PARAM_GROUPS" not in SCRIPT
+    render = SCRIPT.split("function renderParams")[1].split("\nfunction ")[0]
+    assert "Object.values(meta).map(m => m.family)" in render
+
+
+def test_an_unnamed_family_still_appears():
+    """Hiding a block that IS in the preset is worse than showing it with a
+    plain label."""
+    render = SCRIPT.split("function renderParams")[1].split("\nfunction ")[0]
+    assert "GROUP_NAMES[fam]" in render and "||" in render
+    order = SCRIPT.split("const GROUP_ORDER = [")[1].split("];")[0]
+    assert "'CHORUS'" in order and "'PHASER'" in order and "'FLANGER'" in order
+    # anything not in the order follows rather than vanishing
+    assert "!GROUP_ORDER.includes(f)" in render
+
+
+def test_a_type_picker_appears_only_where_the_names_are_real(client):
+    """Chorus, phaser, flanger and pitch each have a type enum (27, 17, 31 and
+    16 entries) with NO roster. The catalogue carries none, the ordering is
+    undocumented, and the display-name query returns a stale constant rather
+    than the current type. "Type 14" is a number pretending to be a choice."""
+    pickers = SCRIPT.split("const TYPE_PICKERS = {")[1].split("}")[0]
+    assert "DISTORT" in pickers and "REVERB" in pickers and "FUZZ" in pickers
+    for blind in ("CHORUS", "PHASER", "FLANGER", "PITCH"):
+        assert blind not in pickers, blind
+
+
+def test_the_named_rosters_are_served(client):
+    for kind, least in (("amp", 300), ("drive", 80), ("reverb", 70)):
+        d = client.get(f"/api/models?kind={kind}").json()
+        assert len(d["banks"][0]["models"]) >= least, kind
+        assert all(m["name"] for m in d["banks"][0]["models"]), kind
+
+
+def test_the_current_type_is_read_from_the_wire_not_the_name_query(client):
+    """docs/PROTOCOL.md finding 5: the display-name query returns the roster's
+    first entry or a stale constant, verified on two firmware versions by two
+    people. Read the wire value and map through a roster."""
+    import inspect
+    import server
+    src = inspect.getsource(server.snapshot)
+    assert "_TYPE_NAME" in src and "roster.get" in src
+    assert "get_type_name" not in src
+
+
+def test_setting_a_reverb_type_lands(client):
+    before = client.get("/api/state").json()["values"].get("REVERB_TYPE_NAME")
+    r = client.post("/api/apply", json={"actions": [{
+        "kind": "set_type", "block": "REVERB", "instance": 1,
+        "type_name": "8"}]}).json()
+    assert r["results"][-1]["ok"]
+    after = client.get("/api/state").json()["values"].get("REVERB_TYPE_NAME")
+    assert after and after != before
+
+
+# --- putting a level back ------------------------------------------------
+
+def test_zero_is_only_offered_where_zero_means_something():
+    """Two cases and only two: decibels, where 0 is unity, and a range
+    symmetric about zero, where 0 is flat or centre. Gain, Mix and Depth all
+    run 0 to 10 or 0 to 100, where zero is the BOTTOM and not a default at
+    all: offering to reset a gain to 0 would be offering to turn the amp off.
+    """
+    fn = SCRIPT.split("function neutralOf")[1].split("\n}")[0]
+    assert "m.unit === 'db'" in fn
+    assert "m.min < 0" in fn and "Math.abs(m.min + m.max)" in fn
+
+
+def test_the_value_itself_is_the_reset():
+    """Dragging a slider onto exactly 0.0 dB is a fiddle nobody should have to
+    do, and it is the single most common thing anyone wants a level to be."""
+    row = SCRIPT.split("function knobRow")[1].split("\n}")[0]
+    assert "neutralOf(m)" in row
+    assert 'button class="v reset' in row
+    # and it says so rather than relying on the reader guessing
+    assert "'set to '" in row
+
+
+def test_a_value_already_at_zero_offers_nothing():
+    row = SCRIPT.split("function knobRow")[1].split("\n}")[0]
+    assert "atZero" in row and "' at'" in row
+    assert ".knob button.v.at { cursor: default;" in UI
+
+
+def test_the_reset_goes_through_the_same_verified_write():
+    """Not a shortcut around the path everything else uses, so it is read back
+    and covered by undo like a drag."""
+    handler = SCRIPT.split("button.v.reset")[1].split("\n});")[0]
+    assert "blockAction(" in handler and "set_param" in handler
+
+
+def test_the_button_does_not_inherit_the_global_button_padding():
+    """The global rule is 9px 20px, which is right for ENGAGE and blows
+    "-15 dB" straight out of a narrow value column. Every default the button
+    element brings has to be reset here."""
+    style = UI.split("<style>")[1].split("</style>")[0]
+    rule = re.search(r"^\s*\.knob button\.v \{([^}]*)\}", style, re.M).group(1)
+    for prop in ("padding:", "border:", "background:", "font-family:",
+                 "font-size:", "letter-spacing:"):
+        assert prop in rule, prop
+    # and the column has room for a boxed value
+    knob = re.search(r"^\s*\.knob \{ display: grid;([^}]*)\}", style, re.M).group(1)
+    assert int(re.search(r"1fr (\d+)px", knob).group(1)) >= 80

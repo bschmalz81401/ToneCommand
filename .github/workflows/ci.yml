@@ -16,6 +16,6 @@ jobs:
       - name: Install
         run: pip install -e ".[dev]"
       - name: Run test suite (simulator + validation, no hardware)
-        run: pytest tests/ -q
+        run: pytest tests/ -q -n auto
       - name: Verification ladder on the simulator
         run: TONECOMMAND_SIM=1 python tools/preset_doctor.py 0 1

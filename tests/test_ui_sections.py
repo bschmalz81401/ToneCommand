@@ -1,0 +1,151 @@
+"""One panel per job, instead of one column-flow you have to hunt through.
+
+Moncy's proposal was two sections: amps/cabs/drives, and mod/delay/reverb.
+The split here is three, because two does not cover the rig. A noise gate, a
+compressor and a volume block are not effects in the sense a player means, and
+filing them under EFFECTS to make a two-way split come out even would be a
+tidy-looking lie about what those blocks are.
+"""
+import html
+import re
+from pathlib import Path
+
+import pytest
+from fastapi.testclient import TestClient
+
+import server
+from fm9.sim import SimFM9
+
+UI = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text()
+SCRIPT = UI.split("<script>")[1]
+BODY = UI.split("</style>")[1]
+
+
+@pytest.fixture
+def client(monkeypatch):
+    monkeypatch.setattr(server, "_fm9", SimFM9(server.reg))
+    return TestClient(server.app)
+
+
+def _sections():
+    block = SCRIPT.split("const SECTIONS = [")[1].split("\n];")[0]
+    out = []
+    for m in re.finditer(r"\['(\w+)',\s*'([\w-]+)',\s*\[([^\]]*)\]", block):
+        fams = re.findall(r"'(\w+)'", m.group(3))
+        out.append((m.group(1), m.group(2), fams))
+    return out
+
+
+def _panel_order():
+    return [html.unescape(x) for x in re.findall(r'data-label="([^"]+)"', BODY)]
+
+
+# --- the split itself ------------------------------------------------------
+
+def test_there_are_panels_for_each_job():
+    order = _panel_order()
+    for label in ("AMP & CAB", "GRAPHIC EQ", "EFFECTS", "DYNAMICS & LEVELS"):
+        assert label in order, label
+
+
+def test_they_read_in_signal_order():
+    """What makes the sound, then what shapes it, then what sits around it."""
+    order = _panel_order()
+    assert order.index("AMP & CAB") < order.index("GRAPHIC EQ") \
+        < order.index("EFFECTS") < order.index("DYNAMICS & LEVELS")
+
+
+def test_the_amp_section_is_the_amp_the_cab_and_the_drive():
+    """Moncy's ask, exactly. The cab is not a family of its own: it is the
+    CABINET picker in the #picks row, which lives in this panel."""
+    amp = dict((box, fams) for _, box, fams in _sections())["knobs-amp"]
+    assert set(amp) == {"FUZZ", "DISTORT"}
+    picks = BODY.split('id="amppanel"')[1].split("</div>\n\n")[0]
+    assert '<div id="picks">' in picks
+
+
+def test_the_effects_section_is_what_a_player_calls_a_pedal():
+    fx = dict((box, fams) for _, box, fams in _sections())["knobs-fx"]
+    for fam in ("CHORUS", "FLANGER", "PHASER", "ROTARY", "TREMOLO", "PITCH",
+                "DELAY", "MULTITAP", "REVERB", "WAH", "FILTER"):
+        assert fam in fx, fam
+
+
+def test_gates_and_levels_are_not_filed_as_effects():
+    """The reason this is three sections and not two."""
+    fx = dict((box, fams) for _, box, fams in _sections())["knobs-fx"]
+    util = dict((box, fams) for _, box, fams in _sections())["knobs-util"]
+    for fam in ("INPUT", "GATE", "COMP", "VOLUME", "PEQ"):
+        assert fam in util and fam not in fx, fam
+
+
+def test_every_family_the_ui_can_name_has_a_home():
+    """A block with no section would vanish from the page entirely, which is a
+    worse failure than being in the wrong panel."""
+    names = re.findall(r"^\s*(\w+): '", SCRIPT.split("const GROUP_NAMES = {")[1]
+                       .split("\n};")[0], re.M)
+    placed = {f for _, _, fams in _sections() for f in fams} | {"GEQ"}
+    assert set(names) - placed == set(), set(names) - placed
+
+
+def test_an_unknown_family_lands_somewhere_rather_than_nowhere():
+    assert "const FALLBACK_BOX = 'knobs-util';" in SCRIPT
+    assert "SECTION_OF[fam] || FALLBACK_BOX" in SCRIPT
+
+
+def test_an_empty_section_does_not_draw():
+    """An EFFECTS heading over nothing says this preset has effects and they
+    are all at default. For a four-block preset that is simply untrue."""
+    render = SCRIPT.split("function renderParams")[1].split("\nfunction ")[0]
+    assert "$(panel).style.display = show ? '' : 'none';" in render
+
+
+# --- the bug the split exposed --------------------------------------------
+
+def test_every_control_container_is_wired_the_same_way():
+    """The graphic EQ moved into its own panel and its faders went dead: the
+    listeners were bound to one element by id, and #geqbox is not that
+    element. The markup was right, the write path was right, the API call was
+    right, and the control did nothing. Found by dragging one in a real
+    browser, which is the only place it was visible.
+    """
+    assert "$('knobs')" not in SCRIPT, "no handler may be bound to one box by id"
+    boxes = re.search(r"const CONTROL_BOXES = \[([^\]]*)\]", SCRIPT).group(1)
+    for box in ("picks", "knobs-amp", "geqbox", "knobs-fx", "knobs-util"):
+        assert f"'{box}'" in boxes, box
+    # and every listener over a control goes through it, so adding a panel is
+    # one entry in CONTROL_BOXES rather than five listeners to remember
+    assert SCRIPT.count("eachBox(box => box.addEventListener(") >= 5
+    for box in ("knobs-amp", "geqbox", "knobs-fx", "knobs-util", "picks"):
+        assert f"$('{box}').addEventListener" not in SCRIPT, box
+
+
+def test_the_boxes_all_exist_in_the_markup():
+    """A typo'd id would silently drop a whole panel's controls, because
+    eachBox skips what it cannot find."""
+    boxes = re.findall(r"'([\w-]+)'",
+                       re.search(r"const CONTROL_BOXES = \[([^\]]*)\]", SCRIPT).group(1))
+    for box in boxes:
+        assert f'id="{box}"' in BODY, box
+
+
+def test_a_band_label_never_reaches_the_log_either():
+    """describe() fell back to the catalogue's displayLabel, so a fader that
+    deliberately shows no frequency was recorded in the log as "250: 2". The
+    log is the record of what was written to the rig; a wrong name there is
+    the same wrong number in the one place it is kept."""
+    fn = SCRIPT.split("function describe(a)")[1].split("\n}\n")[0]
+    assert "geqKeys.indexOf(a.param)" in fn
+    assert "Graphic EQ band ${band + 1}" in fn
+    assert fn.index("geqKeys.indexOf") < fn.index("lastParams[a.param]"), \
+        "the fallback must not get there first"
+
+
+# --- and it still shows whatever the preset actually has -------------------
+
+def test_the_sections_between_them_show_every_block(client):
+    """Nothing may be lost in the split."""
+    meta = client.get("/api/state").json()["params"]
+    fams = {m["family"] for m in meta.values()}
+    placed = {f for _, _, fams_ in _sections() for f in fams_} | {"GEQ"}
+    assert fams <= placed, fams - placed
