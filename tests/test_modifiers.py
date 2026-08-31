@@ -282,10 +282,20 @@ def test_many_parameters_can_share_pedal_two(client):
 
 
 def test_running_out_of_slots_says_what_to_do(client):
+    """The slots are filled in the simulator's own store rather than over the
+    wire. Thirty-two binds is ninety-six writes, each waiting out a settle
+    window, and it cost 78 seconds: a fifth of the whole suite to check one
+    sentence. What is under test is the refusal, not the protocol, and the
+    protocol has its own tests.
+    """
     fm9 = server._fm9
+    eid = server.reg.effect_id("DELAY")
+    slots = fm9.sim_core.st.buffer["modifiers"]
+    for m in range(1, fp.MOD_SLOT_COUNT + 1):
+        slots[m][fp.MOD_PID_TARGET_EFFECT] = eid
+        slots[m][fp.MOD_PID_TARGET_PARAM] = 12
+        slots[m][fp.MOD_PID_SOURCE] = 11
     with fm9:
-        for m in range(1, fp.MOD_SLOT_COUNT + 1):
-            _bind(fm9, m, server.reg.effect_id("DELAY"), 12, 11)
         r = server._bind_pedal(fm9, server.Action(
             kind="bind_pedal", block="reverb", instance=1, param="REVERB_MIX"))
     assert not r["ok"]
