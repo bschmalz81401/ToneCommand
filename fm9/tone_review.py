@@ -338,12 +338,18 @@ def bland_test_passed(findings: list[Finding]) -> bool:
 #             split). Real and useful, but adds no TONAL dimension, so it
 #             does not satisfy rule 16 on its own.
 #   eq        PEQ/GEQ. A DIFFERENT fine-tune handle, rule 17's concern,
-#             not rule 16's - tracked separately via eq_engaged/_EQ so
-#             engaging one does not silently also satisfy rule 16.
+#             not rule 16's - engaging one sets eq_engaged, never effects,
+#             so it does not silently also satisfy rule 16.
 #   amp       DISTORT, the amp block itself: tracked via amp_gain/
 #             amp_level, a different dimension than "effects".
 #   boost     FUZZ, the dedicated boost/drive stage: tracked via
 #             boost_gain/boosted, not "effects".
+#
+# PEQ has no _MIX/_DEPTH parameter at all (confirmed against the
+# catalog), so it is not one of the 27 families the completeness test
+# requires - it is listed here anyway because it is still reachable
+# through set_bypass, and _apply_family_engagement below needs ONE table
+# that covers every family either path can produce, not two.
 FAMILY_CLASS: dict[str, str] = {
     # audible: modulation
     "CHORUS": "audible", "FLANGER": "audible", "PHASER": "audible",
@@ -361,17 +367,44 @@ FAMILY_CLASS: dict[str, str] = {
     "COMP": "dynamics", "MULTICOMP": "dynamics", "GATE": "dynamics",
     "CROSSOVER": "dynamics",
     # eq: rule 17's concern, not rule 16's
-    "GEQ": "eq",
+    "GEQ": "eq", "PEQ": "eq",
     # amp / boost: tracked via their own dedicated Scene fields
     "DISTORT": "amp", "FUZZ": "boost",
 }
 
-_BOOST = {"FUZZ", "DRIVE"}
-#: EQ block families (issue #97). Both count as the same fine-tune handle;
-#: a build needs at least one of either, not specifically both. PEQ has no
-#: _MIX/_DEPTH param at all, so it never appears in FAMILY_CLASS - it is
-#: reached only through set_bypass, never through the fx_mix/effects path.
-_EQ = {"PEQ", "GEQ"}
+
+def _apply_family_engagement(s: Scene, fam: str, *, meaningful: bool) -> None:
+    """The ONE place a family's engagement turns into effects/boosted/
+    eq_engaged, used identically whether it was learned from
+    set_bypass(bypassed=False) or from a meaningful value on the family's
+    own _MIX/_DEPTH/_DRIVE parameter.
+
+    Independent review found this split into two hand-maintained,
+    divergent implementations FOUR times in a row (rounds 1, 2, 4, 5):
+    each round's fix patched one path (usually set_bypass) while the
+    other (usually the _MIX/_DEPTH param path) stayed stale, so the same
+    class of false pass/fail kept resurfacing under a new parameter name
+    every round. One function, called from both places against the same
+    FAMILY_CLASS, is the actual fix: a family cannot register as engaged
+    through one path and not the other, because there is only one path.
+
+    `meaningful` lets a caller say "this specific observation does not
+    count" (bypassed=True does not reach here at all; an explicit 0 or
+    missing _MIX/_DEPTH value is not real engagement) without that
+    judgment being duplicated at every call site.
+    """
+    if not meaningful:
+        return
+    cls = FAMILY_CLASS.get(fam)
+    if cls == "audible":
+        s.effects.add(fam)
+    elif cls == "boost":
+        s.boosted = True
+    elif cls == "eq":
+        s.eq_engaged = True
+    # dynamics / amp / unclassified: no engagement flag lives here.
+    # Dynamics is real but not a tonal dimension (rule 16); amp is
+    # tracked via amp_gain/amp_level, not this mechanism.
 
 
 def _catalog_mix_or_depth_families() -> frozenset[str]:
@@ -447,23 +480,25 @@ def summary_from_plan(actions: list[dict], reg=None) -> list[Scene]:
                 # Setting a boost's own gain is intent to use it, whether or
                 # not this same plan also (re-)states set_bypass - a donor/
                 # inherited channel can already be engaged, with the plan
-                # only touching its level. Found in independent review: the
-                # bland check (rule 16) otherwise read a plan that clearly
-                # dials in a boost as having "no boost" simply because it
-                # never repeated a bypass call the block did not need.
-                if val is not None:
-                    scn(cur).boosted = True
+                # only touching its level.
+                _apply_family_engagement(scn(cur), "FUZZ",
+                                          meaningful=val is not None and val != 0)
             elif p.endswith("_MIX") or p.endswith("_DEPTH"):
                 fam = p.rsplit("_", 1)[0]
                 # Depth is what makes an effect audible. A plan that engages
                 # reverb and leaves it at 12 percent has not made a lush clean.
                 if val is not None:
                     scn(cur).fx_mix[fam] = val
-                    # Same reasoning as FUZZ_DRIVE above: dialling an
-                    # effect's mix/depth is intent to use it, independent of
-                    # whether this plan also touches that block's bypass.
-                    if fam in wet_families():
-                        scn(cur).effects.add(fam)
+                # Same reasoning as FUZZ_DRIVE above: dialling a family's own
+                # mix/depth is intent to use it, independent of whether this
+                # plan also touches that block's bypass. An explicit 0 is
+                # not real engagement (found in independent review: FUZZ_MIX
+                # and GEQ_MIX set this way used to reach only `effects` via
+                # wet_families(), silently never reaching boosted/eq_engaged
+                # for FUZZ/GEQ - one shared classification now covers all
+                # three outcomes for both this path and set_bypass below).
+                _apply_family_engagement(scn(cur), fam,
+                                          meaningful=val is not None and val != 0)
             elif p.startswith("OUTPUT_SCENE"):
                 tail = p.replace("OUTPUT_SCENE", "")
                 if tail.isdigit():
@@ -477,12 +512,7 @@ def summary_from_plan(actions: list[dict], reg=None) -> list[Scene]:
                 fam = block.upper()
                 # normalise a couple of friendly names
                 fam = {"AMP": "DISTORT", "DRIVE": "FUZZ"}.get(fam, fam)
-                if fam in wet_families():
-                    scn(cur).effects.add(fam)
-                if fam in _BOOST:
-                    scn(cur).boosted = True
-                if fam in _EQ:
-                    scn(cur).eq_engaged = True
+                _apply_family_engagement(scn(cur), fam, meaningful=True)
         elif kind == "set_channel" and cur is not None:
             # The action that was dropped entirely. A scene voiced purely by
             # pointing blocks at already-voiced channels sets no parameters,

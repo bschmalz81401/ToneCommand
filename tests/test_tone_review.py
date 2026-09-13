@@ -345,9 +345,9 @@ def test_a_dynamics_or_eq_family_alone_does_not_rescue_a_bare_scene(family):
 
 def test_geq_and_peq_are_equally_not_an_audible_dimension_for_rule_16():
     """The exact asymmetry round 4 flagged: PEQ (no _MIX/_DEPTH param) and
-    GEQ (has one, classified 'eq') must behave IDENTICALLY for rule 16 -
-    neither rescues a bland scene - while both still satisfy rule 17
-    (_EQ = {PEQ, GEQ}, unaffected by this fix)."""
+    GEQ (has one) are both classified 'eq' in FAMILY_CLASS and must behave
+    IDENTICALLY for rule 16 - neither rescues a bland scene - while both
+    still satisfy rule 17 via eq_engaged."""
     for eq_block in ("peq", "geq"):
         plan = [
             {"kind": "rename_scene", "value": 1, "type_name": "Rhythm"},
@@ -360,6 +360,93 @@ def test_geq_and_peq_are_equally_not_an_audible_dimension_for_rule_16():
         bland = [f for f in tr.review(scenes) if f.rule == "16"]
         assert bland and bland[0].severity == "fail", (
             f"{eq_block} alone must not rescue rule 16 either")
+
+
+def test_fuzz_mix_alone_prevents_the_false_rule_16_failure():
+    """Round 5's finding: dialling FUZZ_MIX (no set_bypass, no FUZZ_DRIVE)
+    used to reach only `effects` via the old wet_families()-only check -
+    FUZZ is classified 'boost', not 'audible', so it never landed in
+    effects OR boosted, and a scene that clearly uses its fuzz block
+    wrongly hard-failed as bare. One shared classification now means
+    FUZZ_MIX registers as a real boost, exactly like FUZZ_DRIVE does."""
+    plan = [
+        {"kind": "rename_scene", "value": 1, "type_name": "Rhythm"},
+        {"kind": "set_scene", "value": 1},
+        {"kind": "set_param", "block": "fuzz", "param": "FUZZ_MIX", "value": 55},
+        {"kind": "set_param", "block": "amp", "param": "DISTORT_DRIVE", "value": 6.0},
+    ]
+    scenes = tr.summary_from_plan(plan)
+    assert scenes[0].bypass == {}, "fixture must exercise no set_bypass at all"
+    assert scenes[0].boosted is True, "FUZZ_MIX must register as a real boost"
+    findings = tr.review(scenes)
+    assert not [f for f in findings if f.rule == "16"], (
+        "a scene voiced only by FUZZ_MIX must not be judged bare")
+
+
+def test_geq_mix_alone_satisfies_rule_17_like_bypass_engagement_does():
+    """Round 5's other finding: GEQ_MIX (no set_bypass) never touched
+    eq_engaged, so rule 17 fired despite a GEQ value clearly being set.
+    Must behave identically to engaging GEQ via set_bypass."""
+    plan = [
+        {"kind": "rename_scene", "value": 1, "type_name": "Rhythm"},
+        {"kind": "set_scene", "value": 1},
+        {"kind": "set_param", "block": "geq", "param": "GEQ_MIX", "value": 50},
+        {"kind": "set_param", "block": "amp", "param": "DISTORT_DRIVE", "value": 6.0},
+        {"kind": "set_bypass", "block": "delay", "bypassed": False},
+    ]
+    scenes = tr.summary_from_plan(plan)
+    assert scenes[0].eq_engaged is True, "GEQ_MIX must register as EQ engagement"
+    assert not [f for f in tr.review(scenes) if f.rule == "17"]
+
+
+@pytest.mark.parametrize("family", ("COMP", "MULTICOMP", "GATE", "CROSSOVER"))
+def test_a_dynamics_familys_mix_value_still_does_not_satisfy_rule_16(family):
+    """The other direction of round 5's fix: unifying the two engagement
+    paths must not accidentally let a dynamics family's _MIX value start
+    counting as a tonal dimension. A compressor or gate dialled in via
+    set_param, with no other effect and no boost, is still bare."""
+    plan = [
+        {"kind": "rename_scene", "value": 1, "type_name": "Rhythm"},
+        {"kind": "set_scene", "value": 1},
+        {"kind": "set_param", "block": family.lower(),
+         "param": f"{family}_MIX", "value": 60},
+        {"kind": "set_param", "block": "amp", "param": "DISTORT_DRIVE", "value": 6.0},
+    ]
+    scenes = tr.summary_from_plan(plan)
+    assert family not in scenes[0].effects
+    bland = [f for f in tr.review(scenes) if f.rule == "16"]
+    assert bland and bland[0].severity == "fail", (
+        f"a scene voiced only by {family}_MIX must still be judged bare")
+
+
+def test_a_zero_mix_value_does_not_claim_engagement():
+    """An explicit 0 is recorded as evidence (fx_mix), but must not count
+    as real engagement - a mix at 0 percent is functionally off."""
+    plan = [
+        {"kind": "rename_scene", "value": 1, "type_name": "Rhythm"},
+        {"kind": "set_scene", "value": 1},
+        {"kind": "set_param", "block": "reverb", "param": "REVERB_MIX", "value": 0},
+        {"kind": "set_param", "block": "amp", "param": "DISTORT_DRIVE", "value": 6.0},
+    ]
+    scenes = tr.summary_from_plan(plan)
+    assert scenes[0].fx_mix.get("REVERB") == 0, "the value itself is still recorded"
+    assert "REVERB" not in scenes[0].effects, "a 0 mix must not count as engaged"
+    bland = [f for f in tr.review(scenes) if f.rule == "16"]
+    assert bland and bland[0].severity == "fail"
+
+
+def test_a_zero_fuzz_drive_does_not_claim_a_boost():
+    plan = [
+        {"kind": "rename_scene", "value": 1, "type_name": "Rhythm"},
+        {"kind": "set_scene", "value": 1},
+        {"kind": "set_param", "block": "fuzz", "param": "FUZZ_DRIVE", "value": 0},
+        {"kind": "set_param", "block": "amp", "param": "DISTORT_DRIVE", "value": 6.0},
+    ]
+    scenes = tr.summary_from_plan(plan)
+    assert scenes[0].boost_gain == 0
+    assert scenes[0].boosted is False
+    bland = [f for f in tr.review(scenes) if f.rule == "16"]
+    assert bland and bland[0].severity == "fail"
 
 
 def test_scene_level_alone_is_not_tone_voicing():
