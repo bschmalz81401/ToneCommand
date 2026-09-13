@@ -329,7 +329,7 @@ def bland_test_passed(findings: list[Finding]) -> bool:
 # the semantic judgment a name pattern cannot make for us. Every family
 # the catalog gives a _MIX OR _DEPTH parameter to MUST appear here in
 # exactly one category; completeness is enforced by
-# test_every_catalogued_family_is_classified so a future roster addition
+# test_every_catalogued_mix_or_depth_family_is_classified so a future roster addition
 # fails loudly in CI rather than silently reopening either loophole.
 #
 #   audible   a real tone-shaping dimension: modulation, time-based,
@@ -454,6 +454,22 @@ def summary_from_plan(actions: list[dict], reg=None) -> list[Scene]:
         return scenes.setdefault(n, Scene(n=n))
 
     cur = None
+    # add_block places a block on the shared grid, not into "the scene
+    # active when it ran" - the FM9 invariant this module documents
+    # elsewhere is that a scene's identity is its BYPASS and CHANNEL
+    # state, and neither of those is what add_block sets. A newly added
+    # block exists in every scene at once (arrives un-bypassed, per
+    # server.py's own "factory-default settings" behavior), and a given
+    # scene only differs from that shared default once something scene-
+    # specific (set_bypass, set_channel) says so. So this is tracked
+    # separately from `cur` here and applied to every scene at the end,
+    # rather than folded into whichever scene happened to be selected
+    # when the add_block action ran (found in independent review: a
+    # scene voiced purely by adding a new effect block - the documented,
+    # correct way to place chorus/phaser/wah/pitch/etc, none of which are
+    # on the starter template - produced no Scene entry for the block at
+    # all, so it read as a bare amp+cab and a false rule-16 fail).
+    added_families: set[tuple[str, str]] = set()
     for a in actions:
         kind = a.get("kind")
         if kind == "set_scene":
@@ -520,11 +536,32 @@ def summary_from_plan(actions: list[dict], reg=None) -> list[Scene]:
             v = a.get("value")
             if v is not None:
                 scn(cur).channels[block] = int(v)
+        elif kind == "add_block":
+            # Grid-global (see the comment above the loop): not tied to
+            # `cur`, and never written into channels/bypass, so it cannot
+            # manufacture a false rule-15 clone difference between two
+            # scenes that both simply inherit the same shared block. Kept
+            # as (raw block key, classified family): bypass is keyed by
+            # the RAW block string (lowercase, unmapped - see set_bypass
+            # above), so the override check below must look up the same
+            # key a later set_bypass for this block would actually use.
+            fam = {"AMP": "DISTORT", "DRIVE": "FUZZ"}.get(block.upper(), block.upper())
+            added_families.add((block, fam))
 
     # fill roles for any scene named but not yet role'd
     for s in scenes.values():
         if s.role is None and s.name:
             s.role = infer_role(s.name)
+
+    # Apply every globally-added block's engagement to every scene that
+    # does not explicitly bypass it. An explicit set_bypass for THIS scene
+    # (either direction) is the scene-specific fact that wins; add_block
+    # only supplies the shared default.
+    for block_key, fam in added_families:
+        for s in scenes.values():
+            if s.bypass.get(block_key) is not True:
+                _apply_family_engagement(s, fam, meaningful=True)
+
     return [scenes[k] for k in sorted(scenes)]
 
 

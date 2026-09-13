@@ -449,6 +449,97 @@ def test_a_zero_fuzz_drive_does_not_claim_a_boost():
     assert bland and bland[0].severity == "fail"
 
 
+# --- round 6: add_block is grid-global, not scene-local --------------------
+
+def test_an_added_audible_block_prevents_the_false_rule_16_failure():
+    """Round 6's finding: add_block is the documented, correct way to place
+    any effect not already on the starter template (chorus, phaser, wah,
+    pitch, ...), and summary_from_plan had no branch for it at all - a
+    scene voiced purely by adding a real block read as bare amp+cab."""
+    plan = [
+        {"kind": "rename_scene", "value": 1, "type_name": "Rhythm"},
+        {"kind": "set_scene", "value": 1},
+        {"kind": "set_param", "block": "amp", "param": "DISTORT_DRIVE", "value": 6.0},
+        {"kind": "set_param", "block": "amp", "param": "DISTORT_LEVEL", "value": 0.0},
+        {"kind": "add_block", "block": "chorus", "instance": 1, "position": "post"},
+    ]
+    scenes = tr.summary_from_plan(plan)
+    assert "CHORUS" in scenes[0].effects
+    findings = tr.review(scenes)
+    assert not [f for f in findings if f.rule == "16"], (
+        "a scene voiced by adding a real effect block must not be judged bare")
+    assert tr.bland_test_passed(findings)
+
+
+def test_an_added_dynamics_or_boost_block_is_classified_the_same_via_add_block():
+    """add_block must go through the SAME FAMILY_CLASS classification as
+    every other path: a dynamics block (gate) still does not satisfy rule
+    16 on its own, and a boost block (fuzz) satisfies boosted, not effects."""
+    dynamics_plan = [
+        {"kind": "rename_scene", "value": 1, "type_name": "Rhythm"},
+        {"kind": "set_scene", "value": 1},
+        {"kind": "set_param", "block": "amp", "param": "DISTORT_DRIVE", "value": 6.0},
+        {"kind": "add_block", "block": "gate", "instance": 1, "position": "pre"},
+    ]
+    scenes = tr.summary_from_plan(dynamics_plan)
+    assert "GATE" not in scenes[0].effects
+    bland = [f for f in tr.review(scenes) if f.rule == "16"]
+    assert bland and bland[0].severity == "fail"
+
+    boost_plan = [
+        {"kind": "rename_scene", "value": 1, "type_name": "Rhythm"},
+        {"kind": "set_scene", "value": 1},
+        {"kind": "set_param", "block": "amp", "param": "DISTORT_DRIVE", "value": 6.0},
+        {"kind": "add_block", "block": "fuzz", "instance": 1, "position": "pre"},
+    ]
+    scenes = tr.summary_from_plan(boost_plan)
+    assert scenes[0].boosted is True
+    assert "FUZZ" not in scenes[0].effects
+    assert not [f for f in tr.review(scenes) if f.rule == "16"]
+
+    eq_plan = [
+        {"kind": "rename_scene", "value": 1, "type_name": "Rhythm"},
+        {"kind": "set_scene", "value": 1},
+        {"kind": "set_param", "block": "amp", "param": "DISTORT_DRIVE", "value": 6.0},
+        {"kind": "add_block", "block": "geq", "instance": 1, "position": "post"},
+    ]
+    scenes = tr.summary_from_plan(eq_plan)
+    assert scenes[0].eq_engaged is True
+    assert not [f for f in tr.review(scenes) if f.rule == "17"]
+
+
+def test_a_globally_added_block_alone_does_not_falsely_differentiate_scenes():
+    """The FM9 invariant round 6 flagged: add_block places a block on the
+    shared grid, not into one scene. Two scenes that both simply inherit
+    the same globally-added block, with no scene-specific bypass/channel
+    difference at all, are still the same sound under two names - the
+    global block's presence alone must not manufacture a clone-detection
+    escape."""
+    plan = (_scene_actions(2, "A", 2, 1, False)
+            + _scene_actions(4, "B", 2, 1, False)
+            + [{"kind": "add_block", "block": "chorus", "instance": 1, "position": "post"}])
+    scenes = tr.summary_from_plan(plan)
+    clone = [f for f in tr.review(scenes) if f.rule == "15"]
+    assert clone, "a shared global block must not hide an otherwise-real clone"
+
+
+def test_an_explicit_per_scene_bypass_difference_still_differentiates_scenes():
+    """The other half: once a scene EXPLICITLY overrides the globally-added
+    block's default (bypasses it for just that scene), that scene-specific
+    fact must still correctly tell the two scenes apart."""
+    plan = (_scene_actions(2, "A", 2, 1, False)
+            + _scene_actions(4, "B", 2, 1, False)
+            + [{"kind": "add_block", "block": "chorus", "instance": 1, "position": "post"},
+               {"kind": "set_scene", "value": 4},
+               {"kind": "set_bypass", "block": "chorus", "bypassed": True}])
+    scenes = tr.summary_from_plan(plan)
+    by_n = {s.n: s for s in scenes}
+    assert "CHORUS" in by_n[2].effects, "scene 2 keeps the shared default (not bypassed)"
+    assert "CHORUS" not in by_n[4].effects, "scene 4's explicit bypass overrides the default"
+    clone = [f for f in tr.review(scenes) if f.rule == "15"]
+    assert not clone, "the explicit per-scene bypass difference must tell them apart"
+
+
 def test_scene_level_alone_is_not_tone_voicing():
     """Explicit decision (independent review round 3): OUTPUT_SCENEn is an
     output-level TRIM, the same category of fact as a channel assignment -
