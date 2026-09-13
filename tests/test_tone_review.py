@@ -188,3 +188,80 @@ def test_the_plan_shape_is_the_same_identity_health_uses():
     s.bypass = {"amp": False, "delay": True}
     assert s.shape() == (("amp", False, 2), ("delay", True, None))
     assert tr.Scene(2, "Y", None).shape() == (), "an untouched scene is empty"
+
+
+# --- issue #96: the bland test (rule 16) as a real gate --------------------
+
+def test_bare_amp_cab_only_scene_fails_the_bland_test():
+    """A scene the plan leaves with nothing engaged - no effects, no boost -
+    is exactly the bare amp+cab preset issue #96 says must never ship."""
+    plan = [
+        {"kind": "rename_scene", "value": 1, "type_name": "Rhythm"},
+        {"kind": "set_scene", "value": 1},
+        {"kind": "set_channel", "block": "amp", "value": 1},
+        {"kind": "set_bypass", "block": "delay", "bypassed": True},
+        {"kind": "set_bypass", "block": "reverb", "bypassed": True},
+    ]
+    scenes = tr.summary_from_plan(plan)
+    findings = tr.review(scenes)
+    bland = [f for f in findings if f.rule == "16"]
+    assert len(bland) == 1
+    assert bland[0].severity == "fail"
+    assert bland[0].scene == 1
+    assert not tr.bland_test_passed(findings)
+
+
+def test_a_scene_with_an_effect_or_a_boost_does_not_fail_the_bland_test():
+    plan = [
+        {"kind": "rename_scene", "value": 1, "type_name": "Rhythm"},
+        {"kind": "set_scene", "value": 1},
+        {"kind": "set_channel", "block": "amp", "value": 1},
+        {"kind": "set_bypass", "block": "delay", "bypassed": False},
+    ]
+    scenes = tr.summary_from_plan(plan)
+    findings = tr.review(scenes)
+    assert not [f for f in findings if f.rule == "16"]
+    assert tr.bland_test_passed(findings)
+
+
+def test_an_untouched_scene_is_not_accused_of_being_bland():
+    """A scene the plan says nothing structural about (empty shape) cannot be
+    judged bare - that would fire on every delta plan that only renames a
+    scene, the same guard clones() already uses."""
+    plan = [{"kind": "rename_scene", "value": 1, "type_name": "Clean"}]
+    scenes = tr.summary_from_plan(plan)
+    assert not [f for f in tr.review(scenes) if f.rule == "16"]
+
+
+# --- issue #97: every build leaves an EQ fine-tune handle -------------------
+
+def test_build_with_no_eq_block_anywhere_fails_review():
+    plan = (_scene_actions(1, "Clean", 0, 0, False)
+            + _scene_actions(2, "Rhythm", 1, 0, True))
+    scenes = tr.summary_from_plan(plan)
+    findings = tr.review(scenes)
+    eq_findings = [f for f in findings if f.rule == "17"]
+    assert len(eq_findings) == 1
+    assert eq_findings[0].severity == "fail"
+
+
+def test_an_engaged_peq_anywhere_in_the_build_satisfies_the_eq_rule():
+    plan = (_scene_actions(1, "Clean", 0, 0, False)
+            + [{"kind": "set_scene", "value": 1},
+               {"kind": "set_bypass", "block": "peq", "bypassed": False}])
+    scenes = tr.summary_from_plan(plan)
+    assert not [f for f in tr.review(scenes) if f.rule == "17"]
+
+
+def test_an_engaged_geq_anywhere_in_the_build_satisfies_the_eq_rule():
+    plan = (_scene_actions(1, "Clean", 0, 0, False)
+            + [{"kind": "set_scene", "value": 1},
+               {"kind": "set_bypass", "block": "geq", "bypassed": False}])
+    scenes = tr.summary_from_plan(plan)
+    assert not [f for f in tr.review(scenes) if f.rule == "17"]
+
+
+def test_a_plan_touching_nothing_structural_is_not_accused_of_missing_eq():
+    plan = [{"kind": "rename_scene", "value": 1, "type_name": "Clean"}]
+    scenes = tr.summary_from_plan(plan)
+    assert not [f for f in tr.review(scenes) if f.rule == "17"]

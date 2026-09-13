@@ -62,6 +62,11 @@ class Scene:
     #: configured purely by set_channel was invisible here.
     channels: dict = field(default_factory=dict)
     bypass: dict = field(default_factory=dict)
+    #: True once an engaged (non-bypassed) PEQ or GEQ block is seen in this
+    #: scene's plan. Issue #97: a build must leave the player a real
+    #: post-build fine-tune handle, so this is tracked the same way effects
+    #: engagement already is.
+    eq_engaged: bool = False
 
     def shape(self) -> tuple:
         """What this scene stores, and therefore what makes it itself.
@@ -219,14 +224,50 @@ def review(scenes: list[Scene]) -> list[Finding]:
             out.append(Finding(s.n, "4", "warn",
                 f"amp level {s.amp_level:g} dB is very low; check it is not inaudible"))
 
+    # Issue #96, rule 16: the bland test's own "bare amp with no boost where
+    # one belongs" trigger, made real. A scene the plan leaves with zero
+    # engaged effects AND no boost is exactly the never-ship-a-bare-preset
+    # case: only checkable when the plan actually said something structural
+    # about the scene (shape() is non-empty), the same guard clones() uses,
+    # so a scene the plan does not touch at all is not accused of being bare.
+    for s in scenes:
+        if s.shape() and not s.effects and not s.boosted:
+            out.append(Finding(s.n, "16", "fail",
+                f"scene {s.n} is a bare amp+cab with nothing else engaged "
+                "(no effects, no boost); never ship a generic preset - add "
+                "the dimension the role needs (effects, boost, or both)"))
+
+    # Issue #97, rule 17: every build leaves a real post-build fine-tune
+    # handle. Whole-build, not per-scene: an EQ block is typically shared
+    # infrastructure, not something every single scene needs its own copy
+    # of, so one engaged EQ block anywhere in the build satisfies it.
+    if scenes and not any(s.eq_engaged for s in scenes) \
+            and any(s.shape() for s in scenes):
+        out.append(Finding(scenes[0].n, "17", "fail",
+            "no EQ block (PEQ or GEQ) is engaged anywhere in this build; "
+            "leave the player a real fine-tune handle to adjust to their "
+            "ears/room/guitar without a rebuild"))
+
     order = {"fail": 0, "warn": 1}
     out.sort(key=lambda f: (order.get(f.severity, 2), f.scene))
     return out
 
 
+def bland_test_passed(findings: list[Finding]) -> bool:
+    """The gate issue #96 asks for: has the bland test (rule 16) actually
+    passed, so a build can be proposed as-is. A "fail" on any other rule
+    does not block this specifically - rule 16 is the bare-preset check;
+    the other rules (8, 10, 15) have their own, separately surfaced meaning.
+    """
+    return not any(f.rule == "16" and f.severity == "fail" for f in findings)
+
+
 # Effect families that count as "engaged wet/boost" when their block is on.
 _WET = {"DELAY", "REVERB", "CHORUS", "FLANGER", "PHASER", "MULTITAP"}
 _BOOST = {"FUZZ", "DRIVE"}
+#: EQ block families (issue #97). Both count as the same fine-tune handle;
+#: a build needs at least one of either, not specifically both.
+_EQ = {"PEQ", "GEQ"}
 
 
 def summary_from_plan(actions: list[dict], reg=None) -> list[Scene]:
@@ -288,6 +329,8 @@ def summary_from_plan(actions: list[dict], reg=None) -> list[Scene]:
                     scn(cur).effects.add(fam)
                 if fam in _BOOST:
                     scn(cur).boosted = True
+                if fam in _EQ:
+                    scn(cur).eq_engaged = True
         elif kind == "set_channel" and cur is not None:
             # The action that was dropped entirely. A scene voiced purely by
             # pointing blocks at already-voiced channels sets no parameters,

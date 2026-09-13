@@ -80,6 +80,21 @@ MULTITAP = {
     "Strange Things": "themed on the TV series (not a gear model)",
 }
 
+# Families the issue #5 gate was explicitly run against and found no usable
+# reference for (see the issue's own assessment comment). NOT "not yet
+# looked at": each reason names what was checked and why it stopped there.
+# Recorded so the planner reference can say "no source found" instead of
+# silently omitting the family, which would look identical to "not checked".
+UNMAPPED_NO_SOURCE = {
+    "flanger": "no dedicated community guide found yet; the wiki's Flanger "
+               "block page has not been pasted (Cloudflare-gated, needs a "
+               "human save, same as the delay/chorus pages were)",
+    "phaser": "no dedicated community guide found yet; the wiki's Phaser "
+              "block page has not been pasted",
+    "wah": "no dedicated community guide found yet; the wiki's Wah block "
+           "page has not been pasted",
+}
+
 # Ordinals proven on hardware, never guessed:
 KNOWN_ORDINALS = {
     "multitap": {
@@ -113,11 +128,13 @@ def main() -> None:
         "chorus_types": CHORUS,
         "multitap_types": MULTITAP,
         "known_ordinals": KNOWN_ORDINALS,
+        "unmapped_no_source": UNMAPPED_NO_SOURCE,
     }
     dest = ROOT / "config" / "effect_type_models.json"
     dest.write_text(json.dumps(out, indent=1, ensure_ascii=False) + "\n")
     print(f"delay: {len(DELAY)}, chorus: {len(CHORUS)}, "
-          f"multitap: {len(MULTITAP)} mapped -> {dest}")
+          f"multitap: {len(MULTITAP)} mapped, "
+          f"{len(UNMAPPED_NO_SOURCE)} families marked no-source -> {dest}")
 
 if __name__ == "__main__":
     sys.exit(main())

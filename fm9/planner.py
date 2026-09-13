@@ -507,6 +507,15 @@ def _extract_json(text: str) -> dict:
 def _validate(plan_obj: dict) -> dict:
     plan_obj.setdefault("summary", "")
     plan_obj.setdefault("clarification", None)
+    # Issue #72: advisory/action separation is a code guarantee, not a prompt
+    # request. The prompt already tells the model "actions must be empty when
+    # clarification is set", but nothing enforced that if the model ignored
+    # it - a reply carrying both would show the question AND propose the
+    # actions for confirm/send, exactly the silent-write risk #72 exists to
+    # close. A clarifying question means nothing has been decided yet, so
+    # there is nothing to build: zero actions, unconditionally.
+    if (plan_obj.get("clarification") or "").strip():
+        plan_obj["actions"] = []
     actions = plan_obj.get("actions") or []
     clean = []
     for a in actions:

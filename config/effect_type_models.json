@@ -54,5 +54,10 @@
    "Dual Detune": 0,
    "Dual Chromatic": 2
   }
+ },
+ "unmapped_no_source": {
+  "flanger": "no dedicated community guide found yet; the wiki's Flanger block page has not been pasted (Cloudflare-gated, needs a human save, same as the delay/chorus pages were)",
+  "phaser": "no dedicated community guide found yet; the wiki's Phaser block page has not been pasted",
+  "wah": "no dedicated community guide found yet; the wiki's Wah block page has not been pasted"
  }
 }

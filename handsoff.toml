@@ -1,5 +1,5 @@
 [project]
-name = "fm9-tone"
+name = "fm9-tone-claude-offline-10"
 status_file = "handsoff-status.json"
 acceptance_file = "handsoff-acceptance.json"
 event_log = "handsoff-events.jsonl"
@@ -13,36 +13,39 @@ require_live_verification = true
 deployment_requires_explicit_approval = true
 
 [agents]
-supervisor = "configure-me"
-implementer = "configure-me"
-reviewer = "configure-me"
+supervisor = "claude"
+implementer = "claude"
+reviewer = "claude"
 
 [checks]
 # Shell commands the supervisor actually runs via `handsoff_supervisor.py verify`.
-# Each criterion's evidence should point at one of these having run, not a
-# free-text claim. Example: commands = ["pytest tests/ -q", "npm test"]
+# Populated incrementally, one entry per acceptance criterion, as each
+# criterion is added (fast, focused tests only; the full suite is run once
+# after all 10 tickets are implemented, not per-criterion).
 commands = [
-  ".venv/bin/python -m pytest tests/test_site_build.py::test_header_logo_is_64px -q",
-  ".venv/bin/python -m pytest tests/test_site_build.py::test_splash_logo_is_520px -q",
-  ".venv/bin/python -m pytest tests/test_site_build.py::test_splash_reduced_motion_and_no_js_fallback -q",
-  ".venv/bin/python -m pytest tests/test_site_build.py::test_splash_skip_on_interaction_is_wired -q",
-  ".venv/bin/python -m pytest tests/test_site_build.py::test_no_em_dash_in_touched_site_files -q",
-  ".venv/bin/python -m pytest tests/test_grounding_envelope.py -q",
-  ".venv/bin/python -m pytest tests/test_nam_captures.py::test_replay_rejects_ungrounded_tone_target_before_device_connect -q",
-  ".venv/bin/python -m pytest tests/test_nam_captures.py::test_provenance_tier_logic -q",
-  ".venv/bin/python -m pytest tests/test_nam_captures.py::test_replay_accepts_grounded_tone_target -q",
-  ".venv/bin/python -m pytest tests/test_nam_captures.py::test_secret_key_never_hardcoded -q",
-  ".venv/bin/python -m pytest tests/test_recipe_validation.py::test_tone_target_shape -q",
+  ".venv/bin/python -m pytest tests/test_effect_type_notices.py -q",
+  ".venv/bin/python -m pytest tests/test_cab_retrieval.py::test_full_catalog_search_finds_entries_outside_curated_subset -q",
+  ".venv/bin/python -m pytest tests/test_cab_retrieval.py::test_matching_cab_mentions_are_appended_to_planner_context -q",
+  ".venv/bin/python -m pytest tests/test_advisory_separation.py -q",
+  ".venv/bin/python -m pytest tests/test_advisory_separation.py::test_open_ended_ambiguous_input_routes_to_chat_not_build -q",
+  ".venv/bin/python -m pytest tests/test_tone_review.py::test_bare_amp_cab_only_scene_fails_the_bland_test -q",
+  ".venv/bin/python -m pytest tests/test_tone_review.py::test_build_with_no_eq_block_anywhere_fails_review -q",
+  ".venv/bin/python -m pytest tests/test_request_tension.py -q",
+  ".venv/bin/python -m pytest tests/test_diagnostics.py::test_scrub_redacts_known_secret_patterns -q",
+  ".venv/bin/python -m pytest tests/test_diagnostics.py::test_local_log_is_structured_scrubbed_and_expires tests/test_diagnostics.py::test_diagnostics_module_makes_no_network_calls -q",
+  ".venv/bin/python -m pytest tests/test_diagnostics.py::test_share_package_is_scrubbed_and_never_sent_automatically -q",
+  ".venv/bin/python -m pytest tests/test_diagnostics.py -q",
 ]
-# Commands that verify the deployed system. Phase 8 is blocked until these
-# run successfully after deployment approval. This app has no hosted server;
-# "deployed" means pushed to origin/main, which is what a user's local
-# install pulls. Live proof is: the pushed commit's own files, run for real
-# through the actual replay tool (simulator device, not a mock of the tool).
+# This isolated run never merges to main and has no FM9 connected, so the
+# repo's usual "deployed = pulled from main, checked on real hardware" live
+# proof is unreachable by design (see run directive, 2026-09-13). "Live" here
+# is redefined honestly as: the exact commit pushed to the isolated branch,
+# fetched fresh and run for real (simulator, never a mock) rather than
+# trusted from local working-tree state.
 live_commands = [
-  "git fetch origin && git diff --quiet HEAD origin/main -- recipes/mesa-mark-v-a2-reference.json tools/replay_recipe.py fm9/nam_captures.py config/nam_capture_models.json",
-  "TONECOMMAND_SIM=1 .venv/bin/python tools/replay_recipe.py recipes/mesa-mark-v-a2-reference.json | grep -q 'tone3000.com/tones'",
+  "git fetch origin claude/offline-10-grounding-quality && git diff --quiet HEAD origin/claude/offline-10-grounding-quality",
+  "TONECOMMAND_SIM=1 .venv/bin/python -m pytest tests/ -q",
 ]
 # Per-command timeout. A hanging check is killed and recorded as exit 124
 # rather than hanging the Supervisor indefinitely.
-timeout_seconds = 600
+timeout_seconds = 900
