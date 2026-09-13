@@ -145,6 +145,22 @@ def clones(scenes: list[Scene]) -> list[Finding]:
     return out
 
 
+def _voiced(s: Scene) -> bool:
+    """True once the plan has said something SUBSTANTIVE about this scene:
+    a real gain/level/boost/depth value, or an explicit bypass state for
+    some block. Deliberately excludes a bare set_channel reassignment on
+    its own (channels populated, everything else empty) - that says WHICH
+    channel a block sits on, not whether the scene has been voiced at all,
+    which is exactly the case test_a_structural_finding_does_not_make_the_
+    values_verified (#54) pins as "nothing was verified about how this
+    sounds". Rules 16/17 have no opinion on a scene the plan does not
+    actually build.
+    """
+    return (s.amp_gain is not None or s.amp_level is not None
+            or s.scene_level is not None or s.boost_gain is not None
+            or bool(s.fx_mix) or bool(s.bypass))
+
+
 def review(scenes: list[Scene]) -> list[Finding]:
     """Run the deterministic role checks and return what failed, worst first.
 
@@ -227,13 +243,15 @@ def review(scenes: list[Scene]) -> list[Finding]:
     # Issue #96, rule 16: the bland test's own "bare amp with no boost where
     # one belongs" trigger, made real. A scene the plan leaves with zero
     # engaged effects AND no boost is exactly the never-ship-a-bare-preset
-    # case - but only checkable when the plan actually said something about
-    # which blocks are engaged (s.bypass is non-empty). shape() alone is too
-    # wide a guard: a plan that ONLY reassigns a channel (set_channel, no
-    # set_bypass at all) says nothing about effects either way, and is not
-    # evidence of a bare build, only of an edit this check has no opinion on.
+    # case - but only checkable once the plan has actually VOICED the scene
+    # (some real value: gain, level, boost, fx depth, or a bypass state),
+    # not merely reassigned which channel a block sits on. A first cut used
+    # s.bypass alone as that guard, which missed the realistic case of a
+    # scene built purely from set_param (amp gain/level) with no set_bypass
+    # call at all - exactly a bare amp+cab build, and exactly what this rule
+    # exists to catch.
     for s in scenes:
-        if s.bypass and not s.effects and not s.boosted:
+        if _voiced(s) and not s.effects and not s.boosted:
             out.append(Finding(s.n, "16", "fail",
                 f"scene {s.n} is a bare amp+cab with nothing else engaged "
                 "(no effects, no boost); never ship a generic preset - add "
@@ -243,11 +261,15 @@ def review(scenes: list[Scene]) -> list[Finding]:
     # handle. Whole-build, not per-scene: an EQ block is typically shared
     # infrastructure, not something every single scene needs its own copy
     # of, so one engaged EQ block anywhere in the build satisfies it. Same
-    # s.bypass guard as rule 16: only fires once the plan has actually said
-    # something about engaged blocks at all.
+    # _voiced guard as rule 16.
+    #
+    # WARN, not fail, same reasoning as rule 10's margin (issue #65): the
+    # professional reference pack (test_tone_targets.py) gigs fine on
+    # several presets that never touch a PEQ/GEQ block at all. A tendency
+    # worth surfacing is not the same as a law worth blocking a build over.
     if scenes and not any(s.eq_engaged for s in scenes) \
-            and any(s.bypass for s in scenes):
-        out.append(Finding(scenes[0].n, "17", "fail",
+            and any(_voiced(s) for s in scenes):
+        out.append(Finding(scenes[0].n, "17", "warn",
             "no EQ block (PEQ or GEQ) is engaged anywhere in this build; "
             "leave the player a real fine-tune handle to adjust to their "
             "ears/room/guitar without a rebuild"))

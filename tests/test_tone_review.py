@@ -48,7 +48,7 @@ def test_it_catches_the_sykes_failure():
 def test_a_good_build_passes_clean():
     scenes = [
         Scene(1, "Big Clean", "clean", amp_gain=2.5, amp_level=1,
-              effects={"CHORUS", "DELAY", "REVERB"}),
+              effects={"CHORUS", "DELAY", "REVERB"}, eq_engaged=True),
         Scene(2, "Rhythm", "rhythm", amp_gain=6.5, amp_level=-2, effects={"REVERB"}),
         Scene(3, "Lead", "lead", amp_gain=8.5, amp_level=0,
               effects={"DELAY", "REVERB"}, boosted=True),
@@ -65,8 +65,13 @@ def test_a_lead_only_a_hair_over_the_rhythm_is_flagged():
 
 
 def test_unknown_role_is_skipped_not_guessed():
-    # no role -> no role-specific findings
-    assert tr.review([Scene(4, "Scene 4", None, amp_gain=2.0, amp_level=-8)]) == []
+    # no role -> no ROLE-SPECIFIC findings (rules 8, 10). Rule 16 (bland) is
+    # role-agnostic and correctly still fires: this scene has real gain/level
+    # but no effects and no boost, which is a bare amp+cab regardless of
+    # whether its role could be inferred.
+    f = tr.review([Scene(4, "Scene 4", None, amp_gain=2.0, amp_level=-8)])
+    assert not [x for x in f if x.rule in ("8", "10")]
+    assert {x.rule for x in f} == {"16", "17"}
 
 
 def test_summary_from_plan_extracts_scene_state():
@@ -211,6 +216,48 @@ def test_bare_amp_cab_only_scene_fails_the_bland_test():
     assert not tr.bland_test_passed(findings)
 
 
+def test_a_scene_voiced_only_by_set_param_with_no_bypass_call_still_fails_the_bland_test():
+    """The realistic bare build: the model sets amp gain/level and nothing
+    else, never calling set_bypass at all. An earlier guard used s.bypass
+    alone and missed exactly this case (found in independent review)."""
+    plan = [
+        {"kind": "rename_scene", "value": 1, "type_name": "Rhythm"},
+        {"kind": "set_scene", "value": 1},
+        {"kind": "set_param", "block": "amp", "param": "DISTORT_DRIVE", "value": 6.5},
+        {"kind": "set_param", "block": "amp", "param": "DISTORT_LEVEL", "value": -2},
+    ]
+    scenes = tr.summary_from_plan(plan)
+    assert scenes[0].bypass == {}, "fixture must exercise the no-set_bypass-at-all case"
+    findings = tr.review(scenes)
+    assert [f.rule for f in findings if f.rule == "16"], "a voiced, bare scene must still fail"
+    assert not tr.bland_test_passed(findings)
+
+
+def test_a_whole_build_voiced_only_by_set_param_with_no_bypass_still_fails_missing_eq():
+    plan = [
+        {"kind": "rename_scene", "value": 1, "type_name": "Clean"},
+        {"kind": "set_scene", "value": 1},
+        {"kind": "set_param", "block": "amp", "param": "DISTORT_DRIVE", "value": 2.0},
+        {"kind": "set_param", "block": "amp", "param": "DISTORT_LEVEL", "value": 1.0},
+    ]
+    scenes = tr.summary_from_plan(plan)
+    assert [f.rule for f in tr.review(scenes) if f.rule == "17"], \
+        "a voiced build with no bypass calls at all must still be checked for EQ"
+
+
+def test_a_scene_the_plan_only_reassigns_a_channel_on_is_still_not_bland_or_missing_eq():
+    """The other side of the same fix: a bare set_channel reassignment (no
+    gain/level/bypass at all) still must not be judged - this is the
+    coverage() fixture from #54, preserved."""
+    plan = [
+        {"kind": "rename_scene", "value": 4, "type_name": "Lead"},
+        {"kind": "set_scene", "value": 4},
+        {"kind": "set_channel", "block": "amp", "value": 2},
+    ]
+    scenes = tr.summary_from_plan(plan)
+    assert not [f for f in tr.review(scenes) if f.rule in ("16", "17")]
+
+
 def test_a_scene_with_an_effect_or_a_boost_does_not_fail_the_bland_test():
     plan = [
         {"kind": "rename_scene", "value": 1, "type_name": "Rhythm"},
@@ -236,13 +283,16 @@ def test_an_untouched_scene_is_not_accused_of_being_bland():
 # --- issue #97: every build leaves an EQ fine-tune handle -------------------
 
 def test_build_with_no_eq_block_anywhere_fails_review():
+    """WARN, not fail: several professional reference presets
+    (test_tone_targets.py) gig fine with no EQ block at all, the same
+    empirical pattern rule 10's margin follows (issue #65)."""
     plan = (_scene_actions(1, "Clean", 0, 0, False)
             + _scene_actions(2, "Rhythm", 1, 0, True))
     scenes = tr.summary_from_plan(plan)
     findings = tr.review(scenes)
     eq_findings = [f for f in findings if f.rule == "17"]
     assert len(eq_findings) == 1
-    assert eq_findings[0].severity == "fail"
+    assert eq_findings[0].severity == "warn"
 
 
 def test_an_engaged_peq_anywhere_in_the_build_satisfies_the_eq_rule():
