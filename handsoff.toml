@@ -17,6 +17,70 @@ supervisor = "claude"
 implementer = "claude"
 reviewer = "claude"
 
+# The 10 tickets this run covers, in dependency order. Status here is
+# maintained by the supervisor as each ticket's work actually lands -
+# never hand-edited to claim progress ahead of real evidence. Mission
+# Control's own dashboard reads this array directly.
+[[tickets]]
+number = 5
+title = "Grounding Phase 3: effect-type mapping (assessment-gated)"
+status = "in_progress"
+url = "https://github.com/monzta1/ToneCommand/issues/5"
+
+[[tickets]]
+number = 6
+title = "Grounding Phase 4: feed reference data to the planner"
+status = "in_progress"
+url = "https://github.com/monzta1/ToneCommand/issues/6"
+
+[[tickets]]
+number = 71
+title = "A4 - Open-ended brainstorm"
+status = "in_progress"
+url = "https://github.com/monzta1/ToneCommand/issues/71"
+
+[[tickets]]
+number = 72
+title = "A5 - Advisory/action separation (safety)"
+status = "in_progress"
+url = "https://github.com/monzta1/ToneCommand/issues/72"
+
+[[tickets]]
+number = 96
+title = "F1 - Never build a generic/bare preset"
+status = "in_progress"
+url = "https://github.com/monzta1/ToneCommand/issues/96"
+
+[[tickets]]
+number = 97
+title = "F2 - Include an EQ + utility blocks for user fine-tuning"
+status = "in_progress"
+url = "https://github.com/monzta1/ToneCommand/issues/97"
+
+[[tickets]]
+number = 98
+title = "F3 - Flag conflicting requests"
+status = "in_progress"
+url = "https://github.com/monzta1/ToneCommand/issues/98"
+
+[[tickets]]
+number = 107
+title = "H1 - Local error logging (secret-scrubbed, scoped)"
+status = "in_progress"
+url = "https://github.com/monzta1/ToneCommand/issues/107"
+
+[[tickets]]
+number = 108
+title = "H2 - Voluntary \"share this error\" (GitHub issue)"
+status = "in_progress"
+url = "https://github.com/monzta1/ToneCommand/issues/108"
+
+[[tickets]]
+number = 106
+title = "Epic H: Diagnostics / learning"
+status = "in_progress"
+url = "https://github.com/monzta1/ToneCommand/issues/106"
+
 [checks]
 # Shell commands the supervisor actually runs via `handsoff_supervisor.py verify`.
 # Populated incrementally, one entry per acceptance criterion, as each
