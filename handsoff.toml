@@ -96,7 +96,7 @@ commands = [
   ".venv/bin/python -m pytest tests/test_tone_review.py::test_build_with_no_eq_block_anywhere_fails_review -q",
   ".venv/bin/python -m pytest tests/test_request_tension.py -q",
   ".venv/bin/python -m pytest tests/test_diagnostics.py::test_scrub_redacts_known_secret_patterns -q",
-  ".venv/bin/python -m pytest tests/test_diagnostics.py::test_local_log_is_structured_scrubbed_and_expires tests/test_diagnostics.py::test_diagnostics_module_makes_no_network_calls -q",
+  ".venv/bin/python -m pytest tests/test_diagnostics.py::test_local_log_is_structured_scrubbed_and_expires tests/test_diagnostics.py::test_diagnostics_module_makes_no_network_calls tests/test_diagnostics.py::test_a_planner_failure_in_plan_for_is_logged tests/test_diagnostics.py::test_a_planner_failure_in_describe_build_for_is_logged -q",
   ".venv/bin/python -m pytest tests/test_diagnostics.py::test_share_package_is_scrubbed_and_never_sent_automatically -q",
   ".venv/bin/python -m pytest tests/test_diagnostics.py -q",
 ]

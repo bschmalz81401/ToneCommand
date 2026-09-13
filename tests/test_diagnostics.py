@@ -114,3 +114,43 @@ def test_share_package_can_be_scoped_to_one_subsystem(tmp_path):
     assert pkg["entry_count"] == 1
     assert "planner issue" in pkg["body"]
     assert "server issue" not in pkg["body"]
+
+
+# --- #107: the logger is actually wired into real error paths --------------
+# A working scrub/log/share mechanism nobody's code calls is not "errors are
+# logged locally" - it is unused infrastructure. These prove server.py's two
+# planner-failure paths (the ordinary and streaming/describe entry points)
+# actually call it, not just that the module works in isolation.
+
+def test_a_planner_failure_in_plan_for_is_logged(monkeypatch):
+    import server
+
+    def _boom(*a, **kw):
+        raise RuntimeError("simulated planner crash")
+    monkeypatch.setattr(server.planner, "plan", _boom)
+
+    calls = []
+    monkeypatch.setattr(server.diagnostics, "log_error",
+                        lambda scope, msg, **kw: calls.append((scope, msg)))
+
+    out = server._plan_for(server.PromptBody(prompt="build me a rig"))
+    assert "error" in out and "simulated planner crash" in out["error"]
+    assert calls and calls[0][0] == "planner"
+    assert "simulated planner crash" in calls[0][1]
+
+
+def test_a_planner_failure_in_describe_build_for_is_logged(monkeypatch):
+    import server
+
+    def _boom(*a, **kw):
+        raise RuntimeError("simulated describe crash")
+    monkeypatch.setattr(server.planner, "plan", _boom)
+
+    calls = []
+    monkeypatch.setattr(server.diagnostics, "log_error",
+                        lambda scope, msg, **kw: calls.append((scope, msg)))
+
+    out = server._describe_build_for(server.BuildBody(spec={"style": "modern metal"}))
+    assert "error" in out
+    assert calls and calls[0][0] == "planner"
+    assert "simulated describe crash" in calls[0][1]

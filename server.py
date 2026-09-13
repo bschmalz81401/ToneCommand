@@ -23,8 +23,8 @@ from pydantic import BaseModel
 
 from fm9.device import FM9, FM9NotFound, get_cab_slots
 from fm9.registry import Registry
-from fm9 import (acquire, ai_settings, bundlefile, cabfile, describe, designs, editbuffer, health,
-                 planner, presetfile, recipes as recipebook, rigprofile,
+from fm9 import (acquire, ai_settings, bundlefile, cabfile, describe, designs, diagnostics,
+                 editbuffer, health, planner, presetfile, recipes as recipebook, rigprofile,
                  scratch_build, share, starter_template)
 # `slots` is a local variable in more than one function here, so the module
 # gets a name that cannot be shadowed by one.
@@ -1636,6 +1636,7 @@ def _describe_build_for(body: BuildBody, on_count=None, cancel=None,
     except planner.PlanCancelled:
         return {"error": "stopped"}
     except Exception as exc:
+        diagnostics.log_error("planner", str(exc))
         return {"error": f"planner failed: {exc}"}
 
     # A build assembled out of somebody else's video has no business
@@ -2240,6 +2241,7 @@ def _plan_for(body: PromptBody, on_count=None, cancel=None, on_status=None):
     except planner.PlanCancelled:
         return {"error": "stopped"}
     except Exception as e:
+        diagnostics.log_error("planner", str(e))
         return {"error": f"planner failed: {e}"}
 
 
