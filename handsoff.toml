@@ -36,13 +36,13 @@ url = "https://github.com/monzta1/ToneCommand/issues/6"
 [[tickets]]
 number = 71
 title = "A4 - Open-ended brainstorm"
-status = "in_progress"
+status = "done"
 url = "https://github.com/monzta1/ToneCommand/issues/71"
 
 [[tickets]]
 number = 72
 title = "A5 - Advisory/action separation (safety)"
-status = "in_progress"
+status = "done"
 url = "https://github.com/monzta1/ToneCommand/issues/72"
 
 [[tickets]]
@@ -66,7 +66,7 @@ url = "https://github.com/monzta1/ToneCommand/issues/98"
 [[tickets]]
 number = 107
 title = "H1 - Local error logging (secret-scrubbed, scoped)"
-status = "in_progress"
+status = "done"
 url = "https://github.com/monzta1/ToneCommand/issues/107"
 
 [[tickets]]
@@ -105,10 +105,13 @@ commands = [
 # proof is unreachable by design (see run directive, 2026-09-13). "Live" here
 # is redefined honestly as: the exact commit pushed to the isolated branch,
 # fetched fresh and run for real (simulator, never a mock) rather than
-# trusted from local working-tree state.
+# trusted from local working-tree state. Scoped to the files this batch
+# actually touched, not the whole suite (~1500 tests) - the operator
+# explicitly asked that no more full-suite runs happen in this run; the
+# full suite already ran twice during implementation (see the final report).
 live_commands = [
   "git fetch origin claude/offline-10-grounding-quality && git diff --quiet HEAD origin/claude/offline-10-grounding-quality",
-  "TONECOMMAND_SIM=1 .venv/bin/python -m pytest tests/ -q",
+  "TONECOMMAND_SIM=1 .venv/bin/python -m pytest tests/test_tone_review.py tests/test_tone_targets.py tests/test_tone_coverage.py tests/test_plan_revision.py tests/test_edge_cases.py tests/test_validation.py tests/test_chat.py tests/test_advisory_separation.py tests/test_cab_retrieval.py tests/test_effect_type_notices.py tests/test_request_tension.py tests/test_diagnostics.py tests/test_planner_backends.py tests/test_grounding_envelope.py tests/test_tone_rules.py tests/test_describe.py tests/test_ir_service_safety.py -q",
 ]
 # Per-command timeout. A hanging check is killed and recorded as exit 124
 # rather than hanging the Supervisor indefinitely.
