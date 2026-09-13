@@ -17,11 +17,13 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
+from functools import lru_cache
 from pathlib import Path
 
 #: Numeric floors per role, so "generous mix" is arithmetic rather than taste.
 #: See config/tone_targets.json for why each number is what it is.
 TARGETS_PATH = Path(__file__).resolve().parent.parent / "config" / "tone_targets.json"
+CATALOG_PATH = Path(__file__).resolve().parent.parent / "config" / "fm9_catalog.json"
 
 
 def targets() -> dict:
@@ -146,19 +148,28 @@ def clones(scenes: list[Scene]) -> list[Finding]:
 
 
 def _voiced(s: Scene) -> bool:
-    """True once the plan has said something SUBSTANTIVE about this scene:
-    a real gain/level/boost/depth value, or an explicit bypass state for
-    some block. Deliberately excludes a bare set_channel reassignment on
-    its own (channels populated, everything else empty) - that says WHICH
-    channel a block sits on, not whether the scene has been voiced at all,
-    which is exactly the case test_a_structural_finding_does_not_make_the_
-    values_verified (#54) pins as "nothing was verified about how this
-    sounds". Rules 16/17 have no opinion on a scene the plan does not
-    actually build.
+    """True once the plan has said something SUBSTANTIVE about this scene's
+    TONE: a real gain/level/boost/depth value, or an explicit bypass state
+    for some block. Deliberately excludes two things that are NOT tone
+    voicing on their own:
+
+    - A bare set_channel reassignment (channels populated, everything else
+      empty) - that says WHICH channel a block sits on, not whether the
+      scene has been voiced at all, which is exactly the case
+      test_a_structural_finding_does_not_make_the_values_verified (#54)
+      pins as "nothing was verified about how this sounds".
+    - scene_level alone (OUTPUT_SCENEn). That is an output-level TRIM, the
+      same category of fact as a channel assignment: it says how loud this
+      scene is relative to the others, nothing about what it sounds like.
+      A plan that only balances scene volume has not voiced a tone any
+      more than one that only picks a channel has (explicit decision,
+      independent review round 3: see
+      test_scene_level_alone_is_not_tone_voicing).
+
+    Rules 16/17 have no opinion on a scene the plan does not actually build.
     """
     return (s.amp_gain is not None or s.amp_level is not None
-            or s.scene_level is not None or s.boost_gain is not None
-            or bool(s.fx_mix) or bool(s.bypass))
+            or s.boost_gain is not None or bool(s.fx_mix) or bool(s.bypass))
 
 
 def review(scenes: list[Scene]) -> list[Finding]:
@@ -295,8 +306,45 @@ def bland_test_passed(findings: list[Finding]) -> bool:
     return not any(f.rule == "16" and f.severity == "fail" for f in findings)
 
 
-# Effect families that count as "engaged wet/boost" when their block is on.
-_WET = {"DELAY", "REVERB", "CHORUS", "FLANGER", "PHASER", "MULTITAP"}
+# Families excluded from the audible-mixed-effect set even though the FM9
+# gives them their own _MIX blend parameter, same as every other block:
+# DISTORT is the amp block itself (tracked via amp_gain/amp_level, a
+# different dimension than "effects"); FUZZ is the dedicated boost/drive
+# stage (tracked via boost_gain/boosted). Counting either one a second
+# time here would blur the "no effects, no boost" distinction rule 16's
+# own message draws between the two.
+_WET_EXCLUDED = frozenset({"DISTORT", "FUZZ"})
+
+#: A small, known-good fallback if the catalog cannot be read (missing
+#: file, unexpected shape). Degrades to less coverage rather than raising -
+#: same philosophy as targets() above: a missing/corrupt file must never
+#: take a tone review down, only make it less complete.
+_WET_FALLBACK = frozenset({"DELAY", "REVERB", "CHORUS", "FLANGER", "PHASER", "MULTITAP"})
+
+
+@lru_cache(maxsize=1)
+def wet_families() -> frozenset[str]:
+    """Every real FM9 block family with its own _MIX blend parameter, read
+    from the validated catalog (config/fm9_catalog.json) rather than a
+    hand-maintained guess. Found in independent review: a hardcoded list
+    (delay/reverb/chorus/flanger/phaser/multitap only) missed real,
+    catalog-confirmed effect families - tremolo, pitch, rotary, ringmod,
+    vocoder, wah, filter, formant, plex, resonator, megatap, synth, tentap,
+    comp, multicomp, crossover, gate, geq - so a plan that genuinely dialled
+    one of those in (no bypass repeated) still read as "no effects" and
+    rule 16 wrongly failed a scene that was not bare at all. Deriving from
+    the catalog means a future roster change cannot silently reopen the
+    same gap for a family nobody thought to add by hand.
+    """
+    try:
+        data = json.loads(CATALOG_PATH.read_text())
+        fams = {p["family"] for p in data["data"]["FM9_PARAMS"]
+                if str(p.get("name", "")).upper().endswith("_MIX")}
+        return frozenset(fams) - _WET_EXCLUDED
+    except (OSError, ValueError, KeyError, TypeError):
+        return _WET_FALLBACK
+
+
 _BOOST = {"FUZZ", "DRIVE"}
 #: EQ block families (issue #97). Both count as the same fine-tune handle;
 #: a build needs at least one of either, not specifically both.
@@ -357,7 +405,7 @@ def summary_from_plan(actions: list[dict], reg=None) -> list[Scene]:
                     # Same reasoning as FUZZ_DRIVE above: dialling an
                     # effect's mix/depth is intent to use it, independent of
                     # whether this plan also touches that block's bypass.
-                    if fam in _WET:
+                    if fam in wet_families():
                         scn(cur).effects.add(fam)
             elif p.startswith("OUTPUT_SCENE"):
                 tail = p.replace("OUTPUT_SCENE", "")
@@ -372,7 +420,7 @@ def summary_from_plan(actions: list[dict], reg=None) -> list[Scene]:
                 fam = block.upper()
                 # normalise a couple of friendly names
                 fam = {"AMP": "DISTORT", "DRIVE": "FUZZ"}.get(fam, fam)
-                if fam in _WET:
+                if fam in wet_families():
                     scn(cur).effects.add(fam)
                 if fam in _BOOST:
                     scn(cur).boosted = True

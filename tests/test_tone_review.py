@@ -3,6 +3,8 @@ half of config/tone_rules.md rule 14. It must catch the failures that actually
 shipped on 2026-09-04 (cleans cut quiet and dry, leads that do not out-saturate
 the rhythm) and stay quiet on a build that is done right.
 """
+import pytest
+
 from fm9 import tone_review as tr
 from fm9.tone_review import Scene
 
@@ -243,6 +245,62 @@ def test_a_whole_build_voiced_only_by_set_param_with_no_bypass_still_fails_missi
     scenes = tr.summary_from_plan(plan)
     assert [f.rule for f in tr.review(scenes) if f.rule == "17"], \
         "a voiced build with no bypass calls at all must still be checked for EQ"
+
+
+def test_wet_families_are_derived_from_the_real_catalog_not_a_short_list():
+    """Found in independent review round 3: a hand-maintained _WET set
+    (delay/reverb/chorus/flanger/phaser/multitap only) missed real,
+    catalog-confirmed effect families like tremolo, pitch, and wah. This
+    pins the fix: the family set must come from config/fm9_catalog.json's
+    own _MIX parameters, and must be strictly bigger than the old
+    hardcoded six, while never including the amp (DISTORT) or the
+    dedicated boost stage (FUZZ)."""
+    fams = tr.wet_families()
+    old_hardcoded = {"DELAY", "REVERB", "CHORUS", "FLANGER", "PHASER", "MULTITAP"}
+    assert old_hardcoded <= fams
+    assert len(fams) > len(old_hardcoded), "must find MORE than the old hand-maintained list"
+    assert "TREMOLO" in fams and "WAH" in fams and "PITCH" in fams
+    assert "DISTORT" not in fams, "the amp block is not an 'effect'"
+    assert "FUZZ" not in fams, "boost is tracked separately via boost_gain/boosted"
+
+
+@pytest.mark.parametrize("family", sorted(tr.wet_families()))
+def test_every_catalogued_mix_family_prevents_a_false_bland_failure(family):
+    """Any recognized effect with a meaningful _MIX action must prevent a
+    false bare-amp bland failure - the exact wording of the fix this test
+    exists to hold, checked against EVERY family the catalog actually
+    lists, not just a hand-picked few."""
+    plan = [
+        {"kind": "rename_scene", "value": 1, "type_name": "Rhythm"},
+        {"kind": "set_scene", "value": 1},
+        {"kind": "set_param", "block": family.lower(),
+         "param": f"{family}_MIX", "value": 40.0},
+    ]
+    scenes = tr.summary_from_plan(plan)
+    assert scenes[0].bypass == {}, "fixture must exercise no set_bypass at all"
+    assert family in scenes[0].effects, f"{family}_MIX must register as an engaged effect"
+    findings = tr.review(scenes)
+    assert not [f for f in findings if f.rule == "16"], (
+        f"a scene voiced only by {family}_MIX must not be judged bare")
+
+
+def test_scene_level_alone_is_not_tone_voicing():
+    """Explicit decision (independent review round 3): OUTPUT_SCENEn is an
+    output-level TRIM, the same category of fact as a channel assignment -
+    it says how loud a scene is relative to the others, nothing about what
+    it sounds like. A plan that only balances scene volume must still read
+    as unvoiced, exactly like the set_channel-only case."""
+    plan = [
+        {"kind": "rename_scene", "value": 2, "type_name": "Rhythm"},
+        {"kind": "set_scene", "value": 2},
+        {"kind": "set_param", "block": "output", "param": "OUTPUT_SCENE2", "value": -1.5},
+    ]
+    scenes = tr.summary_from_plan(plan)
+    assert scenes[0].scene_level == -1.5, "fixture must actually set scene_level"
+    assert scenes[0].amp_gain is None and scenes[0].amp_level is None
+    assert not tr._voiced(scenes[0]), "scene_level alone must not count as voiced"
+    findings = tr.review(scenes)
+    assert not [f for f in findings if f.rule in ("16", "17")]
 
 
 def test_a_scene_the_plan_only_reassigns_a_channel_on_is_still_not_bland_or_missing_eq():
