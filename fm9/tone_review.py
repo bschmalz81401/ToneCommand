@@ -263,10 +263,17 @@ def review(scenes: list[Scene]) -> list[Finding]:
     # of, so one engaged EQ block anywhere in the build satisfies it. Same
     # _voiced guard as rule 16.
     #
-    # WARN, not fail, same reasoning as rule 10's margin (issue #65): the
-    # professional reference pack (test_tone_targets.py) gigs fine on
-    # several presets that never touch a PEQ/GEQ block at all. A tendency
-    # worth surfacing is not the same as a law worth blocking a build over.
+    # WARN, not fail. NOT because the professional reference pack proves
+    # real presets skip EQ - it does not capture PEQ/GEQ presence at all
+    # (tests/data/austinbuddy_sample.json has no such field), so it is
+    # silent on this question, not evidence either way (caught in
+    # independent review: citing it as proof here would have been
+    # overclaiming). The honest reason is the same PRECAUTION rule 10's
+    # margin already applies for a genuinely unmeasured tendency (issue
+    # #65): without real presence data to check this against, a hard fail
+    # risks blocking real professional work on a dimension nobody has
+    # actually verified matters as strictly as rule 16's bare-preset case
+    # does. Warn until that data exists.
     if scenes and not any(s.eq_engaged for s in scenes) \
             and any(_voiced(s) for s in scenes):
         out.append(Finding(scenes[0].n, "17", "warn",
@@ -332,12 +339,26 @@ def summary_from_plan(actions: list[dict], reg=None) -> list[Scene]:
                 scn(cur).amp_level = val
             elif p == "FUZZ_DRIVE":
                 scn(cur).boost_gain = val
+                # Setting a boost's own gain is intent to use it, whether or
+                # not this same plan also (re-)states set_bypass - a donor/
+                # inherited channel can already be engaged, with the plan
+                # only touching its level. Found in independent review: the
+                # bland check (rule 16) otherwise read a plan that clearly
+                # dials in a boost as having "no boost" simply because it
+                # never repeated a bypass call the block did not need.
+                if val is not None:
+                    scn(cur).boosted = True
             elif p.endswith("_MIX") or p.endswith("_DEPTH"):
                 fam = p.rsplit("_", 1)[0]
                 # Depth is what makes an effect audible. A plan that engages
                 # reverb and leaves it at 12 percent has not made a lush clean.
                 if val is not None:
                     scn(cur).fx_mix[fam] = val
+                    # Same reasoning as FUZZ_DRIVE above: dialling an
+                    # effect's mix/depth is intent to use it, independent of
+                    # whether this plan also touches that block's bypass.
+                    if fam in _WET:
+                        scn(cur).effects.add(fam)
             elif p.startswith("OUTPUT_SCENE"):
                 tail = p.replace("OUTPUT_SCENE", "")
                 if tail.isdigit():

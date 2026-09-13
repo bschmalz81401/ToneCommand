@@ -271,6 +271,37 @@ def test_a_scene_with_an_effect_or_a_boost_does_not_fail_the_bland_test():
     assert tr.bland_test_passed(findings)
 
 
+def test_a_boost_dialled_without_a_matching_set_bypass_call_is_not_bland():
+    """Found in independent review: a donor/inherited channel can already
+    have its drive engaged, with the plan only touching FUZZ_DRIVE's gain -
+    no set_bypass repeated. That must count as a real boost, not silently
+    read as 'no boost' just because bypass was not re-stated."""
+    plan = [
+        {"kind": "rename_scene", "value": 1, "type_name": "Rhythm"},
+        {"kind": "set_scene", "value": 1},
+        {"kind": "set_param", "block": "drive", "param": "FUZZ_DRIVE", "value": 6.0},
+    ]
+    scenes = tr.summary_from_plan(plan)
+    assert scenes[0].bypass == {}, "fixture must exercise no set_bypass at all"
+    assert scenes[0].boosted is True
+    findings = tr.review(scenes)
+    assert not [f for f in findings if f.rule == "16"]
+    assert tr.bland_test_passed(findings)
+
+
+def test_an_effect_mix_dialled_without_a_matching_set_bypass_call_is_not_bland():
+    plan = [
+        {"kind": "rename_scene", "value": 1, "type_name": "Clean"},
+        {"kind": "set_scene", "value": 1},
+        {"kind": "set_param", "block": "reverb", "param": "REVERB_MIX", "value": 35.0},
+    ]
+    scenes = tr.summary_from_plan(plan)
+    assert scenes[0].bypass == {}, "fixture must exercise no set_bypass at all"
+    assert "REVERB" in scenes[0].effects
+    findings = tr.review(scenes)
+    assert not [f for f in findings if f.rule == "16"]
+
+
 def test_an_untouched_scene_is_not_accused_of_being_bland():
     """A scene the plan says nothing structural about (empty shape) cannot be
     judged bare - that would fire on every delta plan that only renames a
