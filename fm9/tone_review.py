@@ -227,11 +227,13 @@ def review(scenes: list[Scene]) -> list[Finding]:
     # Issue #96, rule 16: the bland test's own "bare amp with no boost where
     # one belongs" trigger, made real. A scene the plan leaves with zero
     # engaged effects AND no boost is exactly the never-ship-a-bare-preset
-    # case: only checkable when the plan actually said something structural
-    # about the scene (shape() is non-empty), the same guard clones() uses,
-    # so a scene the plan does not touch at all is not accused of being bare.
+    # case - but only checkable when the plan actually said something about
+    # which blocks are engaged (s.bypass is non-empty). shape() alone is too
+    # wide a guard: a plan that ONLY reassigns a channel (set_channel, no
+    # set_bypass at all) says nothing about effects either way, and is not
+    # evidence of a bare build, only of an edit this check has no opinion on.
     for s in scenes:
-        if s.shape() and not s.effects and not s.boosted:
+        if s.bypass and not s.effects and not s.boosted:
             out.append(Finding(s.n, "16", "fail",
                 f"scene {s.n} is a bare amp+cab with nothing else engaged "
                 "(no effects, no boost); never ship a generic preset - add "
@@ -240,9 +242,11 @@ def review(scenes: list[Scene]) -> list[Finding]:
     # Issue #97, rule 17: every build leaves a real post-build fine-tune
     # handle. Whole-build, not per-scene: an EQ block is typically shared
     # infrastructure, not something every single scene needs its own copy
-    # of, so one engaged EQ block anywhere in the build satisfies it.
+    # of, so one engaged EQ block anywhere in the build satisfies it. Same
+    # s.bypass guard as rule 16: only fires once the plan has actually said
+    # something about engaged blocks at all.
     if scenes and not any(s.eq_engaged for s in scenes) \
-            and any(s.shape() for s in scenes):
+            and any(s.bypass for s in scenes):
         out.append(Finding(scenes[0].n, "17", "fail",
             "no EQ block (PEQ or GEQ) is engaged anywhere in this build; "
             "leave the player a real fine-tune handle to adjust to their "
