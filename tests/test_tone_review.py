@@ -247,41 +247,119 @@ def test_a_whole_build_voiced_only_by_set_param_with_no_bypass_still_fails_missi
         "a voiced build with no bypass calls at all must still be checked for EQ"
 
 
-def test_wet_families_are_derived_from_the_real_catalog_not_a_short_list():
-    """Found in independent review round 3: a hand-maintained _WET set
-    (delay/reverb/chorus/flanger/phaser/multitap only) missed real,
-    catalog-confirmed effect families like tremolo, pitch, and wah. This
-    pins the fix: the family set must come from config/fm9_catalog.json's
-    own _MIX parameters, and must be strictly bigger than the old
-    hardcoded six, while never including the amp (DISTORT) or the
-    dedicated boost stage (FUZZ)."""
+def test_every_catalogued_mix_or_depth_family_is_classified():
+    """Completeness gate for FAMILY_CLASS. Independent review found a name-
+    pattern-based derivation wrong twice in a row (round 3: too narrow;
+    round 4: "any _MIX param" swept in dynamics/EQ blocks and missed a
+    _DEPTH-only one). An explicit table cannot silently drift the same way
+    a pattern can, but only if nothing catalogued is allowed to be
+    missing: a future roster addition must fail HERE, loudly, rather than
+    silently falling on one side of either loophole again."""
+    catalogued = tr._catalog_mix_or_depth_families()
+    assert catalogued, "fixture sanity: the real catalog must yield some families"
+    missing = catalogued - set(tr.FAMILY_CLASS)
+    assert not missing, f"unclassified catalog families: {sorted(missing)}"
+    assert set(tr.FAMILY_CLASS.values()) <= {"audible", "dynamics", "eq", "amp", "boost"}
+
+
+def test_wet_families_excludes_dynamics_eq_amp_and_boost():
+    """The exact round-4 finding: COMP/MULTICOMP/GATE/CROSSOVER/GEQ each
+    have a real _MIX parameter but add no TONAL dimension, so none of them
+    may satisfy rule 16 on their own. PEQ never appears here at all - it
+    has no _MIX/_DEPTH param, so it is reached only through set_bypass."""
     fams = tr.wet_families()
-    old_hardcoded = {"DELAY", "REVERB", "CHORUS", "FLANGER", "PHASER", "MULTITAP"}
-    assert old_hardcoded <= fams
-    assert len(fams) > len(old_hardcoded), "must find MORE than the old hand-maintained list"
-    assert "TREMOLO" in fams and "WAH" in fams and "PITCH" in fams
+    for dynamics_or_eq in ("COMP", "MULTICOMP", "GATE", "CROSSOVER", "GEQ"):
+        assert dynamics_or_eq not in fams, f"{dynamics_or_eq} is not an audible dimension"
+    assert "PEQ" not in fams
     assert "DISTORT" not in fams, "the amp block is not an 'effect'"
     assert "FUZZ" not in fams, "boost is tracked separately via boost_gain/boosted"
 
 
-@pytest.mark.parametrize("family", sorted(tr.wet_families()))
-def test_every_catalogued_mix_family_prevents_a_false_bland_failure(family):
-    """Any recognized effect with a meaningful _MIX action must prevent a
-    false bare-amp bland failure - the exact wording of the fix this test
-    exists to hold, checked against EVERY family the catalog actually
-    lists, not just a hand-picked few."""
-    plan = [
+def test_wet_families_includes_every_real_audible_effect():
+    """The other half: legitimate modulation, time-based, pitch, filter/
+    spatial, resonator, and synth effects - including ENHANCER, a
+    _DEPTH-only family the old _MIX-only derivation missed entirely
+    (round 4's second finding) - must all still count."""
+    fams = tr.wet_families()
+    for audible in ("CHORUS", "FLANGER", "PHASER", "TREMOLO", "ROTARY", "RINGMOD",
+                    "DELAY", "MULTITAP", "MEGATAP", "TENTAP", "PLEX",
+                    "PITCH", "FORMANT", "FILTER", "REVERB", "RESONATOR",
+                    "SYNTH", "VOCODER", "WAH", "ENHANCER"):
+        assert audible in fams, f"{audible} is a real audible effect"
+
+
+def _voice_family_alone(family: str, param_suffix: str) -> list:
+    return tr.summary_from_plan([
         {"kind": "rename_scene", "value": 1, "type_name": "Rhythm"},
         {"kind": "set_scene", "value": 1},
         {"kind": "set_param", "block": family.lower(),
-         "param": f"{family}_MIX", "value": 40.0},
-    ]
-    scenes = tr.summary_from_plan(plan)
+         "param": f"{family}_{param_suffix}", "value": 40.0},
+    ])
+
+
+_AUDIBLE_MIX_FAMILIES = sorted(f for f, c in tr.FAMILY_CLASS.items() if c == "audible" and f != "ENHANCER")
+_DYNAMICS_OR_EQ_MIX_FAMILIES = sorted(f for f, c in tr.FAMILY_CLASS.items() if c in ("dynamics", "eq"))
+
+
+@pytest.mark.parametrize("family", _AUDIBLE_MIX_FAMILIES)
+def test_every_audible_mix_family_prevents_a_false_bland_failure(family):
+    """Positive coverage: any real audible effect, voiced ONLY by its own
+    _MIX (no set_bypass at all), must not be judged a bare amp+cab."""
+    scenes = _voice_family_alone(family, "MIX")
     assert scenes[0].bypass == {}, "fixture must exercise no set_bypass at all"
     assert family in scenes[0].effects, f"{family}_MIX must register as an engaged effect"
     findings = tr.review(scenes)
     assert not [f for f in findings if f.rule == "16"], (
         f"a scene voiced only by {family}_MIX must not be judged bare")
+
+
+def test_enhancer_depth_alone_prevents_a_false_bland_failure():
+    """ENHANCER has only a _DEPTH parameter, no _MIX - the exact family
+    round 4 found silently falling out of a _MIX-only derivation."""
+    scenes = _voice_family_alone("ENHANCER", "DEPTH")
+    assert scenes[0].bypass == {}
+    assert "ENHANCER" in scenes[0].effects
+    findings = tr.review(scenes)
+    assert not [f for f in findings if f.rule == "16"]
+
+
+@pytest.mark.parametrize("family", _DYNAMICS_OR_EQ_MIX_FAMILIES)
+def test_a_dynamics_or_eq_family_alone_does_not_rescue_a_bare_scene(family):
+    """Negative coverage, the other half of round 4's finding: a scene
+    voiced ONLY by a compressor, gate, crossover, or GEQ - real blocks,
+    but none of them a tonal dimension - is still exactly the bare
+    amp+cab case rule 16 exists to catch."""
+    plan = [
+        {"kind": "rename_scene", "value": 1, "type_name": "Rhythm"},
+        {"kind": "set_scene", "value": 1},
+        {"kind": "set_channel", "block": "amp", "value": 1},
+        {"kind": "set_bypass", "block": family.lower(), "bypassed": False},
+    ]
+    scenes = tr.summary_from_plan(plan)
+    assert not scenes[0].effects, f"{family} must not register as an 'effect'"
+    findings = tr.review(scenes)
+    bland = [f for f in findings if f.rule == "16"]
+    assert bland and bland[0].severity == "fail", (
+        f"a scene voiced only by {family} must still be judged bare")
+
+
+def test_geq_and_peq_are_equally_not_an_audible_dimension_for_rule_16():
+    """The exact asymmetry round 4 flagged: PEQ (no _MIX/_DEPTH param) and
+    GEQ (has one, classified 'eq') must behave IDENTICALLY for rule 16 -
+    neither rescues a bland scene - while both still satisfy rule 17
+    (_EQ = {PEQ, GEQ}, unaffected by this fix)."""
+    for eq_block in ("peq", "geq"):
+        plan = [
+            {"kind": "rename_scene", "value": 1, "type_name": "Rhythm"},
+            {"kind": "set_scene", "value": 1},
+            {"kind": "set_channel", "block": "amp", "value": 1},
+            {"kind": "set_bypass", "block": eq_block, "bypassed": False},
+        ]
+        scenes = tr.summary_from_plan(plan)
+        assert scenes[0].eq_engaged is True, f"{eq_block} must still satisfy rule 17"
+        bland = [f for f in tr.review(scenes) if f.rule == "16"]
+        assert bland and bland[0].severity == "fail", (
+            f"{eq_block} alone must not rescue rule 16 either")
 
 
 def test_scene_level_alone_is_not_tone_voicing():

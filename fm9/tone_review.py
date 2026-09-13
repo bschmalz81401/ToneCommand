@@ -306,49 +306,106 @@ def bland_test_passed(findings: list[Finding]) -> bool:
     return not any(f.rule == "16" and f.severity == "fail" for f in findings)
 
 
-# Families excluded from the audible-mixed-effect set even though the FM9
-# gives them their own _MIX blend parameter, same as every other block:
-# DISTORT is the amp block itself (tracked via amp_gain/amp_level, a
-# different dimension than "effects"); FUZZ is the dedicated boost/drive
-# stage (tracked via boost_gain/boosted). Counting either one a second
-# time here would blur the "no effects, no boost" distinction rule 16's
-# own message draws between the two.
-_WET_EXCLUDED = frozenset({"DISTORT", "FUZZ"})
+# Independent review found TWO different failures from inferring meaning
+# out of catalog parameter NAMES:
+#
+#   round 3: a hand-maintained short list (delay/reverb/chorus/flanger/
+#   phaser/multitap) missed real catalog families entirely.
+#
+#   round 4: the fix for that ("any family with a _MIX param") was ALSO
+#   wrong, in both directions at once. COMP/MULTICOMP/GATE/CROSSOVER/GEQ
+#   all have a _MIX param but add no tonal dimension (a compressor or gate
+#   is not what rule 16 means by "an effect"), so a scene with only those
+#   engaged wrongly PASSED as not-bare - and GEQ specifically, despite
+#   being declared interchangeable with PEQ for rule 17, silently also
+#   satisfied rule 16, while PEQ (no _MIX param) correctly did not.
+#   Meanwhile ENHANCER has only a _DEPTH param, no _MIX, so it fell out of
+#   the _MIX-only derivation entirely and a genuinely voiced ENHANCER-only
+#   scene wrongly FAILED as bare.
+#
+# "Has a blend parameter" is simply not the same fact as "is an audible
+# tone-shaping dimension." There is no naming convention left to lean on,
+# so this is an explicit, hand-classified, exhaustive table instead -
+# the semantic judgment a name pattern cannot make for us. Every family
+# the catalog gives a _MIX OR _DEPTH parameter to MUST appear here in
+# exactly one category; completeness is enforced by
+# test_every_catalogued_family_is_classified so a future roster addition
+# fails loudly in CI rather than silently reopening either loophole.
+#
+#   audible   a real tone-shaping dimension: modulation, time-based,
+#             pitch, filter/spatial, resonator, synth. Satisfies rule 16.
+#   dynamics  level/gain-staging utility (compressor, gate, crossover
+#             split). Real and useful, but adds no TONAL dimension, so it
+#             does not satisfy rule 16 on its own.
+#   eq        PEQ/GEQ. A DIFFERENT fine-tune handle, rule 17's concern,
+#             not rule 16's - tracked separately via eq_engaged/_EQ so
+#             engaging one does not silently also satisfy rule 16.
+#   amp       DISTORT, the amp block itself: tracked via amp_gain/
+#             amp_level, a different dimension than "effects".
+#   boost     FUZZ, the dedicated boost/drive stage: tracked via
+#             boost_gain/boosted, not "effects".
+FAMILY_CLASS: dict[str, str] = {
+    # audible: modulation
+    "CHORUS": "audible", "FLANGER": "audible", "PHASER": "audible",
+    "TREMOLO": "audible", "ROTARY": "audible", "RINGMOD": "audible",
+    # audible: time-based (delay family)
+    "DELAY": "audible", "MULTITAP": "audible", "MEGATAP": "audible",
+    "TENTAP": "audible", "PLEX": "audible",
+    # audible: pitch
+    "PITCH": "audible", "FORMANT": "audible",
+    # audible: filter / spatial / resonator / synth
+    "FILTER": "audible", "REVERB": "audible", "RESONATOR": "audible",
+    "SYNTH": "audible", "VOCODER": "audible", "WAH": "audible",
+    "ENHANCER": "audible",
+    # dynamics: level/gain-staging utility, not a tonal dimension
+    "COMP": "dynamics", "MULTICOMP": "dynamics", "GATE": "dynamics",
+    "CROSSOVER": "dynamics",
+    # eq: rule 17's concern, not rule 16's
+    "GEQ": "eq",
+    # amp / boost: tracked via their own dedicated Scene fields
+    "DISTORT": "amp", "FUZZ": "boost",
+}
+
+_BOOST = {"FUZZ", "DRIVE"}
+#: EQ block families (issue #97). Both count as the same fine-tune handle;
+#: a build needs at least one of either, not specifically both. PEQ has no
+#: _MIX/_DEPTH param at all, so it never appears in FAMILY_CLASS - it is
+#: reached only through set_bypass, never through the fx_mix/effects path.
+_EQ = {"PEQ", "GEQ"}
+
+
+def _catalog_mix_or_depth_families() -> frozenset[str]:
+    """Every family the catalog actually gives a _MIX or _DEPTH parameter
+    to - the exhaustive set FAMILY_CLASS must cover. Read fresh (not
+    cached): this is a completeness CHECK, run once at test time, not a
+    hot path."""
+    try:
+        data = json.loads(CATALOG_PATH.read_text())
+        return frozenset(
+            p["family"] for p in data["data"]["FM9_PARAMS"]
+            if str(p.get("name", "")).upper().endswith(("_MIX", "_DEPTH")))
+    except (OSError, ValueError, KeyError, TypeError):
+        return frozenset()
+
 
 #: A small, known-good fallback if the catalog cannot be read (missing
 #: file, unexpected shape). Degrades to less coverage rather than raising -
 #: same philosophy as targets() above: a missing/corrupt file must never
-#: take a tone review down, only make it less complete.
+#: take a tone review down, only make it less complete. Unreachable in
+#: practice once FAMILY_CLASS covers every real catalog family; kept as
+#: the honest degrade path if the file itself ever goes missing.
 _WET_FALLBACK = frozenset({"DELAY", "REVERB", "CHORUS", "FLANGER", "PHASER", "MULTITAP"})
 
 
 @lru_cache(maxsize=1)
 def wet_families() -> frozenset[str]:
-    """Every real FM9 block family with its own _MIX blend parameter, read
-    from the validated catalog (config/fm9_catalog.json) rather than a
-    hand-maintained guess. Found in independent review: a hardcoded list
-    (delay/reverb/chorus/flanger/phaser/multitap only) missed real,
-    catalog-confirmed effect families - tremolo, pitch, rotary, ringmod,
-    vocoder, wah, filter, formant, plex, resonator, megatap, synth, tentap,
-    comp, multicomp, crossover, gate, geq - so a plan that genuinely dialled
-    one of those in (no bypass repeated) still read as "no effects" and
-    rule 16 wrongly failed a scene that was not bare at all. Deriving from
-    the catalog means a future roster change cannot silently reopen the
-    same gap for a family nobody thought to add by hand.
-    """
-    try:
-        data = json.loads(CATALOG_PATH.read_text())
-        fams = {p["family"] for p in data["data"]["FM9_PARAMS"]
-                if str(p.get("name", "")).upper().endswith("_MIX")}
-        return frozenset(fams) - _WET_EXCLUDED
-    except (OSError, ValueError, KeyError, TypeError):
+    """Every family classified "audible" in FAMILY_CLASS - an explicit,
+    exhaustive semantic judgment, not an inference from parameter naming
+    (see the long comment above FAMILY_CLASS for why naming alone failed
+    twice in independent review)."""
+    if not _catalog_mix_or_depth_families():
         return _WET_FALLBACK
-
-
-_BOOST = {"FUZZ", "DRIVE"}
-#: EQ block families (issue #97). Both count as the same fine-tune handle;
-#: a build needs at least one of either, not specifically both.
-_EQ = {"PEQ", "GEQ"}
+    return frozenset(fam for fam, cls in FAMILY_CLASS.items() if cls == "audible")
 
 
 def summary_from_plan(actions: list[dict], reg=None) -> list[Scene]:
