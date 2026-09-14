@@ -7,6 +7,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -144,6 +145,19 @@ def test_validate_tone_target_rejects_non_object():
 
 # --- c7: the secret key is never hardcoded in tracked source --------------
 
+#: A TONE3000 secret key is the prefix followed by a body. The prefix alone is
+#: documentation: `tools/build_nam_captures.py` names it in a docstring and
+#: checks for it so the wrong key type is rejected, and the scanner below used
+#: to match its own search literal. Matching the prefix therefore flagged four
+#: places that hold no secret, so the guard was red from the day it landed
+#: (#112) and a scanner that is always red is one nobody reads.
+#:
+#: Matching the SHAPE instead keeps working when someone documents the prefix
+#: in a fifth place, which an allowlist of files-permitted-to-contain-secrets
+#: would not. 20 is well under any real key and well over `...` or a quote.
+SECRET_KEY_SHAPE = re.compile(r"t3k_cs_[A-Za-z0-9_-]{20,}")
+
+
 def test_secret_key_never_hardcoded():
     tracked = subprocess.run(
         ["git", "ls-files"], cwd=ROOT, capture_output=True, text=True, check=True
@@ -159,6 +173,23 @@ def test_secret_key_never_hardcoded():
             text = path.read_text(errors="ignore")
         except OSError:
             continue
-        if "t3k_cs_" in text:
+        if SECRET_KEY_SHAPE.search(text):
             offenders.append(rel)
     assert offenders == []
+
+
+def test_the_scanner_still_catches_a_real_key():
+    """The point of narrowing it is to keep it believable, so prove it did not
+    become a test that passes because it matches nothing."""
+    real = "t3k_cs_" + "A1b2C3d4E5f6G7h8I9j0K1"
+    assert SECRET_KEY_SHAPE.search(f'KEY = "{real}"')
+    assert SECRET_KEY_SHAPE.search(f"Authorization: Bearer {real}")
+
+
+def test_the_scanner_ignores_the_documented_prefix():
+    """Every shape that is in the tree today and holds no secret."""
+    for harmless in ('the TONE3000 Secret Key (t3k_cs_...) as a Bearer',
+                     'if not key.startswith("t3k_cs_"):',
+                     'use the t3k_cs_ one.',
+                     'SECRET_KEY_SHAPE = re.compile(r"t3k_cs_[A-Za-z0-9_-]{20,}")'):
+        assert not SECRET_KEY_SHAPE.search(harmless), harmless

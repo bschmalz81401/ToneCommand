@@ -2,6 +2,16 @@
 
 Notable changes to ToneCommand. Dates are UTC.
 
+### Fixed (secret scanner, 2026-09-14)
+- `test_secret_key_never_hardcoded` matches the SHAPE of a TONE3000 key rather
+  than its prefix. Matching `t3k_cs_` flagged four places that hold no secret:
+  its own search literal, the generator's docstring, and the two prefix checks
+  that exist to reject the wrong key type. The guard was therefore red from the
+  day it landed, and a secret scanner that is always red is one nobody reads on
+  the day it finds something real (#112). A regex for the prefix plus a body of
+  at least 20 characters clears all four and still catches a planted key, which
+  is proven both ways by two new tests rather than assumed.
+
 ## Unreleased
 
 ### Added (HeadRush grounding, 2026-09-14)
