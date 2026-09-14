@@ -57,8 +57,11 @@ def test_every_ordinal_carries_the_device_name(data):
 
 
 def test_the_counts_are_not_decorative(data):
-    described = sum(1 for rows in data["amps"].values()
-                    for r in rows.values() if r.get("model"))
+    """Counted by a rule the generator does not share: a row is described when
+    `model` is a non-empty string, full stop. Reusing `r.get("model")` here
+    would agree with the generator about an empty string and prove nothing."""
+    described = sum(1 for rows in data["amps"].values() for r in rows.values()
+                    if isinstance(r.get("model"), str) and r["model"].strip())
     total = sum(len(rows) for rows in data["amps"].values())
     assert data["counts"] == {"ordinals": total, "described": described,
                               "unattributed": total - described}
@@ -84,6 +87,12 @@ def test_an_undescribed_model_is_marked_rather_than_missing(data):
     assert blank, "if the vendor has since described everything, drop this test"
     for block, ordinal, row in blank:
         assert row["unattributed"], f"{block}[{ordinal}] is blank with no reason"
+    # named, not merely counted: HeadrushRigBuilder's own KNOWN_GAPS infers a
+    # JCM900 for this one, and this file deliberately does not import that
+    # guess. If the row ever acquires an attribution it should be because the
+    # vendor published one.
+    assert ("ReValver Amp", "5") in [(b, o) for b, o, _ in blank]
+    assert data["amps"]["ReValver Amp"]["5"]["headrush"] == "90 Michael ACM 900"
 
 
 # --- the rule, not the shape -------------------------------------------
@@ -153,8 +162,59 @@ def test_an_empty_category_is_a_wrong_file_not_an_empty_roster(monkeypatch):
         gen.build(catalog, schema)
 
 
-def test_the_join_is_case_and_space_only(monkeypatch):
-    """Normalisation that went further would start matching different amps."""
+def test_the_join_is_by_name_not_by_position(monkeypatch):
+    """The page's order is NOT the device's order, so a positional join would
+    silently mis-attribute every row.
+
+    The catalog lists `59 Tweed Bass` second among the HeadRush amps; the
+    device puts it at ordinal 3. Nothing in a same-order fixture can tell a
+    name join from `zip`, so this one shuffles the catalog deliberately.
+    """
     from tools import build_headrush_amp_models as gen
-    assert gen.norm("  59   TWEED Deluxe ") == "59 tweed deluxe"
-    assert gen.norm("Vox AC30") != gen.norm("Vox AC15")
+    monkeypatch.setattr(gen, "BLOCKS", {"Amp": "HEADRUSH AMP MODELS (53)"})
+    monkeypatch.setattr(gen, "OVERRIDES", {})
+    monkeypatch.setattr(gen, "UNATTRIBUTED", {})
+    device = ["59 Tweed Deluxe", "59 Tweed Prince", "59 Tweed Bass"]
+    catalog, schema = _inputs(device, list(reversed(device)))
+    rows = gen.build(catalog, schema)["amps"]["Amp"]
+    for ordinal, name in enumerate(device):
+        assert rows[str(ordinal)]["headrush"] == name
+        assert rows[str(ordinal)]["model"] == f"a real {name}", \
+            "ordinal %d took its attribution from position, not name" % ordinal
+
+
+def test_normalisation_stays_case_and_space_only(monkeypatch):
+    """Driven through build(), because norm() alone proves nothing about the
+    join. The sibling project's scraper strips to [a-z0-9] and rewrites
+    'channel N' to 'chN'; if that cleverness ever landed here it would start
+    matching models the vendor kept distinct, and a norm()-only test would
+    stay green through it.
+    """
+    from tools import build_headrush_amp_models as gen
+    monkeypatch.setattr(gen, "BLOCKS", {"Amp": "HEADRUSH AMP MODELS (53)"})
+    monkeypatch.setattr(gen, "OVERRIDES", {})
+    monkeypatch.setattr(gen, "UNATTRIBUTED", {})
+    # case and spacing differ: must join. Punctuation differs: must NOT.
+    catalog, schema = _inputs(["  59   TWEED Deluxe "], ["59 Tweed Deluxe"])
+    assert gen.build(catalog, schema)["amps"]["Amp"]["0"]["model"]
+
+    catalog, schema = _inputs(["93 MS-30"], ["93 MS30"])
+    with pytest.raises(SystemExit, match="Do not guess"):
+        gen.build(catalog, schema)
+
+
+def test_the_committed_file_matches_a_fresh_build():
+    """Round trip, skipped where the inputs are not checked out.
+
+    Everything above reads the committed JSON, so a hand edit that kept the
+    shape would pass all of it. This is the only test that can catch one, and
+    it can only run where both generated inputs exist.
+    """
+    from tools import build_headrush_amp_models as gen
+    if not (gen.DEFAULT_CATALOG.exists() and gen.DEFAULT_SCHEMA.exists()):
+        pytest.skip("HeadrushRigBuilder is not checked out beside this repo")
+    fresh = gen.build(json.loads(gen.DEFAULT_CATALOG.read_text()),
+                      json.loads(gen.DEFAULT_SCHEMA.read_text()))
+    assert fresh == json.loads(SIDECAR.read_text()), \
+        "config/headrush_amp_models.json is not what the generator produces; " \
+        "regenerate rather than hand editing"

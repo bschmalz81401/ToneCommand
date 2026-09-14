@@ -85,6 +85,11 @@ BLOCKS = {
 #: device string -> catalog string, where the two spell the same model
 #: differently. Corrections go HERE, never in the generated JSON, so a
 #: regeneration cannot silently drop them.
+#: Verbatim oddities in the vendor's list that are NOT generator bugs, noted
+#: here because the next reader will suspect they are:
+#:   `68 Plexi EL84 Mod` is attributed to a "Super Lead Plexi (EL34 tubes mod)".
+#:   EL84 in the model name, EL34 in the attribution. That is what the page
+#:   says, and facts-only means it ships as published rather than corrected.
 OVERRIDES = {
     "93 MS-30": "93 MS30",
     "05 Tangerine 30 Ch1": "05 Tangerine 30 Channel 1",
@@ -119,10 +124,13 @@ def model_options(schema: dict, block: str) -> list[str]:
         params = schema["blocks"][block]["params"]
     except KeyError:
         sys.exit(f"schema has no block {block!r}; is this a HeadRush schema?")
+    # by NAME, not by label. These blocks are twins: `Type` and `Type2` both
+    # carry label "Model" and today hold identical option lists, so matching
+    # the label works by luck. `keyed_by` says Type, so key on Type.
     for p in params:
-        if p.get("label") == "Model" and p.get("options"):
+        if p.get("name") == "Type" and p.get("options"):
             return list(p["options"])
-    sys.exit(f"block {block!r} publishes no Model parameter with options")
+    sys.exit(f"block {block!r} publishes no Type parameter with options")
 
 
 def build(catalog: dict, schema: dict) -> dict:
@@ -171,11 +179,16 @@ def build(catalog: dict, schema: dict) -> dict:
         "device_schema_source": schema.get("source"),
         "device_schema_generated_at": schema.get("generatedAt"),
         "generated_by": "tools/build_headrush_amp_models.py",
-        "warning": "Generated file. Hand edits are lost on regeneration; put "
-                   "corrections in OVERRIDES in the generator instead. "
-                   "'headrush' must stay equal to the device's own Model "
-                   "option at that ordinal, or the ordinals below mean "
-                   "something else.",
+        "warning": "Generated file. Hand edits are lost on regeneration. "
+                   "OVERRIDES in the generator is a SPELLING table for the "
+                   "join key only: it cannot correct a wrong attribution, "
+                   "because the attribution is the vendor's own words and "
+                   "changing it would stop this being a record of what they "
+                   "published. 'headrush' is the device's own Model option at "
+                   "that ordinal and is what a future drift guard would "
+                   "compare; nothing local verifies it today, because this "
+                   "repo vendors no HeadRush roster (see fm9.grounding."
+                   "UNGUARDABLE).",
         "counts": {"ordinals": total, "described": described,
                    "unattributed": total - described},
         "amps": amps,

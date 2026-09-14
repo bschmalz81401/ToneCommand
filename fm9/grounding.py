@@ -29,7 +29,9 @@ Not every sidecar can have one: `effect_type_models.json` is keyed by display
 name and the catalog carries no ordinal roster for delay, chorus, multitap or
 pitch types, so there is nothing to drift against until #5 maps them on
 hardware. That absence is correct, and `REQUIRES_DRIFT_GUARD` records which
-families can be guarded rather than leaving it to be rediscovered.
+families can be guarded rather than leaving it to be rediscovered. Its
+counterpart `UNGUARDABLE` records WHY each of the others cannot be, so an
+unguarded sidecar is a decision on the record rather than an oversight.
 """
 from __future__ import annotations
 
@@ -54,6 +56,27 @@ ENVELOPE = {
 #: Families whose sidecar CAN be checked against a catalog roster. The others
 #: are not unguarded by oversight: there is no roster to compare them to.
 REQUIRES_DRIFT_GUARD = frozenset({"amp_models", "drive_models", "cab_models"})
+
+#: Why each unguarded family is unguarded, so the absence stays a decision
+#: rather than becoming a gap someone finds later. A family belongs in exactly
+#: one of these two collections; the envelope test holds that.
+UNGUARDABLE = {
+    "effect_type_models":
+        "keyed by display name, and the catalog carries no ordinal roster for "
+        "delay, chorus, multitap or pitch types. Guardable once #5 maps them "
+        "on hardware.",
+    "nam_capture_models":
+        "keyed by TONE3000 tone id from a live API, not by any device roster, "
+        "so there is no local catalog it can drift against. Surfaced by the "
+        "partition test added with headrush_amp_models; recorded here rather "
+        "than left unaccounted. Reword if this is not the intended reason.",
+    "headrush_amp_models":
+        "a second device's roster, and this repo vendors no HeadRush catalog "
+        "to compare against. The `headrush` field on every row is the device's "
+        "own Model option at that ordinal, so a guard becomes possible the "
+        "moment an adapter can read Amp.Type back from a unit (#33 phase 4). "
+        "Until then nothing local verifies it, and the file says so.",
+}
 
 
 def sidecars() -> list[Path]:

@@ -13,7 +13,7 @@
  },
  "device_schema_generated_at": "2026-08-20T04:08:11.165Z",
  "generated_by": "tools/build_headrush_amp_models.py",
- "warning": "Generated file. Hand edits are lost on regeneration; put corrections in OVERRIDES in the generator instead. 'headrush' must stay equal to the device's own Model option at that ordinal, or the ordinals below mean something else.",
+ "warning": "Generated file. Hand edits are lost on regeneration. OVERRIDES in the generator is a SPELLING table for the join key only: it cannot correct a wrong attribution, because the attribution is the vendor's own words and changing it would stop this being a record of what they published. 'headrush' is the device's own Model option at that ordinal and is what a future drift guard would compare; nothing local verifies it today, because this repo vendors no HeadRush roster (see fm9.grounding.UNGUARDABLE).",
  "counts": {
   "ordinals": 101,
   "described": 100,

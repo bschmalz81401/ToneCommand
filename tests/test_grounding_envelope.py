@@ -137,3 +137,24 @@ def test_a_guarded_family_really_refuses_a_drifted_sidecar(family, tmp_path,
     with pytest.raises(Exception) as e:
         fn(p)
     assert "sync" in str(e.value).lower() or "stale" in type(e.value).__name__.lower()
+
+
+def test_every_sidecar_is_either_guarded_or_has_a_recorded_reason():
+    """The two collections must partition the sidecars.
+
+    `REQUIRES_DRIFT_GUARD` records which families CAN be checked against a
+    roster; `UNGUARDABLE` records why each of the others cannot. A family in
+    neither is the case the docstring warns about: an absence nobody decided,
+    waiting to be rediscovered. A family in both is a contradiction.
+    """
+    families = {p.stem for p in grounding.sidecars()}
+    guarded = set(grounding.REQUIRES_DRIFT_GUARD)
+    excused = set(grounding.UNGUARDABLE)
+    assert not (guarded & excused), \
+        f"claimed both guardable and not: {sorted(guarded & excused)}"
+    missing = families - guarded - excused
+    assert not missing, (
+        f"{sorted(missing)} is neither drift-guarded nor recorded in "
+        f"UNGUARDABLE. Add a guard, or say why it cannot have one.")
+    for family, reason in grounding.UNGUARDABLE.items():
+        assert len(reason) > 40, f"{family}'s reason is not a reason"
