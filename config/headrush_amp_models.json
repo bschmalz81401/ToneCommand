@@ -1,0 +1,433 @@
+{
+ "schema_version": 1,
+ "device": "HeadRush",
+ "content": "facts",
+ "keyed_by": "block name, then the Model parameter's ordinal (Amp.Type and 'ReValver Amp'.Type)",
+ "source": "https://www.headrushfx.com/products/core/index.html",
+ "source_generated_at": "2026-08-20T05:45:00.535Z",
+ "device_schema_source": {
+  "host": "headrushcore.local",
+  "deviceName": "HeadRush Core_7309",
+  "product": "HV01",
+  "appVersion": "5.1.0.2a63755"
+ },
+ "device_schema_generated_at": "2026-08-20T04:08:11.165Z",
+ "generated_by": "tools/build_headrush_amp_models.py",
+ "warning": "Generated file. Hand edits are lost on regeneration; put corrections in OVERRIDES in the generator instead. 'headrush' must stay equal to the device's own Model option at that ordinal, or the ordinals below mean something else.",
+ "counts": {
+  "ordinals": 101,
+  "described": 100,
+  "unattributed": 1
+ },
+ "amps": {
+  "Amp": {
+   "0": {
+    "headrush": "59 Deluxe Gain Mod",
+    "model": "Fender® Tweed Deluxe (Gain Mod)"
+   },
+   "1": {
+    "headrush": "59 Tweed Deluxe",
+    "model": "Fender® Tweed Deluxe"
+   },
+   "2": {
+    "headrush": "59 Tweed Prince",
+    "model": "Fender® ’59 Princeton"
+   },
+   "3": {
+    "headrush": "59 Tweed Bass",
+    "model": "Fender® ’59 Bassman"
+   },
+   "4": {
+    "headrush": "64 Black Lux Vib",
+    "model": "Fender® Deluxe Reverb (Vibrato)"
+   },
+   "5": {
+    "headrush": "64 Black Lux Norm",
+    "model": "Fender® Deluxe Reverb (Normal)"
+   },
+   "6": {
+    "headrush": "64 Black Vib",
+    "model": "Fender® Vibroverb"
+   },
+   "7": {
+    "headrush": "65 Black SR",
+    "model": "Fender® Super Reverb \"Blackface\""
+   },
+   "8": {
+    "headrush": "65 Black Mini",
+    "model": "Fender® Champ 6w"
+   },
+   "9": {
+    "headrush": "65 Black Prince",
+    "model": "Fender® Princeton"
+   },
+   "10": {
+    "headrush": "65 Black Prince Rev",
+    "model": "Fender® Princeton Reverb"
+   },
+   "11": {
+    "headrush": "65 J45",
+    "model": "Marshall® JTM45"
+   },
+   "12": {
+    "headrush": "66 AC Hi Boost",
+    "model": "Vox® AC30 Top Boost"
+   },
+   "13": {
+    "headrush": "66 AC Hi Boost Mod",
+    "model": "Vox® AC30 Top Boost (Mod)"
+   },
+   "14": {
+    "headrush": "66 Flip Bass",
+    "model": "Ampeg® Portaflex B15-N"
+   },
+   "15": {
+    "headrush": "67 Black Duo",
+    "model": "Fender® Twin Reverb \"Blackface\""
+   },
+   "16": {
+    "headrush": "67 Black Shimmer",
+    "model": "Fender® Dual Showman"
+   },
+   "17": {
+    "headrush": "67 Plexiglas Vari",
+    "model": "Marshall® Super Lead Plexi (Variac Mod)"
+   },
+   "18": {
+    "headrush": "68 Plexi EL84 Mod",
+    "model": "Marshall® Super Lead Plexi (EL34 tubes mod)"
+   },
+   "19": {
+    "headrush": "68 Plexiglas 50W",
+    "model": "Marshall® Super Lead Plexi 50W"
+   },
+   "20": {
+    "headrush": "69 Plexiglas 100W",
+    "model": "Marshall® Super Lead Plexi 100W"
+   },
+   "21": {
+    "headrush": "69 Blue Line Bass",
+    "model": "Ampeg® SVT 300w"
+   },
+   "22": {
+    "headrush": "69 Blue Line Scoop",
+    "model": "Ampeg® SVT 300w (Scooped)"
+   },
+   "23": {
+    "headrush": "82 Lead 800 100W",
+    "model": "Marshall® JCM800 (Normal)"
+   },
+   "24": {
+    "headrush": "82 Lead 800 50W",
+    "model": "Marshall® JCM800 50w"
+   },
+   "25": {
+    "headrush": "82 Lead 800 Bass Mod",
+    "model": "Marshall® JCM800 (Bass Mod)"
+   },
+   "26": {
+    "headrush": "82 Lead 800 Bright",
+    "model": "Marshall® JCM800 (Bright)"
+   },
+   "27": {
+    "headrush": "82 Lead 800 TS Mod",
+    "model": "Marshall® JCM800 (TS Mod)"
+   },
+   "28": {
+    "headrush": "83 400R",
+    "model": "Gallien-Krueger® 800RB"
+   },
+   "29": {
+    "headrush": "84 J-120H",
+    "model": "Roland® Jazz Chorus 120 (Head)"
+   },
+   "30": {
+    "headrush": "85 M-2 Lead",
+    "model": "Mesa/Boogie® Mark IIc+ (Drive)"
+   },
+   "31": {
+    "headrush": "85 M-2 Lead Cap Mod",
+    "model": "Mesa/Boogie® Mark IIc+ (Coupling Cap Mod)"
+   },
+   "32": {
+    "headrush": "89 SL-100 Drive",
+    "model": "Soldano® SLO-100 (Drive)"
+   },
+   "33": {
+    "headrush": "89 SL-100 Crunch",
+    "model": "Soldano® SLO-100 (Crunch)"
+   },
+   "34": {
+    "headrush": "89 SL-100 Clean",
+    "model": "Soldano® SLO-100 (Clean)"
+   },
+   "35": {
+    "headrush": "89 SL-100 Ext Range",
+    "model": "Soldano® SLO-100 (Extreme)"
+   },
+   "36": {
+    "headrush": "92 Treadplate Modern",
+    "model": "Mesa/Boogie® Dual Rectifier (Modern)"
+   },
+   "37": {
+    "headrush": "92 Treadplate Raw",
+    "model": "Mesa/Boogie® Dual Rectifier (Raw)"
+   },
+   "38": {
+    "headrush": "92 Treadplate Vintage",
+    "model": "Mesa/Boogie® Dual Rectifier (Vintage)"
+   },
+   "39": {
+    "headrush": "93 MS-30",
+    "model": "Matchless® DC30"
+   },
+   "40": {
+    "headrush": "97 RB-01B Red",
+    "model": "Bogner® Ecstasy 101B (Red Channel)"
+   },
+   "41": {
+    "headrush": "97 RB-01B Blue",
+    "model": "Bogner® Ecstasy 101B (Blue Channel)"
+   },
+   "42": {
+    "headrush": "97 RB-01B Green",
+    "model": "Bogner® Ecstasy 101B (Green Channel)"
+   },
+   "43": {
+    "headrush": "99 PV51 II Clean",
+    "model": "Peavey® 5150 II (Clean)"
+   },
+   "44": {
+    "headrush": "99 PV51 II Crunch",
+    "model": "Peavey® 5150 II (Crunch)"
+   },
+   "45": {
+    "headrush": "99 PV51 II Lead",
+    "model": "Peavey® 5150 II (Lead)"
+   },
+   "46": {
+    "headrush": "05 Tangerine 30 Ch1",
+    "model": "Orange® AD30HTC ® Clean Channel"
+   },
+   "47": {
+    "headrush": "05 Tangerine 30 Ch2",
+    "model": "Orange® AD30HTC ® Dirty Channel"
+   },
+   "48": {
+    "headrush": "11 EPB II Clean",
+    "model": "2011 ENGL® Powerball II"
+   },
+   "49": {
+    "headrush": "11 EPB II Crunch",
+    "model": "2011 ENGL® Powerball II"
+   },
+   "50": {
+    "headrush": "11 EPB II Lo-Lead",
+    "model": "2011 ENGL® Powerball II"
+   },
+   "51": {
+    "headrush": "11 EPB II Hi-Lead",
+    "model": "2011 ENGL® Powerball II"
+   },
+   "52": {
+    "headrush": "17 Trace Elliot Elf",
+    "model": "Trace Elliot® ELF"
+   }
+  },
+  "ReValver Amp": {
+   "0": {
+    "headrush": "62 BluesMaker",
+    "model": "Marshall® BluesBreaker"
+   },
+   "1": {
+    "headrush": "64 Fox AC30",
+    "model": "Vox® AC30"
+   },
+   "2": {
+    "headrush": "72 Basic 100 Bass",
+    "model": "Fender®Bassman 100 (Bass Channel)"
+   },
+   "3": {
+    "headrush": "72 Basic 100 Both BG",
+    "model": "Fender® Bassman 100 (Bass and Normal Channel)"
+   },
+   "4": {
+    "headrush": "72 Basic 100 Guitar",
+    "model": "Fender® Bassman 100 (Normal Channel)"
+   },
+   "5": {
+    "headrush": "90 Michael ACM 900",
+    "model": null,
+    "unattributed": "not described on the vendor's published model list"
+   },
+   "6": {
+    "headrush": "92 Flathill Dual Ch1 Normal",
+    "model": "Mesa Boogie® Dual Rectifier (Channel 1 - Normal)"
+   },
+   "7": {
+    "headrush": "92 Flathill Dual Ch1 Clean",
+    "model": "Mesa Boogie® Dual Rectifier (Channel 1 - Clean)"
+   },
+   "8": {
+    "headrush": "92 Flathill Dual Ch1 Modern",
+    "model": "Mesa Boogie® Dual Rectifier (Channel 1 - Modern)"
+   },
+   "9": {
+    "headrush": "92 Flathill Dual Ch2 Normal",
+    "model": "Mesa Boogie® Dual Rectifier (Channel 2 - Normal)"
+   },
+   "10": {
+    "headrush": "92 Flathill Dual Ch2 Vintage",
+    "model": "Mesa Boogie® Dual Rectifier (Channel 2 - Vintage)"
+   },
+   "11": {
+    "headrush": "99 Peavey Classic 30 Ch1",
+    "model": "Peavey® Classic 30 (Channel 1)"
+   },
+   "12": {
+    "headrush": "99 Peavey Classic 30 Ch2",
+    "model": "Peavey® Classic 30 (Channel 2)"
+   },
+   "13": {
+    "headrush": "03 Herr Demon Ch1",
+    "model": "Diezel® Herbert (Channel 1)"
+   },
+   "14": {
+    "headrush": "03 Herr Demon Ch2",
+    "model": "Diezel® Herbert (Channel 2)"
+   },
+   "15": {
+    "headrush": "03 Herr Demon Ch3",
+    "model": "Diezel® Herbert (Channel 3)"
+   },
+   "16": {
+    "headrush": "04 Hangar 18 LH1000",
+    "model": "Hartke® LH1000"
+   },
+   "17": {
+    "headrush": "05 Redhot AD30TC Ch1",
+    "model": "Orange® AD30HTC (Clean Channel)"
+   },
+   "18": {
+    "headrush": "05 Redhot AD30TC Ch2",
+    "model": "Orange® AD30HTC (Dirty Channel)"
+   },
+   "19": {
+    "headrush": "05 Peavey 6505 Clean",
+    "model": "Peavey® 6505 (Clean Channel)"
+   },
+   "20": {
+    "headrush": "05 Peavey 6505 Crunch",
+    "model": "Peavey® 6505 (Crunch Channel)"
+   },
+   "21": {
+    "headrush": "05 Peavey 6505 Lead",
+    "model": "Peavey® 6505 (Lead Channel)"
+   },
+   "22": {
+    "headrush": "05 Peavey 6505+ Clean",
+    "model": "Peavey® 6505+ (Clean Channel)"
+   },
+   "23": {
+    "headrush": "05 Peavey 6505+ Crunch",
+    "model": "Peavey® 6505+ (Crunch Channel)"
+   },
+   "24": {
+    "headrush": "05 Peavey 6505+ Lead",
+    "model": "Peavey® 6505+ (Lead Channel)"
+   },
+   "25": {
+    "headrush": "09 Peavey 3120 Clean",
+    "model": "Peavey® 3120 (Clean Channel)"
+   },
+   "26": {
+    "headrush": "09 Peavey 3120 Rhythm",
+    "model": "Peavey® 3120 (Rhythm Channel)"
+   },
+   "27": {
+    "headrush": "09 Peavey 3120 Lead",
+    "model": "Peavey® 3120 (Lead Channel)"
+   },
+   "28": {
+    "headrush": "09 Peavey Masterpiece 50 Clean",
+    "model": "Peavey® Masterpiece 50 (Clean Channel)"
+   },
+   "29": {
+    "headrush": "09 Peavey Masterpiece 50 Lead",
+    "model": "Peavey® Masterpiece 50 (Lead Channel)"
+   },
+   "30": {
+    "headrush": "09 Peavey Sensation 20",
+    "model": "Peavey® Sensation 20"
+   },
+   "31": {
+    "headrush": "09 Budda SD II Rhythm",
+    "model": "Budda® Superdrive II (Rhythm Channel)"
+   },
+   "32": {
+    "headrush": "09 Budda SD II Drive",
+    "model": "Budda® Superdrive II (Drive Channel)"
+   },
+   "33": {
+    "headrush": "10 Budda V20 Rhythm",
+    "model": "Budda® Superdrive V20 (Rhythm Channel)"
+   },
+   "34": {
+    "headrush": "10 Budda V20 Drive",
+    "model": "Budda® Superdrive V20 (Drive Channel)"
+   },
+   "35": {
+    "headrush": "11 Angel PB II Clean",
+    "model": "Engl® Powerball II (Clean Channel)"
+   },
+   "36": {
+    "headrush": "11 Angel PB II Crunch",
+    "model": "Engl® Powerball II (Crunch Channel)"
+   },
+   "37": {
+    "headrush": "11 Angel PB II Lo-Lead",
+    "model": "Engl® Powerball II (Lo-Lead Channel)"
+   },
+   "38": {
+    "headrush": "11 Angel PB II Hi-Lead",
+    "model": "Engl® Powerball II (Hi-Lead Channel)"
+   },
+   "39": {
+    "headrush": "11 Peavey Triple XXX II Clean",
+    "model": "Peavey® Triple XXX II (Clean Channel)"
+   },
+   "40": {
+    "headrush": "11 Peavey Triple XXX II Rhythm",
+    "model": "Peavey® Triple XXX II (Rhythm Channel)"
+   },
+   "41": {
+    "headrush": "11 Peavey Triple XXX II Lead",
+    "model": "Peavey® Triple XXX II (Lead Channel)"
+   },
+   "42": {
+    "headrush": "13 Peavey ValveKing II Clean",
+    "model": "Peavey® ValveKing II (Clean Channel)"
+   },
+   "43": {
+    "headrush": "13 Peavey ValveKing II Lead",
+    "model": "Peavey® ValveKing II (Lead Channel)"
+   },
+   "44": {
+    "headrush": "14 Peavey Custom Lite 20",
+    "model": "Peavey® Custom Lite 20"
+   },
+   "45": {
+    "headrush": "25 ON-1 Clean",
+    "model": "HeadRush® Original"
+   },
+   "46": {
+    "headrush": "25 ON-1 Crunch",
+    "model": "HeadRush® Original"
+   },
+   "47": {
+    "headrush": "25 ON-1 Lead",
+    "model": "HeadRush® Original"
+   }
+  }
+ }
+}
