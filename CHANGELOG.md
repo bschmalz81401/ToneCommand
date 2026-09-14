@@ -104,6 +104,34 @@ Notable changes to ToneCommand. Dates are UTC.
   follows as the proof the reversal is safe, instead of standing alone.
 
 ### Added
+- **`devices/headrush/client.py`, the HeadRush transport (#33 phase 1).** HTTP
+  and mDNS only: the unit self-describes over unauthenticated HTTP on port 80
+  (`subtree`, `object-meta`, `object-properties` read and write,
+  `object-method`, and a `ws://` change feed), so there is no protocol to
+  reverse engineer and this layer is small. It knows nothing about
+  ToneCommand, which a test pins by parsing its imports: no `DeviceAdapter`,
+  no `Capabilities`, no effect ids, no `validate_action`. Nothing calls it
+  yet, on purpose. Three device facts measured on a HeadRush Core, fw
+  `5.1.0.2a63755` (#109), are what the module mostly consists of, and each
+  reads as an indistinguishable connection failure when it is got wrong: the
+  unit publishes both an A and an AAAA record and which one the resolver
+  returns varies by process, so a link-local answer falls back to the hostname,
+  because a zone has no spelling `urllib` accepts in an http URL (`getaddrinfo`
+  does return the scope, unlike Node's `lookup`, and the module says so rather
+  than repeating the Node fact); a
+  `*.local` name costs about 5 s per lookup against about 130 ms of real work,
+  so the name is resolved once and reused, and the first lookup asks for IPv4
+  alone because the dual-family query waited 5008 ms to return an A record it
+  already had; and writes answer `200` with an EMPTY BODY, so parsing a reply
+  as JSON throws on every `PUT`. Failures are classified by exception type and
+  errno rather than message text, which is what keeps the unit's own `504` on
+  a wrong-argument method call from being reported as a device that is not
+  answering. Resolver and HTTP opener are both injected, so the whole file is
+  tested with no unit on the network and no new runtime dependency: resolution
+  is `socket.getaddrinfo`, which is what the measurements were taken through,
+  and HTTP is `urllib.request`, as every other runtime HTTP path in this repo
+  already is. Writes remain immediate and unguarded at this layer; the
+  `object-method` allowlist is phase 4's deliberate decision, per #33.
 - **A recipe can cite a real NAM Architecture 2 (A2) capture as its tone
   target (#18).** NAM A2 (TONE3000 + NAM's creator, launched June 2026) is
   becoming a cross-vendor capture interchange format, and issue #18 asked
