@@ -67,4 +67,7 @@ tonecommand = "server:main"
 
 [tool.setuptools]
 py-modules = ["server"]
-packages = ["fm9"]
+# `devices/` holds transports for device families other than the FM9, one
+# package each. `fm9` stays where it is: moving it is the maintainer's
+# migration to sequence, not a side effect of adding a second device (#33).
+packages = ["fm9", "devices", "devices.headrush"]
