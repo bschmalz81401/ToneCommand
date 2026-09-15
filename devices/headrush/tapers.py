@@ -177,14 +177,18 @@ class TaperTable:
         """
         if algo is None or algo == LINEAR:
             return LINEAR
-        if algo in self.unimplemented:
-            return LINEAR
+        # Membership of the vendor's enum is checked BEFORE the unimplemented
+        # list. The other order let a corrupt artifact that listed an unknown
+        # id as unimplemented turn the raise below into a silent linear scale,
+        # which is the exact failure the raise exists to prevent.
         if algo not in self.names:
             raise UnknownTaper(
                 f"normalizeAlgo {algo} is not one of the {len(self.names)} "
                 f"this firmware's editor defines. The device is publishing a "
                 f"curve this table has not seen; re-generate from the unit's "
                 f"bundle rather than assuming linear.")
+        if algo in self.unimplemented:
+            return LINEAR
         return algo
 
     def to_display(self, wire: float, *, minimum: float, maximum: float,
@@ -207,17 +211,30 @@ class TaperTable:
         """Run a curve, turning every non-answer into ONE typed refusal.
 
         Python and JavaScript disagree about arithmetic at the edges, and the
-        vendor's curves sit on those edges deliberately. `H3ReverbTime` is
-        `(0.45 + x) / (1 - x)`, which is Infinity in the editor at wire 1 and
-        ZeroDivisionError here. `Volume` is `log10(x)`, which is -Infinity
-        there and ValueError here.
+        vendor's curves sit on those edges. Measured against the committed
+        vectors, the points with no number are `Exponential` on a range whose
+        minimum is at or below zero, where `log(hi / lo)` divides by zero here
+        and is Infinity or NaN there, and `Volume` at wire 0, where `log10(0)`
+        raises here and is -Infinity there.
 
-        Every one of those means the same thing, that the editor has no number
+        NOT `H3ReverbTime`, which an earlier version of this docstring named.
+        Its `(0.45 + x) / (1 - x)` never divides by zero, because the vendor
+        guards it with `x > fround(0.99)` and returns 145 first, and this
+        module carries the same guard. Independent review caught that, and it
+        is written out rather than quietly corrected because the wrong version
+        was the stated justification for catching ZeroDivisionError at all.
+
+        Every one of these means the same thing, that the editor has no number
         to show and renders a special string instead, so they collapse to
         NotConvertible in one place rather than each curve growing a guard and
-        one of them being forgotten. A test walks all 726 reference vectors and
-        asserts this refuses at exactly the 39 points the vendor cannot express
-        a number for, no more and no fewer.
+        one of them being forgotten. A test walks every reference vector and
+        asserts this refuses at exactly the points the vendor cannot express a
+        number for, no more and no fewer.
+
+        The catch is deliberately WIDER than those points: it also covers a
+        genuine mistake in a curve that happens to raise. A test pins the
+        forward direction exactly, so on-grid such a mistake fails the
+        comparison rather than hiding here.
         """
         try:
             value = curve(given, lo, hi)

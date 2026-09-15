@@ -39,11 +39,27 @@ Notable changes to ToneCommand. Dates are UTC.
   raises, because a firmware publishing an unseen curve must not be silently
   scaled as linear.
 - Python and JavaScript disagree at the edges, and the vendor's curves sit on
-  them: `H3ReverbTime` divides by zero at wire 1 where the editor gets
-  Infinity, and `Volume` is `log10(0)` at wire 0. These collapse to one typed
-  `NotConvertible` in one place, and a test walks all 726 vectors asserting it
-  refuses at exactly the 39 points the vendor cannot express, no more and no
-  fewer. That test is what caught the leak.
+  them: `Exponential` on a range whose minimum is at or below zero divides by
+  zero in `log(hi / lo)`, and `Volume` is `log10(0)` at wire 0. These collapse
+  to one typed `NotConvertible` in one place, and a test walks all 990 vectors
+  asserting it refuses at exactly the 51 points the vendor cannot express, no
+  more and no fewer, and that those points are `Exponential` (45) and `Volume`
+  (6). Naming the curves rather than only counting them is the correction:
+  independent review found the first version of this entry blamed
+  `H3ReverbTime`, which never divides at all because `x > fround(0.99)` returns
+  145 first, in the vendor and here alike.
+- The grid straddles the joins in `Db` (0.5) and `AllenHeathFaderVolume` (0.25)
+  with interior samples either side. Both curves are CONTINUOUS at their join,
+  so a sample sitting on it is the same number from either piece and pins
+  nothing: a split transcribed as 0.45 produced zero diffs across the whole
+  earlier grid. Also from review, and the bound is stated rather than
+  overclaimed, since a displacement smaller than the gap to the nearest sample
+  is still not distinguished.
+- The dispatch is now EXTRACTED rather than retyped into the harness, the
+  weakly anchored clamp is checked by behaviour rather than by name, and the
+  extraction regexes have their own test file. Nothing exercised them before,
+  which was the largest untested surface in a change whose whole value is that
+  the extraction is right.
 - The vendor's source text is NOT committed. Names and vectors are facts;
   minified third-party JavaScript in this repository would be redistributing
   their code with no licence for it. sha256 prefixes of each extracted

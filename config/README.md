@@ -72,6 +72,11 @@ seen must not be quietly scaled as linear.
 The vendor's source text is not committed, only sha256 prefixes of the
 fragments read. See THIRD_PARTY_NOTICES.md.
 
+`config/headrush_topologies.json` takes slot geometry from the same bundle and
+carries the same two fields. It arrives with #121 (PR #127) and is not on
+`main` yet, so if this file landed first that section is not here to compare
+against.
+
 Do not hand-edit. Regenerate with `tools/build_headrush_tapers.py --from-file`
 against a saved bundle; `--check` exits non-zero if the committed file is not
 what that bundle produces. node is needed to REGENERATE, because the vendor's

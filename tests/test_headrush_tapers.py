@@ -44,14 +44,14 @@ def test_every_curve_matches_the_vendors_own_output(table, blob):
         assert got == pytest.approx(expected, rel=1e-9, abs=1e-12), (
             f"algo {algo} ({table.name(algo)}) at wire {wire} on {lo}..{hi}")
         checked += 1
-    assert checked > 600, f"only {checked} vectors were comparable"
+    assert checked == 939, f"expected every finite vector, compared {checked}"
 
 
 def test_the_vector_set_covers_every_taper_and_several_shapes(blob):
     """A test that compared ten vectors would pass with nine curves wrong."""
     algos = {v["algo"] for v in blob["vectors"]}
     assert algos == set(range(11))
-    assert len(blob["vectors"]) == 726
+    assert len(blob["vectors"]) == 990
     ranges = {(v["minimum"], v["maximum"]) for v in blob["vectors"]}
     assert len(ranges) >= 6, "percentage, dB, frequency and time shapes"
     assert {0.0, 1.0} <= {v["wire"] for v in blob["vectors"]}, "endpoints"
@@ -159,7 +159,8 @@ def test_the_vendors_code_is_not_redistributed(blob):
     assert "=>" not in text, "no JavaScript source in the artifact"
     assert "Math." not in text, "nor fragments of it"
     digests = blob["vendor_source_sha256"]
-    assert set(digests) == {"to_display", "to_wire", "helpers", "clamp"}
+    assert set(digests) == {"to_display", "to_wire", "helpers", "clamp",
+                            "dispatch"}
     assert all(len(d) == 16 and int(d, 16) >= 0 for d in digests.values())
     # the two directions are genuinely different code, not one read twice
     assert digests["to_display"] != digests["to_wire"]
@@ -175,15 +176,15 @@ def test_a_value_with_no_finite_image_is_refused_not_returned(table):
 def test_the_points_the_vendor_has_no_number_for_are_refused_here_too(table, blob):
     """The hole in the comparison above, closed.
 
-    39 of the 726 vectors carry `display: null`, which is JSON's rendering of
-    the -Infinity the vendor returns (Volume at wire 0 is log10(0)). The main
-    comparison SKIPS those, so a Python curve that happily returned a number
-    where the vendor returns none would never be caught by it.
+    51 of the 990 vectors carry `display: null`, which is what JSON does with
+    the non-finite value the vendor returns. The main comparison SKIPS those,
+    so a Python curve that happily returned a number where the vendor returns
+    none would never be caught by it.
 
-    This is also where Python and JavaScript genuinely differ: `math.log10(0)`
-    raises ValueError where `Math.log10(0)` is -Infinity. The module mirrors
-    the vendor and turns the result into one typed refusal, so callers see
-    NotConvertible rather than a ValueError from inside a curve.
+    WHICH curves those are is pinned below, because an earlier version of this
+    file said H3ReverbTime and that was wrong: its `(0.45 + x) / (1 - x)` is
+    guarded by `x > fround(0.99)` returning 145, in the vendor and here, so it
+    never divides by zero. Independent review caught it.
     """
     refused = 0
     for v in blob["vectors"]:
@@ -193,7 +194,7 @@ def test_the_points_the_vendor_has_no_number_for_are_refused_here_too(table, blo
             table.to_display(v["wire"], minimum=v["minimum"],
                              maximum=v["maximum"], algo=v["algo"])
         refused += 1
-    assert refused == 39, "every point the vendor cannot express is refused"
+    assert refused == 51, "every point the vendor cannot express is refused"
 
 
 def test_a_curve_never_leaks_a_python_domain_error(table, blob):
@@ -206,3 +207,73 @@ def test_a_curve_never_leaks_a_python_domain_error(table, blob):
                              maximum=v["maximum"], algo=v["algo"])
         except T.NotConvertible:
             pass
+
+
+def test_which_curves_have_no_number_is_pinned_not_just_how_many(table, blob):
+    """The count alone let a wrong story stand.
+
+    An earlier version of this module claimed the refusals were H3ReverbTime
+    dividing by zero at wire 1. They are not, and independent review caught it:
+    that curve is guarded by `x > fround(0.99)` returning 145 before the divide,
+    in the vendor and here alike. Naming the curves makes the claim checkable
+    instead of leaving a count that any story fits.
+    """
+    import collections
+    names = {int(k): v["name"] for k, v in blob["tapers"].items()}
+    by_curve = collections.Counter(
+        names[v["algo"]] for v in blob["vectors"] if v["display"] is None)
+    assert dict(by_curve) == {'Volume': 6, 'Exponential': 45}
+    assert "H3ReverbTime" not in by_curve
+
+    # and the guard that keeps it out is real, at the exact boundary
+    assert table.to_display(1.0, minimum=0.0, maximum=1.0, algo=10) == 145.0
+    assert table.to_display(0.999, minimum=0.0, maximum=1.0, algo=10) == 145.0
+
+
+def test_the_inverse_direction_refuses_where_the_vendor_has_no_number(table, blob):
+    """The forward refusals were pinned and the inverse ones were not, so a
+    to_wire that returned a number where the vendor's normaliser cannot was
+    unchecked. Db on a range with minimum 0 divides by zero going back."""
+    refused = converted = 0
+    for v in blob["vectors"]:
+        if v["display"] is None or not math.isfinite(v["display"]):
+            continue
+        try:
+            got = table.to_wire(v["display"], minimum=v["minimum"],
+                                maximum=v["maximum"], algo=v["algo"])
+        except T.NotConvertible:
+            assert v["roundTrip"] is None, (
+                f"refused where the vendor returned {v['roundTrip']} "
+                f"(algo {v['algo']} at wire {v['wire']})")
+            refused += 1
+            continue
+        converted += 1
+        assert v["roundTrip"] is not None, (
+            f"returned {got} where the vendor had no number "
+            f"(algo {v['algo']} at wire {v['wire']})")
+    assert refused > 0 and converted > 0, "both outcomes must be exercised"
+
+
+def test_a_wrong_split_constant_is_caught_by_the_straddling_samples(table, blob):
+    """Db and AllenHeathFaderVolume are CONTINUOUS at their joins, so a sample
+    sitting on the join is the same number from either piece and pins nothing.
+    Interior samples either side are what pin the split location.
+
+    The bound is real and stated rather than overclaimed: a displacement
+    smaller than the gap to the nearest sample is not distinguished.
+    """
+    def db(x, lo, hi, split):
+        return lo + 2 * x * -lo if x <= split else hi * (x - 0.5) * 2
+
+    rows = [v for v in blob["vectors"]
+            if v["algo"] == 1 and v["display"] is not None]
+
+    def diffs(split):
+        return sum(1 for v in rows
+                   if abs(db(v["wire"], v["minimum"], v["maximum"], split)
+                          - v["display"]) > 1e-9)
+
+    assert diffs(0.5) == 0, "the real split reproduces the vendor exactly"
+    assert diffs(0.45) > 0, "a mistyped digit is caught"
+    assert diffs(0.4) > 0
+    assert diffs(0.499) == 0, "and the limit of the grid is stated, not hidden"

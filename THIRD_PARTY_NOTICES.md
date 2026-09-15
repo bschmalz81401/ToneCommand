@@ -270,9 +270,11 @@ extracted fragment is kept instead, so that regenerating the table can be shown
 to have read the same code without the code travelling with it. Anyone checking
 the maths reads it from their own unit.
 
-This mirrors `config/headrush_topologies.json`, which takes slot geometry from
-the same bundle, and both carry `provenance: "vendor editor bundle"` and
-`api_readable: false` so nothing downstream can present them as a device read.
+`config/headrush_topologies.json` takes slot geometry from the same bundle and
+carries the same two fields, `provenance: "vendor editor bundle"` and
+`api_readable: false`, so nothing downstream can present either as a device
+read. That file arrives with #121 and may not be present yet depending on merge
+order; this notice stands on its own either way.
 
 "HeadRush" is a trademark of inMusic Brands, Inc. This project is not
 affiliated with or endorsed by inMusic Brands.

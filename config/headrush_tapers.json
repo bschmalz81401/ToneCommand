@@ -1,6 +1,6 @@
 {
   "absent_algo_is": 0,
-  "absent_algo_note": "the vendor's own dispatch is `(t.algo ? table[t.algo] : void 0) ?? table[0]`, so a parameter with no normalizeAlgo, and equally one carrying 0, resolves to Linear",
+  "absent_algo_note": "the vendor's dispatch looks the id up in the table and falls back to entry 0 whenever the id is absent or itself zero, so a parameter with no normalizeAlgo and one carrying 0 both resolve to Linear. Described rather than quoted, so that the claim in THIRD_PARTY_NOTICES.md that no vendor source text is committed here stays literally true",
   "api_readable": false,
   "content": "the eleven normalisation curves the vendor's editor uses to convert between the 0..1 wire value and the value the unit displays, with reference vectors computed by running the vendor's own code",
   "device": "headrush",
@@ -142,11 +142,27 @@
     },
     {
       "algo": 0,
+      "display": 24.9,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.24899999797344208,
+      "wire": 0.249
+    },
+    {
+      "algo": 0,
       "display": 25,
       "maximum": 100,
       "minimum": 0,
       "roundTrip": 0.25,
       "wire": 0.25
+    },
+    {
+      "algo": 0,
+      "display": 25.1,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.25099998712539673,
+      "wire": 0.251
     },
     {
       "algo": 0,
@@ -158,11 +174,27 @@
     },
     {
       "algo": 0,
+      "display": 49.9,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.49900001287460327,
+      "wire": 0.499
+    },
+    {
+      "algo": 0,
       "display": 50,
       "maximum": 100,
       "minimum": 0,
       "roundTrip": 0.5,
       "wire": 0.5
+    },
+    {
+      "algo": 0,
+      "display": 50.1,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.5009999871253967,
+      "wire": 0.501
     },
     {
       "algo": 0,
@@ -230,11 +262,27 @@
     },
     {
       "algo": 0,
+      "display": -6.024,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.24899999797344208,
+      "wire": 0.249
+    },
+    {
+      "algo": 0,
       "display": -6,
       "maximum": 12,
       "minimum": -12,
       "roundTrip": 0.25,
       "wire": 0.25
+    },
+    {
+      "algo": 0,
+      "display": -5.976,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.25099998712539673,
+      "wire": 0.251
     },
     {
       "algo": 0,
@@ -246,11 +294,27 @@
     },
     {
       "algo": 0,
+      "display": -0.02400000000000091,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.49900001287460327,
+      "wire": 0.499
+    },
+    {
+      "algo": 0,
       "display": 0,
       "maximum": 12,
       "minimum": -12,
       "roundTrip": 0.5,
       "wire": 0.5
+    },
+    {
+      "algo": 0,
+      "display": 0.02400000000000091,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.5009999871253967,
+      "wire": 0.501
     },
     {
       "algo": 0,
@@ -318,11 +382,27 @@
     },
     {
       "algo": 0,
+      "display": 5.16775,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.24899999797344208,
+      "wire": 0.249
+    },
+    {
+      "algo": 0,
       "display": 5.1875,
       "maximum": 20,
       "minimum": 0.25,
       "roundTrip": 0.25,
       "wire": 0.25
+    },
+    {
+      "algo": 0,
+      "display": 5.20725,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.25099998712539673,
+      "wire": 0.251
     },
     {
       "algo": 0,
@@ -334,11 +414,27 @@
     },
     {
       "algo": 0,
+      "display": 10.10525,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.49900001287460327,
+      "wire": 0.499
+    },
+    {
+      "algo": 0,
       "display": 10.125,
       "maximum": 20,
       "minimum": 0.25,
       "roundTrip": 0.5,
       "wire": 0.5
+    },
+    {
+      "algo": 0,
+      "display": 10.14475,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.5009999871253967,
+      "wire": 0.501
     },
     {
       "algo": 0,
@@ -406,11 +502,27 @@
     },
     {
       "algo": 0,
+      "display": 267.775,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.24899999797344208,
+      "wire": 0.249
+    },
+    {
+      "algo": 0,
       "display": 268.75,
       "maximum": 1000,
       "minimum": 25,
       "roundTrip": 0.25,
       "wire": 0.25
+    },
+    {
+      "algo": 0,
+      "display": 269.725,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.25099998712539673,
+      "wire": 0.251
     },
     {
       "algo": 0,
@@ -422,11 +534,27 @@
     },
     {
       "algo": 0,
+      "display": 511.525,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.49900001287460327,
+      "wire": 0.499
+    },
+    {
+      "algo": 0,
       "display": 512.5,
       "maximum": 1000,
       "minimum": 25,
       "roundTrip": 0.5,
       "wire": 0.5
+    },
+    {
+      "algo": 0,
+      "display": 513.475,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.5009999871253967,
+      "wire": 0.501
     },
     {
       "algo": 0,
@@ -494,11 +622,27 @@
     },
     {
       "algo": 0,
+      "display": 4735,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.24899999797344208,
+      "wire": 0.249
+    },
+    {
+      "algo": 0,
       "display": 4750,
       "maximum": 16000,
       "minimum": 1000,
       "roundTrip": 0.25,
       "wire": 0.25
+    },
+    {
+      "algo": 0,
+      "display": 4765,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.25099998712539673,
+      "wire": 0.251
     },
     {
       "algo": 0,
@@ -510,11 +654,27 @@
     },
     {
       "algo": 0,
+      "display": 8485,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.49900001287460327,
+      "wire": 0.499
+    },
+    {
+      "algo": 0,
       "display": 8500,
       "maximum": 16000,
       "minimum": 1000,
       "roundTrip": 0.5,
       "wire": 0.5
+    },
+    {
+      "algo": 0,
+      "display": 8515,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.5009999871253967,
+      "wire": 0.501
     },
     {
       "algo": 0,
@@ -582,11 +742,27 @@
     },
     {
       "algo": 0,
+      "display": -50.2,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.24899999797344208,
+      "wire": 0.249
+    },
+    {
+      "algo": 0,
       "display": -50,
       "maximum": 100,
       "minimum": -100,
       "roundTrip": 0.25,
       "wire": 0.25
+    },
+    {
+      "algo": 0,
+      "display": -49.8,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.25099998712539673,
+      "wire": 0.251
     },
     {
       "algo": 0,
@@ -598,11 +774,27 @@
     },
     {
       "algo": 0,
+      "display": -0.20000000000000284,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.49900001287460327,
+      "wire": 0.499
+    },
+    {
+      "algo": 0,
       "display": 0,
       "maximum": 100,
       "minimum": -100,
       "roundTrip": 0.5,
       "wire": 0.5
+    },
+    {
+      "algo": 0,
+      "display": 0.20000000000000284,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.5009999871253967,
+      "wire": 0.501
     },
     {
       "algo": 0,
@@ -674,7 +866,23 @@
       "maximum": 100,
       "minimum": 0,
       "roundTrip": null,
+      "wire": 0.249
+    },
+    {
+      "algo": 1,
+      "display": 0,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": null,
       "wire": 0.25
+    },
+    {
+      "algo": 1,
+      "display": 0,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": null,
+      "wire": 0.251
     },
     {
       "algo": 1,
@@ -690,7 +898,23 @@
       "maximum": 100,
       "minimum": 0,
       "roundTrip": null,
+      "wire": 0.499
+    },
+    {
+      "algo": 1,
+      "display": 0,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": null,
       "wire": 0.5
+    },
+    {
+      "algo": 1,
+      "display": 0.20000000000000018,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.5009999871253967,
+      "wire": 0.501
     },
     {
       "algo": 1,
@@ -758,11 +982,27 @@
     },
     {
       "algo": 1,
+      "display": -6.024,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.24899999797344208,
+      "wire": 0.249
+    },
+    {
+      "algo": 1,
       "display": -6,
       "maximum": 12,
       "minimum": -12,
       "roundTrip": 0.25,
       "wire": 0.25
+    },
+    {
+      "algo": 1,
+      "display": -5.976,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.25099998712539673,
+      "wire": 0.251
     },
     {
       "algo": 1,
@@ -774,11 +1014,27 @@
     },
     {
       "algo": 1,
+      "display": -0.02400000000000091,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.49900001287460327,
+      "wire": 0.499
+    },
+    {
+      "algo": 1,
       "display": 0,
       "maximum": 12,
       "minimum": -12,
       "roundTrip": 0.5,
       "wire": 0.5
+    },
+    {
+      "algo": 1,
+      "display": 0.02400000000000002,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.5009999871253967,
+      "wire": 0.501
     },
     {
       "algo": 1,
@@ -846,11 +1102,27 @@
     },
     {
       "algo": 1,
+      "display": 0.1255,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.5031375288963318,
+      "wire": 0.249
+    },
+    {
+      "algo": 1,
       "display": 0.125,
       "maximum": 20,
       "minimum": 0.25,
       "roundTrip": 0.503125011920929,
       "wire": 0.25
+    },
+    {
+      "algo": 1,
+      "display": 0.1245,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.5031124949455261,
+      "wire": 0.251
     },
     {
       "algo": 1,
@@ -862,11 +1134,27 @@
     },
     {
       "algo": 1,
+      "display": 0.0005000000000000004,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.5000125169754028,
+      "wire": 0.499
+    },
+    {
+      "algo": 1,
       "display": 0,
       "maximum": 20,
       "minimum": 0.25,
       "roundTrip": 0.5,
       "wire": 0.5
+    },
+    {
+      "algo": 1,
+      "display": 0.040000000000000036,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.5009999871253967,
+      "wire": 0.501
     },
     {
       "algo": 1,
@@ -934,11 +1222,27 @@
     },
     {
       "algo": 1,
+      "display": 12.55,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.5062749981880188,
+      "wire": 0.249
+    },
+    {
+      "algo": 1,
       "display": 12.5,
       "maximum": 1000,
       "minimum": 25,
       "roundTrip": 0.5062500238418579,
       "wire": 0.25
+    },
+    {
+      "algo": 1,
+      "display": 12.45,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.5062249898910522,
+      "wire": 0.251
     },
     {
       "algo": 1,
@@ -950,11 +1254,27 @@
     },
     {
       "algo": 1,
+      "display": 0.05000000000000071,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.5000249743461609,
+      "wire": 0.499
+    },
+    {
+      "algo": 1,
       "display": 0,
       "maximum": 1000,
       "minimum": 25,
       "roundTrip": 0.5,
       "wire": 0.5
+    },
+    {
+      "algo": 1,
+      "display": 2.0000000000000018,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.5009999871253967,
+      "wire": 0.501
     },
     {
       "algo": 1,
@@ -1022,11 +1342,27 @@
     },
     {
       "algo": 1,
+      "display": 502,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.5156875252723694,
+      "wire": 0.249
+    },
+    {
+      "algo": 1,
       "display": 500,
       "maximum": 16000,
       "minimum": 1000,
       "roundTrip": 0.515625,
       "wire": 0.25
+    },
+    {
+      "algo": 1,
+      "display": 498,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.5155624747276306,
+      "wire": 0.251
     },
     {
       "algo": 1,
@@ -1038,11 +1374,27 @@
     },
     {
       "algo": 1,
+      "display": 2,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.5000625252723694,
+      "wire": 0.499
+    },
+    {
+      "algo": 1,
       "display": 0,
       "maximum": 16000,
       "minimum": 1000,
       "roundTrip": 0.5,
       "wire": 0.5
+    },
+    {
+      "algo": 1,
+      "display": 32.00000000000003,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.5009999871253967,
+      "wire": 0.501
     },
     {
       "algo": 1,
@@ -1110,11 +1462,27 @@
     },
     {
       "algo": 1,
+      "display": -50.2,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.24899999797344208,
+      "wire": 0.249
+    },
+    {
+      "algo": 1,
       "display": -50,
       "maximum": 100,
       "minimum": -100,
       "roundTrip": 0.25,
       "wire": 0.25
+    },
+    {
+      "algo": 1,
+      "display": -49.8,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.25099998712539673,
+      "wire": 0.251
     },
     {
       "algo": 1,
@@ -1126,11 +1494,27 @@
     },
     {
       "algo": 1,
+      "display": -0.20000000000000284,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.49900001287460327,
+      "wire": 0.499
+    },
+    {
+      "algo": 1,
       "display": 0,
       "maximum": 100,
       "minimum": -100,
       "roundTrip": 0.5,
       "wire": 0.5
+    },
+    {
+      "algo": 1,
+      "display": 0.20000000000000018,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.5009999871253967,
+      "wire": 0.501
     },
     {
       "algo": 1,
@@ -1198,11 +1582,27 @@
     },
     {
       "algo": 2,
+      "display": -12.076013058085273,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.24899999797344208,
+      "wire": 0.249
+    },
+    {
+      "algo": 2,
       "display": -12.041199826559248,
       "maximum": 100,
       "minimum": 0,
       "roundTrip": 0.25,
       "wire": 0.25
+    },
+    {
+      "algo": 2,
+      "display": -12.006525570379235,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.25099998712539673,
+      "wire": 0.251
     },
     {
       "algo": 2,
@@ -1214,11 +1614,27 @@
     },
     {
       "algo": 2,
+      "display": -6.0379890875322015,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.49900001287460327,
+      "wire": 0.499
+    },
+    {
+      "algo": 2,
       "display": -6.020599913279624,
       "maximum": 100,
       "minimum": 0,
       "roundTrip": 0.5,
       "wire": 0.5
+    },
+    {
+      "algo": 2,
+      "display": -6.003245482655085,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.5009999871253967,
+      "wire": 0.501
     },
     {
       "algo": 2,
@@ -1286,11 +1702,27 @@
     },
     {
       "algo": 2,
+      "display": -12.076013058085273,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.24899999797344208,
+      "wire": 0.249
+    },
+    {
+      "algo": 2,
       "display": -12.041199826559248,
       "maximum": 12,
       "minimum": -12,
       "roundTrip": 0.25,
       "wire": 0.25
+    },
+    {
+      "algo": 2,
+      "display": -12.006525570379235,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.25099998712539673,
+      "wire": 0.251
     },
     {
       "algo": 2,
@@ -1302,11 +1734,27 @@
     },
     {
       "algo": 2,
+      "display": -6.0379890875322015,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.49900001287460327,
+      "wire": 0.499
+    },
+    {
+      "algo": 2,
       "display": -6.020599913279624,
       "maximum": 12,
       "minimum": -12,
       "roundTrip": 0.5,
       "wire": 0.5
+    },
+    {
+      "algo": 2,
+      "display": -6.003245482655085,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.5009999871253967,
+      "wire": 0.501
     },
     {
       "algo": 2,
@@ -1374,11 +1822,27 @@
     },
     {
       "algo": 2,
+      "display": -12.076013058085273,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.24899999797344208,
+      "wire": 0.249
+    },
+    {
+      "algo": 2,
       "display": -12.041199826559248,
       "maximum": 20,
       "minimum": 0.25,
       "roundTrip": 0.25,
       "wire": 0.25
+    },
+    {
+      "algo": 2,
+      "display": -12.006525570379235,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.25099998712539673,
+      "wire": 0.251
     },
     {
       "algo": 2,
@@ -1390,11 +1854,27 @@
     },
     {
       "algo": 2,
+      "display": -6.0379890875322015,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.49900001287460327,
+      "wire": 0.499
+    },
+    {
+      "algo": 2,
       "display": -6.020599913279624,
       "maximum": 20,
       "minimum": 0.25,
       "roundTrip": 0.5,
       "wire": 0.5
+    },
+    {
+      "algo": 2,
+      "display": -6.003245482655085,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.5009999871253967,
+      "wire": 0.501
     },
     {
       "algo": 2,
@@ -1462,11 +1942,27 @@
     },
     {
       "algo": 2,
+      "display": -12.076013058085273,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.24899999797344208,
+      "wire": 0.249
+    },
+    {
+      "algo": 2,
       "display": -12.041199826559248,
       "maximum": 1000,
       "minimum": 25,
       "roundTrip": 0.25,
       "wire": 0.25
+    },
+    {
+      "algo": 2,
+      "display": -12.006525570379235,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.25099998712539673,
+      "wire": 0.251
     },
     {
       "algo": 2,
@@ -1478,11 +1974,27 @@
     },
     {
       "algo": 2,
+      "display": -6.0379890875322015,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.49900001287460327,
+      "wire": 0.499
+    },
+    {
+      "algo": 2,
       "display": -6.020599913279624,
       "maximum": 1000,
       "minimum": 25,
       "roundTrip": 0.5,
       "wire": 0.5
+    },
+    {
+      "algo": 2,
+      "display": -6.003245482655085,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.5009999871253967,
+      "wire": 0.501
     },
     {
       "algo": 2,
@@ -1550,11 +2062,27 @@
     },
     {
       "algo": 2,
+      "display": -12.076013058085273,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.24899999797344208,
+      "wire": 0.249
+    },
+    {
+      "algo": 2,
       "display": -12.041199826559248,
       "maximum": 16000,
       "minimum": 1000,
       "roundTrip": 0.25,
       "wire": 0.25
+    },
+    {
+      "algo": 2,
+      "display": -12.006525570379235,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.25099998712539673,
+      "wire": 0.251
     },
     {
       "algo": 2,
@@ -1566,11 +2094,27 @@
     },
     {
       "algo": 2,
+      "display": -6.0379890875322015,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.49900001287460327,
+      "wire": 0.499
+    },
+    {
+      "algo": 2,
       "display": -6.020599913279624,
       "maximum": 16000,
       "minimum": 1000,
       "roundTrip": 0.5,
       "wire": 0.5
+    },
+    {
+      "algo": 2,
+      "display": -6.003245482655085,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.5009999871253967,
+      "wire": 0.501
     },
     {
       "algo": 2,
@@ -1638,11 +2182,27 @@
     },
     {
       "algo": 2,
+      "display": -12.076013058085273,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.24899999797344208,
+      "wire": 0.249
+    },
+    {
+      "algo": 2,
       "display": -12.041199826559248,
       "maximum": 100,
       "minimum": -100,
       "roundTrip": 0.25,
       "wire": 0.25
+    },
+    {
+      "algo": 2,
+      "display": -12.006525570379235,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.25099998712539673,
+      "wire": 0.251
     },
     {
       "algo": 2,
@@ -1654,11 +2214,27 @@
     },
     {
       "algo": 2,
+      "display": -6.0379890875322015,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.49900001287460327,
+      "wire": 0.499
+    },
+    {
+      "algo": 2,
       "display": -6.020599913279624,
       "maximum": 100,
       "minimum": -100,
       "roundTrip": 0.5,
       "wire": 0.5
+    },
+    {
+      "algo": 2,
+      "display": -6.003245482655085,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.5009999871253967,
+      "wire": 0.501
     },
     {
       "algo": 2,
@@ -1726,11 +2302,27 @@
     },
     {
       "algo": 3,
+      "display": 24.9,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.24899999797344208,
+      "wire": 0.249
+    },
+    {
+      "algo": 3,
       "display": 25,
       "maximum": 100,
       "minimum": 0,
       "roundTrip": 0.25,
       "wire": 0.25
+    },
+    {
+      "algo": 3,
+      "display": 25.1,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.25099998712539673,
+      "wire": 0.251
     },
     {
       "algo": 3,
@@ -1742,11 +2334,27 @@
     },
     {
       "algo": 3,
+      "display": 49.9,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.49900001287460327,
+      "wire": 0.499
+    },
+    {
+      "algo": 3,
       "display": 50,
       "maximum": 100,
       "minimum": 0,
       "roundTrip": 0.5,
       "wire": 0.5
+    },
+    {
+      "algo": 3,
+      "display": 50.1,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.5009999871253967,
+      "wire": 0.501
     },
     {
       "algo": 3,
@@ -1814,11 +2422,27 @@
     },
     {
       "algo": 3,
+      "display": -6.024,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.24899999797344208,
+      "wire": 0.249
+    },
+    {
+      "algo": 3,
       "display": -6,
       "maximum": 12,
       "minimum": -12,
       "roundTrip": 0.25,
       "wire": 0.25
+    },
+    {
+      "algo": 3,
+      "display": -5.976,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.25099998712539673,
+      "wire": 0.251
     },
     {
       "algo": 3,
@@ -1830,11 +2454,27 @@
     },
     {
       "algo": 3,
+      "display": -0.02400000000000091,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.49900001287460327,
+      "wire": 0.499
+    },
+    {
+      "algo": 3,
       "display": 0,
       "maximum": 12,
       "minimum": -12,
       "roundTrip": 0.5,
       "wire": 0.5
+    },
+    {
+      "algo": 3,
+      "display": 0.02400000000000091,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.5009999871253967,
+      "wire": 0.501
     },
     {
       "algo": 3,
@@ -1902,11 +2542,27 @@
     },
     {
       "algo": 3,
+      "display": 5.16775,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.24899999797344208,
+      "wire": 0.249
+    },
+    {
+      "algo": 3,
       "display": 5.1875,
       "maximum": 20,
       "minimum": 0.25,
       "roundTrip": 0.25,
       "wire": 0.25
+    },
+    {
+      "algo": 3,
+      "display": 5.20725,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.25099998712539673,
+      "wire": 0.251
     },
     {
       "algo": 3,
@@ -1918,11 +2574,27 @@
     },
     {
       "algo": 3,
+      "display": 10.10525,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.49900001287460327,
+      "wire": 0.499
+    },
+    {
+      "algo": 3,
       "display": 10.125,
       "maximum": 20,
       "minimum": 0.25,
       "roundTrip": 0.5,
       "wire": 0.5
+    },
+    {
+      "algo": 3,
+      "display": 10.14475,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.5009999871253967,
+      "wire": 0.501
     },
     {
       "algo": 3,
@@ -1990,11 +2662,27 @@
     },
     {
       "algo": 3,
+      "display": 267.775,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.24899999797344208,
+      "wire": 0.249
+    },
+    {
+      "algo": 3,
       "display": 268.75,
       "maximum": 1000,
       "minimum": 25,
       "roundTrip": 0.25,
       "wire": 0.25
+    },
+    {
+      "algo": 3,
+      "display": 269.725,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.25099998712539673,
+      "wire": 0.251
     },
     {
       "algo": 3,
@@ -2006,11 +2694,27 @@
     },
     {
       "algo": 3,
+      "display": 511.525,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.49900001287460327,
+      "wire": 0.499
+    },
+    {
+      "algo": 3,
       "display": 512.5,
       "maximum": 1000,
       "minimum": 25,
       "roundTrip": 0.5,
       "wire": 0.5
+    },
+    {
+      "algo": 3,
+      "display": 513.475,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.5009999871253967,
+      "wire": 0.501
     },
     {
       "algo": 3,
@@ -2078,11 +2782,27 @@
     },
     {
       "algo": 3,
+      "display": 4735,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.24899999797344208,
+      "wire": 0.249
+    },
+    {
+      "algo": 3,
       "display": 4750,
       "maximum": 16000,
       "minimum": 1000,
       "roundTrip": 0.25,
       "wire": 0.25
+    },
+    {
+      "algo": 3,
+      "display": 4765,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.25099998712539673,
+      "wire": 0.251
     },
     {
       "algo": 3,
@@ -2094,11 +2814,27 @@
     },
     {
       "algo": 3,
+      "display": 8485,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.49900001287460327,
+      "wire": 0.499
+    },
+    {
+      "algo": 3,
       "display": 8500,
       "maximum": 16000,
       "minimum": 1000,
       "roundTrip": 0.5,
       "wire": 0.5
+    },
+    {
+      "algo": 3,
+      "display": 8515,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.5009999871253967,
+      "wire": 0.501
     },
     {
       "algo": 3,
@@ -2166,11 +2902,27 @@
     },
     {
       "algo": 3,
+      "display": -50.2,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.24899999797344208,
+      "wire": 0.249
+    },
+    {
+      "algo": 3,
       "display": -50,
       "maximum": 100,
       "minimum": -100,
       "roundTrip": 0.25,
       "wire": 0.25
+    },
+    {
+      "algo": 3,
+      "display": -49.8,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.25099998712539673,
+      "wire": 0.251
     },
     {
       "algo": 3,
@@ -2182,11 +2934,27 @@
     },
     {
       "algo": 3,
+      "display": -0.20000000000000284,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.49900001287460327,
+      "wire": 0.499
+    },
+    {
+      "algo": 3,
       "display": 0,
       "maximum": 100,
       "minimum": -100,
       "roundTrip": 0.5,
       "wire": 0.5
+    },
+    {
+      "algo": 3,
+      "display": 0.20000000000000284,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.5009999871253967,
+      "wire": 0.501
     },
     {
       "algo": 3,
@@ -2254,11 +3022,27 @@
     },
     {
       "algo": 4,
+      "display": -25.200400000000002,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.24899999797344208,
+      "wire": 0.249
+    },
+    {
+      "algo": 4,
       "display": -25,
       "maximum": 100,
       "minimum": 0,
       "roundTrip": 0.25,
       "wire": 0.25
+    },
+    {
+      "algo": 4,
+      "display": -24.8004,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.25099998712539673,
+      "wire": 0.251
     },
     {
       "algo": 4,
@@ -2270,11 +3054,27 @@
     },
     {
       "algo": 4,
+      "display": -0.0004000000000000007,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.49900001287460327,
+      "wire": 0.499
+    },
+    {
+      "algo": 4,
       "display": 0,
       "maximum": 100,
       "minimum": 0,
       "roundTrip": 0.5,
       "wire": 0.5
+    },
+    {
+      "algo": 4,
+      "display": 0.0004000000000000007,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.5009999871253967,
+      "wire": 0.501
     },
     {
       "algo": 4,
@@ -2342,11 +3142,27 @@
     },
     {
       "algo": 4,
+      "display": -3.024048,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.24899999797344208,
+      "wire": 0.249
+    },
+    {
+      "algo": 4,
       "display": -3,
       "maximum": 12,
       "minimum": -12,
       "roundTrip": 0.25,
       "wire": 0.25
+    },
+    {
+      "algo": 4,
+      "display": -2.976048,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.25099998712539673,
+      "wire": 0.251
     },
     {
       "algo": 4,
@@ -2358,11 +3174,27 @@
     },
     {
       "algo": 4,
+      "display": -4.800000000000009e-05,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.49900001287460327,
+      "wire": 0.499
+    },
+    {
+      "algo": 4,
       "display": 0,
       "maximum": 12,
       "minimum": -12,
       "roundTrip": 0.5,
       "wire": 0.5
+    },
+    {
+      "algo": 4,
+      "display": 4.800000000000009e-05,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.5009999871253967,
+      "wire": 0.501
     },
     {
       "algo": 4,
@@ -2430,11 +3262,27 @@
     },
     {
       "algo": 4,
+      "display": -5.04008,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.24899999797344208,
+      "wire": 0.249
+    },
+    {
+      "algo": 4,
       "display": -5,
       "maximum": 20,
       "minimum": 0.25,
       "roundTrip": 0.25,
       "wire": 0.25
+    },
+    {
+      "algo": 4,
+      "display": -4.96008,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.25099998712539673,
+      "wire": 0.251
     },
     {
       "algo": 4,
@@ -2446,11 +3294,27 @@
     },
     {
       "algo": 4,
+      "display": -8.000000000000016e-05,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.49900001287460327,
+      "wire": 0.499
+    },
+    {
+      "algo": 4,
       "display": 0,
       "maximum": 20,
       "minimum": 0.25,
       "roundTrip": 0.5,
       "wire": 0.5
+    },
+    {
+      "algo": 4,
+      "display": 8.000000000000016e-05,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.5009999871253967,
+      "wire": 0.501
     },
     {
       "algo": 4,
@@ -2518,11 +3382,27 @@
     },
     {
       "algo": 4,
+      "display": -252.00400000000002,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.24899999797344208,
+      "wire": 0.249
+    },
+    {
+      "algo": 4,
       "display": -250,
       "maximum": 1000,
       "minimum": 25,
       "roundTrip": 0.25,
       "wire": 0.25
+    },
+    {
+      "algo": 4,
+      "display": -248.004,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.25099998712539673,
+      "wire": 0.251
     },
     {
       "algo": 4,
@@ -2534,11 +3414,27 @@
     },
     {
       "algo": 4,
+      "display": -0.004000000000000007,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.49900001287460327,
+      "wire": 0.499
+    },
+    {
+      "algo": 4,
       "display": 0,
       "maximum": 1000,
       "minimum": 25,
       "roundTrip": 0.5,
       "wire": 0.5
+    },
+    {
+      "algo": 4,
+      "display": 0.004000000000000007,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.5009999871253967,
+      "wire": 0.501
     },
     {
       "algo": 4,
@@ -2606,11 +3502,27 @@
     },
     {
       "algo": 4,
+      "display": -4032.0640000000003,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.24899999797344208,
+      "wire": 0.249
+    },
+    {
+      "algo": 4,
       "display": -4000,
       "maximum": 16000,
       "minimum": 1000,
       "roundTrip": 0.25,
       "wire": 0.25
+    },
+    {
+      "algo": 4,
+      "display": -3968.064,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.25099998712539673,
+      "wire": 0.251
     },
     {
       "algo": 4,
@@ -2622,11 +3534,27 @@
     },
     {
       "algo": 4,
+      "display": -0.06400000000000011,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.49900001287460327,
+      "wire": 0.499
+    },
+    {
+      "algo": 4,
       "display": 0,
       "maximum": 16000,
       "minimum": 1000,
       "roundTrip": 0.5,
       "wire": 0.5
+    },
+    {
+      "algo": 4,
+      "display": 0.06400000000000011,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.5009999871253967,
+      "wire": 0.501
     },
     {
       "algo": 4,
@@ -2694,11 +3622,27 @@
     },
     {
       "algo": 4,
+      "display": -25.200400000000002,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.24899999797344208,
+      "wire": 0.249
+    },
+    {
+      "algo": 4,
       "display": -25,
       "maximum": 100,
       "minimum": -100,
       "roundTrip": 0.25,
       "wire": 0.25
+    },
+    {
+      "algo": 4,
+      "display": -24.8004,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.25099998712539673,
+      "wire": 0.251
     },
     {
       "algo": 4,
@@ -2710,11 +3654,27 @@
     },
     {
       "algo": 4,
+      "display": -0.0004000000000000007,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.49900001287460327,
+      "wire": 0.499
+    },
+    {
+      "algo": 4,
       "display": 0,
       "maximum": 100,
       "minimum": -100,
       "roundTrip": 0.5,
       "wire": 0.5
+    },
+    {
+      "algo": 4,
+      "display": 0.0004000000000000007,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.5009999871253967,
+      "wire": 0.501
     },
     {
       "algo": 4,
@@ -2782,11 +3742,27 @@
     },
     {
       "algo": 5,
+      "display": 6.2001,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.24899999797344208,
+      "wire": 0.249
+    },
+    {
+      "algo": 5,
       "display": 6.25,
       "maximum": 100,
       "minimum": 0,
       "roundTrip": 0.25,
       "wire": 0.25
+    },
+    {
+      "algo": 5,
+      "display": 6.3001000000000005,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.25099998712539673,
+      "wire": 0.251
     },
     {
       "algo": 5,
@@ -2798,11 +3774,27 @@
     },
     {
       "algo": 5,
+      "display": 24.9001,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.49900001287460327,
+      "wire": 0.499
+    },
+    {
+      "algo": 5,
       "display": 25,
       "maximum": 100,
       "minimum": 0,
       "roundTrip": 0.5,
       "wire": 0.5
+    },
+    {
+      "algo": 5,
+      "display": 25.1001,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.5009999871253967,
+      "wire": 0.501
     },
     {
       "algo": 5,
@@ -2870,11 +3862,27 @@
     },
     {
       "algo": 5,
+      "display": -10.511976,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.24899999797344208,
+      "wire": 0.249
+    },
+    {
+      "algo": 5,
       "display": -10.5,
       "maximum": 12,
       "minimum": -12,
       "roundTrip": 0.25,
       "wire": 0.25
+    },
+    {
+      "algo": 5,
+      "display": -10.487976,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.25099998712539673,
+      "wire": 0.251
     },
     {
       "algo": 5,
@@ -2886,11 +3894,27 @@
     },
     {
       "algo": 5,
+      "display": -6.023976,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.49900001287460327,
+      "wire": 0.499
+    },
+    {
+      "algo": 5,
       "display": -6,
       "maximum": 12,
       "minimum": -12,
       "roundTrip": 0.5,
       "wire": 0.5
+    },
+    {
+      "algo": 5,
+      "display": -5.975975999999999,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.5009999871253967,
+      "wire": 0.501
     },
     {
       "algo": 5,
@@ -2958,11 +3982,27 @@
     },
     {
       "algo": 5,
+      "display": 1.47451975,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.24899999797344208,
+      "wire": 0.249
+    },
+    {
+      "algo": 5,
       "display": 1.484375,
       "maximum": 20,
       "minimum": 0.25,
       "roundTrip": 0.25,
       "wire": 0.25
+    },
+    {
+      "algo": 5,
+      "display": 1.49426975,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.25099998712539673,
+      "wire": 0.251
     },
     {
       "algo": 5,
@@ -2974,11 +4014,27 @@
     },
     {
       "algo": 5,
+      "display": 5.16776975,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.49900001287460327,
+      "wire": 0.499
+    },
+    {
+      "algo": 5,
       "display": 5.1875,
       "maximum": 20,
       "minimum": 0.25,
       "roundTrip": 0.5,
       "wire": 0.5
+    },
+    {
+      "algo": 5,
+      "display": 5.20726975,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.5009999871253967,
+      "wire": 0.501
     },
     {
       "algo": 5,
@@ -3046,11 +4102,27 @@
     },
     {
       "algo": 5,
+      "display": 85.450975,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.24899999797344208,
+      "wire": 0.249
+    },
+    {
+      "algo": 5,
       "display": 85.9375,
       "maximum": 1000,
       "minimum": 25,
       "roundTrip": 0.25,
       "wire": 0.25
+    },
+    {
+      "algo": 5,
+      "display": 86.425975,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.25099998712539673,
+      "wire": 0.251
     },
     {
       "algo": 5,
@@ -3062,11 +4134,27 @@
     },
     {
       "algo": 5,
+      "display": 267.775975,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.49900001287460327,
+      "wire": 0.499
+    },
+    {
+      "algo": 5,
       "display": 268.75,
       "maximum": 1000,
       "minimum": 25,
       "roundTrip": 0.5,
       "wire": 0.5
+    },
+    {
+      "algo": 5,
+      "display": 269.725975,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.5009999871253967,
+      "wire": 0.501
     },
     {
       "algo": 5,
@@ -3134,11 +4222,27 @@
     },
     {
       "algo": 5,
+      "display": 1930.0149999999999,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.24899999797344208,
+      "wire": 0.249
+    },
+    {
+      "algo": 5,
       "display": 1937.5,
       "maximum": 16000,
       "minimum": 1000,
       "roundTrip": 0.25,
       "wire": 0.25
+    },
+    {
+      "algo": 5,
+      "display": 1945.0149999999999,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.25099998712539673,
+      "wire": 0.251
     },
     {
       "algo": 5,
@@ -3150,11 +4254,27 @@
     },
     {
       "algo": 5,
+      "display": 4735.014999999999,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.49900001287460327,
+      "wire": 0.499
+    },
+    {
+      "algo": 5,
       "display": 4750,
       "maximum": 16000,
       "minimum": 1000,
       "roundTrip": 0.5,
       "wire": 0.5
+    },
+    {
+      "algo": 5,
+      "display": 4765.014999999999,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.5009999871253967,
+      "wire": 0.501
     },
     {
       "algo": 5,
@@ -3222,11 +4342,27 @@
     },
     {
       "algo": 5,
+      "display": -87.5998,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.24899999797344208,
+      "wire": 0.249
+    },
+    {
+      "algo": 5,
       "display": -87.5,
       "maximum": 100,
       "minimum": -100,
       "roundTrip": 0.25,
       "wire": 0.25
+    },
+    {
+      "algo": 5,
+      "display": -87.3998,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.25099998712539673,
+      "wire": 0.251
     },
     {
       "algo": 5,
@@ -3238,11 +4374,27 @@
     },
     {
       "algo": 5,
+      "display": -50.1998,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.49900001287460327,
+      "wire": 0.499
+    },
+    {
+      "algo": 5,
       "display": -50,
       "maximum": 100,
       "minimum": -100,
       "roundTrip": 0.5,
       "wire": 0.5
+    },
+    {
+      "algo": 5,
+      "display": -49.7998,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.5009999871253967,
+      "wire": 0.501
     },
     {
       "algo": 5,
@@ -3314,7 +4466,23 @@
       "maximum": 100,
       "minimum": 0,
       "roundTrip": null,
+      "wire": 0.249
+    },
+    {
+      "algo": 6,
+      "display": null,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": null,
       "wire": 0.25
+    },
+    {
+      "algo": 6,
+      "display": null,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": null,
+      "wire": 0.251
     },
     {
       "algo": 6,
@@ -3330,7 +4498,23 @@
       "maximum": 100,
       "minimum": 0,
       "roundTrip": null,
+      "wire": 0.499
+    },
+    {
+      "algo": 6,
+      "display": null,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": null,
       "wire": 0.5
+    },
+    {
+      "algo": 6,
+      "display": null,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": null,
+      "wire": 0.501
     },
     {
       "algo": 6,
@@ -3402,7 +4586,23 @@
       "maximum": 12,
       "minimum": -12,
       "roundTrip": null,
+      "wire": 0.249
+    },
+    {
+      "algo": 6,
+      "display": null,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": null,
       "wire": 0.25
+    },
+    {
+      "algo": 6,
+      "display": null,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": null,
+      "wire": 0.251
     },
     {
       "algo": 6,
@@ -3418,7 +4618,23 @@
       "maximum": 12,
       "minimum": -12,
       "roundTrip": null,
+      "wire": 0.499
+    },
+    {
+      "algo": 6,
+      "display": null,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": null,
       "wire": 0.5
+    },
+    {
+      "algo": 6,
+      "display": null,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": null,
+      "wire": 0.501
     },
     {
       "algo": 6,
@@ -3486,11 +4702,27 @@
     },
     {
       "algo": 6,
+      "display": 0.7444052295236129,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.24899999797344208,
+      "wire": 0.249
+    },
+    {
+      "algo": 6,
       "display": 0.7476743906106103,
       "maximum": 20,
       "minimum": 0.25,
       "roundTrip": 0.25,
       "wire": 0.25
+    },
+    {
+      "algo": 6,
+      "display": 0.7509579086819339,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.25099998712539673,
+      "wire": 0.251
     },
     {
       "algo": 6,
@@ -3502,11 +4734,27 @@
     },
     {
       "algo": 6,
+      "display": 2.226290905405675,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.49900001287460327,
+      "wire": 0.499
+    },
+    {
+      "algo": 6,
       "display": 2.2360679774997894,
       "maximum": 20,
       "minimum": 0.25,
       "roundTrip": 0.5,
       "wire": 0.5
+    },
+    {
+      "algo": 6,
+      "display": 2.2458879869919324,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.5009999871253967,
+      "wire": 0.501
     },
     {
       "algo": 6,
@@ -3574,11 +4822,27 @@
     },
     {
       "algo": 6,
+      "display": 62.640172715005974,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.24899999797344208,
+      "wire": 0.249
+    },
+    {
+      "algo": 6,
       "display": 62.87167148414676,
       "maximum": 1000,
       "minimum": 25,
       "roundTrip": 0.25,
       "wire": 0.25
+    },
+    {
+      "algo": 6,
+      "display": 63.10402580137742,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.25099998712539673,
+      "wire": 0.251
     },
     {
       "algo": 6,
@@ -3590,11 +4854,27 @@
     },
     {
       "algo": 6,
+      "display": 157.53169442592275,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.49900001287460327,
+      "wire": 0.499
+    },
+    {
+      "algo": 6,
       "display": 158.11388300841895,
       "maximum": 1000,
       "minimum": 25,
       "roundTrip": 0.5,
       "wire": 0.5
+    },
+    {
+      "algo": 6,
+      "display": 158.6982231804529,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.5009999871253967,
+      "wire": 0.501
     },
     {
       "algo": 6,
@@ -3662,11 +4942,27 @@
     },
     {
       "algo": 6,
+      "display": 1994.4625027041388,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.24899999797344208,
+      "wire": 0.249
+    },
+    {
+      "algo": 6,
       "display": 2000,
       "maximum": 16000,
       "minimum": 1000,
       "roundTrip": 0.25,
       "wire": 0.25
+    },
+    {
+      "algo": 6,
+      "display": 2005.552871802155,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.25099998712539673,
+      "wire": 0.251
     },
     {
       "algo": 6,
@@ -3678,11 +4974,27 @@
     },
     {
       "algo": 6,
+      "display": 3988.9250054082772,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.49900001287460327,
+      "wire": 0.499
+    },
+    {
+      "algo": 6,
       "display": 4000,
       "maximum": 16000,
       "minimum": 1000,
       "roundTrip": 0.5,
       "wire": 0.5
+    },
+    {
+      "algo": 6,
+      "display": 4011.105743604311,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.5009999871253967,
+      "wire": 0.501
     },
     {
       "algo": 6,
@@ -3754,7 +5066,23 @@
       "maximum": 100,
       "minimum": -100,
       "roundTrip": null,
+      "wire": 0.249
+    },
+    {
+      "algo": 6,
+      "display": null,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": null,
       "wire": 0.25
+    },
+    {
+      "algo": 6,
+      "display": null,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": null,
+      "wire": 0.251
     },
     {
       "algo": 6,
@@ -3770,7 +5098,23 @@
       "maximum": 100,
       "minimum": -100,
       "roundTrip": null,
+      "wire": 0.499
+    },
+    {
+      "algo": 6,
+      "display": null,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": null,
       "wire": 0.5
+    },
+    {
+      "algo": 6,
+      "display": null,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": null,
+      "wire": 0.501
     },
     {
       "algo": 6,
@@ -3838,11 +5182,27 @@
     },
     {
       "algo": 7,
+      "display": 0.09201248938608787,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.24899999797344208,
+      "wire": 0.249
+    },
+    {
+      "algo": 7,
       "display": 0.09262925167114228,
       "maximum": 100,
       "minimum": 0,
       "roundTrip": 0.25,
       "wire": 0.25
+    },
+    {
+      "algo": 7,
+      "display": 0.09324880493380444,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.25099998712539673,
+      "wire": 0.251
     },
     {
       "algo": 7,
@@ -3854,11 +5214,27 @@
     },
     {
       "algo": 7,
+      "display": 0.3771124861435896,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.49900001287460327,
+      "wire": 0.499
+    },
+    {
+      "algo": 7,
       "display": 0.37901938520613604,
       "maximum": 100,
       "minimum": 0,
       "roundTrip": 0.5,
       "wire": 0.5
+    },
+    {
+      "algo": 7,
+      "display": 0.3809349133835177,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.5009999871253967,
+      "wire": 0.501
     },
     {
       "algo": 7,
@@ -3926,11 +5302,27 @@
     },
     {
       "algo": 7,
+      "display": 0.09201248938608787,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.24899999797344208,
+      "wire": 0.249
+    },
+    {
+      "algo": 7,
       "display": 0.09262925167114228,
       "maximum": 12,
       "minimum": -12,
       "roundTrip": 0.25,
       "wire": 0.25
+    },
+    {
+      "algo": 7,
+      "display": 0.09324880493380444,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.25099998712539673,
+      "wire": 0.251
     },
     {
       "algo": 7,
@@ -3942,11 +5334,27 @@
     },
     {
       "algo": 7,
+      "display": 0.3771124861435896,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.49900001287460327,
+      "wire": 0.499
+    },
+    {
+      "algo": 7,
       "display": 0.37901938520613604,
       "maximum": 12,
       "minimum": -12,
       "roundTrip": 0.5,
       "wire": 0.5
+    },
+    {
+      "algo": 7,
+      "display": 0.3809349133835177,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.5009999871253967,
+      "wire": 0.501
     },
     {
       "algo": 7,
@@ -4014,11 +5422,27 @@
     },
     {
       "algo": 7,
+      "display": 0.09201248938608787,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.24899999797344208,
+      "wire": 0.249
+    },
+    {
+      "algo": 7,
       "display": 0.09262925167114228,
       "maximum": 20,
       "minimum": 0.25,
       "roundTrip": 0.25,
       "wire": 0.25
+    },
+    {
+      "algo": 7,
+      "display": 0.09324880493380444,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.25099998712539673,
+      "wire": 0.251
     },
     {
       "algo": 7,
@@ -4030,11 +5454,27 @@
     },
     {
       "algo": 7,
+      "display": 0.3771124861435896,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.49900001287460327,
+      "wire": 0.499
+    },
+    {
+      "algo": 7,
       "display": 0.37901938520613604,
       "maximum": 20,
       "minimum": 0.25,
       "roundTrip": 0.5,
       "wire": 0.5
+    },
+    {
+      "algo": 7,
+      "display": 0.3809349133835177,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.5009999871253967,
+      "wire": 0.501
     },
     {
       "algo": 7,
@@ -4102,11 +5542,27 @@
     },
     {
       "algo": 7,
+      "display": 0.09201248938608787,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.24899999797344208,
+      "wire": 0.249
+    },
+    {
+      "algo": 7,
       "display": 0.09262925167114228,
       "maximum": 1000,
       "minimum": 25,
       "roundTrip": 0.25,
       "wire": 0.25
+    },
+    {
+      "algo": 7,
+      "display": 0.09324880493380444,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.25099998712539673,
+      "wire": 0.251
     },
     {
       "algo": 7,
@@ -4118,11 +5574,27 @@
     },
     {
       "algo": 7,
+      "display": 0.3771124861435896,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.49900001287460327,
+      "wire": 0.499
+    },
+    {
+      "algo": 7,
       "display": 0.37901938520613604,
       "maximum": 1000,
       "minimum": 25,
       "roundTrip": 0.5,
       "wire": 0.5
+    },
+    {
+      "algo": 7,
+      "display": 0.3809349133835177,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.5009999871253967,
+      "wire": 0.501
     },
     {
       "algo": 7,
@@ -4190,11 +5662,27 @@
     },
     {
       "algo": 7,
+      "display": 0.09201248938608787,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.24899999797344208,
+      "wire": 0.249
+    },
+    {
+      "algo": 7,
       "display": 0.09262925167114228,
       "maximum": 16000,
       "minimum": 1000,
       "roundTrip": 0.25,
       "wire": 0.25
+    },
+    {
+      "algo": 7,
+      "display": 0.09324880493380444,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.25099998712539673,
+      "wire": 0.251
     },
     {
       "algo": 7,
@@ -4206,11 +5694,27 @@
     },
     {
       "algo": 7,
+      "display": 0.3771124861435896,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.49900001287460327,
+      "wire": 0.499
+    },
+    {
+      "algo": 7,
       "display": 0.37901938520613604,
       "maximum": 16000,
       "minimum": 1000,
       "roundTrip": 0.5,
       "wire": 0.5
+    },
+    {
+      "algo": 7,
+      "display": 0.3809349133835177,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.5009999871253967,
+      "wire": 0.501
     },
     {
       "algo": 7,
@@ -4278,11 +5782,27 @@
     },
     {
       "algo": 7,
+      "display": 0.09201248938608787,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.24899999797344208,
+      "wire": 0.249
+    },
+    {
+      "algo": 7,
       "display": 0.09262925167114228,
       "maximum": 100,
       "minimum": -100,
       "roundTrip": 0.25,
       "wire": 0.25
+    },
+    {
+      "algo": 7,
+      "display": 0.09324880493380444,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.25099998712539673,
+      "wire": 0.251
     },
     {
       "algo": 7,
@@ -4294,11 +5814,27 @@
     },
     {
       "algo": 7,
+      "display": 0.3771124861435896,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.49900001287460327,
+      "wire": 0.499
+    },
+    {
+      "algo": 7,
       "display": 0.37901938520613604,
       "maximum": 100,
       "minimum": -100,
       "roundTrip": 0.5,
       "wire": 0.5
+    },
+    {
+      "algo": 7,
+      "display": 0.3809349133835177,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.5009999871253967,
+      "wire": 0.501
     },
     {
       "algo": 7,
@@ -4366,11 +5902,27 @@
     },
     {
       "algo": 8,
+      "display": 87.92398694191473,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.24899999797344208,
+      "wire": 0.249
+    },
+    {
+      "algo": 8,
       "display": 87.95880017344075,
       "maximum": 100,
       "minimum": 0,
       "roundTrip": 0.25,
       "wire": 0.25
+    },
+    {
+      "algo": 8,
+      "display": 87.99347442962076,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.25099998712539673,
+      "wire": 0.251
     },
     {
       "algo": 8,
@@ -4382,11 +5934,27 @@
     },
     {
       "algo": 8,
+      "display": 93.9620109124678,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.49900001287460327,
+      "wire": 0.499
+    },
+    {
+      "algo": 8,
       "display": 93.97940008672037,
       "maximum": 100,
       "minimum": 0,
       "roundTrip": 0.5,
       "wire": 0.5
+    },
+    {
+      "algo": 8,
+      "display": 93.99675451734491,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.5009999871253967,
+      "wire": 0.501
     },
     {
       "algo": 8,
@@ -4454,11 +6022,27 @@
     },
     {
       "algo": 8,
+      "display": -0.07601305808527314,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.24899999797344208,
+      "wire": 0.249
+    },
+    {
+      "algo": 8,
       "display": -0.041199826559248365,
       "maximum": 12,
       "minimum": -12,
       "roundTrip": 0.25,
       "wire": 0.25
+    },
+    {
+      "algo": 8,
+      "display": -0.00652557037923529,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.25099998712539673,
+      "wire": 0.251
     },
     {
       "algo": 8,
@@ -4470,11 +6054,27 @@
     },
     {
       "algo": 8,
+      "display": 5.9620109124677985,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.49900001287460327,
+      "wire": 0.499
+    },
+    {
+      "algo": 8,
       "display": 5.979400086720376,
       "maximum": 12,
       "minimum": -12,
       "roundTrip": 0.5,
       "wire": 0.5
+    },
+    {
+      "algo": 8,
+      "display": 5.996754517344915,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.5009999871253967,
+      "wire": 0.501
     },
     {
       "algo": 8,
@@ -4542,11 +6142,27 @@
     },
     {
       "algo": 8,
+      "display": 7.923986941914727,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.24899999797344208,
+      "wire": 0.249
+    },
+    {
+      "algo": 8,
       "display": 7.958800173440752,
       "maximum": 20,
       "minimum": 0.25,
       "roundTrip": 0.25,
       "wire": 0.25
+    },
+    {
+      "algo": 8,
+      "display": 7.993474429620765,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.25099998712539673,
+      "wire": 0.251
     },
     {
       "algo": 8,
@@ -4558,11 +6174,27 @@
     },
     {
       "algo": 8,
+      "display": 13.962010912467798,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.49900001287460327,
+      "wire": 0.499
+    },
+    {
+      "algo": 8,
       "display": 13.979400086720375,
       "maximum": 20,
       "minimum": 0.25,
       "roundTrip": 0.5,
       "wire": 0.5
+    },
+    {
+      "algo": 8,
+      "display": 13.996754517344915,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.5009999871253967,
+      "wire": 0.501
     },
     {
       "algo": 8,
@@ -4630,11 +6262,27 @@
     },
     {
       "algo": 8,
+      "display": 987.9239869419147,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.24899999797344208,
+      "wire": 0.249
+    },
+    {
+      "algo": 8,
       "display": 987.9588001734407,
       "maximum": 1000,
       "minimum": 25,
       "roundTrip": 0.25,
       "wire": 0.25
+    },
+    {
+      "algo": 8,
+      "display": 987.9934744296207,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.25099998712539673,
+      "wire": 0.251
     },
     {
       "algo": 8,
@@ -4646,11 +6294,27 @@
     },
     {
       "algo": 8,
+      "display": 993.9620109124678,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.49900001287460327,
+      "wire": 0.499
+    },
+    {
+      "algo": 8,
       "display": 993.9794000867204,
       "maximum": 1000,
       "minimum": 25,
       "roundTrip": 0.5,
       "wire": 0.5
+    },
+    {
+      "algo": 8,
+      "display": 993.9967545173449,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.5009999871253967,
+      "wire": 0.501
     },
     {
       "algo": 8,
@@ -4718,11 +6382,27 @@
     },
     {
       "algo": 8,
+      "display": 15987.923986941914,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.24899999797344208,
+      "wire": 0.249
+    },
+    {
+      "algo": 8,
       "display": 15987.958800173441,
       "maximum": 16000,
       "minimum": 1000,
       "roundTrip": 0.25,
       "wire": 0.25
+    },
+    {
+      "algo": 8,
+      "display": 15987.99347442962,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.25099998712539673,
+      "wire": 0.251
     },
     {
       "algo": 8,
@@ -4734,11 +6414,27 @@
     },
     {
       "algo": 8,
+      "display": 15993.962010912468,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.49900001287460327,
+      "wire": 0.499
+    },
+    {
+      "algo": 8,
       "display": 15993.97940008672,
       "maximum": 16000,
       "minimum": 1000,
       "roundTrip": 0.5,
       "wire": 0.5
+    },
+    {
+      "algo": 8,
+      "display": 15993.996754517344,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.5009999871253967,
+      "wire": 0.501
     },
     {
       "algo": 8,
@@ -4806,11 +6502,27 @@
     },
     {
       "algo": 8,
+      "display": 87.92398694191473,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.24899999797344208,
+      "wire": 0.249
+    },
+    {
+      "algo": 8,
       "display": 87.95880017344075,
       "maximum": 100,
       "minimum": -100,
       "roundTrip": 0.25,
       "wire": 0.25
+    },
+    {
+      "algo": 8,
+      "display": 87.99347442962076,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.25099998712539673,
+      "wire": 0.251
     },
     {
       "algo": 8,
@@ -4822,11 +6534,27 @@
     },
     {
       "algo": 8,
+      "display": 93.9620109124678,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.49900001287460327,
+      "wire": 0.499
+    },
+    {
+      "algo": 8,
       "display": 93.97940008672037,
       "maximum": 100,
       "minimum": -100,
       "roundTrip": 0.5,
       "wire": 0.5
+    },
+    {
+      "algo": 8,
+      "display": 93.99675451734491,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.5009999871253967,
+      "wire": 0.501
     },
     {
       "algo": 8,
@@ -4894,11 +6622,27 @@
     },
     {
       "algo": 9,
+      "display": 0.19872812657090036,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.24899999797344208,
+      "wire": 0.249
+    },
+    {
+      "algo": 9,
       "display": 0.19952623149688792,
       "maximum": 100,
       "minimum": 0,
       "roundTrip": 0.25,
       "wire": 0.25
+    },
+    {
+      "algo": 9,
+      "display": 0.1999554903051965,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.25099998712539673,
+      "wire": 0.251
     },
     {
       "algo": 9,
@@ -4910,11 +6654,27 @@
     },
     {
       "algo": 9,
+      "display": 0.3407218616593573,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.49900001287460327,
+      "wire": 0.499
+    },
+    {
+      "algo": 9,
       "display": 0.3414548873833601,
       "maximum": 100,
       "minimum": 0,
       "roundTrip": 0.5,
       "wire": 0.5
+    },
+    {
+      "algo": 9,
+      "display": 0.3421894901318293,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.5009999871253967,
+      "wire": 0.501
     },
     {
       "algo": 9,
@@ -4982,11 +6742,27 @@
     },
     {
       "algo": 9,
+      "display": 0.19872812657090036,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.24899999797344208,
+      "wire": 0.249
+    },
+    {
+      "algo": 9,
       "display": 0.19952623149688792,
       "maximum": 12,
       "minimum": -12,
       "roundTrip": 0.25,
       "wire": 0.25
+    },
+    {
+      "algo": 9,
+      "display": 0.1999554903051965,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.25099998712539673,
+      "wire": 0.251
     },
     {
       "algo": 9,
@@ -4998,11 +6774,27 @@
     },
     {
       "algo": 9,
+      "display": 0.3407218616593573,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.49900001287460327,
+      "wire": 0.499
+    },
+    {
+      "algo": 9,
       "display": 0.3414548873833601,
       "maximum": 12,
       "minimum": -12,
       "roundTrip": 0.5,
       "wire": 0.5
+    },
+    {
+      "algo": 9,
+      "display": 0.3421894901318293,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.5009999871253967,
+      "wire": 0.501
     },
     {
       "algo": 9,
@@ -5070,11 +6862,27 @@
     },
     {
       "algo": 9,
+      "display": 0.19872812657090036,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.24899999797344208,
+      "wire": 0.249
+    },
+    {
+      "algo": 9,
       "display": 0.19952623149688792,
       "maximum": 20,
       "minimum": 0.25,
       "roundTrip": 0.25,
       "wire": 0.25
+    },
+    {
+      "algo": 9,
+      "display": 0.1999554903051965,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.25099998712539673,
+      "wire": 0.251
     },
     {
       "algo": 9,
@@ -5086,11 +6894,27 @@
     },
     {
       "algo": 9,
+      "display": 0.3407218616593573,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.49900001287460327,
+      "wire": 0.499
+    },
+    {
+      "algo": 9,
       "display": 0.3414548873833601,
       "maximum": 20,
       "minimum": 0.25,
       "roundTrip": 0.5,
       "wire": 0.5
+    },
+    {
+      "algo": 9,
+      "display": 0.3421894901318293,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.5009999871253967,
+      "wire": 0.501
     },
     {
       "algo": 9,
@@ -5158,11 +6982,27 @@
     },
     {
       "algo": 9,
+      "display": 0.19872812657090036,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.24899999797344208,
+      "wire": 0.249
+    },
+    {
+      "algo": 9,
       "display": 0.19952623149688792,
       "maximum": 1000,
       "minimum": 25,
       "roundTrip": 0.25,
       "wire": 0.25
+    },
+    {
+      "algo": 9,
+      "display": 0.1999554903051965,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.25099998712539673,
+      "wire": 0.251
     },
     {
       "algo": 9,
@@ -5174,11 +7014,27 @@
     },
     {
       "algo": 9,
+      "display": 0.3407218616593573,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.49900001287460327,
+      "wire": 0.499
+    },
+    {
+      "algo": 9,
       "display": 0.3414548873833601,
       "maximum": 1000,
       "minimum": 25,
       "roundTrip": 0.5,
       "wire": 0.5
+    },
+    {
+      "algo": 9,
+      "display": 0.3421894901318293,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.5009999871253967,
+      "wire": 0.501
     },
     {
       "algo": 9,
@@ -5246,11 +7102,27 @@
     },
     {
       "algo": 9,
+      "display": 0.19872812657090036,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.24899999797344208,
+      "wire": 0.249
+    },
+    {
+      "algo": 9,
       "display": 0.19952623149688792,
       "maximum": 16000,
       "minimum": 1000,
       "roundTrip": 0.25,
       "wire": 0.25
+    },
+    {
+      "algo": 9,
+      "display": 0.1999554903051965,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.25099998712539673,
+      "wire": 0.251
     },
     {
       "algo": 9,
@@ -5262,11 +7134,27 @@
     },
     {
       "algo": 9,
+      "display": 0.3407218616593573,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.49900001287460327,
+      "wire": 0.499
+    },
+    {
+      "algo": 9,
       "display": 0.3414548873833601,
       "maximum": 16000,
       "minimum": 1000,
       "roundTrip": 0.5,
       "wire": 0.5
+    },
+    {
+      "algo": 9,
+      "display": 0.3421894901318293,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.5009999871253967,
+      "wire": 0.501
     },
     {
       "algo": 9,
@@ -5334,11 +7222,27 @@
     },
     {
       "algo": 9,
+      "display": 0.19872812657090036,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.24899999797344208,
+      "wire": 0.249
+    },
+    {
+      "algo": 9,
       "display": 0.19952623149688792,
       "maximum": 100,
       "minimum": -100,
       "roundTrip": 0.25,
       "wire": 0.25
+    },
+    {
+      "algo": 9,
+      "display": 0.1999554903051965,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.25099998712539673,
+      "wire": 0.251
     },
     {
       "algo": 9,
@@ -5350,11 +7254,27 @@
     },
     {
       "algo": 9,
+      "display": 0.3407218616593573,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.49900001287460327,
+      "wire": 0.499
+    },
+    {
+      "algo": 9,
       "display": 0.3414548873833601,
       "maximum": 100,
       "minimum": -100,
       "roundTrip": 0.5,
       "wire": 0.5
+    },
+    {
+      "algo": 9,
+      "display": 0.3421894901318293,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.5009999871253967,
+      "wire": 0.501
     },
     {
       "algo": 9,
@@ -5422,11 +7342,27 @@
     },
     {
       "algo": 10,
+      "display": 0.9307589880159788,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.24899999797344208,
+      "wire": 0.249
+    },
+    {
+      "algo": 10,
       "display": 0.9333333333333332,
       "maximum": 100,
       "minimum": 0,
       "roundTrip": 0.25,
       "wire": 0.25
+    },
+    {
+      "algo": 10,
+      "display": 0.9359145527369828,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.25099998712539673,
+      "wire": 0.251
     },
     {
       "algo": 10,
@@ -5438,11 +7374,27 @@
     },
     {
       "algo": 10,
+      "display": 1.8942115768463075,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.49900001287460327,
+      "wire": 0.499
+    },
+    {
+      "algo": 10,
       "display": 1.9,
       "maximum": 100,
       "minimum": 0,
       "roundTrip": 0.5,
       "wire": 0.5
+    },
+    {
+      "algo": 10,
+      "display": 1.9058116232464932,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.5009999871253967,
+      "wire": 0.501
     },
     {
       "algo": 10,
@@ -5510,11 +7462,27 @@
     },
     {
       "algo": 10,
+      "display": 0.9307589880159788,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.24899999797344208,
+      "wire": 0.249
+    },
+    {
+      "algo": 10,
       "display": 0.9333333333333332,
       "maximum": 12,
       "minimum": -12,
       "roundTrip": 0.25,
       "wire": 0.25
+    },
+    {
+      "algo": 10,
+      "display": 0.9359145527369828,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.25099998712539673,
+      "wire": 0.251
     },
     {
       "algo": 10,
@@ -5526,11 +7494,27 @@
     },
     {
       "algo": 10,
+      "display": 1.8942115768463075,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.49900001287460327,
+      "wire": 0.499
+    },
+    {
+      "algo": 10,
       "display": 1.9,
       "maximum": 12,
       "minimum": -12,
       "roundTrip": 0.5,
       "wire": 0.5
+    },
+    {
+      "algo": 10,
+      "display": 1.9058116232464932,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.5009999871253967,
+      "wire": 0.501
     },
     {
       "algo": 10,
@@ -5598,11 +7582,27 @@
     },
     {
       "algo": 10,
+      "display": 0.9307589880159788,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.24899999797344208,
+      "wire": 0.249
+    },
+    {
+      "algo": 10,
       "display": 0.9333333333333332,
       "maximum": 20,
       "minimum": 0.25,
       "roundTrip": 0.25,
       "wire": 0.25
+    },
+    {
+      "algo": 10,
+      "display": 0.9359145527369828,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.25099998712539673,
+      "wire": 0.251
     },
     {
       "algo": 10,
@@ -5614,11 +7614,27 @@
     },
     {
       "algo": 10,
+      "display": 1.8942115768463075,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.49900001287460327,
+      "wire": 0.499
+    },
+    {
+      "algo": 10,
       "display": 1.9,
       "maximum": 20,
       "minimum": 0.25,
       "roundTrip": 0.5,
       "wire": 0.5
+    },
+    {
+      "algo": 10,
+      "display": 1.9058116232464932,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.5009999871253967,
+      "wire": 0.501
     },
     {
       "algo": 10,
@@ -5686,11 +7702,27 @@
     },
     {
       "algo": 10,
+      "display": 0.9307589880159788,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.24899999797344208,
+      "wire": 0.249
+    },
+    {
+      "algo": 10,
       "display": 0.9333333333333332,
       "maximum": 1000,
       "minimum": 25,
       "roundTrip": 0.25,
       "wire": 0.25
+    },
+    {
+      "algo": 10,
+      "display": 0.9359145527369828,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.25099998712539673,
+      "wire": 0.251
     },
     {
       "algo": 10,
@@ -5702,11 +7734,27 @@
     },
     {
       "algo": 10,
+      "display": 1.8942115768463075,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.49900001287460327,
+      "wire": 0.499
+    },
+    {
+      "algo": 10,
       "display": 1.9,
       "maximum": 1000,
       "minimum": 25,
       "roundTrip": 0.5,
       "wire": 0.5
+    },
+    {
+      "algo": 10,
+      "display": 1.9058116232464932,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.5009999871253967,
+      "wire": 0.501
     },
     {
       "algo": 10,
@@ -5774,11 +7822,27 @@
     },
     {
       "algo": 10,
+      "display": 0.9307589880159788,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.24899999797344208,
+      "wire": 0.249
+    },
+    {
+      "algo": 10,
       "display": 0.9333333333333332,
       "maximum": 16000,
       "minimum": 1000,
       "roundTrip": 0.25,
       "wire": 0.25
+    },
+    {
+      "algo": 10,
+      "display": 0.9359145527369828,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.25099998712539673,
+      "wire": 0.251
     },
     {
       "algo": 10,
@@ -5790,11 +7854,27 @@
     },
     {
       "algo": 10,
+      "display": 1.8942115768463075,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.49900001287460327,
+      "wire": 0.499
+    },
+    {
+      "algo": 10,
       "display": 1.9,
       "maximum": 16000,
       "minimum": 1000,
       "roundTrip": 0.5,
       "wire": 0.5
+    },
+    {
+      "algo": 10,
+      "display": 1.9058116232464932,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.5009999871253967,
+      "wire": 0.501
     },
     {
       "algo": 10,
@@ -5862,11 +7942,27 @@
     },
     {
       "algo": 10,
+      "display": 0.9307589880159788,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.24899999797344208,
+      "wire": 0.249
+    },
+    {
+      "algo": 10,
       "display": 0.9333333333333332,
       "maximum": 100,
       "minimum": -100,
       "roundTrip": 0.25,
       "wire": 0.25
+    },
+    {
+      "algo": 10,
+      "display": 0.9359145527369828,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.25099998712539673,
+      "wire": 0.251
     },
     {
       "algo": 10,
@@ -5878,11 +7974,27 @@
     },
     {
       "algo": 10,
+      "display": 1.8942115768463075,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.49900001287460327,
+      "wire": 0.499
+    },
+    {
+      "algo": 10,
       "display": 1.9,
       "maximum": 100,
       "minimum": -100,
       "roundTrip": 0.5,
       "wire": 0.5
+    },
+    {
+      "algo": 10,
+      "display": 1.9058116232464932,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.5009999871253967,
+      "wire": 0.501
     },
     {
       "algo": 10,
@@ -5928,6 +8040,7 @@
   "vendor_source_note": "extracted from the unit's static/js/main.<hash>.js and NOT redistributed here; these are sha256 prefixes of the fragments this table was generated from. Re-read them from a unit with tools/build_headrush_tapers.py to check the maths.",
   "vendor_source_sha256": {
     "clamp": "b5dc8c58218664e3",
+    "dispatch": "74e5c4719f0149c8",
     "helpers": "b7cce558a551fb3e",
     "to_display": "687f77170ba9ca18",
     "to_wire": "2341a17d1c30e677"

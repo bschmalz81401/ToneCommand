@@ -67,6 +67,15 @@ SCHEMA_VERSION = 1
 ENUM = re.compile(r"!function\(e\)\{(e\[e\.Linear=0\][^}]*?)\}\(kf\|\|\(kf=\{\}\)\)")
 NORMALISE = re.compile(r"const xf=\{(.*?)\},Af=\{", re.S)
 DENORMALISE = re.compile(r"\},Af=\{(.*?)\};function Lf", re.S)
+# The dispatch was previously RETYPED into the harness from reading the bundle,
+# which is the one thing this generator is built not to do: a rebuild that kept
+# the two tables and changed how it chooses between them would have been
+# converted with the old rule and nothing would have said so. Anchored to the
+# text immediately after the Af table, because `function Lf` also matches a
+# React helper 190k characters earlier.
+DISPATCH = re.compile(
+    r"\};(function Lf\(e,t\)\{.*?\}function If\(e,t\)\{.*?\})function \w+\(e\)\{",
+    re.S)
 HELPERS = re.compile(
     r"function yf\(e\)\{return Math\.pow\(10,\.05\*e\)\}"
     r"const vf=[^;]*;")
@@ -75,7 +84,31 @@ CLAMP = re.compile(r"function Ze\(e,t,n\)\{[^}]*\}")
 # The grid the reference vectors are computed on. Endpoints because that is
 # where a wrong formula is most visibly wrong, and irregular interior points so
 # a table that happened to be right at halves would still be caught.
-WIRE_POINTS = (0.0, 0.0001, 0.05, 0.25, 1 / 3, 0.5, 0.75, 0.9, 0.99, 0.999, 1.0)
+#
+# THE PAIRS STRADDLING 0.25 AND 0.5 ARE NOT DECORATION. Db is piecewise about
+# 0.5 and AllenHeathFaderVolume about 0.25, and both are CONTINUOUS at the
+# join: Db's two pieces are each 0 at 0.5, and AllenHeath's are both 0.1995 at
+# 0.25. So a sample sitting exactly on a join is the same number from either
+# piece, and a transcription that moved the split to 0.45 or 0.3 would have
+# produced zero diffs across the whole grid while being wrong everywhere
+# between. Samples strictly INSIDE each piece are what pin the split location,
+# and those two curves are precisely the ones a typo leaves plausible.
+#
+# WHAT THAT DOES AND DOES NOT PIN, because the obvious claim is too strong.
+# Straddling a join at distance d catches a transcribed split more than d from
+# the real one, and cannot catch one nearer: with samples at 0.499 and 0.501, a
+# split written as 0.4995 is indistinguishable from 0.5 here. Chasing that is
+# an infinite regress, so the bound is stated rather than closed. Measured
+# against these vectors: Db at 0.45 and 0.4 gives four diffs each, AllenHeath
+# at 0.2 and 0.3 gives six each, and 0.499 and 0.249 give none. A realistic
+# slip is a mistyped digit, not a displacement of one part in a thousand.
+WIRE_POINTS = (
+    0.0, 0.0001, 0.05,
+    0.249, 0.25, 0.251,           # straddles the AllenHeathFaderVolume join
+    1 / 3,
+    0.499, 0.5, 0.501,            # straddles the Db join
+    0.75, 0.9, 0.99, 0.999, 1.0,
+)
 
 # Ranges drawn from real properties rather than invented, so the vectors
 # exercise the shapes the firmware actually publishes: a percentage, a
@@ -112,7 +145,7 @@ def extract(bundle: str) -> dict[str, str]:
     pieces = {}
     for name, pattern in (("enum", ENUM), ("normalise", NORMALISE),
                           ("denormalise", DENORMALISE), ("helpers", HELPERS),
-                          ("clamp", CLAMP)):
+                          ("clamp", CLAMP), ("dispatch", DISPATCH)):
         found = pattern.search(bundle)
         if not found:
             fail(f"the bundle does not contain the {name} the vendor's editor "
@@ -149,8 +182,26 @@ def run_node(pieces: dict[str, str], names: dict[int, str]) -> dict:
 {pieces['helpers']}
 var kf;!function(e){{{pieces['enum']}}}(kf||(kf={{}}));
 const xf={{{pieces['normalise']}}},Af={{{pieces['denormalise']}}};
-const Lf=(e,t)=>Math.fround(((t.algo?xf[t.algo]:void 0)??xf[0])(e,t));
-const If=(e,t)=>((t.algo?Af[t.algo]:void 0)??Af[0])(e,t);
+{pieces['dispatch']}
+
+// `Ze` is a two letter minified name defined 140k characters before the tables
+// in a generic utility block, so its regex is the weakest anchor here and a
+// rebuild could put a different three argument `Ze` first. Checking the NAME
+// would not notice; checking the BEHAVIOUR does. Squared's normaliser is the
+// only caller, and reading a non-clamp there would corrupt that curve alone.
+if (Ze(5,0,10)!==5 || Ze(-1,0,10)!==0 || Ze(11,0,10)!==10) {{
+  console.error("CLAMP_NOT_A_CLAMP");
+  process.exit(3);
+}}
+// Likewise the dispatch is now extracted rather than retyped, so assert it
+// resolves the way the rest of this generator assumes before trusting it.
+if (If(0.5,{{minimum:0,maximum:100}})!==50
+    || If(0.5,{{minimum:0,maximum:100,algo:0}})!==50
+    || If(0.5,{{minimum:0.25,maximum:20,algo:5}})!==5.1875) {{
+  console.error("DISPATCH_NOT_AS_ASSUMED");
+  process.exit(4);
+}}
+
 const out=[];
 for (const c of {cases}) {{
   const info={{minimum:c.minimum,maximum:c.maximum,algo:c.algo}};
@@ -174,6 +225,14 @@ process.stdout.write(JSON.stringify(out));
              "transcribed. The committed file needs nothing to use.")
     finally:
         Path(path).unlink(missing_ok=True)
+    if done.returncode == 3:
+        fail("the fragment extracted as the clamp does not behave as one. Its "
+             "regex is the weakest anchor in this file; the bundle has "
+             "probably been rebuilt and `Ze` now resolves to something else.")
+    if done.returncode == 4:
+        fail("the extracted dispatch does not resolve the way this generator "
+             "assumes (absent and 0 to Linear, 5 to Squared). Read it before "
+             "loosening anything.")
     if done.returncode != 0:
         fail(f"the vendor's own code did not run:\n{done.stderr.strip()}")
     return json.loads(done.stdout)
@@ -256,9 +315,12 @@ def build(bundle: str, source: str) -> dict:
                    for n in sorted(names)},
         "absent_algo_is": 0,
         "absent_algo_note": (
-            "the vendor's own dispatch is `(t.algo ? table[t.algo] : void 0) "
-            "?? table[0]`, so a parameter with no normalizeAlgo, and equally "
-            "one carrying 0, resolves to Linear"),
+            "the vendor's dispatch looks the id up in the table and falls back "
+            "to entry 0 whenever the id is absent or itself zero, so a "
+            "parameter with no normalizeAlgo and one carrying 0 both resolve "
+            "to Linear. Described rather than quoted, so that the claim in "
+            "THIRD_PARTY_NOTICES.md that no vendor source text is committed "
+            "here stays literally true"),
         "unimplemented": unimplemented,
         "unimplemented_note": (
             "in the enum and in neither table, so the vendor's fallback sends "
@@ -278,7 +340,8 @@ def build(bundle: str, source: str) -> dict:
             for name, key in (("to_display", "denormalise"),
                               ("to_wire", "normalise"),
                               ("helpers", "helpers"),
-                              ("clamp", "clamp"))
+                              ("clamp", "clamp"),
+                              ("dispatch", "dispatch"))
         },
         "vendor_source_note": (
             "extracted from the unit's static/js/main.<hash>.js and NOT "
@@ -297,24 +360,20 @@ def build(bundle: str, source: str) -> dict:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--from-file", type=Path,
-                    help="a saved copy of the unit's static/js/main.<hash>.js")
-    ap.add_argument("--host", help="fetch the bundle from a unit")
+    ap.add_argument("--from-file", type=Path, required=True,
+                    help="a saved copy of the unit's static/js/main.<hash>.js. "
+                         "Fetch one with tools/build_headrush_topologies.py, "
+                         "which already knows how to pull it off a unit; there "
+                         "is no --host here rather than a --host that does not "
+                         "work.")
     ap.add_argument("--out", type=Path, default=OUT)
     ap.add_argument("--check", action="store_true",
                     help="exit non-zero if the committed file is not what this "
                          "run produces, without writing")
     args = ap.parse_args(argv)
 
-    if args.from_file:
-        bundle = args.from_file.read_text(errors="replace")
-        source = f"vendor editor bundle, {args.from_file.name}"
-    elif args.host:
-        from devices.headrush.client import HeadrushClient  # noqa: local import
-        fail("fetching from a unit is not implemented here; save the bundle "
-             "with tools/build_headrush_topologies.py and pass --from-file")
-    else:
-        fail("pass --from-file with the unit's editor bundle")
+    bundle = args.from_file.read_text(errors="replace")
+    source = f"vendor editor bundle, {args.from_file.name}"
 
     table = build(bundle, source)
     text = json.dumps(table, indent=2, sort_keys=True) + "\n"
