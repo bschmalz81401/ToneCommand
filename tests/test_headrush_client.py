@@ -668,18 +668,23 @@ def test_a_404_names_both_of_its_causes_rather_than_guessing():
     and 404s every /api/v1 path, so a 404 means EITHER a path this firmware
     does not have OR a unit with Remote switched off.
 
-    Reported as a bare 404 it reads as a wrong path, which sent an operator
-    looking at their own code while the unit sat there needing one setting
-    turned back on. This function cannot distinguish the two without a second
-    request it has no business making, so it names both and says how to check.
+    Reported as a bare 404 it reads as a wrong path, which sends an operator
+    looking at their own code while the unit is not serving its API at all.
+    This function cannot distinguish the two without a second request it has no
+    business making, so it names both and says how to check.
+
+    That Remote is the CAUSE is inferred from the editor's own generic
+    connection-failure advice and has not been tested by toggling it, so the
+    message says what was observed and offers Remote as the thing to check
+    rather than asserting it.
     """
     error = urllib.error.HTTPError(
         "http://10.8.72.116/api/v1/subtree/Evil/Gui", 404, "Not Found", {}, None,
     )
     described = describe_unreachable(error, "10.8.72.116")
     assert "404" in described
-    assert "HeadRush Remote" in described, "name the cause an operator can fix"
-    assert "does not exist" in described, "and the other cause, not just one"
+    assert "HeadRush Remote" in described, "name the thing an operator can check"
+    assert "no such path" in described, "and the other cause, not just one"
     # still not misclassified as the network or the name being at fault
     assert "Nothing answered" not in described
     assert "did not resolve" not in described

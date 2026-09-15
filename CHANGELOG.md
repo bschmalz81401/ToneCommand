@@ -17,38 +17,45 @@ Notable changes to ToneCommand. Dates are UTC.
 ### Fixed (HeadRush unreachable diagnosis, 2026-09-15)
 - `describe_unreachable()` names both causes of a 404 instead of reporting the
   code. Measured on a Core (#126): `/api/v1` is mounted only while HeadRush
-  Remote is active on the unit, and with Remote off the unit still serves its
-  editor page on `/` while every API path 404s. Reported as a bare 404 that
-  reads as a wrong path, which sends an operator to check their own code while
-  the unit sits there needing one setting turned back on. The function cannot
-  distinguish the two without a second request it has no business making, so it
-  names both and says how to check. Other status codes keep their wording.
+  Remote is active on the unit; measured is that after a crash the unit served
+  `/` with 200 while every `/api/v1` path returned 404. Reported as a bare 404
+  that reads as a wrong path, which sends an operator to check their own code.
+  The function cannot distinguish the two causes without a second request it has
+  no business making, so it names both and says how to check. That Remote is the
+  cause is inferred from the editor's own generic advice and has not been tested
+  by toggling it. Other status codes keep their wording.
 
 ### Added (HeadRush hardware findings, 2026-09-15)
 - `docs/HEADRUSH-HARDWARE-FINDINGS.md`: partial evidence for #126, which cannot
   be completed until #125 exists, recorded now because one item is a safety
   finding affecting work in flight.
-- WRITING `ModuleType` ORDINAL 20 CRASHES THE ENGINE. `Neural Amp Modeler 2` is
-  in the device's own published roster, in the published range 0..277, and has
-  no object behind it. The write is accepted and echoed back, and the unit dies
-  about two seconds later, taking the whole API down until it is power cycled
-  and Remote re-enabled. Reproduced twice, the second time as a single-variable
-  test from a clean baseline on an empty test rig. Read-back verification does
-  NOT catch it, which matters because #126 AC3 relies on read-back.
-- So #125 must refuse the three unbacked ordinals (4, 20, 254) at validation,
-  before transport, in the same class as the never-brick guard. Ordinal 20 is
-  confirmed; 4 and 254 are deliberately untested, because the mechanism is
-  clear, a test costs a crash, and refusing all three costs nothing. That is a
-  judgement and is labelled as one rather than reported as a measurement.
-- The NAM block itself is fine: after the first crash the unit rebooted into a
-  rig running ordinal 19, `Neural Amp Modeler`, with no trouble. It is the
-  unbacked twin that is fatal, not the module.
-- The normalisation tapers are decoded from the vendor's editor bundle as a
-  named enumeration, and all six screen readings are reproduced exactly by its
-  formulas, derived first and checked after. `normalizeAlgo: 5` is named
-  `Squared`, confirming the quadratic measured on `Amp.TremSpeed`, and an
-  absent id falls back to `Linear` in the vendor's own code. Same provenance
-  class as `headrush_topologies.json`: read out of the editor, not the API.
+- A WRITE OF `ModuleType` ORDINAL 20 WAS FOLLOWED BY ENGINE DEATH on one Core at
+  one firmware. `Neural Amp Modeler 2` is in the device's own roster, in the
+  published range 0..277, and has no object behind it. The write was accepted
+  and echoed back, and `/api/v1` was gone at the next two-second poll; the unit
+  then reloaded itself and asked whether to load the last preset. Bounded
+  deliberately: n=1 for the isolated run, slot 3 on an empty rig, and the
+  timing is a poll bin rather than a measured latency. An earlier mixed
+  sequence that also ended with the API gone is written out rather than counted
+  as a second reproduction, since three writes cannot isolate one.
+- Read-back verification does NOT detect it. The write was acknowledged, the
+  read-back agreed, and the engine died after. That is the part that generalises
+  and it constrains any verified-write built on read-and-compare.
+- Three roster entries have an ordinal and no object (4, 20, 254). That class is
+  a schema fact. 4 and 254 were NOT tested, because a test costs a crash on
+  someone's hardware, and refusing them is not free either: it means an adapter
+  can never select them and whether they work is unknown. Refusing all three is
+  offered to #125 as a judgement for the maintainer, not as a measurement.
+- Ordinal 19 is NOT cleared. A previous draft said the module itself was fine
+  because the unit rebooted into a rig containing it, but load-from-disk is a
+  different operation from writing `ModuleType = 19` over HTTP, and the one
+  HTTP write of 19 was inside the mixed sequence. Corrected after independent
+  review, because it had already been published to #125 as settled.
+- Six readings of continuous parameters taken off the unit's screen are
+  recorded as measurements. The wire takes 0..1 while the published range and
+  format describe what the unit displays, and the device names each curve with
+  an opaque id and no formula. Nothing here decodes those curves; that is its
+  own change with its own provenance.
 
 ### Fixed (capability gates, 2026-09-15)
 - The runtime obeys the device contract (#111, the second half of #109).

@@ -303,8 +303,9 @@ def describe_unreachable(error: BaseException, target: str) -> str:
     CLASSIFIED BY EXCEPTION TYPE AND ERRNO, NEVER BY MESSAGE TEXT. A message
     regex would also have caught the unit's own 504 Gateway Timeout on a
     wrong-argument method call, which is not "nothing answered" but the unit
-    answering. urllib.error.HTTPError is therefore checked first and falls
-    through to the quoted branch, because the unit did reply.
+    answering. urllib.error.HTTPError is therefore checked first, because the
+    unit did reply. Every code but 404 is quoted back; 404 has two causes that
+    want opposite actions and gets its own branch, below.
 
     Every branch ends a sentence, so a caller can append its own context after
     it with a plain space.
@@ -317,18 +318,27 @@ def describe_unreachable(error: BaseException, target: str) -> str:
             # check, rather than picking one and being confidently wrong half
             # the time.
             #
-            # Measured on a Core, 2026-09-15 (#126): the API is mounted only
-            # while HeadRush Remote is active on the unit. With Remote off the
-            # unit still serves its editor's static files, so `GET /` is 200
-            # and EVERY `/api/v1` path is 404. The unit's own editor detects
-            # exactly this and says to check Remote. Before this branch, that
-            # state was reported as a plain 404, which reads as a wrong path.
+            # Measured on a Core, 2026-09-15 (#126): after the engine
+            # crashed, `GET /` returned 200 from the editor's static files
+            # while EVERY `/api/v1` path returned 404. That state was reported
+            # as a plain 404, which reads as a wrong path and sends an operator
+            # to check their own code.
+            #
+            # The editor's advice for it is to check HeadRush Remote, and that
+            # is its GENERIC connection-failure message rather than a diagnosis
+            # of this state: Remote was never toggled while the API was
+            # watched, so the mechanism is a hypothesis. Hence "not serving its
+            # API at all" as the observed fact and Remote as the thing to
+            # check, rather than asserting the cause.
             return (
-                f"The unit answered 404 for {target}. Either that object does "
-                f"not exist on this firmware, or HeadRush Remote is not active "
-                f"on the unit, which 404s every /api/v1 path while the editor "
-                f"page itself still loads. Open http://<unit>/ in a browser: "
-                f"if the page loads and says it cannot connect, Remote is off."
+                f"The unit answered 404 for {target}. Either this firmware has "
+                f"no such path, or the unit is not currently serving its API "
+                f"at all: after a crash it was measured returning 404 for every "
+                f"/api/v1 path while still serving its editor page, and the "
+                f"editor's own advice for that state is to check HeadRush "
+                f"Remote. Open http://<unit>/ in a browser to tell them apart: "
+                f"if the page loads and reports it cannot connect, the problem "
+                f"is the unit's API and not this path."
             )
         return _sentence(f"The unit answered {error.code} {error.reason} for {target}")
 
