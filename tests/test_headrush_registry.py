@@ -317,14 +317,36 @@ def test_every_selectable_block_has_a_distinct_ordinal(reg):
 
 def test_converting_normalised_to_display_refuses(reg):
     """The device publishes a range, a unit and a 0..1 wire, so the conversion
-    looks like arithmetic. Amp.TremSpeed reads 5.19 Hz at wire 0.5 on a
-    0.25..20 range, where linear would give 10.125, so it is not."""
-    with pytest.raises(R.NotMeasured, match="not uniformly linear"):
+    looks like arithmetic. It is not: the taper is per parameter."""
+    with pytest.raises(R.NotMeasured, match="PER PARAMETER"):
         reg.resolve("Amp", "Bass").to_display(0.75)
 
 
+def test_the_two_measured_tapers_disagree_with_each_other(reg):
+    """The reason the refusal is necessary rather than careful. Amp.Bass is
+    linear and Amp.TremSpeed is quadratic, on the same block, with nothing in
+    the schema telling them apart. Both are read off the unit's own screen.
+
+    The arithmetic is checked here so the claim in the artifact is not just
+    prose: solving lo + x**p * (hi - lo) = shown for p must give 2 for the
+    TremSpeed pair and 1 for the Bass one.
+    """
+    import math
+
+    tapers = reg.wire_encoding["measured_tapers"]
+    assert tapers["Amp.Bass"] == "linear"
+    assert tapers["Amp.TremSpeed"] == "quadratic"
+
+    def exponent(lo, hi, wire, shown):
+        return math.log((shown - lo) / (hi - lo)) / math.log(wire)
+
+    assert exponent(0.25, 20.0, 0.5, 5.19) == pytest.approx(2, abs=0.01)
+    assert exponent(0.25, 20.0, 0.25, 1.48) == pytest.approx(2, abs=0.01)
+    assert exponent(0.0, 100.0, 0.75, 75.0) == pytest.approx(1, abs=0.01)
+
+
 def test_the_refusal_names_the_parameter_that_was_asked_about(reg):
-    with pytest.raises(R.NotMeasured, match="TremSpeed"):
+    with pytest.raises(R.NotMeasured, match=r"Amp\.TremSpeed:"):
         reg.resolve("Amp", "TremSpeed").to_display(0.5)
 
 

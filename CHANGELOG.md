@@ -16,11 +16,20 @@ Notable changes to ToneCommand. Dates are UTC.
   `Amp.Bass` at wire 0.75 reads 75 %, `Amp.PostGain` at 0.5 reads 0.0 dB on a
   -12..12 range. The device accepts a write of either 0.75 or 75 without
   clamping, so nothing on the API discriminates and only the screen settles it.
-- No normalised-to-display conversion is offered, because the taper is not
-  published and is not uniformly linear: `Amp.TremSpeed` reads 5.19 Hz at wire
-  0.5 on a published 0.25..20 range, whose linear midpoint is 10.125 Hz.
-  `Parameter.to_display()` exists only to refuse, so the refusal lands where a
+- No normalised-to-display conversion is offered, because THE TAPER IS PER
+  PARAMETER and the schema distinguishes them nowhere. Measured off the unit's
+  screen: `Amp.Bass` and `Amp.PostGain` are linear, while `Amp.TremSpeed` is
+  quadratic, reading 1.48 Hz at wire 0.25 and 5.19 Hz at wire 0.5 on a
+  published 0.25..20 range where linear would give 5.19 and 10.125. Solving for
+  the exponent at each point gives 2.0023 and 1.9993, so that is two
+  independent readings rather than one fitted point. Two tapers on one block
+  means a helper assuming linear would be exactly right on one knob and wrong
+  on the next along, so `Parameter.to_display()` exists only to refuse, where a
   caller would otherwise write `lo + x * (hi - lo)` themselves.
+- Whether unit predicts taper is NOT established: `Amp.MidFreq` spans
+  220..3000 Hz and has not been read. Left open on #126, which can be done
+  without a human at the hardware because the unit's own web editor renders
+  these values.
 - Three roster entries have a `ModuleType` ordinal and no object: `ReValver
   Amp 2`, `Neural Amp Modeler 2` and `C-Verb 2`. That is the unit's one
   Capture and one C-Verb per rig rule showing up in its own data, so they are

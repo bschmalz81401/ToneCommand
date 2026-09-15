@@ -12,15 +12,18 @@ WHAT A CALLER GETS, AND WHAT IT DELIBERATELY CANNOT GET
     reg.module_ordinal("Amp")                  -> 1
 
     reg.resolve("Amp", "Bass").to_display(0.75)
-        NotMeasured: the taper is not published
+        NotMeasured: the taper is per parameter and is not published
 
 That last one is the point of the module. The device publishes a range and a
 unit for every continuous parameter and takes 0..1 on the wire, so the
-conversion LOOKS like arithmetic. It is not: Amp.TremSpeed reads 5.19 Hz at
-wire 0.5 on a published 0.25..20 range, where linear would give 10.125. A
-`to_display` that assumed linear would be correct on every percentage control
-and wrong on every frequency, time and tempo one, so the method exists only to
-refuse in the one place a caller would otherwise write the assumption itself.
+conversion LOOKS like arithmetic. It is not, and the reason is sharper than
+caution. Measured on hardware at this firmware, Amp.Bass is linear (wire 0.75
+reads 75 % of 0..100) and Amp.TremSpeed is quadratic (wire 0.25 and 0.5 read
+1.48 and 5.19 Hz of 0.25..20, where linear would give 5.19 and 10.125). Two
+tapers, on one block, distinguished nowhere in the schema. So a `to_display`
+that assumed linear would be exactly right on one knob and wrong on the next
+one along, and the method exists only to refuse in the one place a caller would
+otherwise write that assumption themselves.
 
 THE DRIFT GUARD
 
@@ -117,10 +120,12 @@ class Parameter:
             f"{self.block}.{self.name}: the device publishes a display range "
             f"({self.display_minimum}..{self.display_maximum} "
             f"{self.unit or ''}".rstrip() + ") and takes 0..1 on the wire, but "
-            "not the curve between them, and it is not uniformly linear: "
-            "Amp.TremSpeed reads 5.19 Hz at wire 0.5 on a 0.25..20 range "
-            "where linear would be 10.125. Measure it on hardware (#126) "
-            "rather than assuming a shape.")
+            "not the curve between them, and that curve is PER PARAMETER. "
+            "Measured on this firmware: Amp.Bass and Amp.PostGain are linear, "
+            "Amp.TremSpeed is quadratic (wire 0.25 reads 1.48 Hz and wire 0.5 "
+            "reads 5.19 Hz on a 0.25..20 range). Nothing in the schema says "
+            "which a given parameter uses, so assuming linear would be right "
+            "here and wrong beside it. Measure it (#126).")
 
     # --- selector and switch -------------------------------------------
     @property

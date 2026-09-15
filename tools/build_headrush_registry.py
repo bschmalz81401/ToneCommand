@@ -75,15 +75,25 @@ minimum the same device published. The evidence spans 290 of the 302 objects,
 so the generalisation from Amp to the rest does not rest on extrapolation from
 one screen reading. `tests/test_headrush_registry.py` pins both counts.
 
-The curve BETWEEN the two scales is not published, and is not uniformly linear:
+THE CURVE BETWEEN THE TWO SCALES IS PER PARAMETER, AND IS NOT PUBLISHED. The
+four readings above are linear: 0.75 of 0..100 is 75, and 0.5 of -12..12 is 0.0.
+This one is not.
 
     Amp.TremSpeed wire 0.5   ->  screen 5.19 Hz   published range 0.25..20
+    Amp.TremSpeed wire 0.25  ->  screen 1.48 Hz   published range 0.25..20
 
-whose linear midpoint would be 10.125 Hz. So this registry records both scales
-and offers no conversion between them. A helper that assumed linear would be
-right on every percentage control and quietly wrong on every frequency, time and
-tempo one, which is the worst available failure mode: plausible everywhere and
-checkable nowhere.
+Linear would read 10.125 and 5.19. Solving lo + x**p * (hi - lo) for p at each
+point gives 1.9993 and 2.0023, so TremSpeed is quadratic, from two independent
+readings rather than one fitted point.
+
+So the device uses AT LEAST TWO tapers and the schema distinguishes them
+nowhere. That is what makes the refusal necessary rather than merely careful: a
+helper assuming linear would be exactly right on every percentage and decibel
+control and quietly wrong on the frequency one beside it, which is the worst
+available failure mode, plausible everywhere and checkable nowhere. Whether unit
+predicts taper is NOT established: Amp.MidFreq spans 220..3000 Hz and has not
+been read. Measuring the rest is #126, and the unit's own web editor renders
+these values, so it can be done without a human at the hardware.
 
 THREE MODULES THE ROSTER OFFERS AND THE DEVICE DOES NOT BACK
 
@@ -344,10 +354,20 @@ def build(schema: dict) -> dict:
                                "they cannot be display values"),
             "conversion_to_display": None,
             "conversion_note": (
-                "not published by the device and not uniformly linear; "
-                "Amp.TremSpeed at wire 0.5 reads 5.19 Hz on a published "
-                "0.25..20 range, whose linear midpoint is 10.125 Hz"
+                "the taper is per parameter and the schema distinguishes them "
+                "nowhere. Measured on this firmware: Amp.Bass, Amp.Treble and "
+                "Amp.PostGain are linear, while Amp.TremSpeed is quadratic "
+                "(wire 0.5 reads 5.19 Hz and wire 0.25 reads 1.48 Hz on a "
+                "published 0.25..20 range, giving exponent 1.9993 and 2.0023). "
+                "Whether unit predicts taper is NOT established; Amp.MidFreq "
+                "spans 220..3000 Hz and has not been read. See #126."
             ),
+            "measured_tapers": {
+                "Amp.Bass": "linear",
+                "Amp.Treble": "linear",
+                "Amp.PostGain": "linear",
+                "Amp.TremSpeed": "quadratic",
+            },
         },
         "excluded_objects": EXCLUDED,
         "module_roster_size": len(roster),

@@ -38029,9 +38029,15 @@
   "warning": "CONTINUOUS VALUES ARE NORMALISED 0..1 ON THE WIRE while display_minimum, display_maximum and display_format describe the scale the unit SHOWS. The curve between them is not published and is not uniformly linear (Amp.TremSpeed reads 5.19 Hz at wire 0.5 on a 0.25..20 range, where linear would be 10.125), so no conversion is offered and none should be assumed. Measured on a Core at this firmware; see the generator docstring. Block categories are absent because the device answers them by method rather than in the schema, and no FM9 equivalence is recorded because none is evidenced.",
   "wire_encoding": {
     "continuous": "normalised 0..1",
-    "conversion_note": "not published by the device and not uniformly linear; Amp.TremSpeed at wire 0.5 reads 5.19 Hz on a published 0.25..20 range, whose linear midpoint is 10.125 Hz",
+    "conversion_note": "the taper is per parameter and the schema distinguishes them nowhere. Measured on this firmware: Amp.Bass, Amp.Treble and Amp.PostGain are linear, while Amp.TremSpeed is quadratic (wire 0.5 reads 5.19 Hz and wire 0.25 reads 1.48 Hz on a published 0.25..20 range, giving exponent 1.9993 and 2.0023). Whether unit predicts taper is NOT established; Amp.MidFreq spans 220..3000 Hz and has not been read. See #126.",
     "conversion_to_display": null,
     "generalised_by": "the schema's own defaults: 3912 continuous parameters across 290 of the 302 objects publish a default, all 3912 lie in 0..1, and 1369 lie outside their own published display range, so they cannot be display values",
-    "measured_on": "HeadRush Core, firmware 5.1.0.2a63755, 2026-09-15, by writing Amp.Bass, Amp.Treble, Amp.PostGain and Amp.TremDepth and reading the unit's own screen"
+    "measured_on": "HeadRush Core, firmware 5.1.0.2a63755, 2026-09-15, by writing Amp.Bass, Amp.Treble, Amp.PostGain and Amp.TremDepth and reading the unit's own screen",
+    "measured_tapers": {
+      "Amp.Bass": "linear",
+      "Amp.PostGain": "linear",
+      "Amp.Treble": "linear",
+      "Amp.TremSpeed": "quadratic"
+    }
   }
 }
