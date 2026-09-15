@@ -35,6 +35,39 @@ Do not hand-edit: `fm9/registry.py` checks at load time that every record's
 `AmpModelsStale` if a catalog refresh renumbered the roster. Corrections and
 gap-fills belong in the generator's `OVERRIDES` table, then regenerate.
 
+# config/headrush_amp_models.json - origin
+
+Generated, not vendored. A SECOND device's roster: maps each HeadRush
+amp-model ordinal to the real amplifier the manufacturer says it emulates,
+across the two amp blocks (`Amp` and `ReValver Amp`, 53 and 48 ordinals).
+Landed ahead of any HeadRush adapter on purpose (#33 phase 5): grounding data
+needs no adapter, no device handle and none of the contract work in #109.
+
+Built by `tools/build_headrush_amp_models.py` from two artifacts that are
+themselves generated, in the sibling `HeadrushRigBuilder` project: the
+vendor's published attribution list, scraped from its product page, and the
+DEVICE's own self-description fetched over its HTTP API, which is what
+supplies the ordinals. Neither is transcribed by hand and neither is vendored
+here. See THIRD_PARTY_NOTICES.md for provenance and trademarks.
+
+Unlike the FM9 sidecars there is no load-time drift guard, because this repo
+vendors no HeadRush catalog to compare against. Every row carries `headrush`,
+the device's own Model option at that ordinal, which is what a guard would
+check once an adapter can read `Amp.Type` back from a unit. The reason is
+recorded in `fm9.grounding.UNGUARDABLE` rather than left to be rediscovered.
+
+Do not hand-edit. `OVERRIDES` in the generator is a SPELLING table for the
+join key only and cannot correct an attribution: the attributions are the
+vendor's own words, and rewriting one would stop this being a record of what
+they published. An ordinal the vendor does not describe is stored as
+`model: null` with a reason, and the generator refuses to build when an
+ordinal has neither an attribution nor a declared absence.
+
+There is deliberately no cross-map to the FM9 roster. Both name real
+amplifiers, so a pivot looks like string matching; measured, exact matching
+finds 4 of 100 and fuzzy matching maps a Vox AC30 onto an AC15. That needs a
+human-confirmed mapping and is its own piece of work.
+
 # config/cab_models.json - origin
 
 Generated, not vendored. Maps the FM9's stock cabs to the real cabinets they
