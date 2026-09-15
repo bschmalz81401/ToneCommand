@@ -12,18 +12,28 @@ WHAT A CALLER GETS, AND WHAT IT DELIBERATELY CANNOT GET
     reg.module_ordinal("Amp")                  -> 1
 
     reg.resolve("Amp", "Bass").to_display(0.75)
-        NotMeasured: the taper is per parameter and is not published
+        NotMeasured: the device names the curve without describing it
 
-That last one is the point of the module. The device publishes a range and a
-unit for every continuous parameter and takes 0..1 on the wire, so the
-conversion LOOKS like arithmetic. It is not, and the reason is sharper than
-caution. Measured on hardware at this firmware, Amp.Bass is linear (wire 0.75
-reads 75 % of 0..100) and Amp.TremSpeed is quadratic (wire 0.25 and 0.5 read
-1.48 and 5.19 Hz of 0.25..20, where linear would give 5.19 and 10.125). Two
-tapers, on one block, distinguished nowhere in the schema. So a `to_display`
-that assumed linear would be exactly right on one knob and wrong on the next
-one along, and the method exists only to refuse in the one place a caller would
-otherwise write that assumption themselves.
+That last one is the point of the module. The device publishes a range, a unit
+and a 0..1 wire for every continuous parameter, so the conversion LOOKS like
+arithmetic. It also publishes an opaque curve id per parameter
+(`x-options.normalizeAlgo`, carried here as `taper_id`) and never says what an
+id denotes. Measured on hardware at this firmware, Amp.Bass carries no id and
+is linear (wire 0.75 reads 75 % of 0..100), while Amp.TremSpeed carries id 5
+and is quadratic (wire 0.25 and 0.5 read 1.48 and 5.19 Hz of 0.25..20, where
+linear would give 5.19 and 10.125). Two curves on one block, named but not
+described. So `to_display` exists only to refuse, in the one place a caller
+would otherwise write the assumption themselves.
+
+Nor is unit a safe proxy for taper: C2_Bass_Chorus.Depth is a percentage
+carrying id 6.
+
+EVERY PUBLISHED FIELD IS CARRIED, including ones nothing here interprets, and
+`Parameter.published` is the verbatim record. An earlier version kept only the
+fields it had a use for, and the registry then told callers the taper was
+unpublished while the schema it was generated from carried normalizeAlgo. A
+test now proves the set is complete against the schema rather than trusting a
+list to stay in step.
 
 THE DRIFT GUARD
 
@@ -50,6 +60,17 @@ class SchemaDrift(RuntimeError):
     """The registry was built from a schema the repo no longer holds."""
 
 
+class RegistryCorrupt(RuntimeError):
+    """The registry file is internally inconsistent.
+
+    Distinct from SchemaDrift, which is about the registry disagreeing with a
+    schema that moved under it. This one is the file disagreeing with ITSELF,
+    a block naming a parameter set the file does not hold, and the two want
+    different responses: drift wants a regenerate-and-read-the-diff, and this
+    wants the file re-fetched or restored because it was truncated or edited.
+    """
+
+
 class UnknownBlock(LookupError):
     """No such object, or a name that more than one object answers to."""
 
@@ -71,6 +92,24 @@ class Parameter:
     kind: str
     raw: dict
 
+    @property
+    def published(self) -> dict:
+        """Everything the device said about this property, verbatim.
+
+        The registry stores this and nothing that repeats it, so the accessors
+        below are views rather than a second copy that could disagree. Keys
+        this module does not interpret are still here, on purpose: an earlier
+        version kept only the fields it had a use for and the registry then
+        declared the taper unpublished while the device was publishing one.
+        """
+        return self.raw.get("published", {})
+
+    @property
+    def read_only(self) -> bool:
+        """Whether the device refuses writes. 491 properties on this firmware
+        are read only, /Evil/Gui.DeviceName among them."""
+        return bool(self.raw.get("read_only"))
+
     # --- continuous ----------------------------------------------------
     @property
     def display_minimum(self) -> float | None:
@@ -82,7 +121,18 @@ class Parameter:
 
     @property
     def display_format(self) -> str | None:
-        return self.raw.get("display_format")
+        return self.published.get("format")
+
+    @property
+    def grid(self) -> float | None:
+        """The device's own step size, carried under its own name.
+
+        NOT called display_step, because that would be a claim. It tracks the
+        format's decimal precision for 1841 of the 1881 properties that have
+        both and diverges for 40 (Freq1 formats as %.0f Hz and grids at 10.0),
+        so it is a real step and its exact meaning is the device's to state.
+        """
+        return self.published.get("grid")
 
     @property
     def unit(self) -> str | None:
@@ -93,11 +143,25 @@ class Parameter:
         belongs, and a caller comparing against a unit it read from the unit
         would then miss.
         """
-        return self.raw.get("unit")
+        from tools.build_headrush_registry import unit_of
+        return unit_of(self.display_format)
 
     @property
     def default_normalised(self) -> float | None:
-        return self.raw.get("default_normalised")
+        return self.published.get("default")
+
+    @property
+    def taper_id(self) -> int | None:
+        """The device's OPAQUE curve identifier (x-options.normalizeAlgo).
+
+        It says two parameters share a taper, or do not. It never says what
+        either curve is, which is why `to_display` refuses even though this is
+        published. Measured on this firmware: the three Amp knobs that read
+        linear carry no id, and TremSpeed, which reads quadratic, carries 5.
+        Four parameters on one block is not a decoding, and nothing here treats
+        absent as meaning identity.
+        """
+        return self.published.get("normalizeAlgo")
 
     @property
     def wire_range(self) -> tuple[float, float] | None:
@@ -107,11 +171,15 @@ class Parameter:
         SHOWS. Conflating the two is the specific error this split exists to
         prevent, and it is an easy one: on Amp.Bass the display range is
         0..100 and writing 75 is accepted by the device without complaint.
+
+        Measured directly on Amp and generalised from the schema's own
+        defaults, not from the four readings: see `Registry.wire_encoding`,
+        which states which part is which.
         """
         return (0.0, 1.0) if self.kind == "continuous" else None
 
     def to_display(self, normalised: float) -> float:
-        """Refuses. The taper is not published and is not uniformly linear.
+        """Refuses. The device names the curve without describing it.
 
         Kept as a method rather than omitted so that the refusal lands where a
         caller would otherwise write `lo + x * (hi - lo)` themselves.
@@ -119,20 +187,19 @@ class Parameter:
         raise NotMeasured(
             f"{self.block}.{self.name}: the device publishes a display range "
             f"({self.display_minimum}..{self.display_maximum} "
-            f"{self.unit or ''}".rstrip() + ") and takes 0..1 on the wire, but "
-            "not the curve between them, and that curve is PER PARAMETER. "
-            "Measured on this firmware: Amp.Bass and Amp.PostGain are linear, "
-            "Amp.TremSpeed is quadratic (wire 0.25 reads 1.48 Hz and wire 0.5 "
-            "reads 5.19 Hz on a 0.25..20 range). Nothing in the schema says "
-            "which a given parameter uses, so assuming linear would be right "
-            "here and wrong beside it. Measure it (#126).")
+            f"{self.unit or ''}".rstrip() + f"), takes 0..1 on the wire, and "
+            f"names this parameter's curve only as taper_id={self.taper_id!r}. "
+            "It never says what an id denotes, so the FORMULA is unavailable "
+            "and cannot be evaluated. Assuming linear is not safe by unit "
+            "either: C2_Bass_Chorus.Depth is a percentage carrying id 6. "
+            "Measure it (#126).")
 
     # --- selector and switch -------------------------------------------
     @property
     def options(self) -> list[str] | None:
         """The device's own option names, or None where it publishes none."""
-        value = self.raw.get("options", self.raw.get("labels"))
-        return list(value) if value else None
+        strings = self.published.get("strings")
+        return list(strings) if strings else None
 
     def option(self, ordinal: int) -> str:
         options = self.options
@@ -250,10 +317,12 @@ def load(registry: Path | None = None, schema: Path | None = None,
         try:
             published = paramsets[raw["parameters"]]
         except KeyError:
-            raise SchemaDrift(
+            raise RegistryCorrupt(
                 f"{path} references parameter set {raw['parameters']!r}, "
-                f"which the registry does not hold. Re-run "
-                f"tools/build_headrush_registry.py.") from None
+                f"which this registry does not hold. The file is internally "
+                f"inconsistent, which a regenerate will not diagnose: restore "
+                f"it from git, or re-run tools/build_headrush_registry.py to "
+                f"replace it wholesale.") from None
         params = {n: Parameter(block=raw["name"], name=n, kind=p["kind"], raw=p)
                   for n, p in published.items()}
         blocks[path] = Block(

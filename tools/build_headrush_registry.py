@@ -75,25 +75,40 @@ minimum the same device published. The evidence spans 290 of the 302 objects,
 so the generalisation from Amp to the rest does not rest on extrapolation from
 one screen reading. `tests/test_headrush_registry.py` pins both counts.
 
-THE CURVE BETWEEN THE TWO SCALES IS PER PARAMETER, AND IS NOT PUBLISHED. The
-four readings above are linear: 0.75 of 0..100 is 75, and 0.5 of -12..12 is 0.0.
-This one is not.
+THE FORMULA BETWEEN THE TWO SCALES IS NOT PUBLISHED. AN OPAQUE TAPER ID IS.
 
-    Amp.TremSpeed wire 0.5   ->  screen 5.19 Hz   published range 0.25..20
-    Amp.TremSpeed wire 0.25  ->  screen 1.48 Hz   published range 0.25..20
+Stated carefully, because an earlier draft of this file said "the taper is not
+published" while `x-options.normalizeAlgo` sat in the schema it was generated
+from. The device publishes an integer per continuous parameter, or publishes
+none. It never says what curve an integer denotes.
 
-Linear would read 10.125 and 5.19. Solving lo + x**p * (hi - lo) for p at each
-point gives 1.9993 and 2.0023, so TremSpeed is quadratic, from two independent
-readings rather than one fitted point.
+    Amp.Bass       no normalizeAlgo     measured linear (wire 0.75 -> 75 %)
+    Amp.Treble     no normalizeAlgo     measured linear (wire 0.5  -> 50 %)
+    Amp.PostGain   no normalizeAlgo     measured linear (wire 0.5  -> 0.0 dB)
+    Amp.TremSpeed  normalizeAlgo: 5     measured quadratic, two points:
+                                        wire 0.25 -> 1.48 Hz, 0.5 -> 5.19 Hz,
+                                        giving exponent 2.0023 and 1.9993
 
-So the device uses AT LEAST TWO tapers and the schema distinguishes them
-nowhere. That is what makes the refusal necessary rather than merely careful: a
-helper assuming linear would be exactly right on every percentage and decibel
-control and quietly wrong on the frequency one beside it, which is the worst
-available failure mode, plausible everywhere and checkable nowhere. Whether unit
-predicts taper is NOT established: Amp.MidFreq spans 220..3000 Hz and has not
-been read. Measuring the rest is #126, and the unit's own web editor renders
-these values, so it can be done without a human at the hardware.
+Across the schema, 458 number properties in the deduplicated metas carry an
+algo from {5, 6, 8, 10} and 1424 carry none. So the four readings are
+CONSISTENT with absent meaning identity, and that is as far as they go: four
+parameters, one block, and no reading at all of algos 6, 8 or 10. The
+correlation is recorded because it is the obvious next thing to test; it is
+not acted on, and `taper_id` stays an opaque integer.
+
+That is why no conversion is offered. It is not that the device is silent, and
+it is not caution. It is that the device names the curve without describing it,
+and a caller cannot evaluate a name.
+
+AND THE OBVIOUS SHORTCUT IS WRONG. An earlier draft argued that assuming linear
+would be "right on every percentage control and wrong on every frequency one",
+which reads well and is false: C2_Bass_Chorus.Depth is a percentage, spans
+0.01..100, and carries normalizeAlgo 6. Unit does not predict taper. Neither
+does anything else here, which is the point.
+
+Measuring the rest is #126, and the unit's own web editor renders these values
+over the same HTTP the schema came from, so it can be done without a human
+standing at the hardware.
 
 THREE MODULES THE ROSTER OFFERS AND THE DEVICE DOES NOT BACK
 
@@ -190,47 +205,60 @@ def classify(name: str, meta: dict) -> dict:
     selector has a fixed set of named positions, an ordinal has positions with
     no published names, a switch has two, text is free, presentation is not a
     parameter at all.
+
+    NOTHING PUBLISHED IS DROPPED. An earlier version of this function kept only
+    the fields it had a use for, and the registry then declared the taper
+    unpublished while `x-options.normalizeAlgo` sat in the schema it was built
+    from. That is the exact error this repo exists to avoid, so every
+    `x-options` key now travels verbatim in `published`, whether or not
+    anything here knows what it means, and a test proves the set is complete
+    rather than trusting this list to stay in step with the firmware.
     """
     if name in PRESENTATION:
         return {"kind": "presentation",
+                "published": dict(meta.get("x-options") or {}),
+                "read_only": bool(meta.get("readOnly")),
                 "note": "live, per selected model; contents are not in the schema"}
 
     kind = meta.get("type")
-    options = (meta.get("x-options") or {})
-    strings = options.get("strings")
-    default = options.get("default")
+    published = dict(meta.get("x-options") or {})
+    strings = published.get("strings")
 
+    # `published` below is the ONE copy of everything the device said. What is
+    # added here is the classification and the fields the device puts outside
+    # x-options; nothing published is repeated, so the file cannot disagree
+    # with itself and devices/headrush/registry.py reads options, defaults and
+    # taper_id straight off `published`.
     if kind == "number":
-        fmt = options.get("format")
-        return {
+        # Parsed here rather than stored, so a format this cannot read makes
+        # the GENERATOR refuse instead of reaching a caller as a null unit.
+        unit_of(published.get("format"))
+        record = {
             "kind": "continuous",
             "display_minimum": meta.get("minimum"),
             "display_maximum": meta.get("maximum"),
-            "display_format": fmt,
-            "unit": unit_of(fmt),
-            "default_normalised": default,
         }
-    if kind == "integer":
-        if strings:
-            return {"kind": "selector",
-                    "minimum": meta.get("minimum"),
-                    "maximum": meta.get("maximum"),
-                    "options": list(strings)}
-        return {"kind": "ordinal",
-                "minimum": meta.get("minimum"),
-                "maximum": meta.get("maximum"),
-                "options": None,
-                "note": "positions are unnamed on this firmware"}
-    if kind == "boolean":
-        return {"kind": "switch",
-                "labels": list(strings) if strings else None,
-                "default": default}
-    if kind == "string":
-        return {"kind": "text", "default": default}
-    if kind == "array":
-        return {"kind": "list",
-                "items": (meta.get("items") or {}).get("type")}
-    fail(f"property {name!r} has unhandled type {kind!r}")
+    elif kind == "integer":
+        record = {"kind": "selector" if strings else "ordinal",
+                  "minimum": meta.get("minimum"),
+                  "maximum": meta.get("maximum")}
+        if not strings:
+            record["note"] = "positions are unnamed on this firmware"
+    elif kind == "boolean":
+        record = {"kind": "switch"}
+    elif kind == "string":
+        record = {"kind": "text"}
+    elif kind == "array":
+        record = {"kind": "list", "items": (meta.get("items") or {}).get("type")}
+    else:
+        fail(f"property {name!r} has unhandled type {kind!r}")
+
+    # Whether a caller may WRITE this at all. 491 properties on this firmware
+    # are read only, including /Evil/Gui.DeviceName, and a registry that did
+    # not carry the flag would let a planner offer to rename the unit.
+    record["read_only"] = bool(meta.get("readOnly"))
+    record["published"] = published
+    return record
 
 
 def build(schema: dict) -> dict:
@@ -331,15 +359,15 @@ def build(schema: dict) -> dict:
                     "ordinal that selects each block into a chain slot"),
         "warning": (
             "CONTINUOUS VALUES ARE NORMALISED 0..1 ON THE WIRE while "
-            "display_minimum, display_maximum and display_format describe the "
-            "scale the unit SHOWS. The curve between them is not published and "
-            "is not uniformly linear (Amp.TremSpeed reads 5.19 Hz at wire 0.5 "
-            "on a 0.25..20 range, where linear would be 10.125), so no "
-            "conversion is offered and none should be assumed. Measured on a "
-            "Core at this firmware; see the generator docstring. Block "
-            "categories are absent because the device answers them by method "
-            "rather than in the schema, and no FM9 equivalence is recorded "
-            "because none is evidenced."
+            "display_minimum, display_maximum and the published format "
+            "describe the scale the unit SHOWS. The FORMULA between them is "
+            "not published, though an opaque taper id is (x-options."
+            "normalizeAlgo, carried as taper_id), so no conversion is offered "
+            "and none should be assumed. Every field the device published "
+            "travels verbatim in each parameter's `published` map, including "
+            "ones nothing here interprets. Block categories are absent because "
+            "the device answers them by method rather than in the schema, and "
+            "no FM9 equivalence is recorded because none is evidenced."
         ),
         "schema_fingerprint": fingerprint(schema),
         "wire_encoding": {
@@ -354,19 +382,24 @@ def build(schema: dict) -> dict:
                                "they cannot be display values"),
             "conversion_to_display": None,
             "conversion_note": (
-                "the taper is per parameter and the schema distinguishes them "
-                "nowhere. Measured on this firmware: Amp.Bass, Amp.Treble and "
-                "Amp.PostGain are linear, while Amp.TremSpeed is quadratic "
-                "(wire 0.5 reads 5.19 Hz and wire 0.25 reads 1.48 Hz on a "
-                "published 0.25..20 range, giving exponent 1.9993 and 2.0023). "
-                "Whether unit predicts taper is NOT established; Amp.MidFreq "
-                "spans 220..3000 Hz and has not been read. See #126."
+                "the FORMULA is not published; an opaque taper id is. Every "
+                "continuous parameter carries x-options.normalizeAlgo or "
+                "carries none, and the device never says what curve an integer "
+                "denotes, so a caller cannot evaluate it. Measured on this "
+                "firmware: Amp.Bass, Amp.Treble and Amp.PostGain carry no algo "
+                "and are linear; Amp.TremSpeed carries algo 5 and is quadratic "
+                "(wire 0.25 reads 1.48 Hz and 0.5 reads 5.19 Hz on a 0.25..20 "
+                "range, giving exponent 2.0023 and 1.9993). That is four "
+                "parameters on one block and no reading of algos 6, 8 or 10, "
+                "so absent-means-identity is a hypothesis worth testing and is "
+                "NOT acted on. Unit does not predict taper either: "
+                "C2_Bass_Chorus.Depth is a percentage carrying algo 6. See #126."
             ),
             "measured_tapers": {
-                "Amp.Bass": "linear",
-                "Amp.Treble": "linear",
-                "Amp.PostGain": "linear",
-                "Amp.TremSpeed": "quadratic",
+                "Amp.Bass": {"taper": "linear", "taper_id": None},
+                "Amp.Treble": {"taper": "linear", "taper_id": None},
+                "Amp.PostGain": {"taper": "linear", "taper_id": None},
+                "Amp.TremSpeed": {"taper": "quadratic", "taper_id": 5},
             },
         },
         "excluded_objects": EXCLUDED,

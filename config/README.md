@@ -64,6 +64,49 @@ than fourteen slots, or names that disagree with the committed schema's own
 
 See THIRD_PARTY_NOTICES.md for provenance and trademarks.
 
+# config/headrush_registry.json - origin
+
+Generated from `config/headrush_schema.json` by
+`tools/build_headrush_registry.py`, which reads no hardware and no network. The
+schema is the device describing itself; this is that description rearranged
+into the questions a caller asks. Every block by object path, its parameters
+classified into the kinds a caller must treat differently, and the `ModuleType`
+ordinal that selects a block into a chain slot.
+
+CONTINUOUS VALUES ARE NORMALISED 0..1 ON THE WIRE, while `display_minimum`,
+`display_maximum` and the published `format` describe the scale the unit SHOWS.
+Measured on a Core by writing a value and reading the unit's own screen:
+`Amp.Bass` at wire 0.75 reads 75 % on a 0..100 range, `Amp.PostGain` at 0.5
+reads 0.0 dB on -12..12. The HTTP API cannot settle this on its own, because
+the device accepts a write of either 0.75 or 75 and clamps neither. The
+generalisation from one block to all 302 objects rests on the schema rather
+than on those readings: 3912 continuous parameters publish a default, all 3912
+lie in 0..1, and 1369 lie outside their own published display range, so they
+cannot be display values at all.
+
+NO NORMALISED-TO-DISPLAY CONVERSION IS OFFERED. The device publishes an opaque
+curve id per parameter (`x-options.normalizeAlgo`, carried as `taper_id`) and
+never says what an id denotes. Measured: `Amp.Bass` carries no id and is
+linear, `Amp.TremSpeed` carries id 5 and is quadratic. Unit is not a proxy
+either, since `C2_Bass_Chorus.Depth` is a percentage carrying id 6.
+`Parameter.to_display()` exists only to refuse. Completing the survey is #126.
+
+Every field the device published travels verbatim in each parameter's
+`published` map, including ones nothing in this repo interprets, and a test
+proves that set complete against the schema. An earlier draft kept only the
+fields it had a use for and consequently told callers the taper was
+unpublished while `normalizeAlgo` sat in the schema it was built from.
+
+Owner state is excluded by object path and the reasons are in
+`excluded_objects`: rig library, setlists, the save dialog, file access, the
+cloud sessions, and `Patch/Rig`, which carries the loaded preset name.
+
+Do not hand-edit. Regenerate with `tools/build_headrush_registry.py`, and
+`--check` exits non-zero if the committed file is not what the generator
+produces. `devices/headrush/registry.py` refuses to serve answers derived from
+a schema the repo no longer holds, distinguishing a firmware bump from a
+hand-edited schema.
+
 # config/headrush_amp_models.json - origin
 
 Generated, not vendored. A SECOND device's roster: maps each HeadRush

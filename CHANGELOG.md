@@ -16,20 +16,34 @@ Notable changes to ToneCommand. Dates are UTC.
   `Amp.Bass` at wire 0.75 reads 75 %, `Amp.PostGain` at 0.5 reads 0.0 dB on a
   -12..12 range. The device accepts a write of either 0.75 or 75 without
   clamping, so nothing on the API discriminates and only the screen settles it.
-- No normalised-to-display conversion is offered, because THE TAPER IS PER
-  PARAMETER and the schema distinguishes them nowhere. Measured off the unit's
-  screen: `Amp.Bass` and `Amp.PostGain` are linear, while `Amp.TremSpeed` is
-  quadratic, reading 1.48 Hz at wire 0.25 and 5.19 Hz at wire 0.5 on a
-  published 0.25..20 range where linear would give 5.19 and 10.125. Solving for
-  the exponent at each point gives 2.0023 and 1.9993, so that is two
-  independent readings rather than one fitted point. Two tapers on one block
-  means a helper assuming linear would be exactly right on one knob and wrong
-  on the next along, so `Parameter.to_display()` exists only to refuse, where a
-  caller would otherwise write `lo + x * (hi - lo)` themselves.
-- Whether unit predicts taper is NOT established: `Amp.MidFreq` spans
-  220..3000 Hz and has not been read. Left open on #126, which can be done
-  without a human at the hardware because the unit's own web editor renders
-  these values.
+- No normalised-to-display conversion is offered, because the device NAMES each
+  curve without describing it. `x-options.normalizeAlgo` is an opaque integer,
+  carried as `taper_id`; the formula behind it is unpublished. Measured off the
+  unit's screen: `Amp.Bass` and `Amp.PostGain` carry no id and are linear,
+  while `Amp.TremSpeed` carries id 5 and is quadratic, reading 1.48 Hz at wire
+  0.25 and 5.19 Hz at wire 0.5 on a published 0.25..20 range where linear would
+  give 5.19 and 10.125. Solving for the exponent at each point gives 2.0023 and
+  1.9993, so that is two independent readings rather than one fitted point.
+  `Parameter.to_display()` exists only to refuse.
+- Absent is NOT treated as meaning identity, though it fits all four readings:
+  four parameters on one block is not a decoding, and ids 6, 8 and 10 have
+  never been read. Unit does not predict taper either, so no per-unit shortcut
+  is available: `C2_Bass_Chorus.Depth` is a percentage carrying id 6. Left open
+  on #126, which needs no human at the hardware because the unit's own web
+  editor renders these values.
+- Every field the device publishes travels verbatim in each parameter's
+  `published` map, including ones nothing here interprets, with `read_only` and
+  the device's own `grid` step alongside. A test proves that set complete
+  against the schema rather than against a list that could fall out of step.
+  This came out of independent review: the first draft kept only the fields it
+  had a use for, so `normalizeAlgo` never reached the registry and the registry
+  then told callers the taper was unpublished while the schema it was generated
+  from was publishing one. 893 read-only properties are now flagged, including
+  `/Evil/Gui.DeviceName`, which a planner could otherwise have offered to
+  rewrite.
+- `RegistryCorrupt` is separate from `SchemaDrift`: a block naming a parameter
+  set the file does not hold is the file disagreeing with itself, which wants a
+  restore, not the regenerate-and-read-the-diff that drift wants.
 - Three roster entries have a `ModuleType` ordinal and no object: `ReValver
   Amp 2`, `Neural Amp Modeler 2` and `C-Verb 2`. That is the unit's one
   Capture and one C-Verb per rig rule showing up in its own data, so they are

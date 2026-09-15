@@ -25,10 +25,6 @@ def reg():
 
 # --- AC1: generation is deterministic from the committed schema ---------
 
-def test_two_runs_on_one_schema_agree(schema):
-    assert gen.build(schema) == gen.build(schema)
-
-
 def test_the_committed_file_is_what_the_generator_produces(schema):
     """Not "it parses": byte equality with a fresh build. A registry that had
     drifted from its generator would be hand edited data wearing a
@@ -181,7 +177,7 @@ def test_nothing_in_the_registry_mentions_the_other_device():
     interchangeable. The absence is the criterion, so it is checked over the
     whole file rather than argued in a docstring."""
     blob = json.loads(R.REGISTRY.read_text())
-    payload = json.dumps(blob["blocks"]).lower()
+    payload = json.dumps([blob["blocks"], blob["paramsets"]]).lower()
     for token in ("fm9", "fractal", "axe-fx", "effect_id", "cc#"):
         assert token not in payload
     # and the envelope says so in words, rather than merely happening not to
@@ -317,9 +313,65 @@ def test_every_selectable_block_has_a_distinct_ordinal(reg):
 
 def test_converting_normalised_to_display_refuses(reg):
     """The device publishes a range, a unit and a 0..1 wire, so the conversion
-    looks like arithmetic. It is not: the taper is per parameter."""
-    with pytest.raises(R.NotMeasured, match="PER PARAMETER"):
+    looks like arithmetic. It is not: the device NAMES each curve without
+    describing it, and a caller cannot evaluate a name."""
+    with pytest.raises(R.NotMeasured, match="never says what an id denotes"):
         reg.resolve("Amp", "Bass").to_display(0.75)
+
+
+def test_the_opaque_taper_id_is_carried_rather_than_declared_absent(reg):
+    """The review finding that reshaped this file. `x-options.normalizeAlgo`
+    is in the schema; an earlier classify() dropped it and the registry then
+    told callers the taper was unpublished. It is the FORMULA that is
+    unpublished. The id is right there."""
+    assert reg.resolve("Amp", "TremSpeed").taper_id == 5
+    assert reg.resolve("Amp", "SltEQHP").taper_id == 6
+    assert reg.resolve("Amp", "Bass").taper_id is None
+    # and the refusal now cites the id rather than claiming silence
+    with pytest.raises(R.NotMeasured, match="taper_id=5"):
+        reg.resolve("Amp", "TremSpeed").to_display(0.5)
+
+
+def test_unit_does_not_predict_taper(reg):
+    """An earlier draft justified the blanket refusal by saying linear would
+    be right on every percentage control. It is false, and a percentage
+    control carrying an algo is the counterexample."""
+    depth = reg.resolve("C2_Bass_Chorus", "Depth")
+    assert depth.unit == "%" and depth.taper_id == 6
+    assert reg.resolve("Amp", "Bass").unit == "%"
+    assert reg.resolve("Amp", "Bass").taper_id is None
+
+
+def test_absent_is_not_treated_as_meaning_identity(reg):
+    """The tempting decode: no id means linear. It fits all four readings and
+    is not acted on, because four parameters on one block is not a decoding
+    and algos 6, 8 and 10 have never been read. Nothing may convert."""
+    with pytest.raises(R.NotMeasured):
+        reg.resolve("Amp", "Bass").to_display(0.5)     # taper_id is None
+    note = reg.wire_encoding["conversion_note"]
+    assert "NOT acted on" in note
+
+
+def test_read_only_properties_are_flagged(reg):
+    """Dropped by the first draft. Without it a planner could offer to rename
+    the unit, because DeviceName looks like any other writable string."""
+    assert reg.resolve("/Evil/Gui", "DeviceName").read_only is True
+    assert reg.resolve("Amp", "Bass").read_only is False
+    # 893 per OBJECT, which is 491 per unique meta expanded across the objects
+    # that share them. Both numbers are right about different things and the
+    # loader answers per object, so that is what is pinned.
+    flagged = sum(p.read_only for b in reg.blocks.values()
+                  for p in b.parameters.values())
+    assert flagged == 893
+
+
+def test_the_devices_own_step_size_is_carried_under_its_own_name(reg):
+    """`grid` is not simply the format's precision: it agrees for 1841 of the
+    1881 that have both and diverges for 40, so it is a real step and is
+    carried rather than re-derived or renamed to a claim."""
+    assert reg.resolve("Amp", "Bass").grid == 1.0
+    assert reg.resolve("/Evil/Engine/GlobalEQMain", "Freq1").display_format == "%.0f Hz"
+    assert reg.resolve("/Evil/Engine/GlobalEQMain", "Freq1").grid == 10.0
 
 
 def test_the_two_measured_tapers_disagree_with_each_other(reg):
@@ -334,8 +386,8 @@ def test_the_two_measured_tapers_disagree_with_each_other(reg):
     import math
 
     tapers = reg.wire_encoding["measured_tapers"]
-    assert tapers["Amp.Bass"] == "linear"
-    assert tapers["Amp.TremSpeed"] == "quadratic"
+    assert tapers["Amp.Bass"]["taper"] == "linear"
+    assert tapers["Amp.TremSpeed"]["taper"] == "quadratic"
 
     def exponent(lo, hi, wire, shown):
         return math.log((shown - lo) / (hi - lo)) / math.log(wire)
@@ -380,12 +432,45 @@ def test_objects_sharing_a_parameter_set_share_one_record():
 
 
 def test_the_dedup_is_lossless_through_the_loader(reg, schema):
-    """Every object still answers with its OWN full parameter set. A shared
-    record must not turn into a shared or truncated answer."""
+    """Every object answers with its OWN full parameter set, VALUES included.
+
+    Comparing only the name sets would pass a classifier that kept every key
+    and emptied every range, so this walks the published content back to the
+    schema property by property.
+    """
     paths, metas = schema["paths"], schema["metas"]
     for path, block in reg.blocks.items():
         published = metas[paths[path]].get("properties") or {}
         assert set(block.parameters) == set(published), path
+        for name, meta in published.items():
+            param = block.parameters[name]
+            assert param.published == (meta.get("x-options") or {}), f"{path}.{name}"
+            assert param.read_only == bool(meta.get("readOnly")), f"{path}.{name}"
+            if param.kind == "continuous":
+                assert param.display_minimum == meta.get("minimum")
+                assert param.display_maximum == meta.get("maximum")
+
+
+def test_every_field_the_device_published_survives_into_the_registry(reg, schema):
+    """The finding that prompted this shape. classify() used to keep only the
+    fields it had a use for, so x-options.normalizeAlgo never reached the
+    registry, and the registry then told callers the taper was unpublished
+    while the schema it was built from was publishing one.
+
+    Checked against the schema rather than against a list in this file, so a
+    firmware that adds a key cannot slip through by nobody updating the list.
+    """
+    paths, metas = schema["paths"], schema["metas"]
+    seen = set()
+    for path, block in reg.blocks.items():
+        for name, meta in (metas[paths[path]].get("properties") or {}).items():
+            for key, value in (meta.get("x-options") or {}).items():
+                assert block.parameters[name].published[key] == value
+                seen.add(key)
+    assert seen == {"default", "format", "grid", "strings", "normalizeAlgo",
+                    "fileType", "startPath", "subtext", "type"}, \
+        "the firmware publishes a key this test has not seen; it is carried " \
+        "either way, but the change is worth a human look"
 
 
 def test_a_dangling_parameter_set_reference_is_named(tmp_path):
@@ -396,6 +481,6 @@ def test_a_dangling_parameter_set_reference_is_named(tmp_path):
     path = tmp_path / "registry.json"
     path.write_text(json.dumps(blob))
     R.load.cache_clear()
-    with pytest.raises(R.SchemaDrift, match="deadbeefdeadbeef"):
+    with pytest.raises(R.RegistryCorrupt, match="deadbeefdeadbeef"):
         R.load(registry=path, check_drift=False)
     R.load.cache_clear()
