@@ -80,18 +80,42 @@ writes in sequence cannot isolate any of them. It is consistent with the
 isolated run and it is recorded here so a reader can judge it, rather than
 summarised as a count.
 
-### Ordinal 19 is NOT cleared
+### Ordinal 19, tested properly this time
 
-An earlier version of this document said the NAM module itself is fine, on the
-grounds that after the first crash the unit came up in a rig containing ordinal
-`19`. That is load-from-disk, which is a different operation from writing
-`ModuleType = 19` over HTTP, and it does not clear the write. Ordinal 19 was
-written over HTTP exactly once, in the mixed sequence above, which cannot clear
-it either.
+An earlier version of this document cleared ordinal 19 on the grounds that
+after the first crash the unit came up in a rig containing it. That is
+load-from-disk, which is a different operation from writing `ModuleType = 19`
+over HTTP, and it cleared nothing. Independent review and a self-audit both
+caught it.
 
-So: writing 20 was sufficient to take the unit down. Whether writing 19 is safe
-is UNTESTED. That correction matters because the refusal list below was
-published to #125 as though it were settled.
+It has since been tested directly, as the same single-variable run used for
+ordinal 20: same rig, same slot 3, same empty chain, write and read back, then
+poll. Health was sampled every 0.5s rather than every 2s, and the probe
+distinguished 403 from 404 rather than recording reachable or not.
+
+```
+baseline: alive
+write ModuleType3 = 19  ->  acknowledged, read back 19
+  alive for 30s
+slot 3 restored to 0
+```
+
+**Writing ordinal 19 did not take the unit down.** So the pair is a controlled
+comparison, which is worth more than either run alone:
+
+| ordinal | name | object published | same rig, same slot, same protocol |
+|---|---|---|---|
+| 19 | Neural Amp Modeler | YES | alive 30s, no effect |
+| 20 | Neural Amp Modeler 2 | NO | API gone inside the next poll |
+
+Two adjacent roster entries naming the same module, differing in whether the
+device publishes an object to address it. That is now a paired observation
+rather than a single crash with an assumed cause, and it is the strongest
+support this document has for treating "roster entry with no object" as the
+thing that matters.
+
+It is still n=1 on each side, and one pair is not a mechanism. What it rules out
+is the reading that the NAM module is simply dangerous to place.
 
 ### The class these three belong to
 
@@ -102,6 +126,7 @@ corresponding path. That is a schema fact, checkable without hardware:
 |---|---|---|---|
 | 4 | ReValver Amp 2 | absent | NOT TESTED |
 | 20 | Neural Amp Modeler 2 | absent | observed once, isolated |
+| 19 | Neural Amp Modeler | present | tested, NO crash (the control) |
 | 254 | C-Verb 2 | absent | NOT TESTED |
 
 The honest description of the class is "roster name with no object path", and
@@ -115,11 +140,17 @@ one costs a crash and a power cycle on someone's hardware. Refusing them is not
 free either: it means an adapter can never select those two roster entries, and
 whether they work is simply unknown.
 
+The 19/20 pair raises what a further test would be worth. With a control in
+hand, confirming that a SECOND unbacked ordinal also takes the unit down would
+move the class claim from one observation to two, on different modules. That is
+the test that would justify the crash, and it has not been run.
+
 ### What this suggests for #125
 
 A conservative write path would refuse ordinal 20 on the evidence, and refuse 4
 and 254 as a JUDGEMENT pending measurement, on the grounds that the one member
-of that schema class anybody has written took the unit down. That is a policy
+of that schema class anybody has written took the unit down while its backed
+sibling, written the same way in the same slot, did not. That is a policy
 call for the maintainer, not a measurement, and it should not be described as
 being in the same class as the never-brick guard, which covers firmware, store
 and recovery operations.

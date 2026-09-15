@@ -53,11 +53,16 @@ Notable changes to ToneCommand. Dates are UTC.
   someone's hardware, and refusing them is not free either: it means an adapter
   can never select them and whether they work is unknown. Refusing all three is
   offered to #125 as a judgement for the maintainer, not as a measurement.
-- Ordinal 19 is NOT cleared. A previous draft said the module itself was fine
-  because the unit rebooted into a rig containing it, but load-from-disk is a
-  different operation from writing `ModuleType = 19` over HTTP, and the one
-  HTTP write of 19 was inside the mixed sequence. Corrected after independent
-  review, because it had already been published to #125 as settled.
+- Ordinal 19 was then TESTED directly, same rig, same slot, same protocol, with
+  health sampled every 0.5s: it was acknowledged, read back, and the unit stayed
+  up for 30s. So the pair is a controlled comparison. 19 (object published) is
+  harmless and 20 (no object published) took the unit down, which is the
+  strongest support here for "roster entry with no object" being what matters,
+  and it rules out the reading that the NAM module is dangerous to place.
+  Still n=1 per side; one pair is not a mechanism.
+- A previous draft had cleared 19 on the wrong grounds, that the unit rebooted
+  into a rig containing it, which is load-from-disk and not an API write. That
+  had already been published to #125 as settled, and was corrected there.
 - Six readings of continuous parameters taken off the unit's screen are
   recorded as measurements. The wire takes 0..1 while the published range and
   format describe what the unit displays, and the device names each curve with
