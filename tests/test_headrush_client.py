@@ -660,3 +660,36 @@ def test_the_changelog_records_this_phase():
     """
     text = (ROOT / "CHANGELOG.md").read_text()
     assert "devices/headrush/client.py" in text
+
+
+def test_a_404_names_both_of_its_causes_rather_than_guessing():
+    """Measured on a Core (#126): the API is mounted only while HeadRush
+    Remote is active. With Remote off the unit serves its editor page on `/`
+    and 404s every /api/v1 path, so a 404 means EITHER a path this firmware
+    does not have OR a unit with Remote switched off.
+
+    Reported as a bare 404 it reads as a wrong path, which sent an operator
+    looking at their own code while the unit sat there needing one setting
+    turned back on. This function cannot distinguish the two without a second
+    request it has no business making, so it names both and says how to check.
+    """
+    error = urllib.error.HTTPError(
+        "http://10.8.72.116/api/v1/subtree/Evil/Gui", 404, "Not Found", {}, None,
+    )
+    described = describe_unreachable(error, "10.8.72.116")
+    assert "404" in described
+    assert "HeadRush Remote" in described, "name the cause an operator can fix"
+    assert "does not exist" in described, "and the other cause, not just one"
+    # still not misclassified as the network or the name being at fault
+    assert "Nothing answered" not in described
+    assert "did not resolve" not in described
+
+
+def test_other_http_codes_are_untouched_by_the_404_branch():
+    """The 504 case above shares this branch and must keep its own wording."""
+    error = urllib.error.HTTPError(
+        "http://10.8.72.116/api/v1/object-method/Evil/x", 504,
+        "Gateway Timeout", {}, None,
+    )
+    described = describe_unreachable(error, "10.8.72.116")
+    assert "504" in described and "HeadRush Remote" not in described

@@ -310,6 +310,26 @@ def describe_unreachable(error: BaseException, target: str) -> str:
     it with a plain space.
     """
     if isinstance(error, urllib.error.HTTPError):
+        if error.code == 404:
+            # A 404 has two causes that want opposite actions, and this
+            # function cannot tell them apart without a second request, which
+            # it has no business making. So it names both and says how to
+            # check, rather than picking one and being confidently wrong half
+            # the time.
+            #
+            # Measured on a Core, 2026-09-15 (#126): the API is mounted only
+            # while HeadRush Remote is active on the unit. With Remote off the
+            # unit still serves its editor's static files, so `GET /` is 200
+            # and EVERY `/api/v1` path is 404. The unit's own editor detects
+            # exactly this and says to check Remote. Before this branch, that
+            # state was reported as a plain 404, which reads as a wrong path.
+            return (
+                f"The unit answered 404 for {target}. Either that object does "
+                f"not exist on this firmware, or HeadRush Remote is not active "
+                f"on the unit, which 404s every /api/v1 path while the editor "
+                f"page itself still loads. Open http://<unit>/ in a browser: "
+                f"if the page loads and says it cannot connect, Remote is off."
+            )
         return _sentence(f"The unit answered {error.code} {error.reason} for {target}")
 
     cause: BaseException | None = error
