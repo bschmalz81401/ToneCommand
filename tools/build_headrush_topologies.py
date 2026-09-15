@@ -142,28 +142,85 @@ def parse(bundle: str) -> list[dict]:
     return out
 
 
-def paths_of(routing: dict) -> list[list[int]]:
-    """Which slots belong to which independent PATH, not which branch.
+def _cluster(values: list[int]) -> list[list[int]] | None:
+    """Split a sorted axis wherever the gap is much larger than the pitch.
 
-    Duals report role 0 everywhere, so the branch field cannot separate them.
-    What does is the IO block list: a routing drawing two input/output pairs is
-    two paths, and the vendor's own name says how the fourteen divide.
+    The editor lays slots on a regular pitch within a path and leaves a wide
+    margin between paths, so a gap several times the usual spacing is a path
+    boundary. Returns None when there is no such gap, which means this axis
+    does not separate the paths and the caller should try the other one.
+    """
+    uniq = sorted(set(values))
+    if len(uniq) < 2:
+        return None
+    gaps = [b - a for a, b in zip(uniq, uniq[1:])]
+    pitch = min(gaps)
+    wide = [i for i, g in enumerate(gaps) if g > pitch * 1.8]
+    if len(wide) != 1:
+        return None
+    cut = uniq[wide[0]]
+    return [[v for v in uniq if v <= cut], [v for v in uniq if v > cut]]
 
-    Derived from the name rather than guessed at, and only for the shapes whose
-    names state a partition. Anything else is one path, which is what every
-    non-dual routing is.
+
+def paths_of(routing: dict) -> tuple[list[list[int]], str]:
+    """Which slots belong to which independent PATH, and how that was decided.
+
+    Duals report role 0 on every slot, so the branch field cannot separate
+    them; a routing drawing two input/output pairs is two paths. WHERE the
+    fourteen divide is then read off the editor's own geometry rather than out
+    of the routing's name.
+
+    Geometry, not the name, because the name does not always carry it:
+    `Dual Path 4-10` states the partition and `Dual Straight Path` states
+    nothing. An earlier version of this fell back to SLOTS // 2 for that case,
+    which is a guess wearing a measurement's clothes, and it would have shipped
+    an unlabelled constant inside a file that presents itself as a snapshot.
+
+    The two axes are both needed. On `Dual Path 4-10` the paths sit side by
+    side, so the x positions carry the gap; on `Dual Straight Path` they are
+    stacked and every x is shared, so the split is in y. Whichever axis
+    separates them is recorded, and where the name DOES state a partition it
+    is used as a cross-check rather than as the source.
     """
     ios = routing["io_blocks"]
+    slots = routing["slots"]
     if len([b for b in ios if b.lower().startswith("input")]) < 2:
-        return [[s["slot"] for s in routing["slots"]]]
-    # "Dual Path 4-10" and friends: the numbers are the split, first path first
-    nums = [int(n) for n in re.findall(r"\b(\d+)\b", routing["name"])]
-    pair = [n for n in nums if 0 < n < SLOTS]
-    if len(pair) == 2 and sum(pair) == SLOTS:
-        first, _second = pair
-    else:
-        first = SLOTS // 2          # "Dual Straight Path": evenly, 7 and 7
-    return [list(range(1, first + 1)), list(range(first + 1, SLOTS + 1))]
+        return [[s["slot"] for s in slots]], "single path"
+
+    for axis, name in ((0, "x"), (1, "y")):
+        values = [s["position"][axis] for s in slots]
+        groups = _cluster(values)
+        if groups is None and axis == 1 and len(set(values)) == 2:
+            # A two-row layout has exactly two y values and no third to
+            # measure a pitch against, so the gap rule cannot see it. Only
+            # reached when x has already failed, which is what keeps the
+            # DISPLAY WRAP from being mistaken for a split: on Dual Path 4-10
+            # the two paths sit side by side and x separates them first, and
+            # its two rows are the same wrap every long single path uses.
+            lo, hi = sorted(set(values))
+            groups = [[lo], [hi]]
+        if not groups:
+            continue
+        first = sorted(s["slot"] for s in slots if s["position"][axis] in groups[0])
+        second = sorted(s["slot"] for s in slots if s["position"][axis] in groups[1])
+        if not first or not second:
+            continue
+        stated = [int(n) for n in re.findall(r"\b(\d+)\b", routing["name"])]
+        pair = [n for n in stated if 0 < n < SLOTS]
+        if len(pair) == 2 and sum(pair) == SLOTS and pair[0] != len(first):
+            sys.exit(
+                f"routing {routing['index']} ({routing['name']!r}): the "
+                f"editor's {name} geometry splits {len(first)}/{len(second)} "
+                f"but the name states {pair[0]}/{pair[1]}. One of them is "
+                f"wrong and guessing which would defeat the point.")
+        method = f"{name} geometry"
+        if len(pair) == 2:
+            method += ", agrees with the name"
+        return [first, second], method
+
+    sys.exit(f"routing {routing['index']} ({routing['name']!r}) draws two "
+             f"input/output pairs but neither axis separates its slots; the "
+             f"partition cannot be measured and will not be guessed.")
 
 
 def build(bundle: str, source_path: str, host: str | None) -> dict:
@@ -192,7 +249,7 @@ def build(bundle: str, source_path: str, host: str | None) -> dict:
                  f"firmware.")
 
     for r in routings:
-        r["paths"] = paths_of(r)
+        r["paths"], r["partition_method"] = paths_of(r)
         roles = [s["role"] for s in r["slots"]]
         r["has_parallel_branches"] = BRANCH_A in roles
         r["independent_paths"] = len(r["paths"])
@@ -227,9 +284,12 @@ def build(bundle: str, source_path: str, host: str | None) -> dict:
             "display_order is not index order: index 5 and index 9 are drawn "
             "sixth and fifth. Writing Routing from a menu position selects the "
             "wrong topology.",
-            "the slot partition for dual paths is derived from the vendor's "
-            "own name (Dual Path 4-10), not from any field; the bundle's "
-            "roleInChain cannot express it.",
+            "the slot partition for dual paths is measured off the editor's "
+            "own slot geometry, because roleInChain cannot express it and the "
+            "routing names do not always state it (Dual Straight Path states "
+            "nothing). Each routing records which axis carried the split in "
+            "partition_method, and where a name does state a partition it is "
+            "cross-checked rather than trusted as the source.",
         ],
         "routings": routings,
     }

@@ -62,12 +62,20 @@ def test_a_dual_is_two_paths_not_a_branch(table):
         assert set(dual.roles) == {T.SlotRole.COMMON}, dual.name
         assert len(dual.paths) == 2, dual.name
         assert sum(len(p) for p in dual.paths) == T.SLOTS
+        # every slot exactly once, and the two paths disjoint: a sum of 14
+        # alone would accept an 8 and a 6 that shared slots
+        assert sorted(dual.paths[0] + dual.paths[1]) == list(range(1, T.SLOTS + 1))
 
 
-def test_dual_partitions_match_the_vendor_names(table):
+def test_every_dual_partition_is_pinned_exactly(table):
+    """All four, including index 9, whose name states no numbers at all and
+    whose split is therefore measured off geometry rather than read off the
+    name. Leaving it out was how an unlabelled 14 // 2 constant nearly
+    shipped."""
+    assert table.get(6).paths == (tuple(range(1, 8)), tuple(range(8, 15)))
     assert table.get(7).paths == (tuple(range(1, 5)), tuple(range(5, 15)))
     assert table.get(8).paths == (tuple(range(1, 3)), tuple(range(3, 15)))
-    assert table.get(6).paths == (tuple(range(1, 8)), tuple(range(8, 15)))
+    assert table.get(9).paths == (tuple(range(1, 8)), tuple(range(8, 15)))
 
 
 def test_role_and_path_answer_different_questions(table):
@@ -97,13 +105,42 @@ def test_the_same_lane_is_ordered_by_slot(table):
     assert sps1.feeds(1, 2) is True
 
 
-def test_crossing_the_split_is_unknown_rather_than_guessed(table):
-    """The device never published where the split and the rejoin sit, so
-    common-to-branch is not derivable. None, not True: a planner that placed a
-    block on the strength of a guess here would be placing it on nothing."""
+def test_crossing_the_split_is_derivable_and_is_answered(table):
+    """An earlier version returned None here while returning True for
+    common-to-common across the same split. That was a contradiction, not
+    caution: both rest on the identical fact, that the split falls between the
+    last common slot and the first branch slot, and the role runs give it."""
     sps1 = table.get(1)
-    assert sps1.feeds(1, 4) is None        # common -> branch A
-    assert sps1.feeds(4, 12) is None       # branch A -> common
+    assert sps1.feeds(1, 4) is True        # common -> branch A
+    assert sps1.feeds(4, 12) is True       # branch A -> common
+    assert sps1.feeds(1, 12) is True       # and across the whole split
+    assert sps1.feeds(12, 4) is False      # but not backwards
+
+
+def test_no_routing_on_this_firmware_answers_unknown(table):
+    """None is reserved for a run order this model has not seen, and none of
+    the ten is one. If a firmware adds a shape we cannot read, feeds() says so
+    rather than forcing it into the nearest pattern."""
+    for top in table:
+        assert top.modelled, top.name
+        for a in range(1, T.SLOTS + 1):
+            for b in range(1, T.SLOTS + 1):
+                assert top.feeds(a, b) is not None
+
+
+def test_an_unreadable_run_order_is_marked_rather_than_forced():
+    """The escape hatch, exercised. A branch order this model has not seen
+    must not be silently read as a middle split."""
+    weird = (T.SlotRole.BRANCH_A, T.SlotRole.COMMON, T.SlotRole.BRANCH_B)
+    stages, modelled = T._stages(weird)
+    assert modelled is False
+    assert stages == (0, 0, 0)
+
+
+def test_stages_run_pre_branch_post(table):
+    assert table.get(1).stages == (0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2)
+    assert table.get(4).stages == (1,) * 10 + (2,) * 4   # Immediate Split
+    assert set(table.get(0).stages) == {0}               # Straight Path
 
 
 def test_an_unknown_routing_or_slot_raises(table):
@@ -149,3 +186,12 @@ def test_a_topology_cannot_be_edited(table):
     """
     with pytest.raises(dataclasses.FrozenInstanceError):
         table.get(0).index = 3
+
+
+def test_provenance_travels_with_each_topology(table):
+    """The table carried it and the individual Topology did not, so anything
+    holding one had device-shaped answers with nothing to cite. `sim.topology`
+    hands out exactly this object."""
+    for top in table:
+        assert top.api_readable is False
+        assert top.provenance == "vendor editor bundle"

@@ -94,6 +94,10 @@ class Topology:
     requires_vocals: bool
     roles: tuple[SlotRole, ...]     # one per slot, slot N at roles[N - 1]
     paths: tuple[tuple[int, ...], ...]
+    stages: tuple[int, ...]         # signal order; see stage()
+    modelled: bool                  # False if the run order is one we cannot read
+    provenance: str                 # carried per topology, not only on the table
+    api_readable: bool
 
     @property
     def kind(self) -> TopologyKind:
@@ -135,27 +139,46 @@ class Topology:
             raise ValueError("COMMON is not a branch; use slots_on_path()")
         return tuple(n for n, r in enumerate(self.roles, start=1) if r is branch)
 
+    def stage(self, slot: int) -> int:
+        """Where a slot sits in signal order: 0 before any split, 1 on a
+        branch, 2 after the rejoin. A straight path is all stage 0.
+
+        This is what makes `feeds` answerable. The roles arrive as contiguous
+        runs in a fixed order, so the split sits between the last stage-0 slot
+        and the first branch slot, and the rejoin between the last branch slot
+        and the first stage-2 slot. Nothing is assumed about WHERE the vendor
+        draws the mixer; only that the runs are in the order the roles say.
+        """
+        self._check(slot)
+        return self.stages[slot - 1]
+
     def feeds(self, upstream: int, downstream: int) -> bool | None:
         """Whether signal can reach `downstream` from `upstream`.
 
-        Returns None rather than a guess where the honest answer is unknown.
-        Two slots in the SAME parallel branch, or both common, are ordered by
-        slot number and the answer is known. Across the two branches of a split
-        there is no path at all, which is a known False. But the device never
-        published where the split and the rejoin sit relative to a given common
-        slot, so common-to-branch and branch-to-common are NOT derivable from
-        this table, and saying so is the point.
+        None means this topology's shape is not modelled here, not that the
+        answer is unknowable. For the ten routings on this firmware it never
+        returns None, and a test pins that.
+
+        An earlier version returned None for common-to-branch while returning
+        True for common-to-common across the same split. That was a
+        contradiction rather than caution: both rest on the identical fact,
+        that the split falls between the last common slot and the first branch
+        slot, and the role runs give that fact directly. Refusing to answer
+        one while answering the other was not conservatism, it was
+        inconsistency.
         """
         self._check(upstream)
         self._check(downstream)
         if self.path_of(upstream) != self.path_of(downstream):
             return False                      # separate paths never meet
-        up, down = self.role(upstream), self.role(downstream)
-        if up is down:
+        if not self.modelled:
+            return None                       # a run order this model cannot read
+        up_stage, down_stage = self.stage(upstream), self.stage(downstream)
+        if up_stage != down_stage:
+            return up_stage < down_stage      # pre feeds branches feed post
+        if self.role(upstream) is self.role(downstream):
             return upstream < downstream      # same lane, ordered by slot
-        if SlotRole.COMMON not in (up, down):
-            return False                      # A and B are parallel, not serial
-        return None                           # crossing the split: not published
+        return False                          # A and B are parallel, not serial
 
     def _check(self, slot: int) -> None:
         if not 1 <= slot <= len(self.roles):
@@ -201,6 +224,47 @@ class TopologyTable:
         return sorted(self, key=lambda t: t.display_order)
 
 
+def _stages(roles: tuple[SlotRole, ...]) -> tuple[tuple[int, ...], bool]:
+    """Signal-order stage per slot, and whether the run order was readable.
+
+    Measured on all ten routings of this firmware: the roles arrive as
+    contiguous runs in one of three orders.
+
+        COMMON*                     a straight path
+        COMMON* A* B* COMMON*       a middle split
+        A* B* COMMON*               a split at the input
+
+    Anything else is a shape this model has not seen. It is marked unmodelled
+    rather than forced into the nearest pattern, because a topology silently
+    read as the wrong shape would place blocks into branches that are not
+    there.
+    """
+    runs: list[tuple[SlotRole, int]] = []
+    for role in roles:
+        if runs and runs[-1][0] is role:
+            runs[-1] = (role, runs[-1][1] + 1)
+        else:
+            runs.append((role, 1))
+
+    order = [r for r, _ in runs]
+    branchless = order == [SlotRole.COMMON]
+    middle = order == [SlotRole.COMMON, SlotRole.BRANCH_A, SlotRole.BRANCH_B,
+                       SlotRole.COMMON]
+    immediate = order == [SlotRole.BRANCH_A, SlotRole.BRANCH_B, SlotRole.COMMON]
+    if not (branchless or middle or immediate):
+        return tuple(0 for _ in roles), False
+
+    stages: list[int] = []
+    seen_branch = False
+    for role, length in runs:
+        if role is SlotRole.COMMON:
+            stages += [2 if seen_branch else 0] * length
+        else:
+            seen_branch = True
+            stages += [1] * length
+    return tuple(stages), True
+
+
 @lru_cache(maxsize=1)
 def load(path: Path | None = None) -> TopologyTable:
     """The committed table. Cached: it is a constant of the firmware."""
@@ -209,6 +273,7 @@ def load(path: Path | None = None) -> TopologyTable:
     table = {}
     for r in blob["routings"]:
         roles = tuple(SlotRole(s["role"]) for s in r["slots"])
+        stages, modelled = _stages(roles)
         table[r["index"]] = Topology(
             index=r["index"],
             name=r["name"],
@@ -217,6 +282,10 @@ def load(path: Path | None = None) -> TopologyTable:
             requires_vocals=r["requires_vocals"],
             roles=roles,
             paths=tuple(tuple(p) for p in r["paths"]),
+            stages=stages,
+            modelled=modelled,
+            provenance=blob["provenance"],
+            api_readable=blob["api_readable"],
         )
     return TopologyTable(
         provenance=blob["provenance"],

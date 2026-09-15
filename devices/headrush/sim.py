@@ -49,6 +49,8 @@ discovering it on hardware.
 from __future__ import annotations
 
 import json
+import urllib.error
+from io import BytesIO
 from pathlib import Path
 from typing import Any
 
@@ -59,7 +61,18 @@ SCHEMA = CONFIG / "headrush_schema.json"
 
 CHAIN = "/Evil/Engine/Patch/Chain"
 RIG = "/Evil/Engine/Patch/Rig"
+FOOTSWITCH = "/Evil/Engine/FootSwitch"
 SLOTS = topo.SLOTS
+SCENES = 10
+
+#: `Scene{n}_{m}_Mode` is an integer the device publishes as 0..2 with no names
+#: of its own. Which integer is which was MEASURED on a Core at fw
+#: 5.1.0.2a63755 and cross-read against the unit's own bundle, recorded in
+#: HeadrushRigBuilder's `SLOT_MODES`. Cited rather than inferred: the schema
+#: alone would only justify "three states", and guessing the order would put
+#: a scene's blocks in exactly the wrong places.
+SLOT_MODE = {0: "no_change", 1: "on", 2: "off"}
+MODE_VALUE = {v: k for k, v in SLOT_MODE.items()}
 
 
 class SimError(Exception):
@@ -119,8 +132,6 @@ class HeadrushSim:
         self._loaded: str | None = self.library[0] if self.library else None
         self._values.setdefault(RIG, {})["PresetName"] = self._loaded or ""
         # a rig the owner has not saved reads as an empty name on a real unit
-        self._scenes: dict[int, dict[str, topo.SlotRole]] = {}
-        self._scene_slots: dict[int, dict[str, str]] = {}
 
     # --- schema -----------------------------------------------------------
 
@@ -237,33 +248,83 @@ class HeadrushSim:
     # --- scenes -----------------------------------------------------------
 
     def scene_slots(self, scene_1based: int) -> dict[str, str]:
-        """Slot NAME to state, defaulting to no_change.
+        """Slot NAME to state, read off the device's own scene properties.
 
-        By name rather than index, and tri-state rather than boolean, because
-        that is what the hardware does (#109). A slot this scene says nothing
-        about reports `no_change`, which is not the same as `off`.
+        Not a side table: `Scene{n}_{m}_Effect` and `Scene{n}_{m}_Mode` are
+        real properties on /Evil/Engine/FootSwitch, 140 of each, and this
+        serves those. Which is what makes the scene model schema-derived
+        rather than something this file invented.
+
+        Named, not positional, and tri-state: a slot the scene says nothing
+        about is absent from the mapping, which is not the same as `off`.
         """
-        if not 1 <= scene_1based <= 10:
-            raise SimError(400, f"scene {scene_1based} is out of range 1..10")
-        return dict(self._scene_slots.get(scene_1based, {}))
+        self._check_scene(scene_1based)
+        out: dict[str, str] = {}
+        props = self._values[FOOTSWITCH]
+        for m in range(1, SLOTS + 1):
+            effect = props.get(f"Scene{scene_1based}_{m}_Effect") or ""
+            if not effect:
+                continue
+            mode = int(props.get(f"Scene{scene_1based}_{m}_Mode", 0))
+            state = SLOT_MODE[mode]
+            if state != "no_change":
+                out[effect] = state
+        return out
 
     def set_scene_slot(self, scene_1based: int, slot_name: str,
                        state: str) -> None:
-        if state not in ("no_change", "off", "on"):
+        self._check_scene(scene_1based)
+        if state not in MODE_VALUE:
             raise SimError(400, f"{state!r} is not a scene slot state")
         if not slot_name:
             raise SimError(400, "a scene slot is addressed by name")
-        slots = self._scene_slots.setdefault(scene_1based, {})
-        if state == "no_change":
-            slots.pop(slot_name, None)
-        else:
-            slots[slot_name] = state
+        props = self._values[FOOTSWITCH]
+        target = None
+        free = None
+        for m in range(1, SLOTS + 1):
+            effect = props.get(f"Scene{scene_1based}_{m}_Effect") or ""
+            if effect == slot_name:
+                target = m
+                break
+            if not effect and free is None:
+                free = m
+        if target is None:
+            target = free
+        if target is None:
+            raise SimError(400, f"scene {scene_1based} has no free slot for "
+                                f"{slot_name!r}; all {SLOTS} are claimed")
+        self.set_properties(FOOTSWITCH, {
+            f"Scene{scene_1based}_{target}_Effect": slot_name,
+            f"Scene{scene_1based}_{target}_Mode": MODE_VALUE[state],
+        })
+
+    def _check_scene(self, scene_1based: int) -> None:
+        if not 1 <= scene_1based <= SCENES:
+            raise SimError(400, f"scene {scene_1based} is out of range "
+                                f"1..{SCENES}")
 
     # --- the client's opener ---------------------------------------------
 
     def opener(self, url: str, method: str, body: bytes | None,
                headers: dict[str, str], timeout: float) -> bytes:
-        """Serve `HeadrushClient`, so the real client code is what runs."""
+        """Serve `HeadrushClient`, so the real client code is what runs.
+
+        Failures leave here as `urllib.error.HTTPError`, not as `SimError`.
+        The Opener contract in client.py says an opener "raises urllib's own
+        exceptions so that callers, and describe_unreachable, see exactly what
+        production sees", and a simulator that raised its own type would let
+        phase 4 be written against an exception hardware never throws. The
+        in-process helpers still raise SimError, which is the right type for
+        calling the sim directly.
+        """
+        try:
+            return self._serve(url, method, body)
+        except SimError as err:
+            raise urllib.error.HTTPError(
+                url, err.status, str(err), hdrs=None,
+                fp=BytesIO(str(err).encode())) from err
+
+    def _serve(self, url: str, method: str, body: bytes | None) -> bytes:
         try:
             path = url.split("/api/v1", 1)[1]
         except IndexError:

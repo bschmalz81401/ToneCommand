@@ -18,7 +18,7 @@
  "notes": [
   "roleInChain is 0 on all fourteen slots of every dual topology. Duals are independent paths, not branches, and are identified by the routing drawing two input/output pairs.",
   "display_order is not index order: index 5 and index 9 are drawn sixth and fifth. Writing Routing from a menu position selects the wrong topology.",
-  "the slot partition for dual paths is derived from the vendor's own name (Dual Path 4-10), not from any field; the bundle's roleInChain cannot express it."
+  "the slot partition for dual paths is measured off the editor's own slot geometry, because roleInChain cannot express it and the routing names do not always state it (Dual Straight Path states nothing). Each routing records which axis carried the split in partition_method, and where a name does state a partition it is cross-checked rather than trusted as the source."
  ],
  "routings": [
   {
@@ -165,6 +165,7 @@
      14
     ]
    ],
+   "partition_method": "single path",
    "has_parallel_branches": false,
    "independent_paths": 1,
    "schema_name": "S"
@@ -313,6 +314,7 @@
      14
     ]
    ],
+   "partition_method": "single path",
    "has_parallel_branches": true,
    "independent_paths": 1,
    "schema_name": "SPS-1"
@@ -461,6 +463,7 @@
      14
     ]
    ],
+   "partition_method": "single path",
    "has_parallel_branches": true,
    "independent_paths": 1,
    "schema_name": "SPS-2"
@@ -609,6 +612,7 @@
      14
     ]
    ],
+   "partition_method": "single path",
    "has_parallel_branches": true,
    "independent_paths": 1,
    "schema_name": "SPS-3"
@@ -757,6 +761,7 @@
      14
     ]
    ],
+   "partition_method": "single path",
    "has_parallel_branches": true,
    "independent_paths": 1,
    "schema_name": "PS-1"
@@ -905,6 +910,7 @@
      14
     ]
    ],
+   "partition_method": "single path",
    "has_parallel_branches": false,
    "independent_paths": 1,
    "schema_name": "Vocal"
@@ -1058,6 +1064,7 @@
      14
     ]
    ],
+   "partition_method": "y geometry, agrees with the name",
    "has_parallel_branches": false,
    "independent_paths": 2,
    "schema_name": "Dual"
@@ -1211,6 +1218,7 @@
      14
     ]
    ],
+   "partition_method": "x geometry, agrees with the name",
    "has_parallel_branches": false,
    "independent_paths": 2,
    "schema_name": "Dual Vox-4"
@@ -1364,6 +1372,7 @@
      14
     ]
    ],
+   "partition_method": "x geometry, agrees with the name",
    "has_parallel_branches": false,
    "independent_paths": 2,
    "schema_name": "Dual Vox-2"
@@ -1517,6 +1526,7 @@
      14
     ]
    ],
+   "partition_method": "y geometry",
    "has_parallel_branches": false,
    "independent_paths": 2,
    "schema_name": "DualGuit"

@@ -35,6 +35,35 @@ Do not hand-edit: `fm9/registry.py` checks at load time that every record's
 `AmpModelsStale` if a catalog refresh renumbered the roster. Corrections and
 gap-fills belong in the generator's `OVERRIDES` table, then regenerate.
 
+# config/headrush_topologies.json - origin
+
+Generated, not vendored, and NOT a device read. The ten HeadRush signal-path
+templates: per routing, which of the fourteen slots are common, which sit on a
+parallel branch, and which belong to an independent path.
+
+The unit publishes the ten names on `Chain.Routing` and nothing about their
+shapes. Verified on hardware (#109): writing each of the ten in turn and
+reading the whole chain object back leaves every per-slot property
+byte-identical. So the shapes are read out of the vendor's own web editor,
+which the unit serves, by `tools/build_headrush_topologies.py`. That is the
+best available source and it is still not the API, which is why the file
+carries `provenance: "vendor editor bundle"` and `api_readable: false`, and why
+`devices/headrush/topology.py` carries both onto every `Topology` it hands out.
+
+The dual-path partitions are measured off the editor's own slot geometry rather
+than read out of the routing names, because the names do not always state one:
+`Dual Path 4-10` does and `Dual Straight Path` does not. Each routing records
+which axis carried the split in `partition_method`, and where a name does state
+a partition the generator cross-checks it and refuses if the two disagree.
+
+Do not hand-edit. Regenerate with `tools/build_headrush_topologies.py`, from a
+unit or with `--from-file` against a saved bundle. The generator refuses rather
+than shipping something short: fewer than ten definitions, a routing with other
+than fourteen slots, or names that disagree with the committed schema's own
+`Routing` enumeration all exit non-zero and write nothing.
+
+See THIRD_PARTY_NOTICES.md for provenance and trademarks.
+
 # config/headrush_amp_models.json - origin
 
 Generated, not vendored. A SECOND device's roster: maps each HeadRush

@@ -7,6 +7,7 @@ are not flattened, and unknown behaviour is reported rather than smoothed over.
 """
 import json
 import socket
+import urllib.error
 
 import pytest
 
@@ -80,11 +81,23 @@ def test_an_object_with_only_methods_is_not_a_malformed_meta(sim):
 # --- AC5: unknown paths and methods are reported, not invented -----------
 
 def test_an_unknown_path_is_a_404_not_a_blank_object(sim, client):
-    """Through the client, because that is the path a caller takes."""
-    with pytest.raises(SimError) as err:
+    """Through the client, and as the exception PRODUCTION raises.
+
+    The Opener contract says an opener raises urllib's own exceptions. A sim
+    raising its own type would let phase 4 be written to catch something
+    hardware never throws, so this pins HTTPError rather than SimError.
+    """
+    with pytest.raises(urllib.error.HTTPError) as err:
         client.get_properties("/Evil/Engine/Patch/NotAThing")
-    assert err.value.status == 404
+    assert err.value.code == 404
     assert "no object at" in str(err.value)
+
+
+def test_calling_the_sim_directly_still_raises_its_own_type(sim):
+    """SimError is right for the in-process helpers; only the wire boundary
+    has to speak urllib."""
+    with pytest.raises(SimError):
+        sim.get_properties("/Evil/Engine/Patch/NotAThing")
 
 
 def test_object_method_refuses_and_records_why(sim, client):
@@ -95,9 +108,9 @@ def test_object_method_refuses_and_records_why(sim, client):
     `raises(Exception)` here would also pass if `call_method` were renamed and
     the call raised AttributeError, which would prove nothing about refusal.
     """
-    with pytest.raises(SimError) as err:
+    with pytest.raises(urllib.error.HTTPError) as err:
         client.call_method("/Evil/Engine/Patch/Chain", "doSomething")
-    assert err.value.status == 501
+    assert err.value.code == 501
     assert any("object-method" in u for u in sim.undecoded)
 
 
@@ -146,6 +159,33 @@ def test_an_unknown_rig_is_refused(sim):
 
 
 # --- AC3: scenes are tri-state and addressed by name --------------------
+
+def test_scenes_are_stored_on_the_devices_own_properties(sim):
+    """AC2: schema-derived, not a side table. Scene{n}_{m}_Effect and
+    Scene{n}_{m}_Mode are real properties on /Evil/Engine/FootSwitch."""
+    from devices.headrush.sim import FOOTSWITCH
+    sim.set_scene_slot(1, "Amp", "on")
+    props = sim.get_properties(FOOTSWITCH)
+    assert props["Scene1_1_Effect"] == "Amp"
+    assert props["Scene1_1_Mode"] == 1
+
+
+def test_the_mode_integers_are_the_measured_ones(sim):
+    """0/1/2 carry no names on the device. Which is which was measured on a
+    Core and cross-read from its bundle; guessing the order would put a
+    scene's blocks in exactly the wrong places."""
+    from devices.headrush.sim import MODE_VALUE, SLOT_MODE
+    assert SLOT_MODE == {0: "no_change", 1: "on", 2: "off"}
+    assert MODE_VALUE["on"] == 1 and MODE_VALUE["off"] == 2
+
+
+def test_a_scene_outside_the_ten_is_refused(sim):
+    for bad in (0, 11):
+        with pytest.raises(SimError, match="out of range"):
+            sim.scene_slots(bad)
+        with pytest.raises(SimError, match="out of range"):
+            sim.set_scene_slot(bad, "Amp", "on")
+
 
 def test_a_slot_a_scene_says_nothing_about_is_absent_not_off(sim):
     sim.set_scene_slot(1, "Amp", "on")
