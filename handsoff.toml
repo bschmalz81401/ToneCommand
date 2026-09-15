@@ -45,7 +45,8 @@ commands = [
 # install pulls. Live proof is: the pushed commit's own files, run for real
 # through the actual replay tool (simulator device, not a mock of the tool).
 live_commands = [
-  "git fetch origin && git diff --quiet HEAD origin/main -- server.py fm9/adapter.py fm9/device.py tests/test_device_handle.py",
+  "git fetch origin",
+  "git diff --quiet HEAD origin/main -- server.py fm9/adapter.py fm9/device.py tests/test_device_handle.py",
   "TONECOMMAND_SIM=1 .venv/bin/python -m pytest tests/test_device_handle.py -q",
   "TONECOMMAND_SIM=1 .venv/bin/python -m pytest tests/test_validation.py tests/test_modifiers.py -q",
 ]
