@@ -14,6 +14,41 @@ Notable changes to ToneCommand. Dates are UTC.
 
 ## Unreleased
 
+### Added (HeadRush normalisation tapers, 2026-09-15)
+- `config/headrush_tapers.json` plus `tools/build_headrush_tapers.py` and
+  `devices/headrush/tapers.py`: the eleven curves that convert between the
+  0..1 wire value and the value a HeadRush displays. The device publishes an
+  opaque id (`x-options.normalizeAlgo`) and no formula, which stays true of
+  the API; the formulas are in the web editor the unit serves, so this is the
+  same provenance class as `headrush_topologies.json` and carries
+  `api_readable: false`.
+- NOTHING IS TRANSCRIBED BY EYE. The generator extracts the vendor's own
+  functions, RUNS them under node across 726 points, and commits the results;
+  the Python is tested against those vectors rather than against a reading of
+  the JavaScript. `Db` and `AllenHeathFaderVolume` are exactly the shapes that
+  survive a typo while still returning plausible numbers.
+- Six readings taken off a Core's screen are reproduced exactly, formulas
+  first. The generator writes nothing if they are not, so a bundle whose maths
+  disagrees with hardware fails loudly rather than shipping.
+- `normalizeAlgo: 5` is named `Squared`, independently confirming the quadratic
+  measured on `Amp.TremSpeed`, and an absent id falls back to `Linear` in the
+  vendor's own dispatch.
+- Id 3 (`DelayRatio`) is in the enum and in neither table, so it falls back to
+  Linear and is recorded as `unimplemented`: an id with no implementation and
+  an id implemented as linear are different facts. An id OUTSIDE the enum
+  raises, because a firmware publishing an unseen curve must not be silently
+  scaled as linear.
+- Python and JavaScript disagree at the edges, and the vendor's curves sit on
+  them: `H3ReverbTime` divides by zero at wire 1 where the editor gets
+  Infinity, and `Volume` is `log10(0)` at wire 0. These collapse to one typed
+  `NotConvertible` in one place, and a test walks all 726 vectors asserting it
+  refuses at exactly the 39 points the vendor cannot express, no more and no
+  fewer. That test is what caught the leak.
+- The vendor's source text is NOT committed. Names and vectors are facts;
+  minified third-party JavaScript in this repository would be redistributing
+  their code with no licence for it. sha256 prefixes of each extracted
+  fragment are kept so a regeneration is verifiable without carrying the code.
+
 ### Fixed (capability gates, 2026-09-15)
 - The runtime obeys the device contract (#111, the second half of #109).
   `server.py` held a handle typed to `DeviceAdapter` and `Capabilities` said

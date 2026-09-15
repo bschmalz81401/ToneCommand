@@ -35,6 +35,48 @@ Do not hand-edit: `fm9/registry.py` checks at load time that every record's
 `AmpModelsStale` if a catalog refresh renumbered the roster. Corrections and
 gap-fills belong in the generator's `OVERRIDES` table, then regenerate.
 
+# config/headrush_tapers.json - origin
+
+Generated, not vendored, and NOT a device read. The eleven normalisation curves
+that convert between the 0..1 value a HeadRush takes on the wire and the value
+it shows on screen.
+
+The unit publishes an opaque integer per continuous parameter
+(`x-options.normalizeAlgo`) and no formula, which is why a registry built from
+the schema alone cannot convert: a caller cannot evaluate a name. The vendor's
+web editor has to convert, so it carries the curves, and
+`tools/build_headrush_tapers.py` reads them out of the bundle the unit serves.
+That is the best available source and it is still not the API, which is why the
+file carries `provenance: "vendor editor bundle"` and `api_readable: false`.
+
+NOTHING IS TRANSCRIBED BY EYE. A hand-copied formula is a guess that looks like
+a fact, and `Db` and `AllenHeathFaderVolume` are exactly the shapes that survive
+a typo while returning plausible numbers. The generator extracts the vendor's
+own functions, RUNS them under node over a grid of 726 points, and commits the
+results. `devices/headrush/tapers.py` is checked against those vectors rather
+than against anyone's reading of the JavaScript.
+
+Six readings taken off a Core's screen are reproduced exactly by the committed
+formulas, with the formulas derived first. The generator refuses to write
+anything if they are not, so a bundle whose maths disagrees with the hardware
+fails loudly. That is corroboration on one block and not proof across 302
+objects, and the `warning` field says so.
+
+`normalizeAlgo` 3 (`DelayRatio`) is in the vendor's enum and in neither lookup
+table, so its own dispatch falls back to Linear. Recorded as `unimplemented`
+rather than filed under Linear, because an id with no implementation and an id
+implemented as linear are different facts about the firmware. An id OUTSIDE the
+enum raises instead, because a firmware publishing a curve this table has never
+seen must not be quietly scaled as linear.
+
+The vendor's source text is not committed, only sha256 prefixes of the
+fragments read. See THIRD_PARTY_NOTICES.md.
+
+Do not hand-edit. Regenerate with `tools/build_headrush_tapers.py --from-file`
+against a saved bundle; `--check` exits non-zero if the committed file is not
+what that bundle produces. node is needed to REGENERATE, because the vendor's
+code is executed rather than retyped, and is not needed to use the result.
+
 # config/headrush_amp_models.json - origin
 
 Generated, not vendored. A SECOND device's roster: maps each HeadRush

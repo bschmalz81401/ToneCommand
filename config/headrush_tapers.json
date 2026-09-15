@@ -1,0 +1,5936 @@
+{
+  "absent_algo_is": 0,
+  "absent_algo_note": "the vendor's own dispatch is `(t.algo ? table[t.algo] : void 0) ?? table[0]`, so a parameter with no normalizeAlgo, and equally one carrying 0, resolves to Linear",
+  "api_readable": false,
+  "content": "the eleven normalisation curves the vendor's editor uses to convert between the 0..1 wire value and the value the unit displays, with reference vectors computed by running the vendor's own code",
+  "device": "headrush",
+  "generated_by": "tools/build_headrush_tapers.py",
+  "hardware_check": [
+    {
+      "algo": 0,
+      "format": "%.0f %%",
+      "maximum": 100.0,
+      "minimum": 0.0,
+      "property": "Amp.Bass",
+      "screen": "75 %",
+      "wire": 0.75
+    },
+    {
+      "algo": 0,
+      "format": "%.0f %%",
+      "maximum": 100.0,
+      "minimum": 0.0,
+      "property": "Amp.Treble",
+      "screen": "50 %",
+      "wire": 0.5
+    },
+    {
+      "algo": 0,
+      "format": "%.1f dB",
+      "maximum": 12.0,
+      "minimum": -12.0,
+      "property": "Amp.PostGain",
+      "screen": "0.0 dB",
+      "wire": 0.5
+    },
+    {
+      "algo": 0,
+      "format": "%.0f %%",
+      "maximum": 100.0,
+      "minimum": 0.0,
+      "property": "Amp.TremDepth",
+      "screen": "0 %",
+      "wire": 0.0
+    },
+    {
+      "algo": 5,
+      "format": "%.2f Hz",
+      "maximum": 20.0,
+      "minimum": 0.25,
+      "property": "Amp.TremSpeed",
+      "screen": "5.19 Hz",
+      "wire": 0.5
+    },
+    {
+      "algo": 5,
+      "format": "%.2f Hz",
+      "maximum": 20.0,
+      "minimum": 0.25,
+      "property": "Amp.TremSpeed",
+      "screen": "1.48 Hz",
+      "wire": 0.25
+    }
+  ],
+  "keyed_by": "tapers by the integer the device publishes in x-options.normalizeAlgo; vectors are a flat list keyed by (algo, minimum, maximum, wire)",
+  "provenance": "vendor editor bundle",
+  "schema_version": 1,
+  "source": "vendor editor bundle, hr-main.js",
+  "tapers": {
+    "0": {
+      "implemented": true,
+      "name": "Linear"
+    },
+    "1": {
+      "implemented": true,
+      "name": "Db"
+    },
+    "10": {
+      "implemented": true,
+      "name": "H3ReverbTime"
+    },
+    "2": {
+      "implemented": true,
+      "name": "Volume"
+    },
+    "3": {
+      "implemented": false,
+      "name": "DelayRatio"
+    },
+    "4": {
+      "implemented": true,
+      "name": "TimeBiSquared"
+    },
+    "5": {
+      "implemented": true,
+      "name": "Squared"
+    },
+    "6": {
+      "implemented": true,
+      "name": "Exponential"
+    },
+    "7": {
+      "implemented": true,
+      "name": "MixerGain"
+    },
+    "8": {
+      "implemented": true,
+      "name": "H3Volume"
+    },
+    "9": {
+      "implemented": true,
+      "name": "AllenHeathFaderVolume"
+    }
+  },
+  "unimplemented": [
+    3
+  ],
+  "unimplemented_note": "in the enum and in neither table, so the vendor's fallback sends them to Linear. An id with no implementation and an id implemented as Linear are different facts, so they are named",
+  "vectors": [
+    {
+      "algo": 0,
+      "display": 0,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0,
+      "wire": 0
+    },
+    {
+      "algo": 0,
+      "display": 0.01,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 9.999999747378752e-05,
+      "wire": 0.0001
+    },
+    {
+      "algo": 0,
+      "display": 5,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.05000000074505806,
+      "wire": 0.05
+    },
+    {
+      "algo": 0,
+      "display": 25,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.25,
+      "wire": 0.25
+    },
+    {
+      "algo": 0,
+      "display": 33.33333333333333,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.3333333432674408,
+      "wire": 0.3333333333333333
+    },
+    {
+      "algo": 0,
+      "display": 50,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.5,
+      "wire": 0.5
+    },
+    {
+      "algo": 0,
+      "display": 75,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.75,
+      "wire": 0.75
+    },
+    {
+      "algo": 0,
+      "display": 90,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.8999999761581421,
+      "wire": 0.9
+    },
+    {
+      "algo": 0,
+      "display": 99,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.9900000095367432,
+      "wire": 0.99
+    },
+    {
+      "algo": 0,
+      "display": 99.9,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.9990000128746033,
+      "wire": 0.999
+    },
+    {
+      "algo": 0,
+      "display": 100,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 1,
+      "wire": 1
+    },
+    {
+      "algo": 0,
+      "display": -12,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0,
+      "wire": 0
+    },
+    {
+      "algo": 0,
+      "display": -11.9976,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 9.999999747378752e-05,
+      "wire": 0.0001
+    },
+    {
+      "algo": 0,
+      "display": -10.8,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.05000000074505806,
+      "wire": 0.05
+    },
+    {
+      "algo": 0,
+      "display": -6,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.25,
+      "wire": 0.25
+    },
+    {
+      "algo": 0,
+      "display": -4,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.3333333432674408,
+      "wire": 0.3333333333333333
+    },
+    {
+      "algo": 0,
+      "display": 0,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.5,
+      "wire": 0.5
+    },
+    {
+      "algo": 0,
+      "display": 6,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.75,
+      "wire": 0.75
+    },
+    {
+      "algo": 0,
+      "display": 9.600000000000001,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.8999999761581421,
+      "wire": 0.9
+    },
+    {
+      "algo": 0,
+      "display": 11.759999999999998,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.9900000095367432,
+      "wire": 0.99
+    },
+    {
+      "algo": 0,
+      "display": 11.975999999999999,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.9990000128746033,
+      "wire": 0.999
+    },
+    {
+      "algo": 0,
+      "display": 12,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 1,
+      "wire": 1
+    },
+    {
+      "algo": 0,
+      "display": 0.25,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0,
+      "wire": 0
+    },
+    {
+      "algo": 0,
+      "display": 0.251975,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 9.999999747378752e-05,
+      "wire": 0.0001
+    },
+    {
+      "algo": 0,
+      "display": 1.2375,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.05000000074505806,
+      "wire": 0.05
+    },
+    {
+      "algo": 0,
+      "display": 5.1875,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.25,
+      "wire": 0.25
+    },
+    {
+      "algo": 0,
+      "display": 6.833333333333333,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.3333333432674408,
+      "wire": 0.3333333333333333
+    },
+    {
+      "algo": 0,
+      "display": 10.125,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.5,
+      "wire": 0.5
+    },
+    {
+      "algo": 0,
+      "display": 15.0625,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.75,
+      "wire": 0.75
+    },
+    {
+      "algo": 0,
+      "display": 18.025000000000002,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.8999999761581421,
+      "wire": 0.9
+    },
+    {
+      "algo": 0,
+      "display": 19.8025,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.9900000095367432,
+      "wire": 0.99
+    },
+    {
+      "algo": 0,
+      "display": 19.98025,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.9990000128746033,
+      "wire": 0.999
+    },
+    {
+      "algo": 0,
+      "display": 20,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 1,
+      "wire": 1
+    },
+    {
+      "algo": 0,
+      "display": 25,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0,
+      "wire": 0
+    },
+    {
+      "algo": 0,
+      "display": 25.0975,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 9.999999747378752e-05,
+      "wire": 0.0001
+    },
+    {
+      "algo": 0,
+      "display": 73.75,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.05000000074505806,
+      "wire": 0.05
+    },
+    {
+      "algo": 0,
+      "display": 268.75,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.25,
+      "wire": 0.25
+    },
+    {
+      "algo": 0,
+      "display": 350,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.3333333432674408,
+      "wire": 0.3333333333333333
+    },
+    {
+      "algo": 0,
+      "display": 512.5,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.5,
+      "wire": 0.5
+    },
+    {
+      "algo": 0,
+      "display": 756.25,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.75,
+      "wire": 0.75
+    },
+    {
+      "algo": 0,
+      "display": 902.5,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.8999999761581421,
+      "wire": 0.9
+    },
+    {
+      "algo": 0,
+      "display": 990.25,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.9900000095367432,
+      "wire": 0.99
+    },
+    {
+      "algo": 0,
+      "display": 999.025,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.9990000128746033,
+      "wire": 0.999
+    },
+    {
+      "algo": 0,
+      "display": 1000,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 1,
+      "wire": 1
+    },
+    {
+      "algo": 0,
+      "display": 1000,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0,
+      "wire": 0
+    },
+    {
+      "algo": 0,
+      "display": 1001.5,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 9.999999747378752e-05,
+      "wire": 0.0001
+    },
+    {
+      "algo": 0,
+      "display": 1750,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.05000000074505806,
+      "wire": 0.05
+    },
+    {
+      "algo": 0,
+      "display": 4750,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.25,
+      "wire": 0.25
+    },
+    {
+      "algo": 0,
+      "display": 6000,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.3333333432674408,
+      "wire": 0.3333333333333333
+    },
+    {
+      "algo": 0,
+      "display": 8500,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.5,
+      "wire": 0.5
+    },
+    {
+      "algo": 0,
+      "display": 12250,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.75,
+      "wire": 0.75
+    },
+    {
+      "algo": 0,
+      "display": 14500,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.8999999761581421,
+      "wire": 0.9
+    },
+    {
+      "algo": 0,
+      "display": 15850,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.9900000095367432,
+      "wire": 0.99
+    },
+    {
+      "algo": 0,
+      "display": 15985,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.9990000128746033,
+      "wire": 0.999
+    },
+    {
+      "algo": 0,
+      "display": 16000,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 1,
+      "wire": 1
+    },
+    {
+      "algo": 0,
+      "display": -100,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0,
+      "wire": 0
+    },
+    {
+      "algo": 0,
+      "display": -99.98,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 9.999999747378752e-05,
+      "wire": 0.0001
+    },
+    {
+      "algo": 0,
+      "display": -90,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.05000000074505806,
+      "wire": 0.05
+    },
+    {
+      "algo": 0,
+      "display": -50,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.25,
+      "wire": 0.25
+    },
+    {
+      "algo": 0,
+      "display": -33.33333333333334,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.3333333432674408,
+      "wire": 0.3333333333333333
+    },
+    {
+      "algo": 0,
+      "display": 0,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.5,
+      "wire": 0.5
+    },
+    {
+      "algo": 0,
+      "display": 50,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.75,
+      "wire": 0.75
+    },
+    {
+      "algo": 0,
+      "display": 80,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.8999999761581421,
+      "wire": 0.9
+    },
+    {
+      "algo": 0,
+      "display": 98,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.9900000095367432,
+      "wire": 0.99
+    },
+    {
+      "algo": 0,
+      "display": 99.80000000000001,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.9990000128746033,
+      "wire": 0.999
+    },
+    {
+      "algo": 0,
+      "display": 100,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 1,
+      "wire": 1
+    },
+    {
+      "algo": 1,
+      "display": 0,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": null,
+      "wire": 0
+    },
+    {
+      "algo": 1,
+      "display": 0,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": null,
+      "wire": 0.0001
+    },
+    {
+      "algo": 1,
+      "display": 0,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": null,
+      "wire": 0.05
+    },
+    {
+      "algo": 1,
+      "display": 0,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": null,
+      "wire": 0.25
+    },
+    {
+      "algo": 1,
+      "display": 0,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": null,
+      "wire": 0.3333333333333333
+    },
+    {
+      "algo": 1,
+      "display": 0,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": null,
+      "wire": 0.5
+    },
+    {
+      "algo": 1,
+      "display": 50,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.75,
+      "wire": 0.75
+    },
+    {
+      "algo": 1,
+      "display": 80,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.8999999761581421,
+      "wire": 0.9
+    },
+    {
+      "algo": 1,
+      "display": 98,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.9900000095367432,
+      "wire": 0.99
+    },
+    {
+      "algo": 1,
+      "display": 99.8,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.9990000128746033,
+      "wire": 0.999
+    },
+    {
+      "algo": 1,
+      "display": 100,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 1,
+      "wire": 1
+    },
+    {
+      "algo": 1,
+      "display": -12,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0,
+      "wire": 0
+    },
+    {
+      "algo": 1,
+      "display": -11.9976,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 9.999999747378752e-05,
+      "wire": 0.0001
+    },
+    {
+      "algo": 1,
+      "display": -10.8,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.05000000074505806,
+      "wire": 0.05
+    },
+    {
+      "algo": 1,
+      "display": -6,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.25,
+      "wire": 0.25
+    },
+    {
+      "algo": 1,
+      "display": -4,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.3333333432674408,
+      "wire": 0.3333333333333333
+    },
+    {
+      "algo": 1,
+      "display": 0,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.5,
+      "wire": 0.5
+    },
+    {
+      "algo": 1,
+      "display": 6,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.75,
+      "wire": 0.75
+    },
+    {
+      "algo": 1,
+      "display": 9.600000000000001,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.8999999761581421,
+      "wire": 0.9
+    },
+    {
+      "algo": 1,
+      "display": 11.76,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.9900000095367432,
+      "wire": 0.99
+    },
+    {
+      "algo": 1,
+      "display": 11.975999999999999,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.9990000128746033,
+      "wire": 0.999
+    },
+    {
+      "algo": 1,
+      "display": 12,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 1,
+      "wire": 1
+    },
+    {
+      "algo": 1,
+      "display": 0.25,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.5062500238418579,
+      "wire": 0
+    },
+    {
+      "algo": 1,
+      "display": 0.24995,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.5062487721443176,
+      "wire": 0.0001
+    },
+    {
+      "algo": 1,
+      "display": 0.225,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.5056250095367432,
+      "wire": 0.05
+    },
+    {
+      "algo": 1,
+      "display": 0.125,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.503125011920929,
+      "wire": 0.25
+    },
+    {
+      "algo": 1,
+      "display": 0.08333333333333334,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.5020833611488342,
+      "wire": 0.3333333333333333
+    },
+    {
+      "algo": 1,
+      "display": 0,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.5,
+      "wire": 0.5
+    },
+    {
+      "algo": 1,
+      "display": 10,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.75,
+      "wire": 0.75
+    },
+    {
+      "algo": 1,
+      "display": 16,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.8999999761581421,
+      "wire": 0.9
+    },
+    {
+      "algo": 1,
+      "display": 19.6,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.9900000095367432,
+      "wire": 0.99
+    },
+    {
+      "algo": 1,
+      "display": 19.96,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.9990000128746033,
+      "wire": 0.999
+    },
+    {
+      "algo": 1,
+      "display": 20,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 1,
+      "wire": 1
+    },
+    {
+      "algo": 1,
+      "display": 25,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.512499988079071,
+      "wire": 0
+    },
+    {
+      "algo": 1,
+      "display": 24.995,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.5124974846839905,
+      "wire": 0.0001
+    },
+    {
+      "algo": 1,
+      "display": 22.5,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.5112500190734863,
+      "wire": 0.05
+    },
+    {
+      "algo": 1,
+      "display": 12.5,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.5062500238418579,
+      "wire": 0.25
+    },
+    {
+      "algo": 1,
+      "display": 8.333333333333336,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.5041666626930237,
+      "wire": 0.3333333333333333
+    },
+    {
+      "algo": 1,
+      "display": 0,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.5,
+      "wire": 0.5
+    },
+    {
+      "algo": 1,
+      "display": 500,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.75,
+      "wire": 0.75
+    },
+    {
+      "algo": 1,
+      "display": 800,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.8999999761581421,
+      "wire": 0.9
+    },
+    {
+      "algo": 1,
+      "display": 980,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.9900000095367432,
+      "wire": 0.99
+    },
+    {
+      "algo": 1,
+      "display": 998,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.9990000128746033,
+      "wire": 0.999
+    },
+    {
+      "algo": 1,
+      "display": 1000,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 1,
+      "wire": 1
+    },
+    {
+      "algo": 1,
+      "display": 1000,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.53125,
+      "wire": 0
+    },
+    {
+      "algo": 1,
+      "display": 999.8,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.5312437415122986,
+      "wire": 0.0001
+    },
+    {
+      "algo": 1,
+      "display": 900,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.528124988079071,
+      "wire": 0.05
+    },
+    {
+      "algo": 1,
+      "display": 500,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.515625,
+      "wire": 0.25
+    },
+    {
+      "algo": 1,
+      "display": 333.33333333333337,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.5104166865348816,
+      "wire": 0.3333333333333333
+    },
+    {
+      "algo": 1,
+      "display": 0,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.5,
+      "wire": 0.5
+    },
+    {
+      "algo": 1,
+      "display": 8000,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.75,
+      "wire": 0.75
+    },
+    {
+      "algo": 1,
+      "display": 12800,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.8999999761581421,
+      "wire": 0.9
+    },
+    {
+      "algo": 1,
+      "display": 15680,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.9900000095367432,
+      "wire": 0.99
+    },
+    {
+      "algo": 1,
+      "display": 15968,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.9990000128746033,
+      "wire": 0.999
+    },
+    {
+      "algo": 1,
+      "display": 16000,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 1,
+      "wire": 1
+    },
+    {
+      "algo": 1,
+      "display": -100,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0,
+      "wire": 0
+    },
+    {
+      "algo": 1,
+      "display": -99.98,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 9.999999747378752e-05,
+      "wire": 0.0001
+    },
+    {
+      "algo": 1,
+      "display": -90,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.05000000074505806,
+      "wire": 0.05
+    },
+    {
+      "algo": 1,
+      "display": -50,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.25,
+      "wire": 0.25
+    },
+    {
+      "algo": 1,
+      "display": -33.33333333333334,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.3333333432674408,
+      "wire": 0.3333333333333333
+    },
+    {
+      "algo": 1,
+      "display": 0,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.5,
+      "wire": 0.5
+    },
+    {
+      "algo": 1,
+      "display": 50,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.75,
+      "wire": 0.75
+    },
+    {
+      "algo": 1,
+      "display": 80,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.8999999761581421,
+      "wire": 0.9
+    },
+    {
+      "algo": 1,
+      "display": 98,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.9900000095367432,
+      "wire": 0.99
+    },
+    {
+      "algo": 1,
+      "display": 99.8,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.9990000128746033,
+      "wire": 0.999
+    },
+    {
+      "algo": 1,
+      "display": 100,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 1,
+      "wire": 1
+    },
+    {
+      "algo": 2,
+      "display": null,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": null,
+      "wire": 0
+    },
+    {
+      "algo": 2,
+      "display": -80,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 9.999999747378752e-05,
+      "wire": 0.0001
+    },
+    {
+      "algo": 2,
+      "display": -26.020599913279625,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.05000000074505806,
+      "wire": 0.05
+    },
+    {
+      "algo": 2,
+      "display": -12.041199826559248,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.25,
+      "wire": 0.25
+    },
+    {
+      "algo": 2,
+      "display": -9.54242509439325,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.3333333432674408,
+      "wire": 0.3333333333333333
+    },
+    {
+      "algo": 2,
+      "display": -6.020599913279624,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.5,
+      "wire": 0.5
+    },
+    {
+      "algo": 2,
+      "display": -2.4987747321659985,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.75,
+      "wire": 0.75
+    },
+    {
+      "algo": 2,
+      "display": -0.9151498112135024,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.8999999761581421,
+      "wire": 0.9
+    },
+    {
+      "algo": 2,
+      "display": -0.08729610804900176,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.9900000095367432,
+      "wire": 0.99
+    },
+    {
+      "algo": 2,
+      "display": -0.008690235480353834,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.9990000128746033,
+      "wire": 0.999
+    },
+    {
+      "algo": 2,
+      "display": 0,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 1,
+      "wire": 1
+    },
+    {
+      "algo": 2,
+      "display": null,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": null,
+      "wire": 0
+    },
+    {
+      "algo": 2,
+      "display": -80,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 9.999999747378752e-05,
+      "wire": 0.0001
+    },
+    {
+      "algo": 2,
+      "display": -26.020599913279625,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.05000000074505806,
+      "wire": 0.05
+    },
+    {
+      "algo": 2,
+      "display": -12.041199826559248,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.25,
+      "wire": 0.25
+    },
+    {
+      "algo": 2,
+      "display": -9.54242509439325,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.3333333432674408,
+      "wire": 0.3333333333333333
+    },
+    {
+      "algo": 2,
+      "display": -6.020599913279624,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.5,
+      "wire": 0.5
+    },
+    {
+      "algo": 2,
+      "display": -2.4987747321659985,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.75,
+      "wire": 0.75
+    },
+    {
+      "algo": 2,
+      "display": -0.9151498112135024,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.8999999761581421,
+      "wire": 0.9
+    },
+    {
+      "algo": 2,
+      "display": -0.08729610804900176,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.9900000095367432,
+      "wire": 0.99
+    },
+    {
+      "algo": 2,
+      "display": -0.008690235480353834,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.9990000128746033,
+      "wire": 0.999
+    },
+    {
+      "algo": 2,
+      "display": 0,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 1,
+      "wire": 1
+    },
+    {
+      "algo": 2,
+      "display": null,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": null,
+      "wire": 0
+    },
+    {
+      "algo": 2,
+      "display": -80,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 9.999999747378752e-05,
+      "wire": 0.0001
+    },
+    {
+      "algo": 2,
+      "display": -26.020599913279625,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.05000000074505806,
+      "wire": 0.05
+    },
+    {
+      "algo": 2,
+      "display": -12.041199826559248,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.25,
+      "wire": 0.25
+    },
+    {
+      "algo": 2,
+      "display": -9.54242509439325,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.3333333432674408,
+      "wire": 0.3333333333333333
+    },
+    {
+      "algo": 2,
+      "display": -6.020599913279624,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.5,
+      "wire": 0.5
+    },
+    {
+      "algo": 2,
+      "display": -2.4987747321659985,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.75,
+      "wire": 0.75
+    },
+    {
+      "algo": 2,
+      "display": -0.9151498112135024,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.8999999761581421,
+      "wire": 0.9
+    },
+    {
+      "algo": 2,
+      "display": -0.08729610804900176,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.9900000095367432,
+      "wire": 0.99
+    },
+    {
+      "algo": 2,
+      "display": -0.008690235480353834,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.9990000128746033,
+      "wire": 0.999
+    },
+    {
+      "algo": 2,
+      "display": 0,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 1,
+      "wire": 1
+    },
+    {
+      "algo": 2,
+      "display": null,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": null,
+      "wire": 0
+    },
+    {
+      "algo": 2,
+      "display": -80,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 9.999999747378752e-05,
+      "wire": 0.0001
+    },
+    {
+      "algo": 2,
+      "display": -26.020599913279625,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.05000000074505806,
+      "wire": 0.05
+    },
+    {
+      "algo": 2,
+      "display": -12.041199826559248,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.25,
+      "wire": 0.25
+    },
+    {
+      "algo": 2,
+      "display": -9.54242509439325,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.3333333432674408,
+      "wire": 0.3333333333333333
+    },
+    {
+      "algo": 2,
+      "display": -6.020599913279624,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.5,
+      "wire": 0.5
+    },
+    {
+      "algo": 2,
+      "display": -2.4987747321659985,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.75,
+      "wire": 0.75
+    },
+    {
+      "algo": 2,
+      "display": -0.9151498112135024,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.8999999761581421,
+      "wire": 0.9
+    },
+    {
+      "algo": 2,
+      "display": -0.08729610804900176,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.9900000095367432,
+      "wire": 0.99
+    },
+    {
+      "algo": 2,
+      "display": -0.008690235480353834,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.9990000128746033,
+      "wire": 0.999
+    },
+    {
+      "algo": 2,
+      "display": 0,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 1,
+      "wire": 1
+    },
+    {
+      "algo": 2,
+      "display": null,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": null,
+      "wire": 0
+    },
+    {
+      "algo": 2,
+      "display": -80,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 9.999999747378752e-05,
+      "wire": 0.0001
+    },
+    {
+      "algo": 2,
+      "display": -26.020599913279625,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.05000000074505806,
+      "wire": 0.05
+    },
+    {
+      "algo": 2,
+      "display": -12.041199826559248,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.25,
+      "wire": 0.25
+    },
+    {
+      "algo": 2,
+      "display": -9.54242509439325,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.3333333432674408,
+      "wire": 0.3333333333333333
+    },
+    {
+      "algo": 2,
+      "display": -6.020599913279624,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.5,
+      "wire": 0.5
+    },
+    {
+      "algo": 2,
+      "display": -2.4987747321659985,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.75,
+      "wire": 0.75
+    },
+    {
+      "algo": 2,
+      "display": -0.9151498112135024,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.8999999761581421,
+      "wire": 0.9
+    },
+    {
+      "algo": 2,
+      "display": -0.08729610804900176,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.9900000095367432,
+      "wire": 0.99
+    },
+    {
+      "algo": 2,
+      "display": -0.008690235480353834,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.9990000128746033,
+      "wire": 0.999
+    },
+    {
+      "algo": 2,
+      "display": 0,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 1,
+      "wire": 1
+    },
+    {
+      "algo": 2,
+      "display": null,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": null,
+      "wire": 0
+    },
+    {
+      "algo": 2,
+      "display": -80,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 9.999999747378752e-05,
+      "wire": 0.0001
+    },
+    {
+      "algo": 2,
+      "display": -26.020599913279625,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.05000000074505806,
+      "wire": 0.05
+    },
+    {
+      "algo": 2,
+      "display": -12.041199826559248,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.25,
+      "wire": 0.25
+    },
+    {
+      "algo": 2,
+      "display": -9.54242509439325,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.3333333432674408,
+      "wire": 0.3333333333333333
+    },
+    {
+      "algo": 2,
+      "display": -6.020599913279624,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.5,
+      "wire": 0.5
+    },
+    {
+      "algo": 2,
+      "display": -2.4987747321659985,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.75,
+      "wire": 0.75
+    },
+    {
+      "algo": 2,
+      "display": -0.9151498112135024,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.8999999761581421,
+      "wire": 0.9
+    },
+    {
+      "algo": 2,
+      "display": -0.08729610804900176,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.9900000095367432,
+      "wire": 0.99
+    },
+    {
+      "algo": 2,
+      "display": -0.008690235480353834,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.9990000128746033,
+      "wire": 0.999
+    },
+    {
+      "algo": 2,
+      "display": 0,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 1,
+      "wire": 1
+    },
+    {
+      "algo": 3,
+      "display": 0,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0,
+      "wire": 0
+    },
+    {
+      "algo": 3,
+      "display": 0.01,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 9.999999747378752e-05,
+      "wire": 0.0001
+    },
+    {
+      "algo": 3,
+      "display": 5,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.05000000074505806,
+      "wire": 0.05
+    },
+    {
+      "algo": 3,
+      "display": 25,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.25,
+      "wire": 0.25
+    },
+    {
+      "algo": 3,
+      "display": 33.33333333333333,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.3333333432674408,
+      "wire": 0.3333333333333333
+    },
+    {
+      "algo": 3,
+      "display": 50,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.5,
+      "wire": 0.5
+    },
+    {
+      "algo": 3,
+      "display": 75,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.75,
+      "wire": 0.75
+    },
+    {
+      "algo": 3,
+      "display": 90,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.8999999761581421,
+      "wire": 0.9
+    },
+    {
+      "algo": 3,
+      "display": 99,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.9900000095367432,
+      "wire": 0.99
+    },
+    {
+      "algo": 3,
+      "display": 99.9,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.9990000128746033,
+      "wire": 0.999
+    },
+    {
+      "algo": 3,
+      "display": 100,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 1,
+      "wire": 1
+    },
+    {
+      "algo": 3,
+      "display": -12,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0,
+      "wire": 0
+    },
+    {
+      "algo": 3,
+      "display": -11.9976,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 9.999999747378752e-05,
+      "wire": 0.0001
+    },
+    {
+      "algo": 3,
+      "display": -10.8,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.05000000074505806,
+      "wire": 0.05
+    },
+    {
+      "algo": 3,
+      "display": -6,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.25,
+      "wire": 0.25
+    },
+    {
+      "algo": 3,
+      "display": -4,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.3333333432674408,
+      "wire": 0.3333333333333333
+    },
+    {
+      "algo": 3,
+      "display": 0,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.5,
+      "wire": 0.5
+    },
+    {
+      "algo": 3,
+      "display": 6,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.75,
+      "wire": 0.75
+    },
+    {
+      "algo": 3,
+      "display": 9.600000000000001,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.8999999761581421,
+      "wire": 0.9
+    },
+    {
+      "algo": 3,
+      "display": 11.759999999999998,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.9900000095367432,
+      "wire": 0.99
+    },
+    {
+      "algo": 3,
+      "display": 11.975999999999999,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.9990000128746033,
+      "wire": 0.999
+    },
+    {
+      "algo": 3,
+      "display": 12,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 1,
+      "wire": 1
+    },
+    {
+      "algo": 3,
+      "display": 0.25,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0,
+      "wire": 0
+    },
+    {
+      "algo": 3,
+      "display": 0.251975,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 9.999999747378752e-05,
+      "wire": 0.0001
+    },
+    {
+      "algo": 3,
+      "display": 1.2375,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.05000000074505806,
+      "wire": 0.05
+    },
+    {
+      "algo": 3,
+      "display": 5.1875,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.25,
+      "wire": 0.25
+    },
+    {
+      "algo": 3,
+      "display": 6.833333333333333,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.3333333432674408,
+      "wire": 0.3333333333333333
+    },
+    {
+      "algo": 3,
+      "display": 10.125,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.5,
+      "wire": 0.5
+    },
+    {
+      "algo": 3,
+      "display": 15.0625,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.75,
+      "wire": 0.75
+    },
+    {
+      "algo": 3,
+      "display": 18.025000000000002,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.8999999761581421,
+      "wire": 0.9
+    },
+    {
+      "algo": 3,
+      "display": 19.8025,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.9900000095367432,
+      "wire": 0.99
+    },
+    {
+      "algo": 3,
+      "display": 19.98025,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.9990000128746033,
+      "wire": 0.999
+    },
+    {
+      "algo": 3,
+      "display": 20,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 1,
+      "wire": 1
+    },
+    {
+      "algo": 3,
+      "display": 25,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0,
+      "wire": 0
+    },
+    {
+      "algo": 3,
+      "display": 25.0975,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 9.999999747378752e-05,
+      "wire": 0.0001
+    },
+    {
+      "algo": 3,
+      "display": 73.75,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.05000000074505806,
+      "wire": 0.05
+    },
+    {
+      "algo": 3,
+      "display": 268.75,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.25,
+      "wire": 0.25
+    },
+    {
+      "algo": 3,
+      "display": 350,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.3333333432674408,
+      "wire": 0.3333333333333333
+    },
+    {
+      "algo": 3,
+      "display": 512.5,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.5,
+      "wire": 0.5
+    },
+    {
+      "algo": 3,
+      "display": 756.25,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.75,
+      "wire": 0.75
+    },
+    {
+      "algo": 3,
+      "display": 902.5,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.8999999761581421,
+      "wire": 0.9
+    },
+    {
+      "algo": 3,
+      "display": 990.25,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.9900000095367432,
+      "wire": 0.99
+    },
+    {
+      "algo": 3,
+      "display": 999.025,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.9990000128746033,
+      "wire": 0.999
+    },
+    {
+      "algo": 3,
+      "display": 1000,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 1,
+      "wire": 1
+    },
+    {
+      "algo": 3,
+      "display": 1000,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0,
+      "wire": 0
+    },
+    {
+      "algo": 3,
+      "display": 1001.5,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 9.999999747378752e-05,
+      "wire": 0.0001
+    },
+    {
+      "algo": 3,
+      "display": 1750,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.05000000074505806,
+      "wire": 0.05
+    },
+    {
+      "algo": 3,
+      "display": 4750,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.25,
+      "wire": 0.25
+    },
+    {
+      "algo": 3,
+      "display": 6000,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.3333333432674408,
+      "wire": 0.3333333333333333
+    },
+    {
+      "algo": 3,
+      "display": 8500,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.5,
+      "wire": 0.5
+    },
+    {
+      "algo": 3,
+      "display": 12250,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.75,
+      "wire": 0.75
+    },
+    {
+      "algo": 3,
+      "display": 14500,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.8999999761581421,
+      "wire": 0.9
+    },
+    {
+      "algo": 3,
+      "display": 15850,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.9900000095367432,
+      "wire": 0.99
+    },
+    {
+      "algo": 3,
+      "display": 15985,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.9990000128746033,
+      "wire": 0.999
+    },
+    {
+      "algo": 3,
+      "display": 16000,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 1,
+      "wire": 1
+    },
+    {
+      "algo": 3,
+      "display": -100,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0,
+      "wire": 0
+    },
+    {
+      "algo": 3,
+      "display": -99.98,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 9.999999747378752e-05,
+      "wire": 0.0001
+    },
+    {
+      "algo": 3,
+      "display": -90,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.05000000074505806,
+      "wire": 0.05
+    },
+    {
+      "algo": 3,
+      "display": -50,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.25,
+      "wire": 0.25
+    },
+    {
+      "algo": 3,
+      "display": -33.33333333333334,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.3333333432674408,
+      "wire": 0.3333333333333333
+    },
+    {
+      "algo": 3,
+      "display": 0,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.5,
+      "wire": 0.5
+    },
+    {
+      "algo": 3,
+      "display": 50,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.75,
+      "wire": 0.75
+    },
+    {
+      "algo": 3,
+      "display": 80,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.8999999761581421,
+      "wire": 0.9
+    },
+    {
+      "algo": 3,
+      "display": 98,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.9900000095367432,
+      "wire": 0.99
+    },
+    {
+      "algo": 3,
+      "display": 99.80000000000001,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.9990000128746033,
+      "wire": 0.999
+    },
+    {
+      "algo": 3,
+      "display": 100,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 1,
+      "wire": 1
+    },
+    {
+      "algo": 4,
+      "display": -100,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0,
+      "wire": 0
+    },
+    {
+      "algo": 4,
+      "display": -99.960004,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 9.999999747378752e-05,
+      "wire": 0.0001
+    },
+    {
+      "algo": 4,
+      "display": -81,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.05000000074505806,
+      "wire": 0.05
+    },
+    {
+      "algo": 4,
+      "display": -25,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.25,
+      "wire": 0.25
+    },
+    {
+      "algo": 4,
+      "display": -11.111111111111112,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.3333333432674408,
+      "wire": 0.3333333333333333
+    },
+    {
+      "algo": 4,
+      "display": 0,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.5,
+      "wire": 0.5
+    },
+    {
+      "algo": 4,
+      "display": 25,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.75,
+      "wire": 0.75
+    },
+    {
+      "algo": 4,
+      "display": 64.00000000000001,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.8999999761581421,
+      "wire": 0.9
+    },
+    {
+      "algo": 4,
+      "display": 96.03999999999999,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.9900000095367432,
+      "wire": 0.99
+    },
+    {
+      "algo": 4,
+      "display": 99.6004,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.9990000128746033,
+      "wire": 0.999
+    },
+    {
+      "algo": 4,
+      "display": 100,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 1,
+      "wire": 1
+    },
+    {
+      "algo": 4,
+      "display": -12,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0,
+      "wire": 0
+    },
+    {
+      "algo": 4,
+      "display": -11.995200480000001,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 9.999999747378752e-05,
+      "wire": 0.0001
+    },
+    {
+      "algo": 4,
+      "display": -9.72,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.05000000074505806,
+      "wire": 0.05
+    },
+    {
+      "algo": 4,
+      "display": -3,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.25,
+      "wire": 0.25
+    },
+    {
+      "algo": 4,
+      "display": -1.3333333333333335,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.3333333432674408,
+      "wire": 0.3333333333333333
+    },
+    {
+      "algo": 4,
+      "display": 0,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.5,
+      "wire": 0.5
+    },
+    {
+      "algo": 4,
+      "display": 3,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.75,
+      "wire": 0.75
+    },
+    {
+      "algo": 4,
+      "display": 7.6800000000000015,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.8999999761581421,
+      "wire": 0.9
+    },
+    {
+      "algo": 4,
+      "display": 11.524799999999999,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.9900000095367432,
+      "wire": 0.99
+    },
+    {
+      "algo": 4,
+      "display": 11.952048,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.9990000128746033,
+      "wire": 0.999
+    },
+    {
+      "algo": 4,
+      "display": 12,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 1,
+      "wire": 1
+    },
+    {
+      "algo": 4,
+      "display": -20,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0,
+      "wire": 0
+    },
+    {
+      "algo": 4,
+      "display": -19.9920008,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 9.999999747378752e-05,
+      "wire": 0.0001
+    },
+    {
+      "algo": 4,
+      "display": -16.200000000000003,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.05000000074505806,
+      "wire": 0.05
+    },
+    {
+      "algo": 4,
+      "display": -5,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.25,
+      "wire": 0.25
+    },
+    {
+      "algo": 4,
+      "display": -2.2222222222222228,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.3333333432674408,
+      "wire": 0.3333333333333333
+    },
+    {
+      "algo": 4,
+      "display": 0,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.5,
+      "wire": 0.5
+    },
+    {
+      "algo": 4,
+      "display": 5,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.75,
+      "wire": 0.75
+    },
+    {
+      "algo": 4,
+      "display": 12.800000000000002,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.8999999761581421,
+      "wire": 0.9
+    },
+    {
+      "algo": 4,
+      "display": 19.208,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.9900000095367432,
+      "wire": 0.99
+    },
+    {
+      "algo": 4,
+      "display": 19.92008,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.9990000128746033,
+      "wire": 0.999
+    },
+    {
+      "algo": 4,
+      "display": 20,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 1,
+      "wire": 1
+    },
+    {
+      "algo": 4,
+      "display": -1000,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0,
+      "wire": 0
+    },
+    {
+      "algo": 4,
+      "display": -999.60004,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 9.999999747378752e-05,
+      "wire": 0.0001
+    },
+    {
+      "algo": 4,
+      "display": -810,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.05000000074505806,
+      "wire": 0.05
+    },
+    {
+      "algo": 4,
+      "display": -250,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.25,
+      "wire": 0.25
+    },
+    {
+      "algo": 4,
+      "display": -111.11111111111113,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.3333333432674408,
+      "wire": 0.3333333333333333
+    },
+    {
+      "algo": 4,
+      "display": 0,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.5,
+      "wire": 0.5
+    },
+    {
+      "algo": 4,
+      "display": 250,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.75,
+      "wire": 0.75
+    },
+    {
+      "algo": 4,
+      "display": 640.0000000000001,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.8999999761581421,
+      "wire": 0.9
+    },
+    {
+      "algo": 4,
+      "display": 960.3999999999999,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.9900000095367432,
+      "wire": 0.99
+    },
+    {
+      "algo": 4,
+      "display": 996.004,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.9990000128746033,
+      "wire": 0.999
+    },
+    {
+      "algo": 4,
+      "display": 1000,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 1,
+      "wire": 1
+    },
+    {
+      "algo": 4,
+      "display": -16000,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0,
+      "wire": 0
+    },
+    {
+      "algo": 4,
+      "display": -15993.60064,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 9.999999747378752e-05,
+      "wire": 0.0001
+    },
+    {
+      "algo": 4,
+      "display": -12960,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.05000000074505806,
+      "wire": 0.05
+    },
+    {
+      "algo": 4,
+      "display": -4000,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.25,
+      "wire": 0.25
+    },
+    {
+      "algo": 4,
+      "display": -1777.777777777778,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.3333333432674408,
+      "wire": 0.3333333333333333
+    },
+    {
+      "algo": 4,
+      "display": 0,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.5,
+      "wire": 0.5
+    },
+    {
+      "algo": 4,
+      "display": 4000,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.75,
+      "wire": 0.75
+    },
+    {
+      "algo": 4,
+      "display": 10240.000000000002,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.8999999761581421,
+      "wire": 0.9
+    },
+    {
+      "algo": 4,
+      "display": 15366.399999999998,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.9900000095367432,
+      "wire": 0.99
+    },
+    {
+      "algo": 4,
+      "display": 15936.064,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.9990000128746033,
+      "wire": 0.999
+    },
+    {
+      "algo": 4,
+      "display": 16000,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 1,
+      "wire": 1
+    },
+    {
+      "algo": 4,
+      "display": -100,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0,
+      "wire": 0
+    },
+    {
+      "algo": 4,
+      "display": -99.960004,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 9.999999747378752e-05,
+      "wire": 0.0001
+    },
+    {
+      "algo": 4,
+      "display": -81,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.05000000074505806,
+      "wire": 0.05
+    },
+    {
+      "algo": 4,
+      "display": -25,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.25,
+      "wire": 0.25
+    },
+    {
+      "algo": 4,
+      "display": -11.111111111111112,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.3333333432674408,
+      "wire": 0.3333333333333333
+    },
+    {
+      "algo": 4,
+      "display": 0,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.5,
+      "wire": 0.5
+    },
+    {
+      "algo": 4,
+      "display": 25,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.75,
+      "wire": 0.75
+    },
+    {
+      "algo": 4,
+      "display": 64.00000000000001,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.8999999761581421,
+      "wire": 0.9
+    },
+    {
+      "algo": 4,
+      "display": 96.03999999999999,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.9900000095367432,
+      "wire": 0.99
+    },
+    {
+      "algo": 4,
+      "display": 99.6004,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.9990000128746033,
+      "wire": 0.999
+    },
+    {
+      "algo": 4,
+      "display": 100,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 1,
+      "wire": 1
+    },
+    {
+      "algo": 5,
+      "display": 0,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0,
+      "wire": 0
+    },
+    {
+      "algo": 5,
+      "display": 1.0000000000000002e-06,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 9.999999747378752e-05,
+      "wire": 0.0001
+    },
+    {
+      "algo": 5,
+      "display": 0.25,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.05000000074505806,
+      "wire": 0.05
+    },
+    {
+      "algo": 5,
+      "display": 6.25,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.25,
+      "wire": 0.25
+    },
+    {
+      "algo": 5,
+      "display": 11.111111111111109,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.3333333432674408,
+      "wire": 0.3333333333333333
+    },
+    {
+      "algo": 5,
+      "display": 25,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.5,
+      "wire": 0.5
+    },
+    {
+      "algo": 5,
+      "display": 56.25,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.75,
+      "wire": 0.75
+    },
+    {
+      "algo": 5,
+      "display": 81,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.8999999761581421,
+      "wire": 0.9
+    },
+    {
+      "algo": 5,
+      "display": 98.01,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.9900000095367432,
+      "wire": 0.99
+    },
+    {
+      "algo": 5,
+      "display": 99.8001,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.9990000128746033,
+      "wire": 0.999
+    },
+    {
+      "algo": 5,
+      "display": 100,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 1,
+      "wire": 1
+    },
+    {
+      "algo": 5,
+      "display": -12,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0,
+      "wire": 0
+    },
+    {
+      "algo": 5,
+      "display": -11.99999976,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 9.999999747378752e-05,
+      "wire": 0.0001
+    },
+    {
+      "algo": 5,
+      "display": -11.94,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.05000000074505806,
+      "wire": 0.05
+    },
+    {
+      "algo": 5,
+      "display": -10.5,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.25,
+      "wire": 0.25
+    },
+    {
+      "algo": 5,
+      "display": -9.333333333333334,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.3333333432674408,
+      "wire": 0.3333333333333333
+    },
+    {
+      "algo": 5,
+      "display": -6,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.5,
+      "wire": 0.5
+    },
+    {
+      "algo": 5,
+      "display": 1.5,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.75,
+      "wire": 0.75
+    },
+    {
+      "algo": 5,
+      "display": 7.440000000000001,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.8999999761581421,
+      "wire": 0.9
+    },
+    {
+      "algo": 5,
+      "display": 11.522399999999998,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.9900000095367432,
+      "wire": 0.99
+    },
+    {
+      "algo": 5,
+      "display": 11.952023999999998,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.9990000128746033,
+      "wire": 0.999
+    },
+    {
+      "algo": 5,
+      "display": 12,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 1,
+      "wire": 1
+    },
+    {
+      "algo": 5,
+      "display": 0.25,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0,
+      "wire": 0
+    },
+    {
+      "algo": 5,
+      "display": 0.2500001975,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 9.999999747378752e-05,
+      "wire": 0.0001
+    },
+    {
+      "algo": 5,
+      "display": 0.299375,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.05000000074505806,
+      "wire": 0.05
+    },
+    {
+      "algo": 5,
+      "display": 1.484375,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.25,
+      "wire": 0.25
+    },
+    {
+      "algo": 5,
+      "display": 2.444444444444444,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.3333333432674408,
+      "wire": 0.3333333333333333
+    },
+    {
+      "algo": 5,
+      "display": 5.1875,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.5,
+      "wire": 0.5
+    },
+    {
+      "algo": 5,
+      "display": 11.359375,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.75,
+      "wire": 0.75
+    },
+    {
+      "algo": 5,
+      "display": 16.247500000000002,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.8999999761581421,
+      "wire": 0.9
+    },
+    {
+      "algo": 5,
+      "display": 19.606975,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.9900000095367432,
+      "wire": 0.99
+    },
+    {
+      "algo": 5,
+      "display": 19.960519750000003,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.9990000128746033,
+      "wire": 0.999
+    },
+    {
+      "algo": 5,
+      "display": 20,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 1,
+      "wire": 1
+    },
+    {
+      "algo": 5,
+      "display": 25,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0,
+      "wire": 0
+    },
+    {
+      "algo": 5,
+      "display": 25.00000975,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 9.999999747378752e-05,
+      "wire": 0.0001
+    },
+    {
+      "algo": 5,
+      "display": 27.4375,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.05000000074505806,
+      "wire": 0.05
+    },
+    {
+      "algo": 5,
+      "display": 85.9375,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.25,
+      "wire": 0.25
+    },
+    {
+      "algo": 5,
+      "display": 133.33333333333331,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.3333333432674408,
+      "wire": 0.3333333333333333
+    },
+    {
+      "algo": 5,
+      "display": 268.75,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.5,
+      "wire": 0.5
+    },
+    {
+      "algo": 5,
+      "display": 573.4375,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.75,
+      "wire": 0.75
+    },
+    {
+      "algo": 5,
+      "display": 814.75,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.8999999761581421,
+      "wire": 0.9
+    },
+    {
+      "algo": 5,
+      "display": 980.5975,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.9900000095367432,
+      "wire": 0.99
+    },
+    {
+      "algo": 5,
+      "display": 998.050975,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.9990000128746033,
+      "wire": 0.999
+    },
+    {
+      "algo": 5,
+      "display": 1000,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 1,
+      "wire": 1
+    },
+    {
+      "algo": 5,
+      "display": 1000,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0,
+      "wire": 0
+    },
+    {
+      "algo": 5,
+      "display": 1000.00015,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 9.999999747378752e-05,
+      "wire": 0.0001
+    },
+    {
+      "algo": 5,
+      "display": 1037.5,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.05000000074505806,
+      "wire": 0.05
+    },
+    {
+      "algo": 5,
+      "display": 1937.5,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.25,
+      "wire": 0.25
+    },
+    {
+      "algo": 5,
+      "display": 2666.6666666666665,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.3333333432674408,
+      "wire": 0.3333333333333333
+    },
+    {
+      "algo": 5,
+      "display": 4750,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.5,
+      "wire": 0.5
+    },
+    {
+      "algo": 5,
+      "display": 9437.5,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.75,
+      "wire": 0.75
+    },
+    {
+      "algo": 5,
+      "display": 13150,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.8999999761581421,
+      "wire": 0.9
+    },
+    {
+      "algo": 5,
+      "display": 15701.5,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.9900000095367432,
+      "wire": 0.99
+    },
+    {
+      "algo": 5,
+      "display": 15970.015,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.9990000128746033,
+      "wire": 0.999
+    },
+    {
+      "algo": 5,
+      "display": 16000,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 1,
+      "wire": 1
+    },
+    {
+      "algo": 5,
+      "display": -100,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0,
+      "wire": 0
+    },
+    {
+      "algo": 5,
+      "display": -99.999998,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 9.999999747378752e-05,
+      "wire": 0.0001
+    },
+    {
+      "algo": 5,
+      "display": -99.5,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.05000000074505806,
+      "wire": 0.05
+    },
+    {
+      "algo": 5,
+      "display": -87.5,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.25,
+      "wire": 0.25
+    },
+    {
+      "algo": 5,
+      "display": -77.77777777777779,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.3333333432674408,
+      "wire": 0.3333333333333333
+    },
+    {
+      "algo": 5,
+      "display": -50,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.5,
+      "wire": 0.5
+    },
+    {
+      "algo": 5,
+      "display": 12.5,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.75,
+      "wire": 0.75
+    },
+    {
+      "algo": 5,
+      "display": 62,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.8999999761581421,
+      "wire": 0.9
+    },
+    {
+      "algo": 5,
+      "display": 96.02000000000001,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.9900000095367432,
+      "wire": 0.99
+    },
+    {
+      "algo": 5,
+      "display": 99.6002,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.9990000128746033,
+      "wire": 0.999
+    },
+    {
+      "algo": 5,
+      "display": 100,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 1,
+      "wire": 1
+    },
+    {
+      "algo": 6,
+      "display": null,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": null,
+      "wire": 0
+    },
+    {
+      "algo": 6,
+      "display": null,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": null,
+      "wire": 0.0001
+    },
+    {
+      "algo": 6,
+      "display": null,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": null,
+      "wire": 0.05
+    },
+    {
+      "algo": 6,
+      "display": null,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": null,
+      "wire": 0.25
+    },
+    {
+      "algo": 6,
+      "display": null,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": null,
+      "wire": 0.3333333333333333
+    },
+    {
+      "algo": 6,
+      "display": null,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": null,
+      "wire": 0.5
+    },
+    {
+      "algo": 6,
+      "display": null,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": null,
+      "wire": 0.75
+    },
+    {
+      "algo": 6,
+      "display": null,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": null,
+      "wire": 0.9
+    },
+    {
+      "algo": 6,
+      "display": null,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": null,
+      "wire": 0.99
+    },
+    {
+      "algo": 6,
+      "display": null,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": null,
+      "wire": 0.999
+    },
+    {
+      "algo": 6,
+      "display": null,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": null,
+      "wire": 1
+    },
+    {
+      "algo": 6,
+      "display": null,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": null,
+      "wire": 0
+    },
+    {
+      "algo": 6,
+      "display": null,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": null,
+      "wire": 0.0001
+    },
+    {
+      "algo": 6,
+      "display": null,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": null,
+      "wire": 0.05
+    },
+    {
+      "algo": 6,
+      "display": null,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": null,
+      "wire": 0.25
+    },
+    {
+      "algo": 6,
+      "display": null,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": null,
+      "wire": 0.3333333333333333
+    },
+    {
+      "algo": 6,
+      "display": null,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": null,
+      "wire": 0.5
+    },
+    {
+      "algo": 6,
+      "display": null,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": null,
+      "wire": 0.75
+    },
+    {
+      "algo": 6,
+      "display": null,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": null,
+      "wire": 0.9
+    },
+    {
+      "algo": 6,
+      "display": null,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": null,
+      "wire": 0.99
+    },
+    {
+      "algo": 6,
+      "display": null,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": null,
+      "wire": 0.999
+    },
+    {
+      "algo": 6,
+      "display": null,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": null,
+      "wire": 1
+    },
+    {
+      "algo": 6,
+      "display": 0.25,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0,
+      "wire": 0
+    },
+    {
+      "algo": 6,
+      "display": 0.25010957467207,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 9.999999747378752e-05,
+      "wire": 0.0001
+    },
+    {
+      "algo": 6,
+      "display": 0.31123935599755226,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.05000000074505806,
+      "wire": 0.05
+    },
+    {
+      "algo": 6,
+      "display": 0.7476743906106103,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.25,
+      "wire": 0.25
+    },
+    {
+      "algo": 6,
+      "display": 1.0772173450159415,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.3333333432674408,
+      "wire": 0.3333333333333333
+    },
+    {
+      "algo": 6,
+      "display": 2.2360679774997894,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.5,
+      "wire": 0.5
+    },
+    {
+      "algo": 6,
+      "display": 6.687403049764218,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.75,
+      "wire": 0.75
+    },
+    {
+      "algo": 6,
+      "display": 12.903900242964315,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.8999999761581421,
+      "wire": 0.9
+    },
+    {
+      "algo": 6,
+      "display": 19.142519395231226,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.9900000095367432,
+      "wire": 0.99
+    },
+    {
+      "algo": 6,
+      "display": 19.91255120870657,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.9990000128746033,
+      "wire": 0.999
+    },
+    {
+      "algo": 6,
+      "display": 19.999999999999993,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 1,
+      "wire": 1
+    },
+    {
+      "algo": 6,
+      "display": 25,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0,
+      "wire": 0
+    },
+    {
+      "algo": 6,
+      "display": 25.009223899823414,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 9.999999747378752e-05,
+      "wire": 0.0001
+    },
+    {
+      "algo": 6,
+      "display": 30.063740094920878,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.05000000074505806,
+      "wire": 0.05
+    },
+    {
+      "algo": 6,
+      "display": 62.87167148414676,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.25,
+      "wire": 0.25
+    },
+    {
+      "algo": 6,
+      "display": 85.49879733383486,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.3333333432674408,
+      "wire": 0.3333333333333333
+    },
+    {
+      "algo": 6,
+      "display": 158.11388300841895,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.5,
+      "wire": 0.5
+    },
+    {
+      "algo": 6,
+      "display": 397.63536438352537,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.75,
+      "wire": 0.75
+    },
+    {
+      "algo": 6,
+      "display": 691.5028921812391,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.8999999761581421,
+      "wire": 0.9
+    },
+    {
+      "algo": 6,
+      "display": 963.7833073548235,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.9900000095367432,
+      "wire": 0.99
+    },
+    {
+      "algo": 6,
+      "display": 996.3179161031343,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.9990000128746033,
+      "wire": 0.999
+    },
+    {
+      "algo": 6,
+      "display": 1000,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 1,
+      "wire": 1
+    },
+    {
+      "algo": 6,
+      "display": 1000,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0,
+      "wire": 0
+    },
+    {
+      "algo": 6,
+      "display": 1000.2772973120175,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 9.999999747378752e-05,
+      "wire": 0.0001
+    },
+    {
+      "algo": 6,
+      "display": 1148.6983549970348,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.05000000074505806,
+      "wire": 0.05
+    },
+    {
+      "algo": 6,
+      "display": 2000,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.25,
+      "wire": 0.25
+    },
+    {
+      "algo": 6,
+      "display": 2519.842099789746,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.3333333432674408,
+      "wire": 0.3333333333333333
+    },
+    {
+      "algo": 6,
+      "display": 4000,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.5,
+      "wire": 0.5
+    },
+    {
+      "algo": 6,
+      "display": 7999.999999999998,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.75,
+      "wire": 0.75
+    },
+    {
+      "algo": 6,
+      "display": 12125.732532083184,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.8999999761581421,
+      "wire": 0.9
+    },
+    {
+      "algo": 6,
+      "display": 15562.479158596563,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.9900000095367432,
+      "wire": 0.99
+    },
+    {
+      "algo": 6,
+      "display": 15955.700021633113,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.9990000128746033,
+      "wire": 0.999
+    },
+    {
+      "algo": 6,
+      "display": 15999.999999999998,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 1,
+      "wire": 1
+    },
+    {
+      "algo": 6,
+      "display": null,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": null,
+      "wire": 0
+    },
+    {
+      "algo": 6,
+      "display": null,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": null,
+      "wire": 0.0001
+    },
+    {
+      "algo": 6,
+      "display": null,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": null,
+      "wire": 0.05
+    },
+    {
+      "algo": 6,
+      "display": null,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": null,
+      "wire": 0.25
+    },
+    {
+      "algo": 6,
+      "display": null,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": null,
+      "wire": 0.3333333333333333
+    },
+    {
+      "algo": 6,
+      "display": null,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": null,
+      "wire": 0.5
+    },
+    {
+      "algo": 6,
+      "display": null,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": null,
+      "wire": 0.75
+    },
+    {
+      "algo": 6,
+      "display": null,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": null,
+      "wire": 0.9
+    },
+    {
+      "algo": 6,
+      "display": null,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": null,
+      "wire": 0.99
+    },
+    {
+      "algo": 6,
+      "display": null,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": null,
+      "wire": 0.999
+    },
+    {
+      "algo": 6,
+      "display": null,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": null,
+      "wire": 1
+    },
+    {
+      "algo": 7,
+      "display": 0,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0,
+      "wire": 0
+    },
+    {
+      "algo": 7,
+      "display": 1.9997974438395772e-05,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 9.999999747378752e-05,
+      "wire": 0.0001
+    },
+    {
+      "algo": 7,
+      "display": 0.011215038615193499,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.05000000074505806,
+      "wire": 0.05
+    },
+    {
+      "algo": 7,
+      "display": 0.09262925167114228,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.25,
+      "wire": 0.25
+    },
+    {
+      "algo": 7,
+      "display": 0.15517199615913463,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.3333333432674408,
+      "wire": 0.3333333333333333
+    },
+    {
+      "algo": 7,
+      "display": 0.37901938520613604,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.5,
+      "wire": 0.5
+    },
+    {
+      "algo": 7,
+      "display": 1.2644773491480363,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.75,
+      "wire": 0.75
+    },
+    {
+      "algo": 7,
+      "display": 2.531954829696128,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.8999999761581421,
+      "wire": 0.9
+    },
+    {
+      "algo": 7,
+      "display": 3.823494446954542,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.9900000095367432,
+      "wire": 0.99
+    },
+    {
+      "algo": 7,
+      "display": 3.9838984934090553,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.9990000128746033,
+      "wire": 0.999
+    },
+    {
+      "algo": 7,
+      "display": 4.002126849256725,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 1,
+      "wire": 1
+    },
+    {
+      "algo": 7,
+      "display": 0,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0,
+      "wire": 0
+    },
+    {
+      "algo": 7,
+      "display": 1.9997974438395772e-05,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 9.999999747378752e-05,
+      "wire": 0.0001
+    },
+    {
+      "algo": 7,
+      "display": 0.011215038615193499,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.05000000074505806,
+      "wire": 0.05
+    },
+    {
+      "algo": 7,
+      "display": 0.09262925167114228,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.25,
+      "wire": 0.25
+    },
+    {
+      "algo": 7,
+      "display": 0.15517199615913463,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.3333333432674408,
+      "wire": 0.3333333333333333
+    },
+    {
+      "algo": 7,
+      "display": 0.37901938520613604,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.5,
+      "wire": 0.5
+    },
+    {
+      "algo": 7,
+      "display": 1.2644773491480363,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.75,
+      "wire": 0.75
+    },
+    {
+      "algo": 7,
+      "display": 2.531954829696128,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.8999999761581421,
+      "wire": 0.9
+    },
+    {
+      "algo": 7,
+      "display": 3.823494446954542,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.9900000095367432,
+      "wire": 0.99
+    },
+    {
+      "algo": 7,
+      "display": 3.9838984934090553,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.9990000128746033,
+      "wire": 0.999
+    },
+    {
+      "algo": 7,
+      "display": 4.002126849256725,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 1,
+      "wire": 1
+    },
+    {
+      "algo": 7,
+      "display": 0,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0,
+      "wire": 0
+    },
+    {
+      "algo": 7,
+      "display": 1.9997974438395772e-05,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 9.999999747378752e-05,
+      "wire": 0.0001
+    },
+    {
+      "algo": 7,
+      "display": 0.011215038615193499,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.05000000074505806,
+      "wire": 0.05
+    },
+    {
+      "algo": 7,
+      "display": 0.09262925167114228,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.25,
+      "wire": 0.25
+    },
+    {
+      "algo": 7,
+      "display": 0.15517199615913463,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.3333333432674408,
+      "wire": 0.3333333333333333
+    },
+    {
+      "algo": 7,
+      "display": 0.37901938520613604,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.5,
+      "wire": 0.5
+    },
+    {
+      "algo": 7,
+      "display": 1.2644773491480363,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.75,
+      "wire": 0.75
+    },
+    {
+      "algo": 7,
+      "display": 2.531954829696128,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.8999999761581421,
+      "wire": 0.9
+    },
+    {
+      "algo": 7,
+      "display": 3.823494446954542,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.9900000095367432,
+      "wire": 0.99
+    },
+    {
+      "algo": 7,
+      "display": 3.9838984934090553,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.9990000128746033,
+      "wire": 0.999
+    },
+    {
+      "algo": 7,
+      "display": 4.002126849256725,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 1,
+      "wire": 1
+    },
+    {
+      "algo": 7,
+      "display": 0,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0,
+      "wire": 0
+    },
+    {
+      "algo": 7,
+      "display": 1.9997974438395772e-05,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 9.999999747378752e-05,
+      "wire": 0.0001
+    },
+    {
+      "algo": 7,
+      "display": 0.011215038615193499,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.05000000074505806,
+      "wire": 0.05
+    },
+    {
+      "algo": 7,
+      "display": 0.09262925167114228,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.25,
+      "wire": 0.25
+    },
+    {
+      "algo": 7,
+      "display": 0.15517199615913463,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.3333333432674408,
+      "wire": 0.3333333333333333
+    },
+    {
+      "algo": 7,
+      "display": 0.37901938520613604,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.5,
+      "wire": 0.5
+    },
+    {
+      "algo": 7,
+      "display": 1.2644773491480363,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.75,
+      "wire": 0.75
+    },
+    {
+      "algo": 7,
+      "display": 2.531954829696128,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.8999999761581421,
+      "wire": 0.9
+    },
+    {
+      "algo": 7,
+      "display": 3.823494446954542,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.9900000095367432,
+      "wire": 0.99
+    },
+    {
+      "algo": 7,
+      "display": 3.9838984934090553,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.9990000128746033,
+      "wire": 0.999
+    },
+    {
+      "algo": 7,
+      "display": 4.002126849256725,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 1,
+      "wire": 1
+    },
+    {
+      "algo": 7,
+      "display": 0,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0,
+      "wire": 0
+    },
+    {
+      "algo": 7,
+      "display": 1.9997974438395772e-05,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 9.999999747378752e-05,
+      "wire": 0.0001
+    },
+    {
+      "algo": 7,
+      "display": 0.011215038615193499,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.05000000074505806,
+      "wire": 0.05
+    },
+    {
+      "algo": 7,
+      "display": 0.09262925167114228,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.25,
+      "wire": 0.25
+    },
+    {
+      "algo": 7,
+      "display": 0.15517199615913463,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.3333333432674408,
+      "wire": 0.3333333333333333
+    },
+    {
+      "algo": 7,
+      "display": 0.37901938520613604,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.5,
+      "wire": 0.5
+    },
+    {
+      "algo": 7,
+      "display": 1.2644773491480363,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.75,
+      "wire": 0.75
+    },
+    {
+      "algo": 7,
+      "display": 2.531954829696128,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.8999999761581421,
+      "wire": 0.9
+    },
+    {
+      "algo": 7,
+      "display": 3.823494446954542,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.9900000095367432,
+      "wire": 0.99
+    },
+    {
+      "algo": 7,
+      "display": 3.9838984934090553,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.9990000128746033,
+      "wire": 0.999
+    },
+    {
+      "algo": 7,
+      "display": 4.002126849256725,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 1,
+      "wire": 1
+    },
+    {
+      "algo": 7,
+      "display": 0,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0,
+      "wire": 0
+    },
+    {
+      "algo": 7,
+      "display": 1.9997974438395772e-05,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 9.999999747378752e-05,
+      "wire": 0.0001
+    },
+    {
+      "algo": 7,
+      "display": 0.011215038615193499,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.05000000074505806,
+      "wire": 0.05
+    },
+    {
+      "algo": 7,
+      "display": 0.09262925167114228,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.25,
+      "wire": 0.25
+    },
+    {
+      "algo": 7,
+      "display": 0.15517199615913463,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.3333333432674408,
+      "wire": 0.3333333333333333
+    },
+    {
+      "algo": 7,
+      "display": 0.37901938520613604,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.5,
+      "wire": 0.5
+    },
+    {
+      "algo": 7,
+      "display": 1.2644773491480363,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.75,
+      "wire": 0.75
+    },
+    {
+      "algo": 7,
+      "display": 2.531954829696128,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.8999999761581421,
+      "wire": 0.9
+    },
+    {
+      "algo": 7,
+      "display": 3.823494446954542,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.9900000095367432,
+      "wire": 0.99
+    },
+    {
+      "algo": 7,
+      "display": 3.9838984934090553,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.9990000128746033,
+      "wire": 0.999
+    },
+    {
+      "algo": 7,
+      "display": 4.002126849256725,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 1,
+      "wire": 1
+    },
+    {
+      "algo": 8,
+      "display": -100,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 1.000000013351432e-10,
+      "wire": 0
+    },
+    {
+      "algo": 8,
+      "display": 20,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 9.999999747378752e-05,
+      "wire": 0.0001
+    },
+    {
+      "algo": 8,
+      "display": 73.97940008672037,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.05000000074505806,
+      "wire": 0.05
+    },
+    {
+      "algo": 8,
+      "display": 87.95880017344075,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.25,
+      "wire": 0.25
+    },
+    {
+      "algo": 8,
+      "display": 90.45757490560675,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.3333333432674408,
+      "wire": 0.3333333333333333
+    },
+    {
+      "algo": 8,
+      "display": 93.97940008672037,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.5,
+      "wire": 0.5
+    },
+    {
+      "algo": 8,
+      "display": 97.501225267834,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.75,
+      "wire": 0.75
+    },
+    {
+      "algo": 8,
+      "display": 99.0848501887865,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.8999999761581421,
+      "wire": 0.9
+    },
+    {
+      "algo": 8,
+      "display": 99.912703891951,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.9900000095367432,
+      "wire": 0.99
+    },
+    {
+      "algo": 8,
+      "display": 99.99130976451964,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.9990000128746033,
+      "wire": 0.999
+    },
+    {
+      "algo": 8,
+      "display": 100,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 1,
+      "wire": 1
+    },
+    {
+      "algo": 8,
+      "display": -188,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 1.000000013351432e-10,
+      "wire": 0
+    },
+    {
+      "algo": 8,
+      "display": -68,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 9.999999747378752e-05,
+      "wire": 0.0001
+    },
+    {
+      "algo": 8,
+      "display": -14.020599913279625,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.05000000074505806,
+      "wire": 0.05
+    },
+    {
+      "algo": 8,
+      "display": -0.041199826559248365,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.25,
+      "wire": 0.25
+    },
+    {
+      "algo": 8,
+      "display": 2.4575749056067497,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.3333333432674408,
+      "wire": 0.3333333333333333
+    },
+    {
+      "algo": 8,
+      "display": 5.979400086720376,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.5,
+      "wire": 0.5
+    },
+    {
+      "algo": 8,
+      "display": 9.501225267834002,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.75,
+      "wire": 0.75
+    },
+    {
+      "algo": 8,
+      "display": 11.084850188786497,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.8999999761581421,
+      "wire": 0.9
+    },
+    {
+      "algo": 8,
+      "display": 11.912703891950999,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.9900000095367432,
+      "wire": 0.99
+    },
+    {
+      "algo": 8,
+      "display": 11.991309764519647,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.9990000128746033,
+      "wire": 0.999
+    },
+    {
+      "algo": 8,
+      "display": 12,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 1,
+      "wire": 1
+    },
+    {
+      "algo": 8,
+      "display": -180,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 1.000000013351432e-10,
+      "wire": 0
+    },
+    {
+      "algo": 8,
+      "display": -60,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 9.999999747378752e-05,
+      "wire": 0.0001
+    },
+    {
+      "algo": 8,
+      "display": -6.020599913279625,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.05000000074505806,
+      "wire": 0.05
+    },
+    {
+      "algo": 8,
+      "display": 7.958800173440752,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.25,
+      "wire": 0.25
+    },
+    {
+      "algo": 8,
+      "display": 10.45757490560675,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.3333333432674408,
+      "wire": 0.3333333333333333
+    },
+    {
+      "algo": 8,
+      "display": 13.979400086720375,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.5,
+      "wire": 0.5
+    },
+    {
+      "algo": 8,
+      "display": 17.501225267834002,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.75,
+      "wire": 0.75
+    },
+    {
+      "algo": 8,
+      "display": 19.084850188786497,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.8999999761581421,
+      "wire": 0.9
+    },
+    {
+      "algo": 8,
+      "display": 19.912703891950997,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.9900000095367432,
+      "wire": 0.99
+    },
+    {
+      "algo": 8,
+      "display": 19.991309764519645,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.9990000128746033,
+      "wire": 0.999
+    },
+    {
+      "algo": 8,
+      "display": 20,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 1,
+      "wire": 1
+    },
+    {
+      "algo": 8,
+      "display": 800,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 1.000000013351432e-10,
+      "wire": 0
+    },
+    {
+      "algo": 8,
+      "display": 920,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 9.999999747378752e-05,
+      "wire": 0.0001
+    },
+    {
+      "algo": 8,
+      "display": 973.9794000867204,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.05000000074505806,
+      "wire": 0.05
+    },
+    {
+      "algo": 8,
+      "display": 987.9588001734407,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.25,
+      "wire": 0.25
+    },
+    {
+      "algo": 8,
+      "display": 990.4575749056067,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.3333333432674408,
+      "wire": 0.3333333333333333
+    },
+    {
+      "algo": 8,
+      "display": 993.9794000867204,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.5,
+      "wire": 0.5
+    },
+    {
+      "algo": 8,
+      "display": 997.501225267834,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.75,
+      "wire": 0.75
+    },
+    {
+      "algo": 8,
+      "display": 999.0848501887865,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.8999999761581421,
+      "wire": 0.9
+    },
+    {
+      "algo": 8,
+      "display": 999.912703891951,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.9900000095367432,
+      "wire": 0.99
+    },
+    {
+      "algo": 8,
+      "display": 999.9913097645197,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.9990000128746033,
+      "wire": 0.999
+    },
+    {
+      "algo": 8,
+      "display": 1000,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 1,
+      "wire": 1
+    },
+    {
+      "algo": 8,
+      "display": 15800,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 1.000000013351432e-10,
+      "wire": 0
+    },
+    {
+      "algo": 8,
+      "display": 15920,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 9.999999747378752e-05,
+      "wire": 0.0001
+    },
+    {
+      "algo": 8,
+      "display": 15973.97940008672,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.05000000074505806,
+      "wire": 0.05
+    },
+    {
+      "algo": 8,
+      "display": 15987.958800173441,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.25,
+      "wire": 0.25
+    },
+    {
+      "algo": 8,
+      "display": 15990.457574905608,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.3333333432674408,
+      "wire": 0.3333333333333333
+    },
+    {
+      "algo": 8,
+      "display": 15993.97940008672,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.5,
+      "wire": 0.5
+    },
+    {
+      "algo": 8,
+      "display": 15997.501225267833,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.75,
+      "wire": 0.75
+    },
+    {
+      "algo": 8,
+      "display": 15999.084850188787,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.8999999761581421,
+      "wire": 0.9
+    },
+    {
+      "algo": 8,
+      "display": 15999.91270389195,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.9900000095367432,
+      "wire": 0.99
+    },
+    {
+      "algo": 8,
+      "display": 15999.99130976452,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.9990000128746033,
+      "wire": 0.999
+    },
+    {
+      "algo": 8,
+      "display": 16000,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 1,
+      "wire": 1
+    },
+    {
+      "algo": 8,
+      "display": -100,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 1.000000013351432e-10,
+      "wire": 0
+    },
+    {
+      "algo": 8,
+      "display": 20,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 9.999999747378752e-05,
+      "wire": 0.0001
+    },
+    {
+      "algo": 8,
+      "display": 73.97940008672037,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.05000000074505806,
+      "wire": 0.05
+    },
+    {
+      "algo": 8,
+      "display": 87.95880017344075,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.25,
+      "wire": 0.25
+    },
+    {
+      "algo": 8,
+      "display": 90.45757490560675,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.3333333432674408,
+      "wire": 0.3333333333333333
+    },
+    {
+      "algo": 8,
+      "display": 93.97940008672037,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.5,
+      "wire": 0.5
+    },
+    {
+      "algo": 8,
+      "display": 97.501225267834,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.75,
+      "wire": 0.75
+    },
+    {
+      "algo": 8,
+      "display": 99.0848501887865,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.8999999761581421,
+      "wire": 0.9
+    },
+    {
+      "algo": 8,
+      "display": 99.912703891951,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.9900000095367432,
+      "wire": 0.99
+    },
+    {
+      "algo": 8,
+      "display": 99.99130976451964,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.9990000128746033,
+      "wire": 0.999
+    },
+    {
+      "algo": 8,
+      "display": 100,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 1,
+      "wire": 1
+    },
+    {
+      "algo": 9,
+      "display": 0,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0,
+      "wire": 0
+    },
+    {
+      "algo": 9,
+      "display": 7.981049259875517e-05,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 9.999999747378752e-05,
+      "wire": 0.0001
+    },
+    {
+      "algo": 9,
+      "display": 0.039905246299377584,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.05000000074505806,
+      "wire": 0.05
+    },
+    {
+      "algo": 9,
+      "display": 0.19952623149688792,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.25,
+      "wire": 0.25
+    },
+    {
+      "algo": 9,
+      "display": 0.23865897868585803,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.3333333432674408,
+      "wire": 0.3333333333333333
+    },
+    {
+      "algo": 9,
+      "display": 0.3414548873833601,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.5,
+      "wire": 0.5
+    },
+    {
+      "algo": 9,
+      "display": 0.5843414133735175,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.75,
+      "wire": 0.75
+    },
+    {
+      "algo": 9,
+      "display": 0.8066156921766134,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.8999999761581421,
+      "wire": 0.9
+    },
+    {
+      "algo": 9,
+      "display": 0.9787384874971928,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.9900000095367432,
+      "wire": 0.99
+    },
+    {
+      "algo": 9,
+      "display": 0.9978532281976685,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.9990000128746033,
+      "wire": 0.999
+    },
+    {
+      "algo": 9,
+      "display": 1,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 1,
+      "wire": 1
+    },
+    {
+      "algo": 9,
+      "display": 0,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0,
+      "wire": 0
+    },
+    {
+      "algo": 9,
+      "display": 7.981049259875517e-05,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 9.999999747378752e-05,
+      "wire": 0.0001
+    },
+    {
+      "algo": 9,
+      "display": 0.039905246299377584,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.05000000074505806,
+      "wire": 0.05
+    },
+    {
+      "algo": 9,
+      "display": 0.19952623149688792,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.25,
+      "wire": 0.25
+    },
+    {
+      "algo": 9,
+      "display": 0.23865897868585803,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.3333333432674408,
+      "wire": 0.3333333333333333
+    },
+    {
+      "algo": 9,
+      "display": 0.3414548873833601,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.5,
+      "wire": 0.5
+    },
+    {
+      "algo": 9,
+      "display": 0.5843414133735175,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.75,
+      "wire": 0.75
+    },
+    {
+      "algo": 9,
+      "display": 0.8066156921766134,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.8999999761581421,
+      "wire": 0.9
+    },
+    {
+      "algo": 9,
+      "display": 0.9787384874971928,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.9900000095367432,
+      "wire": 0.99
+    },
+    {
+      "algo": 9,
+      "display": 0.9978532281976685,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.9990000128746033,
+      "wire": 0.999
+    },
+    {
+      "algo": 9,
+      "display": 1,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 1,
+      "wire": 1
+    },
+    {
+      "algo": 9,
+      "display": 0,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0,
+      "wire": 0
+    },
+    {
+      "algo": 9,
+      "display": 7.981049259875517e-05,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 9.999999747378752e-05,
+      "wire": 0.0001
+    },
+    {
+      "algo": 9,
+      "display": 0.039905246299377584,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.05000000074505806,
+      "wire": 0.05
+    },
+    {
+      "algo": 9,
+      "display": 0.19952623149688792,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.25,
+      "wire": 0.25
+    },
+    {
+      "algo": 9,
+      "display": 0.23865897868585803,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.3333333432674408,
+      "wire": 0.3333333333333333
+    },
+    {
+      "algo": 9,
+      "display": 0.3414548873833601,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.5,
+      "wire": 0.5
+    },
+    {
+      "algo": 9,
+      "display": 0.5843414133735175,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.75,
+      "wire": 0.75
+    },
+    {
+      "algo": 9,
+      "display": 0.8066156921766134,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.8999999761581421,
+      "wire": 0.9
+    },
+    {
+      "algo": 9,
+      "display": 0.9787384874971928,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.9900000095367432,
+      "wire": 0.99
+    },
+    {
+      "algo": 9,
+      "display": 0.9978532281976685,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.9990000128746033,
+      "wire": 0.999
+    },
+    {
+      "algo": 9,
+      "display": 1,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 1,
+      "wire": 1
+    },
+    {
+      "algo": 9,
+      "display": 0,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0,
+      "wire": 0
+    },
+    {
+      "algo": 9,
+      "display": 7.981049259875517e-05,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 9.999999747378752e-05,
+      "wire": 0.0001
+    },
+    {
+      "algo": 9,
+      "display": 0.039905246299377584,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.05000000074505806,
+      "wire": 0.05
+    },
+    {
+      "algo": 9,
+      "display": 0.19952623149688792,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.25,
+      "wire": 0.25
+    },
+    {
+      "algo": 9,
+      "display": 0.23865897868585803,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.3333333432674408,
+      "wire": 0.3333333333333333
+    },
+    {
+      "algo": 9,
+      "display": 0.3414548873833601,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.5,
+      "wire": 0.5
+    },
+    {
+      "algo": 9,
+      "display": 0.5843414133735175,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.75,
+      "wire": 0.75
+    },
+    {
+      "algo": 9,
+      "display": 0.8066156921766134,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.8999999761581421,
+      "wire": 0.9
+    },
+    {
+      "algo": 9,
+      "display": 0.9787384874971928,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.9900000095367432,
+      "wire": 0.99
+    },
+    {
+      "algo": 9,
+      "display": 0.9978532281976685,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.9990000128746033,
+      "wire": 0.999
+    },
+    {
+      "algo": 9,
+      "display": 1,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 1,
+      "wire": 1
+    },
+    {
+      "algo": 9,
+      "display": 0,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0,
+      "wire": 0
+    },
+    {
+      "algo": 9,
+      "display": 7.981049259875517e-05,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 9.999999747378752e-05,
+      "wire": 0.0001
+    },
+    {
+      "algo": 9,
+      "display": 0.039905246299377584,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.05000000074505806,
+      "wire": 0.05
+    },
+    {
+      "algo": 9,
+      "display": 0.19952623149688792,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.25,
+      "wire": 0.25
+    },
+    {
+      "algo": 9,
+      "display": 0.23865897868585803,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.3333333432674408,
+      "wire": 0.3333333333333333
+    },
+    {
+      "algo": 9,
+      "display": 0.3414548873833601,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.5,
+      "wire": 0.5
+    },
+    {
+      "algo": 9,
+      "display": 0.5843414133735175,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.75,
+      "wire": 0.75
+    },
+    {
+      "algo": 9,
+      "display": 0.8066156921766134,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.8999999761581421,
+      "wire": 0.9
+    },
+    {
+      "algo": 9,
+      "display": 0.9787384874971928,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.9900000095367432,
+      "wire": 0.99
+    },
+    {
+      "algo": 9,
+      "display": 0.9978532281976685,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.9990000128746033,
+      "wire": 0.999
+    },
+    {
+      "algo": 9,
+      "display": 1,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 1,
+      "wire": 1
+    },
+    {
+      "algo": 9,
+      "display": 0,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0,
+      "wire": 0
+    },
+    {
+      "algo": 9,
+      "display": 7.981049259875517e-05,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 9.999999747378752e-05,
+      "wire": 0.0001
+    },
+    {
+      "algo": 9,
+      "display": 0.039905246299377584,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.05000000074505806,
+      "wire": 0.05
+    },
+    {
+      "algo": 9,
+      "display": 0.19952623149688792,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.25,
+      "wire": 0.25
+    },
+    {
+      "algo": 9,
+      "display": 0.23865897868585803,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.3333333432674408,
+      "wire": 0.3333333333333333
+    },
+    {
+      "algo": 9,
+      "display": 0.3414548873833601,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.5,
+      "wire": 0.5
+    },
+    {
+      "algo": 9,
+      "display": 0.5843414133735175,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.75,
+      "wire": 0.75
+    },
+    {
+      "algo": 9,
+      "display": 0.8066156921766134,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.8999999761581421,
+      "wire": 0.9
+    },
+    {
+      "algo": 9,
+      "display": 0.9787384874971928,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.9900000095367432,
+      "wire": 0.99
+    },
+    {
+      "algo": 9,
+      "display": 0.9978532281976685,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.9990000128746033,
+      "wire": 0.999
+    },
+    {
+      "algo": 9,
+      "display": 1,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 1,
+      "wire": 1
+    },
+    {
+      "algo": 10,
+      "display": 0.45,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0,
+      "wire": 0
+    },
+    {
+      "algo": 10,
+      "display": 0.4501450145014501,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 9.999999747378752e-05,
+      "wire": 0.0001
+    },
+    {
+      "algo": 10,
+      "display": 0.5263157894736842,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.05000000074505806,
+      "wire": 0.05
+    },
+    {
+      "algo": 10,
+      "display": 0.9333333333333332,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.25,
+      "wire": 0.25
+    },
+    {
+      "algo": 10,
+      "display": 1.1749999999999998,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.3333333432674408,
+      "wire": 0.3333333333333333
+    },
+    {
+      "algo": 10,
+      "display": 1.9,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.5,
+      "wire": 0.5
+    },
+    {
+      "algo": 10,
+      "display": 4.8,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.75,
+      "wire": 0.75
+    },
+    {
+      "algo": 10,
+      "display": 13.500000000000004,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.8999999761581421,
+      "wire": 0.9
+    },
+    {
+      "algo": 10,
+      "display": 143.99999999999986,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 0.9900000095367432,
+      "wire": 0.99
+    },
+    {
+      "algo": 10,
+      "display": 145,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 1,
+      "wire": 0.999
+    },
+    {
+      "algo": 10,
+      "display": 145,
+      "maximum": 100,
+      "minimum": 0,
+      "roundTrip": 1,
+      "wire": 1
+    },
+    {
+      "algo": 10,
+      "display": 0.45,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0,
+      "wire": 0
+    },
+    {
+      "algo": 10,
+      "display": 0.4501450145014501,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 9.999999747378752e-05,
+      "wire": 0.0001
+    },
+    {
+      "algo": 10,
+      "display": 0.5263157894736842,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.05000000074505806,
+      "wire": 0.05
+    },
+    {
+      "algo": 10,
+      "display": 0.9333333333333332,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.25,
+      "wire": 0.25
+    },
+    {
+      "algo": 10,
+      "display": 1.1749999999999998,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.3333333432674408,
+      "wire": 0.3333333333333333
+    },
+    {
+      "algo": 10,
+      "display": 1.9,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.5,
+      "wire": 0.5
+    },
+    {
+      "algo": 10,
+      "display": 4.8,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.75,
+      "wire": 0.75
+    },
+    {
+      "algo": 10,
+      "display": 13.500000000000004,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.8999999761581421,
+      "wire": 0.9
+    },
+    {
+      "algo": 10,
+      "display": 143.99999999999986,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 0.9900000095367432,
+      "wire": 0.99
+    },
+    {
+      "algo": 10,
+      "display": 145,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 1,
+      "wire": 0.999
+    },
+    {
+      "algo": 10,
+      "display": 145,
+      "maximum": 12,
+      "minimum": -12,
+      "roundTrip": 1,
+      "wire": 1
+    },
+    {
+      "algo": 10,
+      "display": 0.45,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0,
+      "wire": 0
+    },
+    {
+      "algo": 10,
+      "display": 0.4501450145014501,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 9.999999747378752e-05,
+      "wire": 0.0001
+    },
+    {
+      "algo": 10,
+      "display": 0.5263157894736842,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.05000000074505806,
+      "wire": 0.05
+    },
+    {
+      "algo": 10,
+      "display": 0.9333333333333332,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.25,
+      "wire": 0.25
+    },
+    {
+      "algo": 10,
+      "display": 1.1749999999999998,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.3333333432674408,
+      "wire": 0.3333333333333333
+    },
+    {
+      "algo": 10,
+      "display": 1.9,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.5,
+      "wire": 0.5
+    },
+    {
+      "algo": 10,
+      "display": 4.8,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.75,
+      "wire": 0.75
+    },
+    {
+      "algo": 10,
+      "display": 13.500000000000004,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.8999999761581421,
+      "wire": 0.9
+    },
+    {
+      "algo": 10,
+      "display": 143.99999999999986,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 0.9900000095367432,
+      "wire": 0.99
+    },
+    {
+      "algo": 10,
+      "display": 145,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 1,
+      "wire": 0.999
+    },
+    {
+      "algo": 10,
+      "display": 145,
+      "maximum": 20,
+      "minimum": 0.25,
+      "roundTrip": 1,
+      "wire": 1
+    },
+    {
+      "algo": 10,
+      "display": 0.45,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0,
+      "wire": 0
+    },
+    {
+      "algo": 10,
+      "display": 0.4501450145014501,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 9.999999747378752e-05,
+      "wire": 0.0001
+    },
+    {
+      "algo": 10,
+      "display": 0.5263157894736842,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.05000000074505806,
+      "wire": 0.05
+    },
+    {
+      "algo": 10,
+      "display": 0.9333333333333332,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.25,
+      "wire": 0.25
+    },
+    {
+      "algo": 10,
+      "display": 1.1749999999999998,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.3333333432674408,
+      "wire": 0.3333333333333333
+    },
+    {
+      "algo": 10,
+      "display": 1.9,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.5,
+      "wire": 0.5
+    },
+    {
+      "algo": 10,
+      "display": 4.8,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.75,
+      "wire": 0.75
+    },
+    {
+      "algo": 10,
+      "display": 13.500000000000004,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.8999999761581421,
+      "wire": 0.9
+    },
+    {
+      "algo": 10,
+      "display": 143.99999999999986,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 0.9900000095367432,
+      "wire": 0.99
+    },
+    {
+      "algo": 10,
+      "display": 145,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 1,
+      "wire": 0.999
+    },
+    {
+      "algo": 10,
+      "display": 145,
+      "maximum": 1000,
+      "minimum": 25,
+      "roundTrip": 1,
+      "wire": 1
+    },
+    {
+      "algo": 10,
+      "display": 0.45,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0,
+      "wire": 0
+    },
+    {
+      "algo": 10,
+      "display": 0.4501450145014501,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 9.999999747378752e-05,
+      "wire": 0.0001
+    },
+    {
+      "algo": 10,
+      "display": 0.5263157894736842,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.05000000074505806,
+      "wire": 0.05
+    },
+    {
+      "algo": 10,
+      "display": 0.9333333333333332,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.25,
+      "wire": 0.25
+    },
+    {
+      "algo": 10,
+      "display": 1.1749999999999998,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.3333333432674408,
+      "wire": 0.3333333333333333
+    },
+    {
+      "algo": 10,
+      "display": 1.9,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.5,
+      "wire": 0.5
+    },
+    {
+      "algo": 10,
+      "display": 4.8,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.75,
+      "wire": 0.75
+    },
+    {
+      "algo": 10,
+      "display": 13.500000000000004,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.8999999761581421,
+      "wire": 0.9
+    },
+    {
+      "algo": 10,
+      "display": 143.99999999999986,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 0.9900000095367432,
+      "wire": 0.99
+    },
+    {
+      "algo": 10,
+      "display": 145,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 1,
+      "wire": 0.999
+    },
+    {
+      "algo": 10,
+      "display": 145,
+      "maximum": 16000,
+      "minimum": 1000,
+      "roundTrip": 1,
+      "wire": 1
+    },
+    {
+      "algo": 10,
+      "display": 0.45,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0,
+      "wire": 0
+    },
+    {
+      "algo": 10,
+      "display": 0.4501450145014501,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 9.999999747378752e-05,
+      "wire": 0.0001
+    },
+    {
+      "algo": 10,
+      "display": 0.5263157894736842,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.05000000074505806,
+      "wire": 0.05
+    },
+    {
+      "algo": 10,
+      "display": 0.9333333333333332,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.25,
+      "wire": 0.25
+    },
+    {
+      "algo": 10,
+      "display": 1.1749999999999998,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.3333333432674408,
+      "wire": 0.3333333333333333
+    },
+    {
+      "algo": 10,
+      "display": 1.9,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.5,
+      "wire": 0.5
+    },
+    {
+      "algo": 10,
+      "display": 4.8,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.75,
+      "wire": 0.75
+    },
+    {
+      "algo": 10,
+      "display": 13.500000000000004,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.8999999761581421,
+      "wire": 0.9
+    },
+    {
+      "algo": 10,
+      "display": 143.99999999999986,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 0.9900000095367432,
+      "wire": 0.99
+    },
+    {
+      "algo": 10,
+      "display": 145,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 1,
+      "wire": 0.999
+    },
+    {
+      "algo": 10,
+      "display": 145,
+      "maximum": 100,
+      "minimum": -100,
+      "roundTrip": 1,
+      "wire": 1
+    }
+  ],
+  "vendor_source_note": "extracted from the unit's static/js/main.<hash>.js and NOT redistributed here; these are sha256 prefixes of the fragments this table was generated from. Re-read them from a unit with tools/build_headrush_tapers.py to check the maths.",
+  "vendor_source_sha256": {
+    "clamp": "b5dc8c58218664e3",
+    "helpers": "b7cce558a551fb3e",
+    "to_display": "687f77170ba9ca18",
+    "to_wire": "2341a17d1c30e677"
+  },
+  "warning": "NOT A DEVICE READ. The unit publishes an opaque integer per parameter (x-options.normalizeAlgo) and no formula; these come from the web editor the unit serves, which is the best available source and is still not the API. Anything surfacing a converted value to a user or a planner has to say so. Corroborated against six readings taken off a Core's screen, which is one block and not proof across 302 objects."
+}

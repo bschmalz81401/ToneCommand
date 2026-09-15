@@ -247,3 +247,32 @@ its quotations from named individuals are deliberately not reproduced; the
 generator's `--with-prose` mode keeps them in a gitignored local file instead.
 
 Check the wiki's content licence before redistributing this file further.
+
+## HeadRush web editor (normalisation tapers)
+
+- Source: the web editor a HeadRush unit serves from its own HTTP port,
+  `static/js/main.<hash>.js`. Not a public download and not vendored here.
+- Not redistributed by this project. `tools/build_headrush_tapers.py` reads a
+  local copy of that bundle and writes `config/headrush_tapers.json`.
+
+The unit publishes an opaque integer per continuous parameter
+(`x-options.normalizeAlgo`) and no formula for it, so the curve between the
+0..1 wire value and the value the unit displays is not on the API. The editor
+has to convert, so it carries the curves.
+
+WHAT IS TAKEN IS FACTS, NOT CODE. Two things are recorded: the names of the
+eleven curves, which is an enumeration the vendor ships in a file it serves,
+and 726 reference vectors, which are numbers the vendor's own functions
+produced when run. Neither is their expression of anything.
+
+The vendor's SOURCE TEXT is deliberately not committed. A sha256 prefix of each
+extracted fragment is kept instead, so that regenerating the table can be shown
+to have read the same code without the code travelling with it. Anyone checking
+the maths reads it from their own unit.
+
+This mirrors `config/headrush_topologies.json`, which takes slot geometry from
+the same bundle, and both carry `provenance: "vendor editor bundle"` and
+`api_readable: false` so nothing downstream can present them as a device read.
+
+"HeadRush" is a trademark of inMusic Brands, Inc. This project is not
+affiliated with or endorsed by inMusic Brands.
