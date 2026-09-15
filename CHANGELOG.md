@@ -15,15 +15,22 @@ Notable changes to ToneCommand. Dates are UTC.
 ## Unreleased
 
 ### Fixed (HeadRush unreachable diagnosis, 2026-09-15)
-- `describe_unreachable()` names both causes of a 404 instead of reporting the
-  code. Measured on a Core (#126): `/api/v1` is mounted only while HeadRush
-  Remote is active on the unit; measured is that after a crash the unit served
-  `/` with 200 while every `/api/v1` path returned 404. Reported as a bare 404
-  that reads as a wrong path, which sends an operator to check their own code.
-  The function cannot distinguish the two causes without a second request it has
-  no business making, so it names both and says how to check. That Remote is the
-  cause is inferred from the editor's own generic advice and has not been tested
-  by toggling it. Other status codes keep their wording.
+- `describe_unreachable()` gains a 403 branch and its 404 branch stops blaming
+  the wrong thing. MEASURED by toggling HeadRush Remote on a Core with no
+  reboot (#126): with Remote off, every `object-properties` and `object-meta`
+  path answers **403** and the unit says why in the body, "DataModel: Web
+  access temporarily disabled"; turning it back on restores 200 immediately.
+- A **404** is therefore the case where Remote is demonstrably NOT the problem.
+  It means this firmware has no such path, or the engine is not running: after
+  the crash in the findings report, every `/api/v1` object path returned 404
+  while the unit still served its editor page on `/`.
+- The first version of this branch had it backwards, telling anyone who saw a
+  404 to go check HeadRush Remote. It was built on the editor's own dialog,
+  which names Remote for every connection failure because it is generic advice
+  rather than a diagnosis. It was labelled as inferred, which was honest, and
+  it still pointed operators at the one thing that was fine. One toggle settled
+  it, and the toggle should have come before the advice.
+- Other status codes keep their wording; the existing 504 case is unchanged.
 
 ### Added (HeadRush hardware findings, 2026-09-15)
 - `docs/HEADRUSH-HARDWARE-FINDINGS.md`: partial evidence for #126, which cannot

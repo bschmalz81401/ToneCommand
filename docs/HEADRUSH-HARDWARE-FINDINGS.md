@@ -129,43 +129,64 @@ useful: **read-back verification does not detect this.** The write was
 acknowledged, the read-back agreed, and the engine died afterwards. Any
 verified-write built on read-and-compare would report this write as a success.
 
-## FINDING 2: the API was unreachable while the unit still served its editor
+## FINDING 2: Remote gates the API, and its signature is 403, not 404
 
-After each crash `/api/v1` returned 404 on every path while the unit kept
-serving its editor's static files, and it did not recover on its own.
+Measured by toggling HeadRush Remote on the unit with no reboot, in both
+directions, 2026-09-15. An earlier version of this document inferred the gating
+from the editor's own connection-failure dialog and got the SIGNATURE wrong,
+which is recorded below because the wrong version shipped a diagnostic that
+pointed operators at the wrong thing.
 
-THAT REMOTE IS THE CAUSE IS INFERRED, NOT TESTED. HeadRush Remote was never
-toggled while the API was watched. The evidence is the observed 200/404 split
-plus the editor's own advice, and that advice is its GENERIC connection-failure
-message rather than a diagnosis of this state. The unit was later power cycled
-and Remote re-enabled together, so which of the two restored the API is also
-unknown. The state is real and diagnosable either way; the mechanism is a
-hypothesis worth one toggle to settle.
+| request | Remote OFF | Remote ON |
+|---|---|---|
+| `GET /` | 200 | 200 |
+| `/api/v1/subtree/{path}` | 404 | 200 |
+| `/api/v1/object-properties/{path}` | **403** | 200 |
+| `/api/v1/object-meta/{path}` | **403** | 200 |
 
-The failure is specific and diagnosable, because the unit keeps serving its
-editor's static files the whole time:
+With Remote off the unit says why, in the body:
 
+```json
+{"desc": "DataModel: Web access temporarily disabled",
+ "reason": "Forbidden", "status": 403}
 ```
-GET /                     200    the editor page loads
-GET /api/v1/subtree       404    every API path
-```
 
-The unit's own editor detects exactly this and says so: "Connection cannot be
-established to your HeadRush device. Check that HeadRush Remote is active on
-your HeadRush device."
+Turning Remote back on restored 200 on every path immediately, without a
+reboot. So Remote does gate the API, that is now measured rather than inferred,
+and the state is entirely recoverable by the operator.
 
-The unit also announces the crash itself. @bschmalz81401, watching it: after
-either crash it reloads on its own and comes up asking whether to load the last
-preset, yes or no. That is a recovery prompt rather than a normal boot, which is
-corroboration that this is a fault and not a hang, and it is operationally
-relevant: anyone reproducing finding 1 has to answer a dialog on the unit before
-the API is reachable again, on top of re-enabling Remote.
+### The correction, and why it mattered
 
-`describe_unreachable()` in `devices/headrush/client.py` currently explains name
-resolution and connection failures, which are the wrong advice here: the name
-resolved, the connection succeeded, and the unit answered. A 200 on `/` with a
-404 on `/api/v1` means the unit is up and Remote is off, and saying so is worth
-more than telling someone to check their Wi-Fi.
+After each crash in finding 1, `object-properties` returned **404**. With Remote
+off it returns **403**. Those are different failures:
+
+    403 on an object path   Remote is off. Turn it on. No reboot needed.
+    404 on an object path   this firmware has no such path, OR the engine is
+                            not running. Remote is NOT the problem.
+
+The earlier version of this document, and the `describe_unreachable` text that
+went with it, told anyone seeing a 404 to check HeadRush Remote. A 404 is
+precisely the case where Remote is demonstrably fine, so that advice sent an
+operator to the one thing that was not wrong.
+
+The mistake was building on the editor's dialog, which names Remote for EVERY
+connection failure because it is generic advice rather than a diagnosis. It was
+labelled as inferred, which was honest, and it still pointed the wrong way. One
+toggle settled it, and the toggle is what should have happened before the advice
+was written.
+
+### What this also says about finding 1
+
+The post-crash state was not Remote being switched off. `object-properties`
+404ing rather than 403ing means the engine itself was not serving, which is
+consistent with a crash and is a stronger reading of finding 1 than the earlier
+write-up allowed: the two failures are now distinguishable and the crash was
+the other one.
+
+It does not change what recovery was performed. The unit was power cycled and
+Remote re-enabled together, so whether either alone would have sufficed is still
+untested. Given Remote-off is a 403 and the observed state was 404, Remote was
+probably not what needed re-enabling.
 
 ## FINDING 3: continuous parameters are normalised on the wire
 

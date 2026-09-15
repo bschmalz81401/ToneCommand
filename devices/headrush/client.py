@@ -304,41 +304,52 @@ def describe_unreachable(error: BaseException, target: str) -> str:
     regex would also have caught the unit's own 504 Gateway Timeout on a
     wrong-argument method call, which is not "nothing answered" but the unit
     answering. urllib.error.HTTPError is therefore checked first, because the
-    unit did reply. Every code but 404 is quoted back; 404 has two causes that
-    want opposite actions and gets its own branch, below.
+    unit did reply. 403 and 404 get their own branches because they are the two
+    states an operator can act on and they want OPPOSITE actions: 403 is
+    HeadRush Remote switched off, measured by toggling it, and 404 is a path
+    this firmware lacks or an engine that is not running. Every other code is
+    quoted back.
 
     Every branch ends a sentence, so a caller can append its own context after
     it with a plain space.
     """
     if isinstance(error, urllib.error.HTTPError):
+        if error.code == 403:
+            # MEASURED BY TOGGLING IT, 2026-09-15 (#126). With HeadRush Remote
+            # off the unit answers every object-properties and object-meta
+            # request with 403 and says why in the body: "DataModel: Web access
+            # temporarily disabled". Turning Remote back on restores 200 with
+            # no reboot. So this is the one unambiguous, operator-fixable
+            # state, and it is worth naming exactly.
+            return (
+                f"The unit refused {target} with 403. Measured on a Core: this "
+                f"is what it answers when HeadRush Remote is switched off, and "
+                f"it says so in the body (\"Web access temporarily disabled\"). "
+                f"Turn HeadRush Remote on at the unit; no reboot is needed."
+            )
         if error.code == 404:
-            # A 404 has two causes that want opposite actions, and this
-            # function cannot tell them apart without a second request, which
-            # it has no business making. So it names both and says how to
-            # check, rather than picking one and being confidently wrong half
-            # the time.
+            # NOT the Remote-off signature, and an earlier version of this
+            # branch said it was. Remote off is the 403 above; that was
+            # established by toggling Remote and watching the API, which had
+            # not been done when this advice was first written. The editor's
+            # own connection-failure dialog names Remote for every failure,
+            # which is what the wrong version was built on.
             #
-            # Measured on a Core, 2026-09-15 (#126): after the engine
-            # crashed, `GET /` returned 200 from the editor's static files
-            # while EVERY `/api/v1` path returned 404. That state was reported
-            # as a plain 404, which reads as a wrong path and sends an operator
-            # to check their own code.
-            #
-            # The editor's advice for it is to check HeadRush Remote, and that
-            # is its GENERIC connection-failure message rather than a diagnosis
-            # of this state: Remote was never toggled while the API was
-            # watched, so the mechanism is a hypothesis. Hence "not serving its
-            # API at all" as the observed fact and Remote as the thing to
-            # check, rather than asserting the cause.
+            # What a 404 was actually measured to mean, after the engine
+            # crashed (#126): `GET /` still served the editor's static files
+            # with 200, while every /api/v1 object path returned 404. So a 404
+            # is either a path this firmware does not have, or a unit whose
+            # engine is not running. Telling the operator to check Remote here
+            # would send them to the one thing that is demonstrably fine.
             return (
                 f"The unit answered 404 for {target}. Either this firmware has "
-                f"no such path, or the unit is not currently serving its API "
-                f"at all: after a crash it was measured returning 404 for every "
-                f"/api/v1 path while still serving its editor page, and the "
-                f"editor's own advice for that state is to check HeadRush "
-                f"Remote. Open http://<unit>/ in a browser to tell them apart: "
-                f"if the page loads and reports it cannot connect, the problem "
-                f"is the unit's API and not this path."
+                f"no such path, or its engine is not running: measured after a "
+                f"crash, every /api/v1 object path returned 404 while the unit "
+                f"still served its editor page. This is NOT the signature of "
+                f"HeadRush Remote being off, which is a 403. Open "
+                f"http://<unit>/ in a browser to tell the two apart: if the "
+                f"page loads and reports it cannot connect, the problem is the "
+                f"unit rather than this path."
             )
         return _sentence(f"The unit answered {error.code} {error.reason} for {target}")
 
