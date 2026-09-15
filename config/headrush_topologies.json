@@ -1,0 +1,1525 @@
+{
+ "schema_version": 1,
+ "device": "headrush",
+ "content": "the ten signal-path templates: which slots are common, which are on a parallel branch, and which belong to an independent path",
+ "keyed_by": "Chain.Routing integer, 0..9",
+ "provenance": "vendor editor bundle",
+ "api_readable": false,
+ "source": "GET http://<unit>/hr-main.js, the unit's own web editor",
+ "source_host": null,
+ "source_sha256": "771f4e6ad7df2cad",
+ "generated_by": "tools/build_headrush_topologies.py",
+ "role_values": {
+  "0": "common",
+  "1": "branch A",
+  "2": "branch B"
+ },
+ "warning": "NOT a device read. The unit publishes the ten NAMES on Chain.Routing and nothing about their shapes: writing each in turn leaves every per-slot property byte-identical (#109). These shapes are read out of the vendor's own editor, which is the best available source and is still not the API. Anything built on this must present it as declared knowledge, never as something the device answered.",
+ "notes": [
+  "roleInChain is 0 on all fourteen slots of every dual topology. Duals are independent paths, not branches, and are identified by the routing drawing two input/output pairs.",
+  "display_order is not index order: index 5 and index 9 are drawn sixth and fifth. Writing Routing from a menu position selects the wrong topology.",
+  "the slot partition for dual paths is derived from the vendor's own name (Dual Path 4-10), not from any field; the bundle's roleInChain cannot express it."
+ ],
+ "routings": [
+  {
+   "index": 0,
+   "name": "Straight Path",
+   "display_order": 0,
+   "requires_vocals": false,
+   "io_blocks": [
+    "Input",
+    "Output"
+   ],
+   "input_types": [
+    "guitar"
+   ],
+   "slots": [
+    {
+     "slot": 1,
+     "position": [
+      167,
+      93
+     ],
+     "role": 0
+    },
+    {
+     "slot": 2,
+     "position": [
+      243,
+      93
+     ],
+     "role": 0
+    },
+    {
+     "slot": 3,
+     "position": [
+      319,
+      93
+     ],
+     "role": 0
+    },
+    {
+     "slot": 4,
+     "position": [
+      395,
+      93
+     ],
+     "role": 0
+    },
+    {
+     "slot": 5,
+     "position": [
+      471,
+      93
+     ],
+     "role": 0
+    },
+    {
+     "slot": 6,
+     "position": [
+      547,
+      93
+     ],
+     "role": 0
+    },
+    {
+     "slot": 7,
+     "position": [
+      623,
+      93
+     ],
+     "role": 0
+    },
+    {
+     "slot": 8,
+     "position": [
+      167,
+      250
+     ],
+     "role": 0
+    },
+    {
+     "slot": 9,
+     "position": [
+      243,
+      250
+     ],
+     "role": 0
+    },
+    {
+     "slot": 10,
+     "position": [
+      319,
+      250
+     ],
+     "role": 0
+    },
+    {
+     "slot": 11,
+     "position": [
+      395,
+      250
+     ],
+     "role": 0
+    },
+    {
+     "slot": 12,
+     "position": [
+      471,
+      250
+     ],
+     "role": 0
+    },
+    {
+     "slot": 13,
+     "position": [
+      547,
+      250
+     ],
+     "role": 0
+    },
+    {
+     "slot": 14,
+     "position": [
+      623,
+      250
+     ],
+     "role": 0
+    }
+   ],
+   "paths": [
+    [
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     11,
+     12,
+     13,
+     14
+    ]
+   ],
+   "has_parallel_branches": false,
+   "independent_paths": 1,
+   "schema_name": "S"
+  },
+  {
+   "index": 1,
+   "name": "Middle Split 3-4-3",
+   "display_order": 1,
+   "requires_vocals": false,
+   "io_blocks": [
+    "Input",
+    "Output"
+   ],
+   "input_types": [
+    "guitar"
+   ],
+   "slots": [
+    {
+     "slot": 1,
+     "position": [
+      47,
+      172
+     ],
+     "role": 0
+    },
+    {
+     "slot": 2,
+     "position": [
+      121,
+      172
+     ],
+     "role": 0
+    },
+    {
+     "slot": 3,
+     "position": [
+      195,
+      172
+     ],
+     "role": 0
+    },
+    {
+     "slot": 4,
+     "position": [
+      285,
+      64
+     ],
+     "role": 1
+    },
+    {
+     "slot": 5,
+     "position": [
+      359,
+      64
+     ],
+     "role": 1
+    },
+    {
+     "slot": 6,
+     "position": [
+      433,
+      64
+     ],
+     "role": 1
+    },
+    {
+     "slot": 7,
+     "position": [
+      507,
+      64
+     ],
+     "role": 1
+    },
+    {
+     "slot": 8,
+     "position": [
+      285,
+      282
+     ],
+     "role": 2
+    },
+    {
+     "slot": 9,
+     "position": [
+      359,
+      282
+     ],
+     "role": 2
+    },
+    {
+     "slot": 10,
+     "position": [
+      433,
+      282
+     ],
+     "role": 2
+    },
+    {
+     "slot": 11,
+     "position": [
+      507,
+      282
+     ],
+     "role": 2
+    },
+    {
+     "slot": 12,
+     "position": [
+      593,
+      172
+     ],
+     "role": 0
+    },
+    {
+     "slot": 13,
+     "position": [
+      667,
+      172
+     ],
+     "role": 0
+    },
+    {
+     "slot": 14,
+     "position": [
+      741,
+      172
+     ],
+     "role": 0
+    }
+   ],
+   "paths": [
+    [
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     11,
+     12,
+     13,
+     14
+    ]
+   ],
+   "has_parallel_branches": true,
+   "independent_paths": 1,
+   "schema_name": "SPS-1"
+  },
+  {
+   "index": 2,
+   "name": "Middle Split 5-3-3",
+   "display_order": 2,
+   "requires_vocals": false,
+   "io_blocks": [
+    "Input",
+    "Output"
+   ],
+   "input_types": [
+    "guitar"
+   ],
+   "slots": [
+    {
+     "slot": 1,
+     "position": [
+      46,
+      172
+     ],
+     "role": 0
+    },
+    {
+     "slot": 2,
+     "position": [
+      114,
+      172
+     ],
+     "role": 0
+    },
+    {
+     "slot": 3,
+     "position": [
+      182,
+      172
+     ],
+     "role": 0
+    },
+    {
+     "slot": 4,
+     "position": [
+      250,
+      172
+     ],
+     "role": 0
+    },
+    {
+     "slot": 5,
+     "position": [
+      318,
+      172
+     ],
+     "role": 0
+    },
+    {
+     "slot": 6,
+     "position": [
+      397,
+      52
+     ],
+     "role": 1
+    },
+    {
+     "slot": 7,
+     "position": [
+      465,
+      52
+     ],
+     "role": 1
+    },
+    {
+     "slot": 8,
+     "position": [
+      533,
+      52
+     ],
+     "role": 1
+    },
+    {
+     "slot": 9,
+     "position": [
+      397,
+      285
+     ],
+     "role": 2
+    },
+    {
+     "slot": 10,
+     "position": [
+      465,
+      285
+     ],
+     "role": 2
+    },
+    {
+     "slot": 11,
+     "position": [
+      533,
+      285
+     ],
+     "role": 2
+    },
+    {
+     "slot": 12,
+     "position": [
+      608,
+      172
+     ],
+     "role": 0
+    },
+    {
+     "slot": 13,
+     "position": [
+      676,
+      172
+     ],
+     "role": 0
+    },
+    {
+     "slot": 14,
+     "position": [
+      744,
+      172
+     ],
+     "role": 0
+    }
+   ],
+   "paths": [
+    [
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     11,
+     12,
+     13,
+     14
+    ]
+   ],
+   "has_parallel_branches": true,
+   "independent_paths": 1,
+   "schema_name": "SPS-2"
+  },
+  {
+   "index": 3,
+   "name": "Middle Split 7-2-3",
+   "display_order": 3,
+   "requires_vocals": false,
+   "io_blocks": [
+    "Input",
+    "Output"
+   ],
+   "input_types": [
+    "guitar"
+   ],
+   "slots": [
+    {
+     "slot": 1,
+     "position": [
+      46,
+      172
+     ],
+     "role": 0
+    },
+    {
+     "slot": 2,
+     "position": [
+      114,
+      172
+     ],
+     "role": 0
+    },
+    {
+     "slot": 3,
+     "position": [
+      182,
+      172
+     ],
+     "role": 0
+    },
+    {
+     "slot": 4,
+     "position": [
+      250,
+      172
+     ],
+     "role": 0
+    },
+    {
+     "slot": 5,
+     "position": [
+      318,
+      172
+     ],
+     "role": 0
+    },
+    {
+     "slot": 6,
+     "position": [
+      386,
+      172
+     ],
+     "role": 0
+    },
+    {
+     "slot": 7,
+     "position": [
+      454,
+      172
+     ],
+     "role": 0
+    },
+    {
+     "slot": 8,
+     "position": [
+      503,
+      52
+     ],
+     "role": 1
+    },
+    {
+     "slot": 9,
+     "position": [
+      571,
+      52
+     ],
+     "role": 1
+    },
+    {
+     "slot": 10,
+     "position": [
+      503,
+      290
+     ],
+     "role": 2
+    },
+    {
+     "slot": 11,
+     "position": [
+      571,
+      290
+     ],
+     "role": 2
+    },
+    {
+     "slot": 12,
+     "position": [
+      608,
+      172
+     ],
+     "role": 0
+    },
+    {
+     "slot": 13,
+     "position": [
+      676,
+      172
+     ],
+     "role": 0
+    },
+    {
+     "slot": 14,
+     "position": [
+      744,
+      172
+     ],
+     "role": 0
+    }
+   ],
+   "paths": [
+    [
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     11,
+     12,
+     13,
+     14
+    ]
+   ],
+   "has_parallel_branches": true,
+   "independent_paths": 1,
+   "schema_name": "SPS-3"
+  },
+  {
+   "index": 4,
+   "name": "Immediate Split",
+   "display_order": 4,
+   "requires_vocals": false,
+   "io_blocks": [
+    "Input",
+    "Output"
+   ],
+   "input_types": [
+    "guitar"
+   ],
+   "slots": [
+    {
+     "slot": 1,
+     "position": [
+      87,
+      68
+     ],
+     "role": 1
+    },
+    {
+     "slot": 2,
+     "position": [
+      161,
+      68
+     ],
+     "role": 1
+    },
+    {
+     "slot": 3,
+     "position": [
+      235,
+      68
+     ],
+     "role": 1
+    },
+    {
+     "slot": 4,
+     "position": [
+      309,
+      68
+     ],
+     "role": 1
+    },
+    {
+     "slot": 5,
+     "position": [
+      383,
+      68
+     ],
+     "role": 1
+    },
+    {
+     "slot": 6,
+     "position": [
+      87,
+      273
+     ],
+     "role": 2
+    },
+    {
+     "slot": 7,
+     "position": [
+      161,
+      273
+     ],
+     "role": 2
+    },
+    {
+     "slot": 8,
+     "position": [
+      235,
+      273
+     ],
+     "role": 2
+    },
+    {
+     "slot": 9,
+     "position": [
+      309,
+      273
+     ],
+     "role": 2
+    },
+    {
+     "slot": 10,
+     "position": [
+      383,
+      273
+     ],
+     "role": 2
+    },
+    {
+     "slot": 11,
+     "position": [
+      499,
+      172
+     ],
+     "role": 0
+    },
+    {
+     "slot": 12,
+     "position": [
+      573,
+      172
+     ],
+     "role": 0
+    },
+    {
+     "slot": 13,
+     "position": [
+      647,
+      172
+     ],
+     "role": 0
+    },
+    {
+     "slot": 14,
+     "position": [
+      721,
+      172
+     ],
+     "role": 0
+    }
+   ],
+   "paths": [
+    [
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     11,
+     12,
+     13,
+     14
+    ]
+   ],
+   "has_parallel_branches": true,
+   "independent_paths": 1,
+   "schema_name": "PS-1"
+  },
+  {
+   "index": 5,
+   "name": "Straight Path",
+   "display_order": 6,
+   "requires_vocals": true,
+   "io_blocks": [
+    "Input Vocal",
+    "Output Vocal"
+   ],
+   "input_types": [
+    "vocal"
+   ],
+   "slots": [
+    {
+     "slot": 1,
+     "position": [
+      167,
+      93
+     ],
+     "role": 0
+    },
+    {
+     "slot": 2,
+     "position": [
+      243,
+      93
+     ],
+     "role": 0
+    },
+    {
+     "slot": 3,
+     "position": [
+      319,
+      93
+     ],
+     "role": 0
+    },
+    {
+     "slot": 4,
+     "position": [
+      395,
+      93
+     ],
+     "role": 0
+    },
+    {
+     "slot": 5,
+     "position": [
+      471,
+      93
+     ],
+     "role": 0
+    },
+    {
+     "slot": 6,
+     "position": [
+      547,
+      93
+     ],
+     "role": 0
+    },
+    {
+     "slot": 7,
+     "position": [
+      623,
+      93
+     ],
+     "role": 0
+    },
+    {
+     "slot": 8,
+     "position": [
+      167,
+      250
+     ],
+     "role": 0
+    },
+    {
+     "slot": 9,
+     "position": [
+      243,
+      250
+     ],
+     "role": 0
+    },
+    {
+     "slot": 10,
+     "position": [
+      319,
+      250
+     ],
+     "role": 0
+    },
+    {
+     "slot": 11,
+     "position": [
+      395,
+      250
+     ],
+     "role": 0
+    },
+    {
+     "slot": 12,
+     "position": [
+      471,
+      250
+     ],
+     "role": 0
+    },
+    {
+     "slot": 13,
+     "position": [
+      547,
+      250
+     ],
+     "role": 0
+    },
+    {
+     "slot": 14,
+     "position": [
+      623,
+      250
+     ],
+     "role": 0
+    }
+   ],
+   "paths": [
+    [
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     11,
+     12,
+     13,
+     14
+    ]
+   ],
+   "has_parallel_branches": false,
+   "independent_paths": 1,
+   "schema_name": "Vocal"
+  },
+  {
+   "index": 6,
+   "name": "Dual Path 7-7",
+   "display_order": 7,
+   "requires_vocals": true,
+   "io_blocks": [
+    "Input Vocal",
+    "Output Vocal",
+    "Input",
+    "Output"
+   ],
+   "input_types": [
+    "vocal",
+    "guitar"
+   ],
+   "slots": [
+    {
+     "slot": 1,
+     "position": [
+      167,
+      93
+     ],
+     "role": 0
+    },
+    {
+     "slot": 2,
+     "position": [
+      243,
+      93
+     ],
+     "role": 0
+    },
+    {
+     "slot": 3,
+     "position": [
+      319,
+      93
+     ],
+     "role": 0
+    },
+    {
+     "slot": 4,
+     "position": [
+      395,
+      93
+     ],
+     "role": 0
+    },
+    {
+     "slot": 5,
+     "position": [
+      471,
+      93
+     ],
+     "role": 0
+    },
+    {
+     "slot": 6,
+     "position": [
+      547,
+      93
+     ],
+     "role": 0
+    },
+    {
+     "slot": 7,
+     "position": [
+      623,
+      93
+     ],
+     "role": 0
+    },
+    {
+     "slot": 8,
+     "position": [
+      167,
+      250
+     ],
+     "role": 0
+    },
+    {
+     "slot": 9,
+     "position": [
+      243,
+      250
+     ],
+     "role": 0
+    },
+    {
+     "slot": 10,
+     "position": [
+      319,
+      250
+     ],
+     "role": 0
+    },
+    {
+     "slot": 11,
+     "position": [
+      395,
+      250
+     ],
+     "role": 0
+    },
+    {
+     "slot": 12,
+     "position": [
+      471,
+      250
+     ],
+     "role": 0
+    },
+    {
+     "slot": 13,
+     "position": [
+      547,
+      250
+     ],
+     "role": 0
+    },
+    {
+     "slot": 14,
+     "position": [
+      623,
+      250
+     ],
+     "role": 0
+    }
+   ],
+   "paths": [
+    [
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7
+    ],
+    [
+     8,
+     9,
+     10,
+     11,
+     12,
+     13,
+     14
+    ]
+   ],
+   "has_parallel_branches": false,
+   "independent_paths": 2,
+   "schema_name": "Dual"
+  },
+  {
+   "index": 7,
+   "name": "Dual Path 4-10",
+   "display_order": 8,
+   "requires_vocals": true,
+   "io_blocks": [
+    "Input Vocal",
+    "Output Vocal",
+    "Input",
+    "Output"
+   ],
+   "input_types": [
+    "vocal",
+    "guitar"
+   ],
+   "slots": [
+    {
+     "slot": 1,
+     "position": [
+      122,
+      93
+     ],
+     "role": 0
+    },
+    {
+     "slot": 2,
+     "position": [
+      196,
+      93
+     ],
+     "role": 0
+    },
+    {
+     "slot": 3,
+     "position": [
+      196,
+      250
+     ],
+     "role": 0
+    },
+    {
+     "slot": 4,
+     "position": [
+      122,
+      250
+     ],
+     "role": 0
+    },
+    {
+     "slot": 5,
+     "position": [
+      368,
+      93
+     ],
+     "role": 0
+    },
+    {
+     "slot": 6,
+     "position": [
+      442,
+      93
+     ],
+     "role": 0
+    },
+    {
+     "slot": 7,
+     "position": [
+      516,
+      93
+     ],
+     "role": 0
+    },
+    {
+     "slot": 8,
+     "position": [
+      590,
+      93
+     ],
+     "role": 0
+    },
+    {
+     "slot": 9,
+     "position": [
+      664,
+      93
+     ],
+     "role": 0
+    },
+    {
+     "slot": 10,
+     "position": [
+      368,
+      250
+     ],
+     "role": 0
+    },
+    {
+     "slot": 11,
+     "position": [
+      442,
+      250
+     ],
+     "role": 0
+    },
+    {
+     "slot": 12,
+     "position": [
+      516,
+      250
+     ],
+     "role": 0
+    },
+    {
+     "slot": 13,
+     "position": [
+      590,
+      250
+     ],
+     "role": 0
+    },
+    {
+     "slot": 14,
+     "position": [
+      664,
+      250
+     ],
+     "role": 0
+    }
+   ],
+   "paths": [
+    [
+     1,
+     2,
+     3,
+     4
+    ],
+    [
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     11,
+     12,
+     13,
+     14
+    ]
+   ],
+   "has_parallel_branches": false,
+   "independent_paths": 2,
+   "schema_name": "Dual Vox-4"
+  },
+  {
+   "index": 8,
+   "name": "Dual Path 2-12",
+   "display_order": 9,
+   "requires_vocals": true,
+   "io_blocks": [
+    "Input Vocal",
+    "Output Vocal",
+    "Input",
+    "Output"
+   ],
+   "input_types": [
+    "vocal",
+    "guitar"
+   ],
+   "slots": [
+    {
+     "slot": 1,
+     "position": [
+      122,
+      93
+     ],
+     "role": 0
+    },
+    {
+     "slot": 2,
+     "position": [
+      122,
+      250
+     ],
+     "role": 0
+    },
+    {
+     "slot": 3,
+     "position": [
+      302,
+      93
+     ],
+     "role": 0
+    },
+    {
+     "slot": 4,
+     "position": [
+      376,
+      93
+     ],
+     "role": 0
+    },
+    {
+     "slot": 5,
+     "position": [
+      450,
+      93
+     ],
+     "role": 0
+    },
+    {
+     "slot": 6,
+     "position": [
+      524,
+      93
+     ],
+     "role": 0
+    },
+    {
+     "slot": 7,
+     "position": [
+      598,
+      93
+     ],
+     "role": 0
+    },
+    {
+     "slot": 8,
+     "position": [
+      672,
+      93
+     ],
+     "role": 0
+    },
+    {
+     "slot": 9,
+     "position": [
+      302,
+      250
+     ],
+     "role": 0
+    },
+    {
+     "slot": 10,
+     "position": [
+      376,
+      250
+     ],
+     "role": 0
+    },
+    {
+     "slot": 11,
+     "position": [
+      450,
+      250
+     ],
+     "role": 0
+    },
+    {
+     "slot": 12,
+     "position": [
+      524,
+      250
+     ],
+     "role": 0
+    },
+    {
+     "slot": 13,
+     "position": [
+      598,
+      250
+     ],
+     "role": 0
+    },
+    {
+     "slot": 14,
+     "position": [
+      672,
+      250
+     ],
+     "role": 0
+    }
+   ],
+   "paths": [
+    [
+     1,
+     2
+    ],
+    [
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     11,
+     12,
+     13,
+     14
+    ]
+   ],
+   "has_parallel_branches": false,
+   "independent_paths": 2,
+   "schema_name": "Dual Vox-2"
+  },
+  {
+   "index": 9,
+   "name": "Dual Straight Path",
+   "display_order": 5,
+   "requires_vocals": true,
+   "io_blocks": [
+    "Input Vocal",
+    "Output Vocal",
+    "Input",
+    "Output"
+   ],
+   "input_types": [
+    "guitar",
+    "guitar"
+   ],
+   "slots": [
+    {
+     "slot": 1,
+     "position": [
+      167,
+      93
+     ],
+     "role": 0
+    },
+    {
+     "slot": 2,
+     "position": [
+      243,
+      93
+     ],
+     "role": 0
+    },
+    {
+     "slot": 3,
+     "position": [
+      319,
+      93
+     ],
+     "role": 0
+    },
+    {
+     "slot": 4,
+     "position": [
+      395,
+      93
+     ],
+     "role": 0
+    },
+    {
+     "slot": 5,
+     "position": [
+      471,
+      93
+     ],
+     "role": 0
+    },
+    {
+     "slot": 6,
+     "position": [
+      547,
+      93
+     ],
+     "role": 0
+    },
+    {
+     "slot": 7,
+     "position": [
+      623,
+      93
+     ],
+     "role": 0
+    },
+    {
+     "slot": 8,
+     "position": [
+      167,
+      250
+     ],
+     "role": 0
+    },
+    {
+     "slot": 9,
+     "position": [
+      243,
+      250
+     ],
+     "role": 0
+    },
+    {
+     "slot": 10,
+     "position": [
+      319,
+      250
+     ],
+     "role": 0
+    },
+    {
+     "slot": 11,
+     "position": [
+      395,
+      250
+     ],
+     "role": 0
+    },
+    {
+     "slot": 12,
+     "position": [
+      471,
+      250
+     ],
+     "role": 0
+    },
+    {
+     "slot": 13,
+     "position": [
+      547,
+      250
+     ],
+     "role": 0
+    },
+    {
+     "slot": 14,
+     "position": [
+      623,
+      250
+     ],
+     "role": 0
+    }
+   ],
+   "paths": [
+    [
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7
+    ],
+    [
+     8,
+     9,
+     10,
+     11,
+     12,
+     13,
+     14
+    ]
+   ],
+   "has_parallel_branches": false,
+   "independent_paths": 2,
+   "schema_name": "DualGuit"
+  }
+ ]
+}

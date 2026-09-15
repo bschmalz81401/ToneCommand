@@ -2,7 +2,33 @@
 
 Notable changes to ToneCommand. Dates are UTC.
 
-### Fixed (secret scanner, 2026-09-14)
+#### Added (HeadRush simulator and topology model, 2026-09-15)
+- `devices/headrush/topology.py`: the ten signal-path templates as a model.
+  A HeadRush rig is one of three genuinely different shapes - straight,
+  split/rejoin, or two independent paths - and #121 says not to flatten them
+  into an FM9 grid. `role()` says which parallel branch a slot is on;
+  `path_of()` says which independent path, which is a different question and
+  the one a dual answers.
+- `config/headrush_topologies.json` plus `tools/build_headrush_topologies.py`.
+  Marked `api_readable: false` and `provenance: "vendor editor bundle"`,
+  because the unit publishes the ten NAMES on `Chain.Routing` and nothing about
+  their shapes: writing each in turn leaves every per-slot property
+  byte-identical (#109). Read out of the vendor's own editor, which is the best
+  available source and is still not the API.
+- `devices/headrush/sim.py`: a HeadRush that exists only in this process, built
+  from the committed schema rather than a handwritten device model, so phases 4
+  and 5 can be reviewed by someone who owns no HeadRush. It implements the
+  injected opener from #116, so the real client code is what runs against it.
+- It refuses rather than smooths: an unknown path is a 404 and not a blank
+  object, `object-method` is a 501 recorded in `undecoded` because no method's
+  behaviour is established and #125 gates them behind an allowlist, and
+  `load_rig` says out loud that stored rig CONTENTS are not modelled.
+- `feeds()` returns None, not a guess, for the one relationship the device
+  never published: whether a common slot reaches a branch. Both directions of
+  that are unknown, and a planner placing a block on a guess there would be
+  placing it on nothing.
+
+## Fixed (secret scanner, 2026-09-14)
 - `test_secret_key_never_hardcoded` matches the SHAPE of a TONE3000 key rather
   than its prefix. Matching `t3k_cs_` flagged four places that hold no secret:
   its own search literal, the generator's docstring, and the two prefix checks
