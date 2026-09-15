@@ -16,16 +16,17 @@ import json
 import time
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.responses import (FileResponse, JSONResponse, Response,
                                StreamingResponse)
 from pydantic import BaseModel
 
-from fm9.adapter import DeviceAdapter
+from fm9.adapter import (CAPABILITY_PROTOCOLS, UNDECLARED, Capabilities,
+                         DeviceAdapter)
 from fm9.device import FM9, FM9NotFound, get_cab_slots
 from fm9.registry import Registry
-from fm9 import (acquire, ai_settings, bundlefile, cabfile, describe, designs, editbuffer, health,
-                 planner, presetfile, recipes as recipebook, rigprofile,
+from fm9 import (acquire, ai_settings, bundlefile, cabfile, describe, designs, diagnostics,
+                 editbuffer, health, planner, presetfile, recipes as recipebook, rigprofile,
                  scratch_build, share, starter_template)
 # `slots` is a local variable in more than one function here, so the module
 # gets a name that cannot be shadowed by one.
@@ -53,6 +54,138 @@ _lock = threading.Lock()
 # rather than hanging for the length of a plan.
 _settings_lock = threading.Lock()
 _fm9: DeviceAdapter | None = None
+
+
+# --- capability gates (#111) ---------------------------------------------
+#
+# #109 declared the contract and consulted it nowhere: a route could call
+# any method on the handle and a device that had declined the capability
+# found out on the wire. The gate below is derived from CAPABILITY_PROTOCOLS
+# at import time, so the set of gated methods is read off the sub-Protocols
+# rather than hand-listed, and every route reaches the device through
+# get_fm9(), which wraps the handle once. A missed call site is therefore
+# impossible rather than unlikely.
+
+class CapabilityDeclined(Exception):
+    """A route asked for something the attached device declined to declare.
+
+    Deliberately NOT an HTTPException and NOT an AttributeError: the 72 broad
+    `except Exception` blocks in this file must re-raise it explicitly (see
+    tests/data/broad_except_audit.json), and a decline must never read as a
+    missing attribute that some helper quietly defaults around.
+    """
+
+    def __init__(self, capability: str, method: str):
+        super().__init__(f"this device declines {capability}, so {method} "
+                         f"is not available on it")
+        self.capability = capability
+        self.method = method
+
+    def payload(self, route: str | None = None) -> dict:
+        return {"refused": True, "capability": self.capability,
+                "method": self.method, "route": route}
+
+
+#: method name -> (gate label, predicate over Capabilities), read off the
+#: sub-Protocols. The label is the one CAPABILITY_PROTOCOLS uses, so a
+#: refusal names the gate in the contract's own words.
+GATED_METHODS: dict = {
+    name: (label, gate)
+    for label, gate, proto in CAPABILITY_PROTOCOLS
+    for name in proto.__protocol_attrs__
+}
+
+
+def _capabilities_of(device) -> Capabilities:
+    """What the device declares, deny-by-default: a handle that cannot say
+    what it is (no capabilities(), or one returning the wrong shape) is
+    treated as UNDECLARED, exactly as fm9/adapter.py says."""
+    got = getattr(device, "capabilities", None)
+    if not callable(got):
+        return UNDECLARED
+    caps = got()
+    return caps if isinstance(caps, Capabilities) else UNDECLARED
+
+
+def require_capability(device, *methods: str) -> None:
+    """Refuse BEFORE anything is written. Raises CapabilityDeclined for the
+    first named method whose gate the device declines.
+
+    The proxy below catches a gated call wherever it happens, but a route
+    whose gated call comes after other writes (select the slot, then
+    rename it) would already have touched the device by then. Such routes
+    call this first, so a decline arrives with nothing sent (invariant 1
+    survives gate insertion, and the check runs before the write, not after).
+    """
+    caps = _capabilities_of(device)
+    for name in methods:
+        label, gate = GATED_METHODS[name]
+        if not gate(caps):
+            raise CapabilityDeclined(label, name)
+
+
+#: Which gated methods each action kind reaches through run_action, so a
+#: whole plan can be checked against the device before its first write.
+#: add_block draws cables (place_block, then connect_cells when the outgoing
+#: cable drops, and the starter template lays cables unconditionally), so it
+#: needs the CONSTRUCTED gate as implemented, not only placement.
+ACTION_GATES: dict = {
+    "rename_preset": ("rename_preset",),
+    "rename_scene": ("rename_scene",),
+    "reorder": ("reorder_block",),
+    "add_block": ("place_block", "connect_cells"),
+    "bind_pedal": ("read_modifier", "bind_modifier"),
+    "unbind_pedal": ("read_modifier", "clear_modifier"),
+}
+assert all(m in GATED_METHODS for ms in ACTION_GATES.values() for m in ms)
+
+
+def require_for_actions(device, actions) -> None:
+    """The plan-shaped form of require_capability."""
+    require_capability(device, *[m for a in actions
+                                 for m in ACTION_GATES.get(a.kind, ())])
+
+
+class GatedDevice:
+    """The handle every route gets: the device, with each gated attribute
+    checked against its declared Capabilities on access.
+
+    Ungated names pass straight through, and attribute lookup is dynamic on
+    every access rather than cached, so a test that patches a method on the
+    underlying device is honoured. Raises on ACCESS rather than on call,
+    which is stricter: nothing can even obtain a declined method.
+    """
+
+    __slots__ = ("_device",)
+
+    def __init__(self, device):
+        object.__setattr__(self, "_device", device)
+
+    def __getattr__(self, name):
+        device = object.__getattribute__(self, "_device")
+        gate = GATED_METHODS.get(name)
+        if gate is not None:
+            label, predicate = gate
+            if not predicate(_capabilities_of(device)):
+                raise CapabilityDeclined(label, name)
+        return getattr(device, name)
+
+    def __setattr__(self, name, value):
+        setattr(object.__getattribute__(self, "_device"), name, value)
+
+    def __repr__(self) -> str:
+        return f"GatedDevice({object.__getattribute__(self, '_device')!r})"
+
+
+@app.exception_handler(CapabilityDeclined)
+async def _refuse_declined_capability(request: Request, exc: CapabilityDeclined):
+    """One place turns a decline into the open refusal every route shares:
+    HTTP 409, naming the gate, the method and the route. Never a 500, never
+    a silent success."""
+    log.info("refused %s: %s declines %s", request.url.path, exc.method,
+             exc.capability)
+    return JSONResponse(exc.payload(request.url.path), status_code=409)
+
 
 FRIENDLY = {"DISTORT": "Amp", "CABINET": "Cab", "FUZZ": "Drive", "GATE": "Gate",
             "INPUT": "Input", "OUTPUT": "Output", "COMP": "Compressor",
@@ -174,7 +307,7 @@ def get_fm9() -> DeviceAdapter:
                 _last_rescan["at"] = now
                 rescan_midi()
             _fm9 = FM9(reg)
-    return _fm9
+    return GatedDevice(_fm9)
 
 
 def rescan_midi() -> None:
@@ -1370,6 +1503,8 @@ def api_reconnect():
         except FM9NotFound as e:
             drop_fm9()
             return {"connected": False, "why": str(e)}
+        except CapabilityDeclined:
+            raise
         except Exception as e:
             drop_fm9()
             return {"connected": False, "why": str(e)}
@@ -1387,6 +1522,8 @@ def api_state():
             # gig_mode rides along even unplugged, so the pill in the header
             # stays true while the rig is off.
             return {"connected": False, "gig_mode": _gig_mode["on"]}
+        except CapabilityDeclined:
+            raise
         except Exception as e:
             drop_fm9()
             return JSONResponse({"connected": False, "error": str(e),
@@ -1565,6 +1702,7 @@ def _describe_build_for(body: BuildBody, on_count=None, cancel=None,
     except planner.PlanCancelled:
         return {"error": "stopped"}
     except Exception as exc:
+        diagnostics.log_error("planner", str(exc))
         return {"error": f"planner failed: {exc}"}
 
     # A build assembled out of somebody else's video has no business
@@ -1732,6 +1870,13 @@ def _stream_response(work, final: tuple):
         def runner():
             try:
                 work(emit, cancel)
+            except CapabilityDeclined as exc:
+                # Not swallowed into an error string: the same refusal
+                # shape the 409 handler sends, as its own event. The route
+                # cannot be named from this thread, so the streaming twins
+                # that can reach a gate check BEFORE the stream opens and a
+                # decline there is a real 409 (api_apply_stream).
+                out.put(("refused", exc.payload()))
             except Exception as exc:
                 out.put(("error", str(exc)))
             finally:
@@ -1899,12 +2044,21 @@ def _will_lay_template(body) -> bool:
     the actions. "add delay, reverb and a chorus" and "build me a Vai rig" can
     both be three add_blocks, and only one of them may replace the grid.
 
-    Never raises: if the device cannot be read, the answer is no and the old
-    behaviour stands.
+    Three outcomes, and they must stay distinct (#111):
+
+      empty grid              True, the template is laid
+      a device read failure   False, the old behaviour stands (no device,
+                              busy, anything the read throws)
+      CapabilityDeclined      propagates, so the route refuses with 409.
+                              This block was the clearest case in the audit:
+                              a decline absorbed here would silently switch
+                              the build to the splice path.
     """
     try:
         with _lock:
             grid = get_fm9().read_grid()
+    except CapabilityDeclined:
+        raise
     except Exception:      # noqa: BLE001  no device, busy, anything
         return False
     if grid == []:
@@ -2155,7 +2309,10 @@ def _plan_for(body: PromptBody, on_count=None, cancel=None, on_status=None):
         return result
     except planner.PlanCancelled:
         return {"error": "stopped"}
+    except CapabilityDeclined:
+        raise
     except Exception as e:
+        diagnostics.log_error("planner", str(e))
         return {"error": f"planner failed: {e}"}
 
 
@@ -2936,6 +3093,8 @@ def api_install_cab(body: dict):
                                 status_code=503)
         except cabfile.CabFileError as e:
             return JSONResponse({"error": str(e)}, status_code=422)
+        except CapabilityDeclined:
+            raise
         except Exception as e:
             return JSONResponse({"error": str(e)}, status_code=500)
     sent = [f[6:-2] for f in cabfile.retarget(cf, idx, tag=tag)[1:-1]]
@@ -3058,6 +3217,8 @@ def api_install(body: dict):
                                 status_code=503)
         except presetfile.PresetFileError as e:
             return JSONResponse({"error": str(e)}, status_code=422)
+        except CapabilityDeclined:
+            raise
         except Exception as e:
             return JSONResponse({"error": str(e)}, status_code=500)
     read_back = loaded[1] if loaded else None
@@ -3199,6 +3360,8 @@ def api_presets(refresh: bool = False):
         except FM9NotFound:
             drop_fm9()
             return JSONResponse({"error": "FM9 not connected"}, status_code=503)
+        except CapabilityDeclined:
+            raise
         except Exception as e:
             drop_fm9()
             return JSONResponse({"error": str(e)}, status_code=500)
@@ -3240,6 +3403,8 @@ def api_presets_stream(refresh: bool = False):
                 drop_fm9()
                 emit("error", "FM9 not connected")
                 return
+            except CapabilityDeclined:
+                raise
             except Exception as e:
                 drop_fm9()
                 emit("error", str(e))
@@ -3276,6 +3441,8 @@ def api_preset(body: PresetBody):
         except FM9NotFound:
             drop_fm9()
             return JSONResponse({"error": "FM9 not connected"}, status_code=503)
+        except CapabilityDeclined:
+            raise
         except Exception as e:
             return JSONResponse({"error": str(e)}, status_code=500)
     # Report what the unit says it loaded, not what we asked for: a dropped
@@ -3458,6 +3625,8 @@ def api_level_adjust(body: dict):
         except FM9NotFound:
             drop_fm9()
             return JSONResponse({"error": "the FM9 is not answering"}, status_code=409)
+        except CapabilityDeclined:
+            raise
         except Exception as e:
             return JSONResponse({"error": str(e)}, status_code=500)
     return {"ok": all(c["ok"] for c in changes), "delta": parsed["delta"],
@@ -3531,6 +3700,8 @@ def api_copy_effects(body: CopyEffectsBody):
             drop_fm9()
             return JSONResponse({"error": "the FM9 is not answering"},
                                 status_code=409)
+        except CapabilityDeclined:
+            raise
         except Exception as e:
             return JSONResponse({"error": str(e)}, status_code=500)
     return {"ok": res.ok, "source": source_snap.get("preset_name"),
@@ -3572,12 +3743,15 @@ def api_reorder(body: ReorderBody):
             _, move_eid = reg.resolve_block(body.move, body.move_instance)
             _, ref_eid = reg.resolve_block(body.ref, body.ref_instance)
             pos = body.position if body.position in ("before", "after") else "before"
+            require_capability(fm9, "reorder_block")   # before the snapshot
             _take("undo")
             res = fm9.reorder_block(move_eid, ref_eid, pos)
         except FM9NotFound:
             drop_fm9()
             return JSONResponse({"error": "the FM9 is not answering"},
                                 status_code=409)
+        except CapabilityDeclined:
+            raise
         except Exception as e:
             return JSONResponse({"error": str(e)}, status_code=500)
     status = 200 if res.get("ok") else 422
@@ -3627,6 +3801,10 @@ def api_compose(body: ComposeBody):
     with _lock:
         try:
             fm9 = get_fm9()
+            # The rename in step 4 is gated and comes after two stores, so
+            # it is checked here, before any source is even selected.
+            if body.name:
+                require_capability(fm9, "rename_preset")
             # 1. Read every source we need, read-only, caching by slot.
             snaps: dict = {}
 
@@ -3668,6 +3846,8 @@ def api_compose(body: ComposeBody):
             drop_fm9()
             return JSONResponse({"error": "the FM9 is not answering"},
                                 status_code=409)
+        except CapabilityDeclined:
+            raise
         except Exception as e:
             return JSONResponse({"error": str(e)}, status_code=500)
     _preset_cache["slots"] = None            # a slot's name/contents changed
@@ -3715,6 +3895,8 @@ def api_snapshots():
         try:
             now = editbuffer.capture(get_fm9(), reg)
             err = None
+        except CapabilityDeclined:
+            raise
         except Exception as e:
             now, err = None, str(e)
         for slot, snap in _snaps.items():
@@ -3750,6 +3932,8 @@ def api_snapshot(body: dict):
             snap = _take(slot)
             return {"slot": slot, "preset": snap.get("preset"),
                     "blocks": len(snap.get("blocks") or [])}
+        except CapabilityDeclined:
+            raise
         except Exception as e:
             return JSONResponse({"error": str(e)}, status_code=500)
 
@@ -3787,6 +3971,8 @@ def api_restore(body: dict):
                     "applied": res.applied, "failed": res.failed}
         except ValueError as e:
             return JSONResponse({"error": str(e)}, status_code=409)
+        except CapabilityDeclined:
+            raise
         except Exception as e:
             return JSONResponse({"error": str(e)}, status_code=500)
 
@@ -3875,6 +4061,8 @@ def api_grid():
             return {"cells": out, "alive": w["alive"], "why": w["why"],
                     "rows": 1 + max((c["row"] for c in out), default=0),
                     "cols": 1 + max((c["col"] for c in out), default=0)}
+        except CapabilityDeclined:
+            raise
         except Exception as e:
             return {"error": str(e)}
 
@@ -3894,6 +4082,8 @@ def api_slot(slot: int):
     with _lock:
         try:
             return slotops.describe(get_fm9(), slot)
+        except CapabilityDeclined:
+            raise
         except Exception as exc:
             return JSONResponse({"ok": False, "detail": str(exc)}, status_code=500)
 
@@ -3919,7 +4109,11 @@ def api_rename_slot(body: RenameBody):
                       "to flash. Not while you are playing."}, status_code=423)
     with _lock:
         try:
-            res = slotops.rename(get_fm9(), body.slot, body.name)
+            fm9 = get_fm9()
+            # slotops.rename selects the slot before it renames, so the gate
+            # is checked here, before anything is sent.
+            require_capability(fm9, "rename_preset")
+            res = slotops.rename(fm9, body.slot, body.name)
         except PermissionError as exc:
             return JSONResponse({"ok": False, "detail": str(exc)},
                                 status_code=403)
@@ -3927,6 +4121,8 @@ def api_rename_slot(body: RenameBody):
             drop_fm9()
             return JSONResponse({"ok": False, "detail": "the FM9 is not answering"},
                                 status_code=409)
+        except CapabilityDeclined:
+            raise
         except Exception as exc:
             return JSONResponse({"ok": False, "detail": str(exc)}, status_code=500)
     _preset_cache["slots"] = None
@@ -3954,6 +4150,11 @@ def api_clear_slot(body: ClearBody):
     with _lock:
         try:
             fm9 = get_fm9()
+            # slotops.clear selects the slot and then empties the grid,
+            # blanks the scene names and writes the marker name: three
+            # gates, all checked before the first of those writes.
+            require_capability(fm9, "place_block", "rename_scene",
+                               "rename_preset")
             found = slotops.describe(fm9, body.slot)
             if not found["ok"]:
                 return JSONResponse(found, status_code=409)
@@ -3995,6 +4196,8 @@ def api_clear_slot(body: ClearBody):
             drop_fm9()
             return JSONResponse({"ok": False, "detail": "the FM9 is not answering"},
                                 status_code=409)
+        except CapabilityDeclined:
+            raise
         except Exception as exc:
             return JSONResponse({"ok": False, "detail": str(exc)}, status_code=500)
     # The preset browser reads names from here, and one of them just stopped
@@ -4032,11 +4235,16 @@ def api_build_scratch(body: ScratchBody):
             # reopens the MIDI port on an endpoint that is already held, which
             # took the whole server process down with no traceback rather than
             # raising anything catchable.
+            # The build selects the slot before it places anything, so the
+            # two gates it needs are checked first.
+            require_capability(get_fm9(), "place_block", "connect_cells")
             res = scratch_build.build(get_fm9(), reg, slot=body.slot)
         except FM9NotFound:
             drop_fm9()
             return JSONResponse({"error": "the FM9 is not answering"},
                                 status_code=409)
+        except CapabilityDeclined:
+            raise
         except Exception as exc:
             return JSONResponse({"error": str(exc)}, status_code=500)
     if not res["ok"]:
@@ -4064,6 +4272,7 @@ def api_new_preset(body: ScratchBody):
     with _lock:
         try:
             fm9 = get_fm9()
+            require_capability(fm9, "place_block", "connect_cells")
             res = starter_template.lay(fm9, reg, slot=body.slot)
             # A full unit has no free slot to land on. Rather than fail, make the
             # blank canvas out of the loaded preset's edit buffer (nothing stored,
@@ -4075,6 +4284,8 @@ def api_new_preset(body: ScratchBody):
             drop_fm9()
             return JSONResponse({"error": "the FM9 is not answering"},
                                 status_code=409)
+        except CapabilityDeclined:
+            raise
         except Exception as exc:
             return JSONResponse({"error": str(exc)}, status_code=500)
     if not res["ok"]:
@@ -4116,6 +4327,8 @@ def api_moddebug(body: dict):
         except FM9NotFound:
             drop_fm9()
             return JSONResponse({"error": "FM9 not answering"}, status_code=409)
+        except CapabilityDeclined:
+            raise
         except Exception as e:
             return JSONResponse({"error": str(e)}, status_code=500)
 
@@ -4143,6 +4356,8 @@ def api_health():
                 status_code=423)
         try:
             return health.scan(get_fm9(), reg)
+        except CapabilityDeclined:
+            raise
         except Exception as e:
             return {"error": str(e)}
 
@@ -4168,6 +4383,8 @@ def api_health_stream():
                     get_fm9(), reg,
                     on_scene=lambda n, name: emit("scene",
                                                   {"n": n, "name": name}))
+            except CapabilityDeclined:
+                raise
             except Exception as e:
                 emit("error", str(e))
                 return
@@ -4200,6 +4417,8 @@ def api_shared():
         except FM9NotFound:
             drop_fm9()
             return JSONResponse({"error": "FM9 not connected"}, status_code=503)
+        except CapabilityDeclined:
+            raise
         except Exception as e:
             return JSONResponse({"error": str(e)}, status_code=500)
 
@@ -4232,6 +4451,8 @@ def api_shared_sweep():
         except FM9NotFound:
             drop_fm9()
             return JSONResponse({"error": "FM9 not connected"}, status_code=503)
+        except CapabilityDeclined:
+            raise
         except Exception as e:
             return JSONResponse({"error": str(e)}, status_code=500)
     _shared_cache["preset"], _shared_cache["map"] = key, got
@@ -4326,6 +4547,8 @@ def api_recipe_plan(body: RecipeBody):
     # that. Best effort: a rig that does not answer just means no note.
     try:
         rig_fw = get_fm9().firmware_label()
+    except CapabilityDeclined:
+        raise
     except Exception:
         rig_fw = ""
     return {"summary": body.recipe.get("title") or body.recipe.get("name"),
@@ -4422,6 +4645,8 @@ def api_profile_export():
                                   if c.cable_in_mask & (1 << (r + 1))]})
                 grid["rows"] = 1 + max((c["row"] for c in grid["cells"]), default=0)
                 grid["cols"] = 1 + max((c["col"] for c in grid["cells"]), default=0)
+            except CapabilityDeclined:
+                raise
             except Exception:
                 grid = None
         except FM9NotFound:
@@ -4557,6 +4782,18 @@ def api_version_check():
             "update_available": bool(latest) and _updates.is_newer(
                 latest["version"], cur),
             "notes_url": (latest or {}).get("url")}
+
+
+@app.get("/api/diagnostics/share-package")
+def api_diagnostics_share_package(scope: str | None = None):
+    """Issue #108: the scrubbed local error log packaged as a pre-filled
+    GitHub issue for the player to READ before deciding anything. This makes
+    no network call and sends nothing: it returns text and a URL, and the only
+    way anything leaves the machine is the player opening that URL themselves
+    from the settings drawer's second, separate button."""
+    pkg = diagnostics.package_for_sharing(scope=scope)
+    return {"title": pkg["title"], "body": pkg["body"], "url": pkg["url"],
+            "entries": pkg["entry_count"]}
 
 
 @app.post("/api/update")
@@ -5103,6 +5340,16 @@ def api_apply_stream(body: ApplyBody):
     with nobody told which half, so the work runs to completion and the
     outcome lands in the log and the undo snapshot either way.
     """
+    # Checked here, synchronously, and not only inside _apply_for: once the
+    # stream is open the status is already 200, and a decline must be the
+    # same 409 the blocking twin sends. Nothing is written by this check.
+    with _lock:
+        try:
+            require_for_actions(get_fm9(), body.actions)
+        except FM9NotFound:
+            drop_fm9()
+            return JSONResponse({"error": "FM9 not connected"}, status_code=503)
+
     def work(emit, cancel):
         emit("result", _apply_for(body, on_step=lambda s: emit("step", s)))
 
@@ -5158,6 +5405,11 @@ def _apply_for(body: ApplyBody, on_step=None):
     with _lock:
         try:
             fm9 = get_fm9()
+            # Every gate this plan will need, checked BEFORE the undo
+            # snapshot and before the first write (#111). A rename after
+            # twenty landed parameter writes would otherwise decline with
+            # the rig half changed.
+            require_for_actions(fm9, body.actions)
             if body.expected_preset is not None:
                 current = fm9.current_preset()
                 if current is None or current[0] != body.expected_preset:
@@ -5180,6 +5432,8 @@ def _apply_for(body: ApplyBody, on_step=None):
             if any(a.kind not in ("set_scene", "store") for a in body.actions):
                 try:
                     _take("undo")
+                except CapabilityDeclined:
+                    raise
                 except Exception as e:
                     # A snapshot that fails must not block a MANUAL edit. The
                     # player asked for it and can hear the result, so the
@@ -5291,6 +5545,8 @@ def _apply_for(body: ApplyBody, on_step=None):
                             return {"results": results}
                 except FM9NotFound:
                     raise
+                except CapabilityDeclined:
+                    raise
                 except Exception as exc:
                     log.warning("apply: starting-chain check failed: %s", exc)
 
@@ -5356,6 +5612,8 @@ def _apply_for(body: ApplyBody, on_step=None):
                     continue
                 try:
                     res = run_action(fm9, a)
+                except CapabilityDeclined:
+                    raise
                 except Exception as e:
                     res = {"ok": False, "detail": str(e)}
                 if warns:
@@ -5403,6 +5661,8 @@ def _apply_for(body: ApplyBody, on_step=None):
                     health_findings = [f for f in scan.get("findings", [])
                                        if f.get("kind") in
                                        ("clone", "dead", "silent")]
+                except CapabilityDeclined:
+                    raise
                 except Exception as e:
                     log.warning("apply: post-build health scan failed: %s", e)
         except FM9NotFound:

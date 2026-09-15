@@ -3222,6 +3222,15 @@
   .updprog { margin-top: 8px; }
   #updbanner .updprog { flex-basis: 100%; }
   .updavail { color: var(--amber); }
+  /* #108: the scrubbed error package, shown in full for reading before the
+     player decides whether to open the pre-filled issue. */
+  #shareerrbody {
+    margin: 0; padding: 9px 12px; border-radius: 6px; max-height: 240px;
+    overflow: auto; background: #060c14; border: 1px solid var(--edge-soft);
+    color: var(--text); font-size: var(--fs-hint); white-space: pre-wrap;
+    word-break: break-word;
+  }
+  #shareerrtitle { color: var(--cyan); letter-spacing: 0.05em; }
 
 </style>
   <link rel="icon" type="image/png" href="/logo.png">
@@ -3800,6 +3809,27 @@
         <div class="saverow">
           <button class="small" id="checkupd">CHECK FOR UPDATES</button>
           <span class="hint" style="margin:0" id="checkupdout"></span>
+        </div>
+      </div>
+
+      <div class="console" data-nofold data-label="SHARE THIS ERROR" id="shareerr">
+        <div class="hint" style="margin:0 0 9px">Something failed and you want it
+          fixed? This gathers the recent local error log, with keys and tokens
+          already scrubbed, and shows you the whole thing first. Nothing leaves
+          this machine unless you then choose to open the pre-filled GitHub issue.</div>
+        <div class="saverow">
+          <button class="small" id="shareerrreview">SHARE THIS ERROR</button>
+          <span class="hint" style="margin:0" id="shareerrstatus"></span>
+        </div>
+        <div id="shareerrpreview" hidden>
+          <div class="hint" style="margin:12px 0 6px" id="shareerrtitle"></div>
+          <pre id="shareerrbody"></pre>
+          <div class="hint" style="margin:6px 0 0" id="shareerrcount"></div>
+          <div class="saverow" style="margin-top:9px">
+            <button class="small armed" id="shareerropen">OPEN THE GITHUB ISSUE</button>
+            <span class="hint" style="margin:0">Opens in a new tab with the text
+              above filled in. Nothing is posted until you press Submit there.</span>
+          </div>
         </div>
       </div>
     </div>
@@ -5083,6 +5113,39 @@ async function waitForRestart(before) {
     updating = false; updButtons(false);
   }
 }
+// #108: a voluntary "share this error", deliberately two clicks and two
+// functions. reviewShareError only fetches the scrubbed package and shows
+// it in full for reading; it opens nothing. openShareError is the one and
+// only code path that opens the pre-filled GitHub issue, and its button is
+// not on screen until the preview has been shown. Neither sends anything:
+// the player submits on GitHub, or closes the tab.
+let shareErrPkg = null;
+async function reviewShareError() {
+  $('shareerrstatus').textContent = 'gathering...';
+  $('shareerrpreview').hidden = true;
+  shareErrPkg = null;
+  try {
+    const r = await fetch('/api/diagnostics/share-package');
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const d = await r.json();
+    shareErrPkg = d;
+    $('shareerrtitle').textContent = d.title;
+    $('shareerrbody').textContent = d.body;
+    $('shareerrcount').textContent = d.entries === 1
+      ? '1 entry. Read it over; this is exactly what the issue will contain.'
+      : `${d.entries} entries. Read them over; this is exactly what the issue will contain.`;
+    $('shareerrstatus').textContent = '';
+    $('shareerrpreview').hidden = false;
+  } catch (e) {
+    $('shareerrstatus').textContent = `could not gather the error log: ${e.message}`;
+  }
+}
+function openShareError() {
+  if (!shareErrPkg || !shareErrPkg.url) return;
+  window.open(shareErrPkg.url, '_blank', 'noopener');
+}
+$('shareerrreview').onclick = reviewShareError;
+$('shareerropen').onclick = openShareError;
 $('checkupd').onclick = checkUpdate;
 $('updnow').onclick = runUpdate;
 $('setupdnow').onclick = runUpdate;

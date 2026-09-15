@@ -13,38 +13,31 @@ require_live_verification = true
 deployment_requires_explicit_approval = true
 
 [agents]
-supervisor = "configure-me"
-implementer = "configure-me"
-reviewer = "configure-me"
+architect = "codex"
+supervisor = "codex"
+implementer = "codex"
+reviewer = "codex"
+
+[models]
+architect = "default"
+supervisor = "default"
+implementer = "default"
+reviewer = "default"
 
 [checks]
 # Shell commands the supervisor actually runs via `handsoff_supervisor.py verify`.
 # Each criterion's evidence should point at one of these having run, not a
 # free-text claim. Example: commands = ["pytest tests/ -q", "npm test"]
 commands = [
-  ".venv/bin/python -m pytest tests/test_site_build.py::test_header_logo_is_64px -q",
-  ".venv/bin/python -m pytest tests/test_site_build.py::test_splash_logo_is_520px -q",
-  ".venv/bin/python -m pytest tests/test_site_build.py::test_splash_reduced_motion_and_no_js_fallback -q",
-  ".venv/bin/python -m pytest tests/test_site_build.py::test_splash_skip_on_interaction_is_wired -q",
-  ".venv/bin/python -m pytest tests/test_site_build.py::test_no_em_dash_in_touched_site_files -q",
-  ".venv/bin/python -m pytest tests/test_grounding_envelope.py -q",
-  ".venv/bin/python -m pytest tests/test_nam_captures.py::test_replay_rejects_ungrounded_tone_target_before_device_connect -q",
-  ".venv/bin/python -m pytest tests/test_nam_captures.py::test_provenance_tier_logic -q",
-  ".venv/bin/python -m pytest tests/test_nam_captures.py::test_replay_accepts_grounded_tone_target -q",
-  ".venv/bin/python -m pytest tests/test_nam_captures.py::test_secret_key_never_hardcoded -q",
-  ".venv/bin/python -m pytest tests/test_recipe_validation.py::test_tone_target_shape -q",
-  ".venv/bin/python -m pytest tests/test_device_handle.py::test_a_non_fm9_implementation_satisfies_the_contract_and_conformance_certifies_it -q",
-  ".venv/bin/python -m pytest tests/test_device_handle.py::test_scene_state_is_tri_state_and_slots_are_addressed_by_name -q",
-  ".venv/bin/python -m pytest tests/test_device_handle.py::test_chain_control_is_ranked_not_a_boolean -q",
-  ".venv/bin/python -m pytest tests/test_device_handle.py::test_conformance_rejects_a_stub_whose_signature_drifted -q",
-  ".venv/bin/python -m pytest tests/test_device_handle.py::test_conformance_rejects_a_capability_declared_true_without_its_sub_protocol -q",
-  ".venv/bin/python -m pytest tests/test_device_handle.py::test_set_tempo_action_still_reports_what_it_reported_before -q",
-  ".venv/bin/python -m pytest tests/test_device_handle.py::test_every_method_a_route_calls_has_exactly_one_documented_home -q",
+  ".venv/bin/python -m pytest tests/test_nam_captures.py -q -k scanner",
+  "TONECOMMAND_SIM=1 .venv/bin/python -m pytest tests/test_capability_gates.py -q",
+  ".venv/bin/python -m pytest tests/test_capability_gates.py -q -k audit",
   ".venv/bin/python -m pytest tests/test_device_handle.py::test_routes_do_not_reach_into_private_device_methods -q",
-  ".venv/bin/python -m pytest tests/test_device_handle.py::test_promoted_methods_and_sub_protocols_are_declared_and_satisfied -q",
-  ".venv/bin/python -m pytest tests/test_device_handle.py::test_get_device_returns_the_contract_type_not_the_fm9_class -q",
-  ".venv/bin/python -m pytest tests/test_device_handle.py::test_changelog_entry_exists_and_touched_files_have_no_em_dash -q",
-  ".venv/bin/python -m pytest tests/test_validation.py tests/test_modifiers.py -q",
+  "TONECOMMAND_SIM=1 .venv/bin/python -m pytest tests/test_capability_gates.py -q -k invariant",
+  ".venv/bin/python -m pytest tests/test_diagnostics.py -q",
+  ".venv/bin/python -m pytest tests/test_headrush_client.py -q",
+  ".venv/bin/python -m pytest tests/test_headrush_amp_models.py tests/test_grounding_envelope.py -q",
+  ".venv/bin/python -m pytest tests/test_headrush_schema.py -q",
 ]
 # Commands that verify the deployed system. Phase 8 is blocked until these
 # run successfully after deployment approval. This app has no hosted server;

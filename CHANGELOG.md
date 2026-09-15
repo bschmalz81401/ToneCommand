@@ -14,6 +14,66 @@ Notable changes to ToneCommand. Dates are UTC.
 
 ## Unreleased
 
+### Fixed (capability gates, 2026-09-15)
+- The runtime obeys the device contract (#111, the second half of #109).
+  `server.py` held a handle typed to `DeviceAdapter` and `Capabilities` said
+  what a device declines, and nothing consulted either: a route could call
+  any of the 16 methods behind the seven capability sub-Protocols and a
+  device that had declined the gate found out on the wire, or one of the 72
+  broad `except Exception` blocks absorbed the failure and the route reported
+  a silent success. `get_fm9()` now wraps the handle once in `GatedDevice`,
+  which checks each gated attribute against the device's declared
+  `Capabilities` on access, with the gate table derived from
+  `CAPABILITY_PROTOCOLS` at import time rather than hand-listed, so a missed
+  call site is impossible rather than unlikely. A decline is its own
+  exception, `CapabilityDeclined(capability, method)`, and one handler turns
+  it into HTTP 409 with `{"refused": true, "capability", "method", "route"}`.
+  Routes whose gated call comes after other writes (rename after select,
+  clear-slot, compose, build-scratch, new-preset, apply) check every gate the
+  request will need up front, before the undo snapshot and before the first
+  write, so a decline arrives with nothing sent.
+- The broad-except audit. Every `except Exception` block in `server.py` is
+  listed by AST identity in `tests/data/broad_except_audit.json` (72 blocks:
+  34 re-raise or convert `CapabilityDeclined` before their handler runs, 38
+  carry a one-line reason a decline cannot reach them), and
+  `tests/test_capability_gates.py` fails on an unlisted block, a stale entry,
+  or an "unreachable" claim over a body that names a gated method. The block
+  the issue named, `_will_lay_template`, keeps three distinct outcomes: a
+  decline propagates to the 409, a device read failure still answers False,
+  and an empty grid answers True. Two re-raises the first pass had put on the
+  wrong `try` (the tone-review block in `_plan_for` and the progress callback
+  in `_apply_for`, instead of the enclosing planner and starting-chain blocks
+  that actually reach the device) were moved to where the JSON said they were.
+- Proof by substitution rather than by a hand-picked case: a sentinel device
+  (`tests/sentinel_device.py`) declines every gate and raises if any of the
+  16 methods is reached; all 83 registered routes are driven through
+  TestClient from a request table the test checks is complete, with the
+  planner backends, the network and the AI settings stubbed and the
+  TONECOMMAND_DEBUG pair driven with the variable unset. No gated method
+  fires, every route that needs a declined gate answers the 409 by name, and
+  every other route answers exactly as it did against the simulator in a
+  baseline run. The same run on a recording sentinel asserts ARCHITECTURE.md
+  invariants 1, 2, 5 and 6 survive gate insertion: a decline arrives with
+  zero device writes at both method and wire level, a plan without its
+  reviewed revision transmits nothing, no route can reach a firmware or
+  bootloader message, the undo snapshot precedes the first write, and Pedal 1
+  is never bound or cleared.
+
+### Added (share this error, 2026-09-14)
+- Settings gains a SHARE THIS ERROR panel (#108). Until now a failure left the
+  player with nothing to hand over: the scrubbed local log from #107 existed
+  but had no way out, and the two planner-failure paths in `server.py` were
+  not even writing to it, so "errors are logged locally" was unused
+  infrastructure. Both paths now call `diagnostics.log_error`, and a new
+  `GET /api/diagnostics/share-package` returns the scrubbed package (title,
+  body, pre-filled GitHub issue URL, entry count) without making any network
+  call, proven by a test that patches `urlopen`, `webbrowser.open` and
+  `socket.create_connection` to fail if touched. In the drawer the first click
+  only fetches and shows the whole scrubbed body for reading; a second button,
+  which is not on screen until then, is the single code path that opens the
+  issue URL in a new tab, and a test parses the inline script to prove it.
+  Nothing is posted until the player presses Submit on GitHub. No telemetry.
+
 ### Added (HeadRush grounding, 2026-09-14)
 - `config/headrush_amp_models.json`: every HeadRush amp-model ordinal mapped to
   the real amplifier the manufacturer says it emulates. 101 ordinals across the
