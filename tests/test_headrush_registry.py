@@ -88,6 +88,9 @@ def test_wire_range_and_display_range_are_kept_apart(reg):
     assert (bass.display_minimum, bass.display_maximum) == (0.0, 100.0)
     assert reg.wire_encoding["continuous"] == "normalised 0..1"
     assert reg.wire_encoding["conversion_to_display"] is None
+    # what was measured and what was inferred from it are stated separately
+    assert "Amp.Bass" in reg.wire_encoding["measured_on"]
+    assert "3912" in reg.wire_encoding["generalised_by"]
 
 
 def test_defaults_are_recorded_as_normalised(reg):
@@ -105,6 +108,29 @@ def test_defaults_are_recorded_as_normalised(reg):
                   for b in reg.blocks.values() for p in b.parameters.values()
                   if p.kind == "continuous" and p.default_normalised is not None]
     assert everything and all(0.0 <= d <= 1.0 for d in everything)
+
+
+def test_the_generalisation_off_one_block_is_counted_not_assumed(reg):
+    """The hardware reading covers Amp and the registry describes 302 objects,
+    so the step between them is the weak point and is measured rather than
+    waved at. 1369 defaults lie OUTSIDE their own published display range,
+    which no amount of coincidence explains: they cannot be display values."""
+    total = in01 = impossible = 0
+    objects = set()
+    for path, block in reg.blocks.items():
+        for param in block.parameters.values():
+            default = param.default_normalised
+            if param.kind != "continuous" or default is None:
+                continue
+            total += 1
+            objects.add(path)
+            in01 += 0.0 <= default <= 1.0
+            lo, hi = param.display_minimum, param.display_maximum
+            if lo is not None and hi is not None and not lo <= default <= hi:
+                impossible += 1
+    assert (total, in01) == (3912, 3912), "every published default is in 0..1"
+    assert impossible == 1369, "and a third of them cannot be display values"
+    assert len(objects) == 290, "spanning almost every object, not just Amp"
 
 
 # --- AC3: selectors keep device-published options -----------------------

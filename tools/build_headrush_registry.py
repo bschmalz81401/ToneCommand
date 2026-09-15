@@ -62,11 +62,18 @@ the unit's own screen:
     Amp.TremDepth wire 0.0   ->  screen 0 %       published range 0..100
 
 So `minimum`, `maximum` and `format` describe the DISPLAY scale while the wire
-takes 0..1. That is also the only reading under which the published defaults are
-sane: SltEQHP defaults to 0.0 on a range of 25..1000 Hz and SltEQLP to 1.0 on
-1000..16000 Hz, which as display values are below and above their own published
-minimum and maximum, and as normalised values are a high pass off and a low pass
-wide open.
+takes 0..1.
+
+THAT READING IS MEASURED ON ONE BLOCK AND GENERALISED ON THE SCHEMA'S OWN
+EVIDENCE, which is worth separating because the measurement above covers Amp and
+this file describes 302 objects. Counted across all of them: 3,912 continuous
+parameters publish a default, all 3,912 lie in 0..1, and 1,369 of those lie
+OUTSIDE their own published display range, so they cannot be display values at
+all. SltEQHP defaulting to 0.0 on a 25..1000 Hz range is one of the 1,369; as a
+normalised value it is a high pass off, and as a display value it is below the
+minimum the same device published. The evidence spans 290 of the 302 objects,
+so the generalisation from Amp to the rest does not rest on extrapolation from
+one screen reading. `tests/test_headrush_registry.py` pins both counts.
 
 The curve BETWEEN the two scales is not published, and is not uniformly linear:
 
@@ -327,7 +334,14 @@ def build(schema: dict) -> dict:
         "schema_fingerprint": fingerprint(schema),
         "wire_encoding": {
             "continuous": "normalised 0..1",
-            "measured_on": "HeadRush Core, firmware 5.1.0.2a63755, 2026-09-15",
+            "measured_on": ("HeadRush Core, firmware 5.1.0.2a63755, 2026-09-15, "
+                            "by writing Amp.Bass, Amp.Treble, Amp.PostGain and "
+                            "Amp.TremDepth and reading the unit's own screen"),
+            "generalised_by": ("the schema's own defaults: 3912 continuous "
+                               "parameters across 290 of the 302 objects publish "
+                               "a default, all 3912 lie in 0..1, and 1369 lie "
+                               "outside their own published display range, so "
+                               "they cannot be display values"),
             "conversion_to_display": None,
             "conversion_note": (
                 "not published by the device and not uniformly linear; "
