@@ -69,9 +69,12 @@ EVIDENCE, which is worth separating because the measurement above covers Amp and
 this file describes 302 objects. Counted across all of them: 3,912 continuous
 parameters publish a default, all 3,912 lie in 0..1, and 1,369 of those lie
 OUTSIDE their own published display range, so they cannot be display values at
-all. SltEQHP defaulting to 0.0 on a 25..1000 Hz range is one of the 1,369; as a
-normalised value it is a high pass off, and as a display value it is below the
-minimum the same device published. The evidence spans 290 of the 302 objects,
+all. SltEQHP defaulting to 0.0 on a 25..1000 Hz range is one of the 1,369: as a
+display value it is below the minimum the same device published, which is the
+part that is checkable. What 0.0 SOUNDS like is a separate question and is not
+claimed, because nobody has read that control on a screen; calling it a high
+pass switched off would be an interpretation wearing the same clothes as the
+count. The evidence spans 290 of the 302 objects,
 so the generalisation from Amp to the rest does not rest on extrapolation from
 one screen reading. `tests/test_headrush_registry.py` pins both counts.
 
