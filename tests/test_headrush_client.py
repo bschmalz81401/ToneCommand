@@ -660,3 +660,68 @@ def test_the_changelog_records_this_phase():
     """
     text = (ROOT / "CHANGELOG.md").read_text()
     assert "devices/headrush/client.py" in text
+
+
+def test_remote_switched_off_is_a_403_and_is_named_exactly():
+    """Measured by toggling HeadRush Remote on a Core with no reboot, 2026-09-15
+    (#126). Off: every object-properties and object-meta path answers 403 with
+    "DataModel: Web access temporarily disabled" in the body, while `GET /`
+    still serves the editor. On: 200 again.
+
+    This is the one unambiguous operator-fixable state, so it gets an exact
+    instruction rather than a list of things to check.
+    """
+    error = urllib.error.HTTPError(
+        "http://10.8.72.116/api/v1/object-properties/Evil/Gui", 403,
+        "Forbidden", {}, None,
+    )
+    described = describe_unreachable(error, "10.8.72.116")
+    assert "HeadRush Remote" in described
+    assert "no reboot" in described
+    assert "404" not in described, "403 has one cause; do not muddy it"
+
+
+def test_a_404_does_not_send_the_operator_to_check_remote():
+    """The correction that prompted the 403 branch.
+
+    An earlier version told anyone seeing a 404 to check HeadRush Remote. Then
+    Remote was actually toggled, and Remote off turned out to be 403. A 404 is
+    therefore the case where Remote is demonstrably NOT the problem, and the
+    old advice pointed at the one thing that was fine.
+
+    Measured meaning of 404: a path this firmware lacks, or an engine that is
+    not running (after a crash every object path 404d while `/` still served).
+    """
+    error = urllib.error.HTTPError(
+        "http://10.8.72.116/api/v1/subtree/Evil/Gui", 404, "Not Found", {}, None,
+    )
+    described = describe_unreachable(error, "10.8.72.116")
+    assert "404" in described
+    assert "no such path" in described, "one cause"
+    assert "engine is not running" in described, "and the other"
+    assert "NOT the signature" in described, "and that Remote is not it"
+    # still not misclassified as the network or the name being at fault
+    assert "Nothing answered" not in described
+    assert "did not resolve" not in described
+
+
+def test_the_two_states_give_opposite_instructions():
+    """They both leave the unit serving its editor page, so an operator cannot
+    tell them apart by looking. The messages must not converge."""
+    forbidden = describe_unreachable(urllib.error.HTTPError(
+        "http://u/api/v1/object-properties/Evil/Gui", 403, "Forbidden", {}, None),
+        "unit")
+    missing = describe_unreachable(urllib.error.HTTPError(
+        "http://u/api/v1/subtree/Evil/Gui", 404, "Not Found", {}, None), "unit")
+    assert "Turn HeadRush Remote on" in forbidden
+    assert "Turn HeadRush Remote on" not in missing
+
+
+def test_other_http_codes_are_untouched_by_the_403_and_404_branches():
+    """The 504 case shares this branch and must keep its own wording."""
+    for code, reason in ((504, "Gateway Timeout"), (500, "Internal Server Error")):
+        described = describe_unreachable(urllib.error.HTTPError(
+            "http://10.8.72.116/api/v1/object-method/Evil/x", code, reason,
+            {}, None), "10.8.72.116")
+        assert str(code) in described
+        assert "HeadRush Remote" not in described

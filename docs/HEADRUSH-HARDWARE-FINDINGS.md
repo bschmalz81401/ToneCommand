@@ -1,0 +1,264 @@
+# HeadRush Core: hardware findings
+
+Partial evidence for #126, which cannot be completed yet: that ticket declares
+`Depends on: #125` and most of its criteria verify the finished adapter,
+including AC4, refusing a non-allowlisted `object-method` before network
+transport. No adapter exists, so what follows is the evidence that does not
+depend on one, recorded now because one item is a safety finding that affects
+work in flight.
+
+Scrubbed per AC7. No rig library, setlist or preset contents appear. The unit's
+`DeviceName` carries a per-unit suffix and is reduced to the model. One rig is
+named, `##HRB ToneCommandTesting`, created for this work and holding nothing.
+
+## Unit
+
+| | |
+|---|---|
+| model | HeadRush Core |
+| firmware | 5.1.0.2a63755 |
+| transport | unauthenticated HTTP on port 80, `/api/v1` |
+| date | 2026-09-15 |
+
+Prime and Flex Prime are UNVERIFIED (AC8). The spec says one engine across the
+family; nothing here tests that and it is not assumed.
+
+## FINDING 1: a write of ModuleType ordinal 20 was followed by engine death
+
+**What was observed, bounded to what was actually run.**
+
+On this Core at firmware 5.1.0.2a63755, writing `20` to `Chain.ModuleType3` on an
+empty test rig was accepted, read back as `20`, and followed by `/api/v1` going
+down within the next two-second poll. The unit then reloaded itself and
+presented a recovery prompt asking whether to load the last preset.
+
+```
+baseline API alive: True
+write ModuleType3 = 20  ->  acknowledged, read back 20
+  t+ 0s  API alive
+  t+ 2s  API DOWN
+```
+
+That is enough to say: do not write ordinal 20. It is deliberately NOT written
+up as "writing ordinal 20 crashes the engine", because the protocol does not
+support a general law, and this document will be quoted as hardware fact.
+
+### What the evidence does not cover
+
+- **n = 1** for the isolated run. One controlled observation, not a rate.
+- **The timing is a poll bin, not a latency.** Health was sampled every two
+  seconds. What is known is that the unit was up at the first poll and down at
+  the second, so death falls in (0, 2s]. "About two seconds" would be a
+  measurement that was not made.
+- **Slot 3 only, empty rig only.** The claim is about `Chain.ModuleType{n}`;
+  the evidence is `n = 3` with nothing else placed.
+- **Engine death and API unmount are not separated by this poll.** The probe
+  recorded reachable or not. Finding 2 is a state where the unit still answers
+  HTTP on `/` and 404s every API path, so "API DOWN" could be the crash, the
+  unmount that follows it, or both in sequence. The recovery prompt is what
+  distinguishes a fault from a hang, and that was seen on the unit by
+  @bschmalz81401 rather than captured in the poll log.
+- **The recovery performed is not shown to be the minimum.** The unit was power
+  cycled and HeadRush Remote re-enabled. Whether the self-reload alone, or
+  re-enabling Remote alone, would have sufficed was not tested.
+
+### The earlier occurrence, written down rather than counted
+
+An earlier session on the same test rig, which had an Amp in slot 2 at the
+time, ran three writes and then found the API gone:
+
+```
+slot 3 before: 0   (slot 2 held ordinal 1, Amp)
+wrote ModuleType3 = 20  -> read back 20
+wrote ModuleType3 = 19  -> read back 19
+wrote ModuleType3 = 0   -> read back 0
+   ... every API path 404 on the next request, seconds later
+```
+
+This was previously described as a second reproduction. It is not one: three
+writes in sequence cannot isolate any of them. It is consistent with the
+isolated run and it is recorded here so a reader can judge it, rather than
+summarised as a count.
+
+### Ordinal 19, tested properly this time
+
+An earlier version of this document cleared ordinal 19 on the grounds that
+after the first crash the unit came up in a rig containing it. That is
+load-from-disk, which is a different operation from writing `ModuleType = 19`
+over HTTP, and it cleared nothing. Independent review and a self-audit both
+caught it.
+
+It has since been tested directly, as the same single-variable run used for
+ordinal 20: same rig, same slot 3, same empty chain, write and read back, then
+poll. Health was sampled every 0.5s rather than every 2s, and the probe
+distinguished 403 from 404 rather than recording reachable or not.
+
+```
+baseline: alive
+write ModuleType3 = 19  ->  acknowledged, read back 19
+  alive for 30s
+slot 3 restored to 0
+```
+
+**Writing ordinal 19 did not take the unit down.** So the pair is a controlled
+comparison, which is worth more than either run alone:
+
+| ordinal | name | object published | same rig, same slot, same protocol |
+|---|---|---|---|
+| 19 | Neural Amp Modeler | YES | alive 30s, no effect |
+| 20 | Neural Amp Modeler 2 | NO | API gone inside the next poll |
+
+Two adjacent roster entries naming the same module, differing in whether the
+device publishes an object to address it. That is now a paired observation
+rather than a single crash with an assumed cause, and it is the strongest
+support this document has for treating "roster entry with no object" as the
+thing that matters.
+
+It is still n=1 on each side, and one pair is not a mechanism. What it rules out
+is the reading that the NAM module is simply dangerous to place.
+
+### The class these three belong to
+
+Three roster entries have a `ModuleType` ordinal and no object at the
+corresponding path. That is a schema fact, checkable without hardware:
+
+| ordinal | name | object | crash |
+|---|---|---|---|
+| 4 | ReValver Amp 2 | absent | NOT TESTED |
+| 20 | Neural Amp Modeler 2 | absent | observed once, isolated |
+| 19 | Neural Amp Modeler | present | tested, NO crash (the control) |
+| 254 | C-Verb 2 | absent | NOT TESTED |
+
+The honest description of the class is "roster name with no object path", and
+nothing more. An earlier version explained it by the unit's one Capture and one
+C-Verb per rig rule, which does not cover ReValver Amp 2, since ReValver is not
+a Capture. And a trailing ` 2` is not itself the problem: `Amp 2` is a roster
+entry WITH an object at `/Evil/Engine/Patch/Amp_2`, and is not implicated.
+
+**4 and 254 were not tested, and the reason is cost, not confidence.** Testing
+one costs a crash and a power cycle on someone's hardware. Refusing them is not
+free either: it means an adapter can never select those two roster entries, and
+whether they work is simply unknown.
+
+The 19/20 pair raises what a further test would be worth. With a control in
+hand, confirming that a SECOND unbacked ordinal also takes the unit down would
+move the class claim from one observation to two, on different modules. That is
+the test that would justify the crash, and it has not been run.
+
+### What this suggests for #125
+
+A conservative write path would refuse ordinal 20 on the evidence, and refuse 4
+and 254 as a JUDGEMENT pending measurement, on the grounds that the one member
+of that schema class anybody has written took the unit down while its backed
+sibling, written the same way in the same slot, did not. That is a policy
+call for the maintainer, not a measurement, and it should not be described as
+being in the same class as the never-brick guard, which covers firmware, store
+and recovery operations.
+
+What the evidence does support without qualification is narrower and still
+useful: **read-back verification does not detect this.** The write was
+acknowledged, the read-back agreed, and the engine died afterwards. Any
+verified-write built on read-and-compare would report this write as a success.
+
+## FINDING 2: Remote gates the API, and its signature is 403, not 404
+
+Measured by toggling HeadRush Remote on the unit with no reboot, in both
+directions, 2026-09-15. An earlier version of this document inferred the gating
+from the editor's own connection-failure dialog and got the SIGNATURE wrong,
+which is recorded below because the wrong version shipped a diagnostic that
+pointed operators at the wrong thing.
+
+| request | Remote OFF | Remote ON |
+|---|---|---|
+| `GET /` | 200 | 200 |
+| `/api/v1/subtree/{path}` | 404 | 200 |
+| `/api/v1/object-properties/{path}` | **403** | 200 |
+| `/api/v1/object-meta/{path}` | **403** | 200 |
+
+With Remote off the unit says why, in the body:
+
+```json
+{"desc": "DataModel: Web access temporarily disabled",
+ "reason": "Forbidden", "status": 403}
+```
+
+Turning Remote back on restored 200 on every path immediately, without a
+reboot. So Remote does gate the API, that is now measured rather than inferred,
+and the state is entirely recoverable by the operator.
+
+### The correction, and why it mattered
+
+After each crash in finding 1, `object-properties` returned **404**. With Remote
+off it returns **403**. Those are different failures:
+
+    403 on an object path   Remote is off. Turn it on. No reboot needed.
+    404 on an object path   this firmware has no such path, OR the engine is
+                            not running. Remote is NOT the problem.
+
+The earlier version of this document, and the `describe_unreachable` text that
+went with it, told anyone seeing a 404 to check HeadRush Remote. A 404 is
+precisely the case where Remote is demonstrably fine, so that advice sent an
+operator to the one thing that was not wrong.
+
+The mistake was building on the editor's dialog, which names Remote for EVERY
+connection failure because it is generic advice rather than a diagnosis. It was
+labelled as inferred, which was honest, and it still pointed the wrong way. One
+toggle settled it, and the toggle is what should have happened before the advice
+was written.
+
+### What this also says about finding 1
+
+The post-crash state was not Remote being switched off. `object-properties`
+404ing rather than 403ing means the engine itself was not serving, which is
+consistent with a crash and is a stronger reading of finding 1 than the earlier
+write-up allowed: the two failures are now distinguishable and the crash was
+the other one.
+
+It does not change what recovery was performed. The unit was power cycled and
+Remote re-enabled together, so whether either alone would have sufficed is still
+untested. Given Remote-off is a 403 and the observed state was 404, Remote was
+probably not what needed re-enabling.
+
+## FINDING 3: continuous parameters are normalised on the wire
+
+The wire takes `0..1`. `minimum`, `maximum` and `format` describe the scale the
+unit SHOWS. Measured by writing a value and reading the unit's own screen:
+
+| parameter | wire | screen | published range |
+|---|---|---|---|
+| Amp.Bass | 0.75 | 75 % | 0..100 |
+| Amp.Treble | 0.5 | 50 % | 0..100 |
+| Amp.PostGain | 0.5 | 0.0 dB | -12..12 |
+| Amp.TremDepth | 0.0 | 0 % | 0..100 |
+| Amp.TremSpeed | 0.5 | 5.19 Hz | 0.25..20 |
+| Amp.TremSpeed | 0.25 | 1.48 Hz | 0.25..20 |
+
+The API alone cannot establish this: the device accepts a write of either `0.75`
+or `75` to `Amp.Bass` and clamps neither. The screen is what settles it.
+
+The last two rows are not linear. The device publishes an opaque id for the
+curve (`x-options.normalizeAlgo`) and no formula, so the readings above are
+recorded here as MEASUREMENTS and nothing is decoded from them.
+
+Decoding the curves is a separate piece of work and a different provenance,
+read out of the vendor's editor rather than measured: that is #130, and nothing
+in this commit implements it. What belongs here is only the six readings, which
+are what a later decode has to reproduce.
+
+## Not verified, and why
+
+| AC | status |
+|---|---|
+| 1. model and firmware | done, above |
+| 2. discovery, rigs, topology, scenes, reads, verified writes | BLOCKED, verifies the adapter from #125 |
+| 3. read-back after each write | PARTIAL. Every write in this session was read back. The AC2 write set was not run, because there is no adapter. AC3 is a procedure requirement, not a claim that read-back detects crashes; the argument that it does not is under finding 1 |
+| 4. non-allowlisted object-method refused before transport | BLOCKED, the allowlist is #125 |
+| 5. record failures rather than weaken claims | done, findings 1 and 2 |
+| 6. no destructive operations | no store, reset, firmware or recovery operation was invoked. The unit was nonetheless taken down twice and presented a recovery prompt, and writing an unbacked ordinal until the engine died is arguably outside "the dedicated hardware verification procedure" this ticket asks for. Recorded rather than claimed as clean |
+| 7. scrubbed report | this document |
+| 8. Prime and Flex Prime unverified | honoured, stated above |
+
+Nothing was stored, reset, or flashed. Every write went to the edit buffer of
+`##HRB ToneCommandTesting`, a rig created for this work, and the two crashes
+confirmed the point by discarding everything: the unit came back with the rig as
+it is on disk, empty.

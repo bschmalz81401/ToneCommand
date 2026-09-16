@@ -112,6 +112,61 @@ Notable changes to ToneCommand. Dates are UTC.
   behaviour is established and #125 gates them behind an allowlist, and
   `load_rig` says out loud that stored rig CONTENTS are not modelled.
 
+### Fixed (HeadRush unreachable diagnosis, 2026-09-15)
+- `describe_unreachable()` gains a 403 branch and its 404 branch stops blaming
+  the wrong thing. MEASURED by toggling HeadRush Remote on a Core with no
+  reboot (#126): with Remote off, every `object-properties` and `object-meta`
+  path answers **403** and the unit says why in the body, "DataModel: Web
+  access temporarily disabled"; turning it back on restores 200 immediately.
+- A **404** is therefore the case where Remote is demonstrably NOT the problem.
+  It means this firmware has no such path, or the engine is not running: after
+  the crash in the findings report, every `/api/v1` object path returned 404
+  while the unit still served its editor page on `/`.
+- The first version of this branch had it backwards, telling anyone who saw a
+  404 to go check HeadRush Remote. It was built on the editor's own dialog,
+  which names Remote for every connection failure because it is generic advice
+  rather than a diagnosis. It was labelled as inferred, which was honest, and
+  it still pointed operators at the one thing that was fine. One toggle settled
+  it, and the toggle should have come before the advice.
+- Other status codes keep their wording; the existing 504 case is unchanged.
+
+### Added (HeadRush hardware findings, 2026-09-15)
+- `docs/HEADRUSH-HARDWARE-FINDINGS.md`: partial evidence for #126, which cannot
+  be completed until #125 exists, recorded now because one item is a safety
+  finding affecting work in flight.
+- A WRITE OF `ModuleType` ORDINAL 20 WAS FOLLOWED BY ENGINE DEATH on one Core at
+  one firmware. `Neural Amp Modeler 2` is in the device's own roster, in the
+  published range 0..277, and has no object behind it. The write was accepted
+  and echoed back, and `/api/v1` was gone at the next two-second poll; the unit
+  then reloaded itself and asked whether to load the last preset. Bounded
+  deliberately: n=1 for the isolated run, slot 3 on an empty rig, and the
+  timing is a poll bin rather than a measured latency. An earlier mixed
+  sequence that also ended with the API gone is written out rather than counted
+  as a second reproduction, since three writes cannot isolate one.
+- Read-back verification does NOT detect it. The write was acknowledged, the
+  read-back agreed, and the engine died after. That is the part that generalises
+  and it constrains any verified-write built on read-and-compare.
+- Three roster entries have an ordinal and no object (4, 20, 254). That class is
+  a schema fact. 4 and 254 were NOT tested, because a test costs a crash on
+  someone's hardware, and refusing them is not free either: it means an adapter
+  can never select them and whether they work is unknown. Refusing all three is
+  offered to #125 as a judgement for the maintainer, not as a measurement.
+- Ordinal 19 was then TESTED directly, same rig, same slot, same protocol, with
+  health sampled every 0.5s: it was acknowledged, read back, and the unit stayed
+  up for 30s. So the pair is a controlled comparison. 19 (object published) is
+  harmless and 20 (no object published) took the unit down, which is the
+  strongest support here for "roster entry with no object" being what matters,
+  and it rules out the reading that the NAM module is dangerous to place.
+  Still n=1 per side; one pair is not a mechanism.
+- A previous draft had cleared 19 on the wrong grounds, that the unit rebooted
+  into a rig containing it, which is load-from-disk and not an API write. That
+  had already been published to #125 as settled, and was corrected there.
+- Six readings of continuous parameters taken off the unit's screen are
+  recorded as measurements. The wire takes 0..1 while the published range and
+  format describe what the unit displays, and the device names each curve with
+  an opaque id and no formula. Nothing here decodes those curves; that is its
+  own change with its own provenance.
+
 ### Fixed (capability gates, 2026-09-15)
 - The runtime obeys the device contract (#111, the second half of #109).
   `server.py` held a handle typed to `DeviceAdapter` and `Capabilities` said
