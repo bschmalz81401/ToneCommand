@@ -4,6 +4,70 @@ Notable changes to ToneCommand. Dates are UTC.
 
 ## Unreleased
 
+### Added (HeadRush block and parameter registry, 2026-09-15)
+- `config/headrush_registry.json` plus `tools/build_headrush_registry.py` and
+  `devices/headrush/registry.py` (#122): the committed schema turned into the
+  lookup a planner uses. A block by name or path, its parameters classified
+  into the kinds a caller must treat differently, and the `ModuleType` ordinal
+  that selects it into a chain slot. Generated, deterministic, no hardware.
+- CONTINUOUS VALUES ARE NORMALISED 0..1 ON THE WIRE while the published
+  `minimum`, `maximum` and `format` describe the scale the unit SHOWS.
+  Measured on a Core by writing a value and reading the unit's screen:
+  `Amp.Bass` at wire 0.75 reads 75 %, `Amp.PostGain` at 0.5 reads 0.0 dB on a
+  -12..12 range. The device accepts a write of either 0.75 or 75 without
+  clamping, so nothing on the API discriminates and only the screen settles it.
+- No normalised-to-display conversion is offered, because the device NAMES each
+  curve without describing it. `x-options.normalizeAlgo` is an opaque integer,
+  carried as `taper_id`; the formula behind it is unpublished. Measured off the
+  unit's screen: `Amp.Bass` and `Amp.PostGain` carry no id and are linear,
+  while `Amp.TremSpeed` carries id 5 and is quadratic, reading 1.48 Hz at wire
+  0.25 and 5.19 Hz at wire 0.5 on a published 0.25..20 range where linear would
+  give 5.19 and 10.125. Solving for the exponent at each point gives 2.0023 and
+  1.9993, so that is two independent readings rather than one fitted point.
+  `Parameter.to_display()` exists only to refuse.
+- Absent is NOT treated as meaning identity, though it fits all four readings:
+  four parameters on one block is not a decoding, and ids 6, 8 and 10 have
+  never been read. Unit does not predict taper either, so no per-unit shortcut
+  is available: `C2_Bass_Chorus.Depth` is a percentage carrying id 6. Left open
+  on #126, which needs no human at the hardware because the unit's own web
+  editor renders these values.
+- Every field the device publishes travels verbatim in each parameter's
+  `published` map, including ones nothing here interprets, with `read_only` and
+  the device's own `grid` step alongside. A test proves that set complete
+  against the schema rather than against a list that could fall out of step.
+  This came out of independent review: the first draft kept only the fields it
+  had a use for, so `normalizeAlgo` never reached the registry and the registry
+  then told callers the taper was unpublished while the schema it was generated
+  from was publishing one. 893 read-only properties are now flagged, including
+  `/Evil/Gui.DeviceName`, which a planner could otherwise have offered to
+  rewrite.
+- `RegistryCorrupt` is separate from `SchemaDrift`: a block naming a parameter
+  set the file does not hold is the file disagreeing with itself, which wants a
+  restore, not the regenerate-and-read-the-diff that drift wants.
+- Three roster entries have a `ModuleType` ordinal and no object: `ReValver
+  Amp 2`, `Neural Amp Modeler 2` and `C-Verb 2`. That is the unit's one
+  Capture and one C-Verb per rig rule showing up in its own data, so they are
+  recorded with their ordinals rather than dropped to make the join come out
+  even. Whether writing one of those ordinals is refused, ignored or accepted
+  is a hardware question and is left open on #126.
+- Block CATEGORY is absent rather than inferred: the device has the vocabulary
+  and answers per block by method, and that answer is not in the schema. No
+  FM9 effect or parameter equivalence is recorded either, for the reason
+  `tools/build_headrush_amp_models.py` sets out at length.
+- A property whose name ends in `2` is NOT read as the B half of a doubled
+  block. On `Amp` that is what `Bass2` is, and generalising it would be wrong:
+  `Chain.CanDouble12` is slot twelve and `Vocal_Harmony` carries `On2`, `On3`
+  and `On4` for harmony voices. No rule can tell those apart, so none is
+  applied.
+- `load()` refuses to serve answers derived from a schema the repo no longer
+  holds, and names which of the two causes it is: a firmware bump wants both
+  files regenerated and the diff read, while an unchanged firmware with a
+  changed hash means the schema was hand edited, which #117 says not to do.
+- Objects share parameter sets the way they share metas upstream, 302 objects
+  to 153 distinct sets, stored once and referenced by hash. Without it the
+  derived file was 1.7 MB against the 1.0 MB schema it comes from. The dedup
+  is lossless by check: a hash already holding a different set is refused.
+
 ### Fixed (secret scanner, 2026-09-14)
 - `test_secret_key_never_hardcoded` matches the SHAPE of a TONE3000 key rather
   than its prefix. Matching `t3k_cs_` flagged four places that hold no secret:
