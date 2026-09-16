@@ -109,13 +109,13 @@ comparison, which is worth more than either run alone:
 | 20 | Neural Amp Modeler 2 | NO | API gone inside the next poll |
 
 Two adjacent roster entries naming the same module, differing in whether the
-device publishes an object to address it. That is now a paired observation
-rather than a single crash with an assumed cause, and it is the strongest
-support this document has for treating "roster entry with no object" as the
-thing that matters.
+device publishes an object to address it.
 
-It is still n=1 on each side, and one pair is not a mechanism. What it rules out
-is the reading that the NAM module is simply dangerous to place.
+WHAT THIS PAIR DOES AND DOES NOT SHOW. It rules out the reading that the NAM
+module is dangerous to place, which was the live alternative at the time. It
+does NOT support "roster entry with no object" as the class that matters: an
+earlier draft said so here, and the next section is the testing that falsified
+it. One pair is not a mechanism.
 
 ### All three unbacked ordinals tested, and they do three different things
 

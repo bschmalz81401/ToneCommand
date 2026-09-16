@@ -163,13 +163,12 @@ Notable changes to ToneCommand. Dates are UTC.
   reports success for a write that does not survive. 254: read-back agrees and
   persists, but the block has no object, so a later parameter write has nowhere
   to go.
-- Ordinal 19 was then TESTED directly, same rig, same slot, same protocol, with
-  health sampled every 0.5s: it was acknowledged, read back, and the unit stayed
-  up for 30s. So the pair is a controlled comparison. 19 (object published) is
-  harmless and 20 (no object published) took the unit down, which is the
-  strongest support here for "roster entry with no object" being what matters,
-  and it rules out the reading that the NAM module is dangerous to place.
-  Still n=1 per side; one pair is not a mechanism.
+- Ordinal 19 was tested directly before 4 and 254, same rig, same slot, same
+  protocol, with health sampled every 0.5s: acknowledged, read back, and the
+  unit stayed up for 30s. That pair rules out the reading that the NAM module
+  is dangerous to place. It does NOT support "roster entry with no object" as
+  the class that matters, which the bullet above records as falsified; an
+  earlier version of this entry claimed it did.
 - A previous draft had cleared 19 on the wrong grounds, that the unit rebooted
   into a rig containing it, which is load-from-disk and not an API write. That
   had already been published to #125 as settled, and was corrected there.
