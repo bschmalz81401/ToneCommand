@@ -2,6 +2,72 @@
 
 Notable changes to ToneCommand. Dates are UTC.
 
+## Unreleased
+
+### Added (HeadRush block and parameter registry, 2026-09-15)
+- `config/headrush_registry.json` plus `tools/build_headrush_registry.py` and
+  `devices/headrush/registry.py` (#122): the committed schema turned into the
+  lookup a planner uses. A block by name or path, its parameters classified
+  into the kinds a caller must treat differently, and the `ModuleType` ordinal
+  that selects it into a chain slot. Generated, deterministic, no hardware.
+- CONTINUOUS VALUES ARE NORMALISED 0..1 ON THE WIRE while the published
+  `minimum`, `maximum` and `format` describe the scale the unit SHOWS.
+  Measured on a Core by writing a value and reading the unit's screen:
+  `Amp.Bass` at wire 0.75 reads 75 %, `Amp.PostGain` at 0.5 reads 0.0 dB on a
+  -12..12 range. The device accepts a write of either 0.75 or 75 without
+  clamping, so nothing on the API discriminates and only the screen settles it.
+- No normalised-to-display conversion is offered, because the device NAMES each
+  curve without describing it. `x-options.normalizeAlgo` is an opaque integer,
+  carried as `taper_id`; the formula behind it is unpublished. Measured off the
+  unit's screen: `Amp.Bass` and `Amp.PostGain` carry no id and are linear,
+  while `Amp.TremSpeed` carries id 5 and is quadratic, reading 1.48 Hz at wire
+  0.25 and 5.19 Hz at wire 0.5 on a published 0.25..20 range where linear would
+  give 5.19 and 10.125. Solving for the exponent at each point gives 2.0023 and
+  1.9993, so that is two independent readings rather than one fitted point.
+  `Parameter.to_display()` exists only to refuse.
+- Absent is NOT treated as meaning identity, though it fits all four readings:
+  four parameters on one block is not a decoding, and ids 6, 8 and 10 have
+  never been read. Unit does not predict taper either, so no per-unit shortcut
+  is available: `C2_Bass_Chorus.Depth` is a percentage carrying id 6. Left open
+  on #126, which needs no human at the hardware because the unit's own web
+  editor renders these values.
+- Every field the device publishes travels verbatim in each parameter's
+  `published` map, including ones nothing here interprets, with `read_only` and
+  the device's own `grid` step alongside. A test proves that set complete
+  against the schema rather than against a list that could fall out of step.
+  This came out of independent review: the first draft kept only the fields it
+  had a use for, so `normalizeAlgo` never reached the registry and the registry
+  then told callers the taper was unpublished while the schema it was generated
+  from was publishing one. 893 read-only properties are now flagged, including
+  `/Evil/Gui.DeviceName`, which a planner could otherwise have offered to
+  rewrite.
+- `RegistryCorrupt` is separate from `SchemaDrift`: a block naming a parameter
+  set the file does not hold is the file disagreeing with itself, which wants a
+  restore, not the regenerate-and-read-the-diff that drift wants.
+- Three roster entries have a `ModuleType` ordinal and no object: `ReValver
+  Amp 2`, `Neural Amp Modeler 2` and `C-Verb 2`. That is the unit's one
+  Capture and one C-Verb per rig rule showing up in its own data, so they are
+  recorded with their ordinals rather than dropped to make the join come out
+  even. Whether writing one of those ordinals is refused, ignored or accepted
+  is a hardware question and is left open on #126.
+- Block CATEGORY is absent rather than inferred: the device has the vocabulary
+  and answers per block by method, and that answer is not in the schema. No
+  FM9 effect or parameter equivalence is recorded either, for the reason
+  `tools/build_headrush_amp_models.py` sets out at length.
+- A property whose name ends in `2` is NOT read as the B half of a doubled
+  block. On `Amp` that is what `Bass2` is, and generalising it would be wrong:
+  `Chain.CanDouble12` is slot twelve and `Vocal_Harmony` carries `On2`, `On3`
+  and `On4` for harmony voices. No rule can tell those apart, so none is
+  applied.
+- `load()` refuses to serve answers derived from a schema the repo no longer
+  holds, and names which of the two causes it is: a firmware bump wants both
+  files regenerated and the diff read, while an unchanged firmware with a
+  changed hash means the schema was hand edited, which #117 says not to do.
+- Objects share parameter sets the way they share metas upstream, 302 objects
+  to 153 distinct sets, stored once and referenced by hash. Without it the
+  derived file was 1.7 MB against the 1.0 MB schema it comes from. The dedup
+  is lossless by check: a hash already holding a different set is refused.
+
 ### Fixed (secret scanner, 2026-09-14)
 - `test_secret_key_never_hardcoded` matches the SHAPE of a TONE3000 key rather
   than its prefix. Matching `t3k_cs_` flagged four places that hold no secret:
@@ -12,7 +78,94 @@ Notable changes to ToneCommand. Dates are UTC.
   at least 20 characters clears all four and still catches a planted key, which
   is proven both ways by two new tests rather than assumed.
 
-## Unreleased
+### Added (HeadRush simulator and topology model, 2026-09-15)
+- `devices/headrush/topology.py`: the ten signal-path templates as a model. A
+  HeadRush rig is one of three genuinely different shapes, straight,
+  split/rejoin, or two independent paths, and #121 says not to flatten them
+  into an FM9 grid. `role()` says which parallel branch a slot is on;
+  `path_of()` says which independent PATH, which is a different question and
+  the one a dual answers, because every dual reports COMMON on all fourteen.
+- `config/headrush_topologies.json` plus `tools/build_headrush_topologies.py`,
+  marked `api_readable: false` and `provenance: "vendor editor bundle"`. The
+  unit publishes the ten NAMES on `Chain.Routing` and nothing about their
+  shapes: writing each in turn leaves every per-slot property byte-identical
+  (#109). Read out of the vendor's own editor, which is the best available
+  source and is still not the API, and both fields travel onto every
+  `Topology` so nothing downstream can present them as a device read.
+- Dual-path partitions are measured off the editor's slot geometry rather than
+  parsed out of routing names, because the names do not always carry one:
+  `Dual Path 4-10` states a partition and `Dual Straight Path` states nothing.
+  Each records which axis carried the split, and a name that disagrees with the
+  geometry makes the generator refuse rather than pick.
+- `devices/headrush/sim.py`: a HeadRush that exists only in this process, built
+  from the committed schema rather than a handwritten device model, so phases 4
+  and 5 can be reviewed by someone who owns no HeadRush. It implements the
+  injected opener from #116, so the real client code runs against it, and it
+  raises `urllib.error.HTTPError` at that boundary because that is what the
+  Opener contract promises callers and what production throws.
+- Scenes live on the device's own `/Evil/Engine/FootSwitch` properties,
+  `Scene{n}_{m}_Effect` and `Scene{n}_{m}_Mode`, not in a side table. The mode
+  integers carry no names on the device; which is which was measured on a Core
+  and cross-read from its bundle, and is cited rather than inferred.
+- It refuses rather than smooths: an unknown path is a 404 and not a blank
+  object, `object-method` is a 501 recorded in `undecoded` because no method's
+  behaviour is established and #125 gates them behind an allowlist, and
+  `load_rig` says out loud that stored rig CONTENTS are not modelled.
+
+### Fixed (HeadRush unreachable diagnosis, 2026-09-15)
+- `describe_unreachable()` gains a 403 branch and its 404 branch stops blaming
+  the wrong thing. MEASURED by toggling HeadRush Remote on a Core with no
+  reboot (#126): with Remote off, every `object-properties` and `object-meta`
+  path answers **403** and the unit says why in the body, "DataModel: Web
+  access temporarily disabled"; turning it back on restores 200 immediately.
+- A **404** is therefore the case where Remote is demonstrably NOT the problem.
+  It means this firmware has no such path, or the engine is not running: after
+  the crash in the findings report, every `/api/v1` object path returned 404
+  while the unit still served its editor page on `/`.
+- The first version of this branch had it backwards, telling anyone who saw a
+  404 to go check HeadRush Remote. It was built on the editor's own dialog,
+  which names Remote for every connection failure because it is generic advice
+  rather than a diagnosis. It was labelled as inferred, which was honest, and
+  it still pointed operators at the one thing that was fine. One toggle settled
+  it, and the toggle should have come before the advice.
+- Other status codes keep their wording; the existing 504 case is unchanged.
+
+### Added (HeadRush hardware findings, 2026-09-15)
+- `docs/HEADRUSH-HARDWARE-FINDINGS.md`: partial evidence for #126, which cannot
+  be completed until #125 exists, recorded now because one item is a safety
+  finding affecting work in flight.
+- A WRITE OF `ModuleType` ORDINAL 20 WAS FOLLOWED BY ENGINE DEATH on one Core at
+  one firmware. `Neural Amp Modeler 2` is in the device's own roster, in the
+  published range 0..277, and has no object behind it. The write was accepted
+  and echoed back, and `/api/v1` was gone at the next two-second poll; the unit
+  then reloaded itself and asked whether to load the last preset. Bounded
+  deliberately: n=1 for the isolated run, slot 3 on an empty rig, and the
+  timing is a poll bin rather than a measured latency. An earlier mixed
+  sequence that also ended with the API gone is written out rather than counted
+  as a second reproduction, since three writes cannot isolate one.
+- Read-back verification does NOT detect it. The write was acknowledged, the
+  read-back agreed, and the engine died after. That is the part that generalises
+  and it constrains any verified-write built on read-and-compare.
+- Three roster entries have an ordinal and no object (4, 20, 254). That class is
+  a schema fact. 4 and 254 were NOT tested, because a test costs a crash on
+  someone's hardware, and refusing them is not free either: it means an adapter
+  can never select them and whether they work is unknown. Refusing all three is
+  offered to #125 as a judgement for the maintainer, not as a measurement.
+- Ordinal 19 was then TESTED directly, same rig, same slot, same protocol, with
+  health sampled every 0.5s: it was acknowledged, read back, and the unit stayed
+  up for 30s. So the pair is a controlled comparison. 19 (object published) is
+  harmless and 20 (no object published) took the unit down, which is the
+  strongest support here for "roster entry with no object" being what matters,
+  and it rules out the reading that the NAM module is dangerous to place.
+  Still n=1 per side; one pair is not a mechanism.
+- A previous draft had cleared 19 on the wrong grounds, that the unit rebooted
+  into a rig containing it, which is load-from-disk and not an API write. That
+  had already been published to #125 as settled, and was corrected there.
+- Six readings of continuous parameters taken off the unit's screen are
+  recorded as measurements. The wire takes 0..1 while the published range and
+  format describe what the unit displays, and the device names each curve with
+  an opaque id and no formula. Nothing here decodes those curves; that is its
+  own change with its own provenance.
 
 ### Added (HeadRush normalisation tapers, 2026-09-15)
 - `config/headrush_tapers.json` plus `tools/build_headrush_tapers.py` and

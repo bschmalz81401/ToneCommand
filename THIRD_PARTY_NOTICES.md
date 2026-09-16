@@ -148,6 +148,30 @@ Fractal Audio Systems.
 
 ---
 
+## HeadRush web editor bundle
+
+- Source: the JavaScript the unit itself serves to a browser,
+  `GET http://<unit>/static/js/main.<hash>.js` on the HeadRush's own HTTP
+  server. Not a public download; it is what the device hands its own editor.
+- Not redistributed by this project. The bundle is not in this repository;
+  `tools/build_headrush_topologies.py` reads it from a unit or from a local
+  copy, and commits only the derived table.
+
+`config/headrush_topologies.json` records, per signal-path template, which of
+the fourteen slots are common, which are on a parallel branch, and which belong
+to an independent path. Those are facts about how the device routes audio, and
+the device will not state them itself: it publishes the ten NAMES on
+`Chain.Routing` and nothing about their shapes (#109).
+
+Taken are the routing names, an ordering field, a vocals flag, and per slot a
+screen position and a role integer. No code is copied and none is executed; the
+bundle is parsed for those values and discarded. The file marks itself
+`api_readable: false` and `provenance: "vendor editor bundle"` so that nothing
+downstream can present it as something the unit answered.
+
+"HeadRush" is a trademark of inMusic Brands, Inc. This project is not
+affiliated with or endorsed by inMusic Brands.
+
 ## HeadRush published model list
 
 - Source: HeadRush's own product page,
