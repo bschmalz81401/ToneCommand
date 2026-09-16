@@ -117,48 +117,81 @@ thing that matters.
 It is still n=1 on each side, and one pair is not a mechanism. What it rules out
 is the reading that the NAM module is simply dangerous to place.
 
-### The class these three belong to
+### All three unbacked ordinals tested, and they do three different things
 
-Three roster entries have a `ModuleType` ordinal and no object at the
-corresponding path. That is a schema fact, checkable without hardware:
+The earlier version of this document proposed "roster entry with no object
+path" as the class that mattered, having tested exactly one member of it.
+Testing the other two falsified that. Same rig, same slot 3, same empty chain,
+same protocol, health sampled every 0.5s:
 
-| ordinal | name | object | crash |
-|---|---|---|---|
-| 4 | ReValver Amp 2 | absent | NOT TESTED |
-| 20 | Neural Amp Modeler 2 | absent | observed once, isolated |
-| 19 | Neural Amp Modeler | present | tested, NO crash (the control) |
-| 254 | C-Verb 2 | absent | NOT TESTED |
+| ordinal | name | object | what the write does | crash |
+|---|---|---|---|---|
+| 3 | ReValver Amp | present | sticks | no |
+| **4** | **ReValver Amp 2** | **absent** | **silently reverts to 0 in ~0.4s** | **no** |
+| 19 | Neural Amp Modeler | present | sticks | no |
+| **20** | **Neural Amp Modeler 2** | **absent** | (engine died) | **YES** |
+| 253 | C-Verb | present | sticks | no |
+| **254** | **C-Verb 2** | **absent** | **sticks, with no object to address it** | **no** |
 
-The honest description of the class is "roster name with no object path", and
-nothing more. An earlier version explained it by the unit's one Capture and one
-C-Verb per rig rule, which does not cover ReValver Amp 2, since ReValver is not
-a Capture. And a trailing ` 2` is not itself the problem: `Amp 2` is a roster
-entry WITH an object at `/Evil/Engine/Patch/Amp_2`, and is not implicated.
+The three backed siblings are inert controls: written the same way, they take
+the value and keep it.
 
-**4 and 254 were not tested, and the reason is cost, not confidence.** Testing
-one costs a crash and a power cycle on someone's hardware. Refusing them is not
-free either: it means an adapter can never select those two roster entries, and
-whether they work is simply unknown.
+**Unbacked does not predict a crash.** Only ordinal 20 does. The recommendation
+to refuse all three, which was published to #125, rested on generalising from
+the single member that had been tried, and two thirds of that generalisation is
+now wrong.
 
-The 19/20 pair raises what a further test would be worth. With a control in
-hand, confirming that a SECOND unbacked ordinal also takes the unit down would
-move the class claim from one observation to two, on different modules. That is
-the test that would justify the crash, and it has not been run.
+#### Ordinal 4 is rejected by the device, silently
 
-### What this suggests for #125
+```
+wrote 4 ->  t+0.04s slot 3 reads 4
+            t+0.39s slot 3 reads 0
+```
 
-A conservative write path would refuse ordinal 20 on the evidence, and refuse 4
-and 254 as a JUDGEMENT pending measurement, on the grounds that the one member
-of that schema class anybody has written took the unit down while its backed
-sibling, written the same way in the same slot, did not. That is a policy
-call for the maintainer, not a measurement, and it should not be described as
-being in the same class as the never-brick guard, which covers firmware, store
-and recovery operations.
+No error, no refusal, no crash. The write is acknowledged, the read-back agrees
+for about four tenths of a second, and then the unit puts the slot back to
+empty on its own. Its backed sibling, ordinal 3, written identically in the same
+slot moments earlier, stays put.
 
-What the evidence does support without qualification is narrower and still
-useful: **read-back verification does not detect this.** The write was
-acknowledged, the read-back agreed, and the engine died afterwards. Any
-verified-write built on read-and-compare would report this write as a success.
+#### Ordinal 254 is accepted and is not addressable
+
+It sticks at 254 and the unit stays up. But `/Evil/Engine/Patch/C-Verb_2` is
+still absent (404) while the block is placed, and `EffectType3` reads 0. So the
+slot holds something with no object through which any parameter of it could be
+read or written.
+
+### What this means for read-back verification
+
+Stronger than the earlier write-up, and in three distinct ways. Read-back is not
+sufficient here, and each unbacked ordinal breaks it differently:
+
+    ordinal 20   read-back agrees, then the engine dies
+    ordinal 4    read-back agrees at t+0.04s, and the device has discarded the
+                 write by t+0.39s. A verified-write that reads back promptly
+                 reports success for a write that does not survive
+    ordinal 254  read-back agrees and persists, but the block it names has no
+                 object, so any subsequent parameter write has nowhere to go
+
+An adapter cannot tell any of these from a good write by reading the value back.
+
+### What this suggests for #125, revised
+
+The earlier recommendation was "refuse all three". On the evidence that is
+wrong, and here is what the measurements actually support:
+
+- **Ordinal 20: refuse.** It is the one measured unit-down, and read-back does
+  not catch it.
+- **Ordinal 4: nothing is required.** The device rejects it itself, promptly and
+  without harm. An adapter that wrote it and then verified after a short delay
+  would see the slot empty, which is the correct outcome arrived at honestly.
+- **Ordinal 254: not a crash, but not usable either.** It occupies a slot with
+  nothing to address. Worth refusing or flagging, for a different reason than
+  20 and a much weaker one.
+
+Whether some property shared by 20 and not by 4 or 254 explains the crash is
+unknown. NAM is the capture engine and the other two are not, which is a
+hypothesis and is explicitly not a finding; this document has already been
+wrong once by promoting exactly that kind of guess.
 
 ## FINDING 2: Remote gates the API, and its signature is 403, not 404
 

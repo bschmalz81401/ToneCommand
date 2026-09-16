@@ -48,11 +48,23 @@ Notable changes to ToneCommand. Dates are UTC.
 - Read-back verification does NOT detect it. The write was acknowledged, the
   read-back agreed, and the engine died after. That is the part that generalises
   and it constrains any verified-write built on read-and-compare.
-- Three roster entries have an ordinal and no object (4, 20, 254). That class is
-  a schema fact. 4 and 254 were NOT tested, because a test costs a crash on
-  someone's hardware, and refusing them is not free either: it means an adapter
-  can never select them and whether they work is unknown. Refusing all three is
-  offered to #125 as a judgement for the maintainer, not as a measurement.
+- ALL THREE unbacked ordinals have now been tested, with their backed siblings
+  as controls, and they do three different things. 4 is acknowledged and then
+  silently reverted to 0 by the device within ~0.4s. 20 takes the unit down.
+  254 sticks and does not crash, but `/Evil/Engine/Patch/C-Verb_2` stays absent
+  while it is placed, so the slot holds a block with no object to address. The
+  three backed siblings (3, 19, 253) all simply stick.
+- SO "UNBACKED" DOES NOT PREDICT A CRASH, and the earlier recommendation to
+  refuse all three was a generalisation from the one member that had been
+  tried. Two thirds of it were wrong. Revised: refuse 20 on the evidence;
+  nothing is required for 4, which the device rejects itself; 254 is worth
+  flagging for being unusable rather than dangerous.
+- Read-back verification now has three distinct demonstrated failure modes
+  rather than one. 20: read-back agrees and then the engine dies. 4: read-back
+  agrees at t+0.04s and the write is gone by t+0.39s, so a prompt verify
+  reports success for a write that does not survive. 254: read-back agrees and
+  persists, but the block has no object, so a later parameter write has nowhere
+  to go.
 - Ordinal 19 was then TESTED directly, same rig, same slot, same protocol, with
   health sampled every 0.5s: it was acknowledged, read back, and the unit stayed
   up for 30s. So the pair is a controlled comparison. 19 (object published) is
