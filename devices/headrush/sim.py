@@ -50,6 +50,7 @@ from __future__ import annotations
 
 import json
 import urllib.error
+from email.message import Message as HTTPMessage
 from io import BytesIO
 from pathlib import Path
 from typing import Any
@@ -81,6 +82,13 @@ class SimError(Exception):
     def __init__(self, status: int, message: str):
         super().__init__(f"{status} {message}")
         self.status = status
+        #: The message WITHOUT the status prefix, for the wire boundary. The
+        #: opener puts this in HTTPError's reason slot: urllib renders that as
+        #: "HTTP Error 404: <reason>" and describe_unreachable as "The unit
+        #: answered 404 <reason>", so passing str(self) produced "404 404 no
+        #: object at ...". The whole point of raising urllib's type there is
+        #: that callers see what production shows them.
+        self.message = message
 
 
 def _default_for(meta: dict) -> Any:
@@ -321,7 +329,7 @@ class HeadrushSim:
             return self._serve(url, method, body)
         except SimError as err:
             raise urllib.error.HTTPError(
-                url, err.status, str(err), hdrs=None,
+                url, err.status, err.message, hdrs=HTTPMessage(),
                 fp=BytesIO(str(err).encode())) from err
 
     def _serve(self, url: str, method: str, body: bytes | None) -> bytes:

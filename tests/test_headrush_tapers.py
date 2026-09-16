@@ -29,7 +29,7 @@ def blob():
 # --- the one that earns the module ---------------------------------------
 
 def test_every_curve_matches_the_vendors_own_output(table, blob):
-    """All 726 vectors, each computed by executing the vendor's function.
+    """All 990 vectors, each computed by executing the vendor's function.
 
     Relative tolerance, because these span 1e-10 to 16000 and an absolute
     epsilon would be meaningless at both ends.

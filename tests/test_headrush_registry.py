@@ -92,8 +92,10 @@ def test_wire_range_and_display_range_are_kept_apart(reg):
 def test_defaults_are_recorded_as_normalised(reg):
     """Every published default sits in 0..1 while ranges span display units,
     which is the schema's own corroboration of the hardware reading. SltEQHP
-    defaults to 0.0 on a 25..1000 Hz range: as a display value that is below
-    its own published minimum, as a normalised one it is a high pass off."""
+    defaults to 0.0 on a 25..1000 Hz range, which is below the minimum the
+    device itself published, so it cannot be a display value. What 0.0 SOUNDS
+    like is a separate question and is not claimed here; the generator dropped
+    that same interpretation and this docstring kept it."""
     hp = reg.resolve("Amp", "SltEQHP")
     assert hp.default_normalised == 0.0
     assert hp.display_minimum == 25.0
@@ -357,18 +359,24 @@ def test_read_only_properties_are_flagged(reg):
     the unit, because DeviceName looks like any other writable string."""
     assert reg.resolve("/Evil/Gui", "DeviceName").read_only is True
     assert reg.resolve("Amp", "Bass").read_only is False
-    # 893 per OBJECT, which is 491 per unique meta expanded across the objects
-    # that share them. Both numbers are right about different things and the
-    # loader answers per object, so that is what is pinned.
+    # 893 per OBJECT. The unique-meta count behind it is 448, over the metas
+    # this registry INCLUDES; the 491 an earlier comment quoted counts all 161
+    # metas, 43 of whose read-only properties live only on excluded objects,
+    # and 491 expands to 936 rather than 893. Different scopes, not unique
+    # versus expanded of one set. The loader answers per object, so that is
+    # what is pinned.
     flagged = sum(p.read_only for b in reg.blocks.values()
                   for p in b.parameters.values())
     assert flagged == 893
 
 
 def test_the_devices_own_step_size_is_carried_under_its_own_name(reg):
-    """`grid` is not simply the format's precision: it agrees for 1841 of the
-    1881 that have both and diverges for 40, so it is a real step and is
-    carried rather than re-derived or renamed to a claim."""
+    """`grid` is not simply the format's precision: of the included numeric
+    properties, 1881 publish a format, 1880 publish both, and of those 1840
+    match a `%.Nf` step while 40 diverge. So it is a real step and is carried
+    rather than re-derived or renamed to a claim. (An earlier version said
+    1841 of 1881, conflating "has a format" with "has both"; `UsedSpace` on
+    StorageInfo is the one with a format and no grid.)"""
     assert reg.resolve("Amp", "Bass").grid == 1.0
     assert reg.resolve("/Evil/Engine/GlobalEQMain", "Freq1").display_format == "%.0f Hz"
     assert reg.resolve("/Evil/Engine/GlobalEQMain", "Freq1").grid == 10.0
@@ -376,8 +384,12 @@ def test_the_devices_own_step_size_is_carried_under_its_own_name(reg):
 
 def test_the_two_measured_tapers_disagree_with_each_other(reg):
     """The reason the refusal is necessary rather than careful. Amp.Bass is
-    linear and Amp.TremSpeed is quadratic, on the same block, with nothing in
-    the schema telling them apart. Both are read off the unit's own screen.
+    linear and Amp.TremSpeed is quadratic, on the same block. The schema names
+    them as DIFFERENT ids (taper_id None versus 5) and describes neither, which
+    is the distinction that matters: a caller can see they differ and still
+    cannot evaluate either. An earlier version of this docstring said nothing
+    in the schema told them apart, which stopped being true once normalizeAlgo
+    was carried. Both readings are off the unit's own screen.
 
     The arithmetic is checked here so the claim in the artifact is not just
     prose: solving lo + x**p * (hi - lo) = shown for p must give 2 for the

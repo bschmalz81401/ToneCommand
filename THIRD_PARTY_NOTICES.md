@@ -286,7 +286,7 @@ has to convert, so it carries the curves.
 
 WHAT IS TAKEN IS FACTS, NOT CODE. Two things are recorded: the names of the
 eleven curves, which is an enumeration the vendor ships in a file it serves,
-and 726 reference vectors, which are numbers the vendor's own functions
+and 990 reference vectors, which are numbers the vendor's own functions
 produced when run. Neither is their expression of anything.
 
 The vendor's SOURCE TEXT is deliberately not committed. A sha256 prefix of each

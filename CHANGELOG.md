@@ -4,6 +4,42 @@ Notable changes to ToneCommand. Dates are UTC.
 
 ## Unreleased
 
+### Fixed (post-merge corrections, 2026-09-16)
+- A follow-up review of the final state of #127, #128, #129 and #130, after all
+  four merged, found things the first pass could not: the fix commits were
+  themselves unreviewed, and several published numbers had moved.
+- `describe_unreachable()` was BLANKET-CLAIMING that a 404 rules out HeadRush
+  Remote. The measured table is path dependent: with Remote off,
+  `object-properties` and `object-meta` answer 403 but `subtree` answers 404.
+  So the claim was wrong for exactly the endpoint `client.subtree()` uses. It
+  now classifies on the request URL as well as the status, and says how to
+  disambiguate. The test that covered this asserted the overclaim, which is
+  what kept it alive; it is replaced by one test per path shape.
+- Five published strings still said the taper grid was 726 points after it
+  became 990 (`CHANGELOG`, `THIRD_PARTY_NOTICES`, `config/README.md`,
+  `devices/headrush/tapers.py`, and the docstring of the test that asserts 990).
+  The notices one was a false statement about the committed file.
+- The registry's read-only count was wrong in a comment: 893 per object comes
+  from 448 unique metas among those the registry INCLUDES, not from the 491
+  that counts all 161 metas and expands to 936. Different scopes rather than
+  unique versus expanded of one set.
+- `grid` versus format precision is 1840 of the 1880 that publish both, with 40
+  diverging, not 1841 of 1881. `UsedSpace` publishes a format and no grid.
+- `wire_encoding.measured_on` counted `Amp.TremDepth` among the readings that
+  establish the 0..1 wire. It does not: 0 reads as 0 under either scale, so it
+  discriminates nothing. Recorded as a reading that was taken and does not bear
+  on the claim.
+- Two registry docstrings restated findings that had already been withdrawn:
+  one kept the "high pass off" interpretation the generator had dropped, and
+  one said nothing in the schema tells two tapers apart, which stopped being
+  true when `normalizeAlgo` was carried through as `taper_id`.
+- `devices/headrush/sim.py` put the full `SimError` text into `HTTPError`'s
+  reason slot, so a missing path rendered as "HTTP Error 404: 404 no object at
+  ...". Since the reason for raising urllib's type there is that callers see
+  what production shows them, doubling the status defeated it. It also passed
+  `hdrs=None`, where any caller touching `.headers` would get AttributeError
+  rather than the header object production carries.
+
 ### Added (HeadRush block and parameter registry, 2026-09-15)
 - `config/headrush_registry.json` plus `tools/build_headrush_registry.py` and
   `devices/headrush/registry.py` (#122): the committed schema turned into the
@@ -176,7 +212,7 @@ Notable changes to ToneCommand. Dates are UTC.
   same provenance class as `headrush_topologies.json` and carries
   `api_readable: false`.
 - NOTHING IS TRANSCRIBED BY EYE. The generator extracts the vendor's own
-  functions, RUNS them under node across 726 points, and commits the results;
+  functions, RUNS them under node across 990 points, and commits the results;
   the Python is tested against those vectors rather than against a reading of
   the JavaScript. `Db` and `AllenHeathFaderVolume` are exactly the shapes that
   survive a typo while still returning plausible numbers.

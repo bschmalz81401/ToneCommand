@@ -51,7 +51,7 @@ at length why name similarity across these two rosters produces confident
 nonsense, and a parameter level cross-map would be the same mistake with more
 entries. Nothing here maps to an FM9 id.
 
-THE WIRE IS NORMALISED AND THE TAPER IS NOT PUBLISHED
+THE WIRE IS NORMALISED 0..1
 
 Measured on a Core at this firmware, 2026-09-15, by writing a value and reading
 the unit's own screen:
@@ -376,8 +376,11 @@ def build(schema: dict) -> dict:
         "wire_encoding": {
             "continuous": "normalised 0..1",
             "measured_on": ("HeadRush Core, firmware 5.1.0.2a63755, 2026-09-15, "
-                            "by writing Amp.Bass, Amp.Treble, Amp.PostGain and "
-                            "Amp.TremDepth and reading the unit's own screen"),
+                            "by writing Amp.Bass, Amp.Treble and Amp.PostGain "
+                            "and reading the unit's own screen. Amp.TremDepth "
+                            "was also written and read (wire 0.0 shows 0 %) and "
+                            "is NOT counted here, because 0 reads the same "
+                            "under both scales and so discriminates nothing"),
             "generalised_by": ("the schema's own defaults: 3912 continuous "
                                "parameters across 290 of the 302 objects publish "
                                "a default, all 3912 lie in 0..1, and 1369 lie "

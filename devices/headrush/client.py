@@ -328,28 +328,35 @@ def describe_unreachable(error: BaseException, target: str) -> str:
                 f"Turn HeadRush Remote on at the unit; no reboot is needed."
             )
         if error.code == 404:
-            # NOT the Remote-off signature, and an earlier version of this
-            # branch said it was. Remote off is the 403 above; that was
-            # established by toggling Remote and watching the API, which had
-            # not been done when this advice was first written. The editor's
-            # own connection-failure dialog names Remote for every failure,
-            # which is what the wrong version was built on.
-            #
-            # What a 404 was actually measured to mean, after the engine
-            # crashed (#126): `GET /` still served the editor's static files
-            # with 200, while every /api/v1 object path returned 404. So a 404
-            # is either a path this firmware does not have, or a unit whose
-            # engine is not running. Telling the operator to check Remote here
-            # would send them to the one thing that is demonstrably fine.
+            # NOT simply "Remote is fine", which is what an earlier version of
+            # this branch asserted. The measured table is PATH DEPENDENT: with
+            # Remote off, object-properties and object-meta answer 403, and
+            # `subtree` answers 404. So a 404 rules Remote out only for the
+            # object endpoints, and this classifies on the request URL rather
+            # than on the status alone. Still not on message text, which is the
+            # rule this module keeps.
+            on_subtree = "/subtree" in (getattr(error, "url", "") or "")
+            measured = (
+                "measured after a crash, every /api/v1 object path returned "
+                "404 while the unit still served its editor page"
+            )
+            if on_subtree:
+                return (
+                    f"The unit answered 404 for {target}. This was a subtree "
+                    f"request, and a 404 on subtree has three causes measured "
+                    f"on a Core: this firmware has no such path, its engine is "
+                    f"not running ({measured}), or HeadRush Remote is off, "
+                    f"which answers 404 on subtree while answering 403 on the "
+                    f"object endpoints. Ask for an object path to tell the last "
+                    f"one apart: 403 there means Remote, 404 there does not."
+                )
             return (
                 f"The unit answered 404 for {target}. Either this firmware has "
-                f"no such path, or its engine is not running: measured after a "
-                f"crash, every /api/v1 object path returned 404 while the unit "
-                f"still served its editor page. This is NOT the signature of "
-                f"HeadRush Remote being off, which is a 403. Open "
-                f"http://<unit>/ in a browser to tell the two apart: if the "
-                f"page loads and reports it cannot connect, the problem is the "
-                f"unit rather than this path."
+                f"no such path, or its engine is not running: {measured}. On an "
+                f"object path this is NOT HeadRush Remote being off, which "
+                f"answers 403 there. Open http://<unit>/ in a browser to tell "
+                f"the two apart: if the page loads and reports it cannot "
+                f"connect, the problem is the unit rather than this path."
             )
         return _sentence(f"The unit answered {error.code} {error.reason} for {target}")
 

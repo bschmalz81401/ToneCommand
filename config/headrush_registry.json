@@ -49501,7 +49501,7 @@
     "conversion_note": "the FORMULA is not published; an opaque taper id is. Every continuous parameter carries x-options.normalizeAlgo or carries none, and the device never says what curve an integer denotes, so a caller cannot evaluate it. Measured on this firmware: Amp.Bass, Amp.Treble and Amp.PostGain carry no algo and are linear; Amp.TremSpeed carries algo 5 and is quadratic (wire 0.25 reads 1.48 Hz and 0.5 reads 5.19 Hz on a 0.25..20 range, giving exponent 2.0023 and 1.9993). That is four parameters on one block and no reading of algos 6, 8 or 10, so absent-means-identity is a hypothesis worth testing and is NOT acted on. Unit does not predict taper either: C2_Bass_Chorus.Depth is a percentage carrying algo 6. See #126.",
     "conversion_to_display": null,
     "generalised_by": "the schema's own defaults: 3912 continuous parameters across 290 of the 302 objects publish a default, all 3912 lie in 0..1, and 1369 lie outside their own published display range, so they cannot be display values",
-    "measured_on": "HeadRush Core, firmware 5.1.0.2a63755, 2026-09-15, by writing Amp.Bass, Amp.Treble, Amp.PostGain and Amp.TremDepth and reading the unit's own screen",
+    "measured_on": "HeadRush Core, firmware 5.1.0.2a63755, 2026-09-15, by writing Amp.Bass, Amp.Treble and Amp.PostGain and reading the unit's own screen. Amp.TremDepth was also written and read (wire 0.0 shows 0 %) and is NOT counted here, because 0 reads the same under both scales and so discriminates nothing",
     "measured_tapers": {
       "Amp.Bass": {
         "taper": "linear",

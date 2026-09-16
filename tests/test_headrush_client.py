@@ -681,25 +681,24 @@ def test_remote_switched_off_is_a_403_and_is_named_exactly():
     assert "404" not in described, "403 has one cause; do not muddy it"
 
 
-def test_a_404_does_not_send_the_operator_to_check_remote():
-    """The correction that prompted the 403 branch.
+def test_a_404_names_its_causes_without_overclaiming():
+    """This test previously ASSERTED the bug, which is why it is worth a note.
 
-    An earlier version told anyone seeing a 404 to check HeadRush Remote. Then
-    Remote was actually toggled, and Remote off turned out to be 403. A 404 is
-    therefore the case where Remote is demonstrably NOT the problem, and the
-    old advice pointed at the one thing that was fine.
+    It used a subtree URL and required the message to say Remote was not the
+    problem. That came from a real correction (Remote off is 403, and an even
+    earlier version had sent 404 to check Remote), but it overshot: the measured
+    table is path dependent, and subtree answers 404 with Remote off. So the
+    test pinned a blanket claim the measurements never supported, and pinning it
+    is what kept it alive.
 
-    Measured meaning of 404: a path this firmware lacks, or an engine that is
-    not running (after a crash every object path 404d while `/` still served).
+    The two tests below now check each path shape separately.
     """
-    error = urllib.error.HTTPError(
-        "http://10.8.72.116/api/v1/subtree/Evil/Gui", 404, "Not Found", {}, None,
-    )
-    described = describe_unreachable(error, "10.8.72.116")
+    described = describe_unreachable(urllib.error.HTTPError(
+        "http://10.8.72.116/api/v1/object-properties/Evil/Gui", 404,
+        "Not Found", {}, None), "10.8.72.116")
     assert "404" in described
     assert "no such path" in described, "one cause"
     assert "engine is not running" in described, "and the other"
-    assert "NOT the signature" in described, "and that Remote is not it"
     # still not misclassified as the network or the name being at fault
     assert "Nothing answered" not in described
     assert "did not resolve" not in described
@@ -725,3 +724,30 @@ def test_other_http_codes_are_untouched_by_the_403_and_404_branches():
             {}, None), "10.8.72.116")
         assert str(code) in described
         assert "HeadRush Remote" not in described
+
+
+def test_a_404_on_subtree_does_not_rule_remote_out():
+    """The measured table is path dependent and the message was not.
+
+    With HeadRush Remote off, `object-properties` and `object-meta` answer 403
+    but `subtree` answers 404. So the blanket claim that a 404 means Remote is
+    not the problem was wrong for exactly one endpoint, which is the one the
+    client's own `subtree()` uses.
+    """
+    error = urllib.error.HTTPError(
+        "http://10.8.72.116/api/v1/subtree/Evil/Gui", 404, "Not Found", {}, None,
+    )
+    described = describe_unreachable(error, "10.8.72.116")
+    assert "HeadRush Remote is off" in described, "subtree 404 can be Remote"
+    assert "403 there means Remote" in described, "and how to disambiguate"
+
+
+def test_a_404_on_an_object_path_still_rules_remote_out():
+    """Because there it really is measured to be 403."""
+    error = urllib.error.HTTPError(
+        "http://10.8.72.116/api/v1/object-properties/Evil/Gui", 404,
+        "Not Found", {}, None,
+    )
+    described = describe_unreachable(error, "10.8.72.116")
+    assert "NOT HeadRush Remote" in described
+    assert "answers 403 there" in described
