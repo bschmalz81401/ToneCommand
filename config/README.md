@@ -227,3 +227,29 @@ the generated JSON. The join is by slot (the wiki numbers each bank from 1, the
 catalog from 0), with names compared only to confirm the offset still holds;
 the build aborts if too few agree. `fm9/registry.py` raises `CabModelsStale` if
 a record's `fractal` no longer matches the catalog roster.
+
+# User-cab slots: TONECOMMAND_CAB_SLOTS and the scratch slot
+
+`TONECOMMAND_CAB_SLOTS` (env or `.env`) names the ONLY user-cab slots this
+tool may ever write an IR into, as 0-based wire indices: `510-511` covers what
+FM9-Edit shows as User Cab 511 and 512. The default is empty, so IR installs
+are disabled until the owner designates slots; nobody but the owner knows
+which user cabs are disposable.
+
+Convention (issues #83, #84): the HIGHEST slot in the list is the scratch
+slot. It is the one to load a candidate IR into through Cab-Lab when you want
+to hear it in the rig before deciding, and the one this tool treats as
+overwrite-able; the lower slot(s) are where a chosen IR is committed. With
+`510-511`, User Cab 512 is scratch and User Cab 511 is the commit target.
+
+Auditioning itself never writes a user-cab slot. `/api/cab/audition` points
+the CABINET block at a cab that is already on the unit (factory or an
+installed user slot) in the edit buffer, and `/api/cab/audition/end` puts the
+original back; a plan you confirm and send is the only thing that commits.
+
+On firmware 12.x the user-cab read (`fn 0x19`) hangs the unit's MIDI (issue
+#43), so the direct `.syx` install path is off by default
+(`TONECOMMAND_ALLOW_CAB_READ=1` turns it on for a unit you are prepared to
+power cycle). The supported way to put an IR on the unit today: export it as a
+48 kHz WAV, load it into a user slot with Fractal's free Cab-Lab 4, then select
+that slot from here.

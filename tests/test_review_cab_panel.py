@@ -30,7 +30,7 @@ END = "// --- CONFIRM stage"
 # nodes on demand passes against markup that has none of them. These are read
 # straight out of the HTML rather than listed here by hand.
 PANEL_IDS = ("cabpanel", "cabnote", "cabchosen", "cabcurrent", "cablink",
-             "cabalts", "cabblend", "cabfoot")
+             "cabalts", "cabrestore", "cabblend", "cabfoot")
 
 HARNESS = r"""
 import { readFileSync } from "fs";

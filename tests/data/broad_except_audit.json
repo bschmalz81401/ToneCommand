@@ -1,365 +1,395 @@
 {
-  "_comment": "Every 'except Exception' block in server.py by AST identity (enclosing function qualified name plus the ordinal of the block within that function). tests/test_capability_gates.py enforces exact correspondence and that each block either re-raises CapabilityDeclined first or states why a decline cannot reach it (#111).",
-  "blocks": [
-    {
-      "function": "read_modifiers",
-      "ordinal": 1,
-      "disposition": "unreachable: wraps bulk_read and registry lookups; bulk_read is on DeviceAdapter, behind no gate"
-    },
-    {
-      "function": "_safe_modifiers",
-      "ordinal": 1,
-      "disposition": "unreachable: wraps read_modifiers, whose only device call is the ungated bulk_read"
-    },
-    {
-      "function": "rescan_midi",
-      "ordinal": 1,
-      "disposition": "unreachable: mido backend reload; no device handle in the try body"
-    },
-    {
-      "function": "_pump_coremidi.run",
-      "ordinal": 1,
-      "disposition": "unreachable: ctypes CoreMIDI watcher; no device handle in the try body"
-    },
-    {
-      "function": "drop_fm9",
-      "ordinal": 1,
-      "disposition": "unreachable: wraps close(), on DeviceAdapter, behind no gate"
-    },
-    {
-      "function": "cab_listening_set",
-      "ordinal": 1,
-      "disposition": "unreachable: ir_service call; no device handle in the try body"
-    },
-    {
-      "function": "ir_context",
-      "ordinal": 1,
-      "disposition": "unreachable: ir_service call; no device handle in the try body"
-    },
-    {
-      "function": "shared_scenes",
-      "ordinal": 1,
-      "disposition": "unreachable: set_scene and status_dump are on DeviceAdapter, behind no gate"
-    },
-    {
-      "function": "shared_scenes",
-      "ordinal": 2,
-      "disposition": "unreachable: set_scene is on DeviceAdapter, behind no gate"
-    },
-    {
-      "function": "scene_names",
-      "ordinal": 1,
-      "disposition": "unreachable: scene_name is on DeviceAdapter, behind no gate"
-    },
-    {
-      "function": "_fm9_port_present",
-      "ordinal": 1,
-      "disposition": "unreachable: mido port enumeration; no device handle in the try body"
-    },
-    {
-      "function": "api_reconnect",
-      "ordinal": 1,
-      "disposition": "re-raises CapabilityDeclined: wraps snapshot(get_fm9()), a device read path"
-    },
-    {
-      "function": "api_state",
-      "ordinal": 1,
-      "disposition": "re-raises CapabilityDeclined: wraps snapshot(get_fm9()), a device read path"
-    },
-    {
-      "function": "api_describe_read",
-      "ordinal": 1,
-      "disposition": "unreachable: describe.read_source and describe.extract; no device handle in the try body"
-    },
-    {
-      "function": "api_describe_read_stream.work",
-      "ordinal": 1,
-      "disposition": "unreachable: describe.read_source and describe.extract; no device handle in the try body"
-    },
-    {
-      "function": "_describe_build_for",
-      "ordinal": 1,
-      "disposition": "unreachable: planner call under the settings lock; the snapshot is taken outside this try"
-    },
-    {
-      "function": "_describe_build_for",
-      "ordinal": 2,
-      "disposition": "unreachable: reg.resolve_block; no device handle in the try body"
-    },
-    {
-      "function": "_describe_build_for",
-      "ordinal": 3,
-      "disposition": "unreachable: reg.resolve_block; no device handle in the try body"
-    },
-    {
-      "function": "_stream_response.events.runner",
-      "ordinal": 1,
-      "disposition": "converted: a preceding except CapabilityDeclined emits a distinct 'refused' event carrying the refusal payload rather than an error string; streaming twins that can reach a gate (api_apply_stream) check before the stream opens so a decline is a real 409"
-    },
-    {
-      "function": "_hold_settings",
-      "ordinal": 1,
-      "disposition": "unreachable: on_status callback; no device handle in the try body"
-    },
-    {
-      "function": "_plan_counting",
-      "ordinal": 1,
-      "disposition": "unreachable: on_count callback; no device handle in the try body"
-    },
-    {
-      "function": "_repair_refused_actions",
-      "ordinal": 1,
-      "disposition": "unreachable: validate_action reads the registry and the last snapshot, never the device"
-    },
-    {
-      "function": "_repair_refused_actions",
-      "ordinal": 2,
-      "disposition": "unreachable: validate_action reads the registry and the last snapshot, never the device"
-    },
-    {
-      "function": "_will_lay_template",
-      "ordinal": 1,
-      "disposition": "re-raises CapabilityDeclined: wraps get_fm9().read_grid(); the block the issue names, where a decline absorbed here would switch the build to the splice path"
-    },
-    {
-      "function": "_plan_for",
-      "ordinal": 1,
-      "disposition": "unreachable: profile path: planner and cab_listening_set only, no device handle"
-    },
-    {
-      "function": "_plan_for",
-      "ordinal": 2,
-      "disposition": "unreachable: reg.resolve_block; no device handle in the try body"
-    },
-    {
-      "function": "_plan_for",
-      "ordinal": 3,
-      "disposition": "unreachable: register_revision; no device handle in the try body"
-    },
-    {
-      "function": "_plan_for",
-      "ordinal": 4,
-      "disposition": "unreachable: _repair_refused_actions; no device handle in the try body"
-    },
-    {
-      "function": "_plan_for",
-      "ordinal": 5,
-      "disposition": "unreachable: reg.resolve_block; no device handle in the try body"
-    },
-    {
-      "function": "_plan_for",
-      "ordinal": 6,
-      "disposition": "unreachable: tone_review; no device handle in the try body"
-    },
-    {
-      "function": "_plan_for",
-      "ordinal": 7,
-      "disposition": "re-raises CapabilityDeclined: the outer planner try reaches get_fm9() for _splice_plan_for and read_grid"
-    },
-    {
-      "function": "_splice_plan_for",
-      "ordinal": 1,
-      "disposition": "unreachable: reg.resolve_block; the device reads follow the try"
-    },
-    {
-      "function": "api_acquire",
-      "ordinal": 1,
-      "disposition": "unreachable: acquire catalog and bundle fetch; no device handle in the try body"
-    },
-    {
-      "function": "api_install_cab",
-      "ordinal": 1,
-      "disposition": "re-raises CapabilityDeclined: wraps install_user_cab_at and read_user_cab_addr, behind installs_files"
-    },
-    {
-      "function": "api_install_parse",
-      "ordinal": 1,
-      "disposition": "unreachable: base64 decode; no device handle in the try body"
-    },
-    {
-      "function": "api_install",
-      "ordinal": 1,
-      "disposition": "re-raises CapabilityDeclined: wraps install_preset, behind installs_files"
-    },
-    {
-      "function": "api_set_store_slots",
-      "ordinal": 1,
-      "disposition": "unreachable: parse_store_slots; no device handle in the try body"
-    },
-    {
-      "function": "api_presets",
-      "ordinal": 1,
-      "disposition": "re-raises CapabilityDeclined: wraps scan_slots on the device handle"
-    },
-    {
-      "function": "api_presets_stream.work",
-      "ordinal": 1,
-      "disposition": "re-raises CapabilityDeclined: wraps scan_slots on the device handle"
-    },
-    {
-      "function": "api_preset",
-      "ordinal": 1,
-      "disposition": "re-raises CapabilityDeclined: wraps select_preset and current_preset on the device handle"
-    },
-    {
-      "function": "api_level_adjust",
-      "ordinal": 1,
-      "disposition": "re-raises CapabilityDeclined: wraps get_param_display and set_param_display on the device handle"
-    },
-    {
-      "function": "api_copy_effects",
-      "ordinal": 1,
-      "disposition": "re-raises CapabilityDeclined: wraps select_preset and the editbuffer transplant on the device handle"
-    },
-    {
-      "function": "api_reorder",
-      "ordinal": 1,
-      "disposition": "re-raises CapabilityDeclined: wraps reorder_block, behind topology>=SELECTED"
-    },
-    {
-      "function": "api_compose",
-      "ordinal": 1,
-      "disposition": "re-raises CapabilityDeclined: wraps run_action, which reaches rename_preset behind can_rename"
-    },
-    {
-      "function": "api_snapshots",
-      "ordinal": 1,
-      "disposition": "re-raises CapabilityDeclined: wraps editbuffer.capture on the device handle"
-    },
-    {
-      "function": "api_snapshot",
-      "ordinal": 1,
-      "disposition": "re-raises CapabilityDeclined: wraps _take, an editbuffer.capture on the device handle"
-    },
-    {
-      "function": "api_restore",
-      "ordinal": 1,
-      "disposition": "re-raises CapabilityDeclined: wraps editbuffer.restore on the device handle"
-    },
-    {
-      "function": "api_grid",
-      "ordinal": 1,
-      "disposition": "re-raises CapabilityDeclined: wraps read_grid and status_dump on the device handle"
-    },
-    {
-      "function": "api_slot",
-      "ordinal": 1,
-      "disposition": "re-raises CapabilityDeclined: wraps slotops.describe on the device handle"
-    },
-    {
-      "function": "api_rename_slot",
-      "ordinal": 1,
-      "disposition": "re-raises CapabilityDeclined: wraps slotops.rename, which reaches rename_preset behind can_rename"
-    },
-    {
-      "function": "api_clear_slot",
-      "ordinal": 1,
-      "disposition": "re-raises CapabilityDeclined: wraps slotops.clear, which reaches place_block, rename_scene and rename_preset"
-    },
-    {
-      "function": "api_build_scratch",
-      "ordinal": 1,
-      "disposition": "re-raises CapabilityDeclined: wraps scratch_build.build, which reaches place_block and connect_cells"
-    },
-    {
-      "function": "api_new_preset",
-      "ordinal": 1,
-      "disposition": "re-raises CapabilityDeclined: wraps starter_template.lay, which reaches place_block and connect_cells"
-    },
-    {
-      "function": "api_moddebug",
-      "ordinal": 1,
-      "disposition": "re-raises CapabilityDeclined: the TONECOMMAND_DEBUG=1 _send and _drain pair plus read_modifier behind has_modifiers"
-    },
-    {
-      "function": "api_health",
-      "ordinal": 1,
-      "disposition": "re-raises CapabilityDeclined: wraps health.scan on the device handle"
-    },
-    {
-      "function": "api_health_stream.work",
-      "ordinal": 1,
-      "disposition": "re-raises CapabilityDeclined: wraps health.scan on the device handle"
-    },
-    {
-      "function": "api_shared",
-      "ordinal": 1,
-      "disposition": "re-raises CapabilityDeclined: wraps current_preset on the device handle"
-    },
-    {
-      "function": "api_shared_sweep",
-      "ordinal": 1,
-      "disposition": "re-raises CapabilityDeclined: wraps shared_scenes on the device handle"
-    },
-    {
-      "function": "api_recipe_plan",
-      "ordinal": 1,
-      "disposition": "unreachable: validate_action reads the registry and the last snapshot, never the device"
-    },
-    {
-      "function": "api_recipe_plan",
-      "ordinal": 2,
-      "disposition": "unreachable: reg.resolve_block; no device handle in the try body"
-    },
-    {
-      "function": "api_recipe_plan",
-      "ordinal": 3,
-      "disposition": "re-raises CapabilityDeclined: wraps get_fm9().firmware_label()"
-    },
-    {
-      "function": "api_profile_export",
-      "ordinal": 1,
-      "disposition": "re-raises CapabilityDeclined: wraps read_grid and status_dump on the device handle"
-    },
-    {
-      "function": "api_chat",
-      "ordinal": 1,
-      "disposition": "unreachable: planner.converse under the settings lock; _chat_context runs before the try"
-    },
-    {
-      "function": "api_ai_setup_run",
-      "ordinal": 1,
-      "disposition": "unreachable: ai_settings.run_setup_step; no device handle in the try body"
-    },
-    {
-      "function": "_set_param_spec",
-      "ordinal": 1,
-      "disposition": "unreachable: reg.resolve_block; no device handle in the try body"
-    },
-    {
-      "function": "_apply_for",
-      "ordinal": 1,
-      "disposition": "re-raises CapabilityDeclined: wraps _take('undo'), an editbuffer.capture on the device handle"
-    },
-    {
-      "function": "_apply_for.step",
-      "ordinal": 1,
-      "disposition": "unreachable: on_step callback; no device handle in the try body"
-    },
-    {
-      "function": "_apply_for",
-      "ordinal": 2,
-      "disposition": "unreachable: on_step callback inside the starting-chain branch; no device handle in the try body"
-    },
-    {
-      "function": "_apply_for",
-      "ordinal": 3,
-      "disposition": "re-raises CapabilityDeclined: wraps read_grid and starter_template.lay, which reaches place_block and connect_cells"
-    },
-    {
-      "function": "_apply_for",
-      "ordinal": 4,
-      "disposition": "re-raises CapabilityDeclined: wraps run_action, which reaches every gated action kind"
-    },
-    {
-      "function": "_apply_for",
-      "ordinal": 5,
-      "disposition": "re-raises CapabilityDeclined: wraps health.scan on the device handle"
-    },
-    {
-      "function": "api_plan_revise",
-      "ordinal": 1,
-      "disposition": "unreachable: tone_review; no device handle in the try body"
-    }
-  ]
+ "_comment": "Every 'except Exception' block in server.py by AST identity (enclosing function qualified name plus the ordinal of the block within that function). tests/test_capability_gates.py enforces exact correspondence and that each block either re-raises CapabilityDeclined first or states why a decline cannot reach it (#111).",
+ "blocks": [
+  {
+   "function": "read_modifiers",
+   "ordinal": 1,
+   "disposition": "unreachable: wraps bulk_read and registry lookups; bulk_read is on DeviceAdapter, behind no gate"
+  },
+  {
+   "function": "_safe_modifiers",
+   "ordinal": 1,
+   "disposition": "unreachable: wraps read_modifiers, whose only device call is the ungated bulk_read"
+  },
+  {
+   "function": "rescan_midi",
+   "ordinal": 1,
+   "disposition": "unreachable: mido backend reload; no device handle in the try body"
+  },
+  {
+   "function": "_pump_coremidi.run",
+   "ordinal": 1,
+   "disposition": "unreachable: ctypes CoreMIDI watcher; no device handle in the try body"
+  },
+  {
+   "function": "drop_fm9",
+   "ordinal": 1,
+   "disposition": "unreachable: _audition_restore, whose device calls are get_param_wire and set_param_ordinal on DeviceAdapter, behind no gate"
+  },
+  {
+   "function": "_library_listening_set",
+   "ordinal": 1,
+   "disposition": "unreachable: ir_service call; no device handle in the try body"
+  },
+  {
+   "function": "ir_context",
+   "ordinal": 1,
+   "disposition": "unreachable: ir_service call; no device handle in the try body"
+  },
+  {
+   "function": "shared_scenes",
+   "ordinal": 1,
+   "disposition": "unreachable: set_scene and status_dump are on DeviceAdapter, behind no gate"
+  },
+  {
+   "function": "shared_scenes",
+   "ordinal": 2,
+   "disposition": "unreachable: set_scene is on DeviceAdapter, behind no gate"
+  },
+  {
+   "function": "scene_names",
+   "ordinal": 1,
+   "disposition": "unreachable: scene_name is on DeviceAdapter, behind no gate"
+  },
+  {
+   "function": "_fm9_port_present",
+   "ordinal": 1,
+   "disposition": "unreachable: mido port enumeration; no device handle in the try body"
+  },
+  {
+   "function": "api_reconnect",
+   "ordinal": 1,
+   "disposition": "re-raises CapabilityDeclined: wraps snapshot(get_fm9()), a device read path"
+  },
+  {
+   "function": "api_state",
+   "ordinal": 1,
+   "disposition": "re-raises CapabilityDeclined: wraps snapshot(get_fm9()), a device read path"
+  },
+  {
+   "function": "api_describe_read",
+   "ordinal": 1,
+   "disposition": "unreachable: describe.read_source and describe.extract; no device handle in the try body"
+  },
+  {
+   "function": "api_describe_read_stream.work",
+   "ordinal": 1,
+   "disposition": "unreachable: describe.read_source and describe.extract; no device handle in the try body"
+  },
+  {
+   "function": "_describe_build_for",
+   "ordinal": 1,
+   "disposition": "unreachable: planner call under the settings lock; the snapshot is taken outside this try"
+  },
+  {
+   "function": "_describe_build_for",
+   "ordinal": 2,
+   "disposition": "unreachable: reg.resolve_block; no device handle in the try body"
+  },
+  {
+   "function": "_describe_build_for",
+   "ordinal": 3,
+   "disposition": "unreachable: reg.resolve_block; no device handle in the try body"
+  },
+  {
+   "function": "_stream_response.events.runner",
+   "ordinal": 1,
+   "disposition": "converted: a preceding except CapabilityDeclined emits a distinct 'refused' event carrying the refusal payload rather than an error string; streaming twins that can reach a gate (api_apply_stream) check before the stream opens so a decline is a real 409"
+  },
+  {
+   "function": "_hold_settings",
+   "ordinal": 1,
+   "disposition": "unreachable: on_status callback; no device handle in the try body"
+  },
+  {
+   "function": "_plan_counting",
+   "ordinal": 1,
+   "disposition": "unreachable: on_count callback; no device handle in the try body"
+  },
+  {
+   "function": "_repair_refused_actions",
+   "ordinal": 1,
+   "disposition": "unreachable: validate_action reads the registry and the last snapshot, never the device"
+  },
+  {
+   "function": "_repair_refused_actions",
+   "ordinal": 2,
+   "disposition": "unreachable: validate_action reads the registry and the last snapshot, never the device"
+  },
+  {
+   "function": "_will_lay_template",
+   "ordinal": 1,
+   "disposition": "re-raises CapabilityDeclined: wraps get_fm9().read_grid(); the block the issue names, where a decline absorbed here would switch the build to the splice path"
+  },
+  {
+   "function": "_plan_for",
+   "ordinal": 1,
+   "disposition": "unreachable: profile path: planner and cab_listening_set only, no device handle"
+  },
+  {
+   "function": "_plan_for",
+   "ordinal": 2,
+   "disposition": "unreachable: reg.resolve_block; no device handle in the try body"
+  },
+  {
+   "function": "_plan_for",
+   "ordinal": 3,
+   "disposition": "unreachable: register_revision; no device handle in the try body"
+  },
+  {
+   "function": "_plan_for",
+   "ordinal": 4,
+   "disposition": "unreachable: _repair_refused_actions; no device handle in the try body"
+  },
+  {
+   "function": "_plan_for",
+   "ordinal": 5,
+   "disposition": "unreachable: reg.resolve_block; no device handle in the try body"
+  },
+  {
+   "function": "_plan_for",
+   "ordinal": 6,
+   "disposition": "unreachable: tone_review; no device handle in the try body"
+  },
+  {
+   "function": "_plan_for",
+   "ordinal": 7,
+   "disposition": "unreachable: request_tension.as_dicts; no device handle in the try body"
+  },
+  {
+   "function": "_splice_plan_for",
+   "ordinal": 1,
+   "disposition": "unreachable: reg.resolve_block; the device reads follow the try"
+  },
+  {
+   "function": "api_acquire",
+   "ordinal": 1,
+   "disposition": "unreachable: acquire catalog and bundle fetch; no device handle in the try body"
+  },
+  {
+   "function": "api_install_cab",
+   "ordinal": 1,
+   "disposition": "re-raises CapabilityDeclined: wraps install_user_cab_at and read_user_cab_addr, behind installs_files"
+  },
+  {
+   "function": "api_install_parse",
+   "ordinal": 1,
+   "disposition": "unreachable: base64 decode; no device handle in the try body"
+  },
+  {
+   "function": "api_install",
+   "ordinal": 1,
+   "disposition": "re-raises CapabilityDeclined: wraps install_preset, behind installs_files"
+  },
+  {
+   "function": "api_set_store_slots",
+   "ordinal": 1,
+   "disposition": "unreachable: parse_store_slots; no device handle in the try body"
+  },
+  {
+   "function": "api_presets",
+   "ordinal": 1,
+   "disposition": "re-raises CapabilityDeclined: wraps scan_slots on the device handle"
+  },
+  {
+   "function": "api_presets_stream.work",
+   "ordinal": 1,
+   "disposition": "re-raises CapabilityDeclined: wraps scan_slots on the device handle"
+  },
+  {
+   "function": "api_preset",
+   "ordinal": 1,
+   "disposition": "re-raises CapabilityDeclined: wraps select_preset and current_preset on the device handle"
+  },
+  {
+   "function": "api_level_adjust",
+   "ordinal": 1,
+   "disposition": "re-raises CapabilityDeclined: wraps get_param_display and set_param_display on the device handle"
+  },
+  {
+   "function": "api_copy_effects",
+   "ordinal": 1,
+   "disposition": "re-raises CapabilityDeclined: wraps select_preset and the editbuffer transplant on the device handle"
+  },
+  {
+   "function": "api_reorder",
+   "ordinal": 1,
+   "disposition": "re-raises CapabilityDeclined: wraps reorder_block, behind topology>=SELECTED"
+  },
+  {
+   "function": "api_compose",
+   "ordinal": 1,
+   "disposition": "re-raises CapabilityDeclined: wraps run_action, which reaches rename_preset behind can_rename"
+  },
+  {
+   "function": "api_snapshots",
+   "ordinal": 1,
+   "disposition": "re-raises CapabilityDeclined: wraps editbuffer.capture on the device handle"
+  },
+  {
+   "function": "api_snapshot",
+   "ordinal": 1,
+   "disposition": "re-raises CapabilityDeclined: wraps _take, an editbuffer.capture on the device handle"
+  },
+  {
+   "function": "api_restore",
+   "ordinal": 1,
+   "disposition": "re-raises CapabilityDeclined: wraps editbuffer.restore on the device handle"
+  },
+  {
+   "function": "api_grid",
+   "ordinal": 1,
+   "disposition": "re-raises CapabilityDeclined: wraps read_grid and status_dump on the device handle"
+  },
+  {
+   "function": "api_slot",
+   "ordinal": 1,
+   "disposition": "re-raises CapabilityDeclined: wraps slotops.describe on the device handle"
+  },
+  {
+   "function": "api_rename_slot",
+   "ordinal": 1,
+   "disposition": "re-raises CapabilityDeclined: wraps slotops.rename, which reaches rename_preset behind can_rename"
+  },
+  {
+   "function": "api_clear_slot",
+   "ordinal": 1,
+   "disposition": "re-raises CapabilityDeclined: wraps slotops.clear, which reaches place_block, rename_scene and rename_preset"
+  },
+  {
+   "function": "api_build_scratch",
+   "ordinal": 1,
+   "disposition": "re-raises CapabilityDeclined: wraps scratch_build.build, which reaches place_block and connect_cells"
+  },
+  {
+   "function": "api_new_preset",
+   "ordinal": 1,
+   "disposition": "re-raises CapabilityDeclined: wraps starter_template.lay, which reaches place_block and connect_cells"
+  },
+  {
+   "function": "api_moddebug",
+   "ordinal": 1,
+   "disposition": "re-raises CapabilityDeclined: the TONECOMMAND_DEBUG=1 _send and _drain pair plus read_modifier behind has_modifiers"
+  },
+  {
+   "function": "api_health",
+   "ordinal": 1,
+   "disposition": "re-raises CapabilityDeclined: wraps health.scan on the device handle"
+  },
+  {
+   "function": "api_health_stream.work",
+   "ordinal": 1,
+   "disposition": "re-raises CapabilityDeclined: wraps health.scan on the device handle"
+  },
+  {
+   "function": "api_shared",
+   "ordinal": 1,
+   "disposition": "re-raises CapabilityDeclined: wraps current_preset on the device handle"
+  },
+  {
+   "function": "api_shared_sweep",
+   "ordinal": 1,
+   "disposition": "re-raises CapabilityDeclined: wraps shared_scenes on the device handle"
+  },
+  {
+   "function": "api_recipe_plan",
+   "ordinal": 1,
+   "disposition": "unreachable: validate_action reads the registry and the last snapshot, never the device"
+  },
+  {
+   "function": "api_recipe_plan",
+   "ordinal": 2,
+   "disposition": "unreachable: reg.resolve_block; no device handle in the try body"
+  },
+  {
+   "function": "api_recipe_plan",
+   "ordinal": 3,
+   "disposition": "re-raises CapabilityDeclined: wraps get_fm9().firmware_label()"
+  },
+  {
+   "function": "api_profile_export",
+   "ordinal": 1,
+   "disposition": "re-raises CapabilityDeclined: wraps read_grid and status_dump on the device handle"
+  },
+  {
+   "function": "api_chat",
+   "ordinal": 1,
+   "disposition": "unreachable: planner.converse under the settings lock; _chat_context runs before the try"
+  },
+  {
+   "function": "api_ai_setup_run",
+   "ordinal": 1,
+   "disposition": "unreachable: ai_settings.run_setup_step; no device handle in the try body"
+  },
+  {
+   "function": "_set_param_spec",
+   "ordinal": 1,
+   "disposition": "unreachable: reg.resolve_block; no device handle in the try body"
+  },
+  {
+   "function": "_apply_for",
+   "ordinal": 1,
+   "disposition": "re-raises CapabilityDeclined: wraps _take('undo'), an editbuffer.capture on the device handle"
+  },
+  {
+   "function": "_apply_for.step",
+   "ordinal": 1,
+   "disposition": "unreachable: on_step callback; no device handle in the try body"
+  },
+  {
+   "function": "_apply_for",
+   "ordinal": 2,
+   "disposition": "unreachable: on_step callback inside the starting-chain branch; no device handle in the try body"
+  },
+  {
+   "function": "_apply_for",
+   "ordinal": 3,
+   "disposition": "re-raises CapabilityDeclined: wraps read_grid and starter_template.lay, which reaches place_block and connect_cells"
+  },
+  {
+   "function": "_apply_for",
+   "ordinal": 4,
+   "disposition": "re-raises CapabilityDeclined: wraps run_action, which reaches every gated action kind"
+  },
+  {
+   "function": "_apply_for",
+   "ordinal": 5,
+   "disposition": "re-raises CapabilityDeclined: wraps health.scan on the device handle"
+  },
+  {
+   "function": "api_plan_revise",
+   "ordinal": 1,
+   "disposition": "unreachable: tone_review; no device handle in the try body"
+  },
+  {
+   "function": "drop_fm9",
+   "ordinal": 2,
+   "disposition": "unreachable: wraps close(), on DeviceAdapter, behind no gate"
+  },
+  {
+   "function": "_plan_for",
+   "ordinal": 8,
+   "disposition": "re-raises CapabilityDeclined: the outer planner try reaches get_fm9() for _splice_plan_for and read_grid"
+  },
+  {
+   "function": "_audition_restore",
+   "ordinal": 1,
+   "disposition": "unreachable: _select_cab uses get_param_wire and set_param_ordinal on DeviceAdapter, behind no gate"
+  },
+  {
+   "function": "_audition_restore_if_open",
+   "ordinal": 1,
+   "disposition": "unreachable: get_fm9() and _audition_restore; get_param_wire and set_param_ordinal are on DeviceAdapter, behind no gate"
+  },
+  {
+   "function": "api_cab_audition",
+   "ordinal": 1,
+   "disposition": "unreachable: _read_cab uses get_param_wire on DeviceAdapter, behind no gate"
+  },
+  {
+   "function": "api_cab_audition",
+   "ordinal": 2,
+   "disposition": "unreachable: _select_cab uses get_param_wire and set_param_ordinal on DeviceAdapter, behind no gate"
+  }
+ ]
 }

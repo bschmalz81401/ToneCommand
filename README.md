@@ -281,6 +281,10 @@ unreachable, on every device, forever.
 - **Store is disabled until YOU enable it**, via
   `TONECOMMAND_STORE_SLOTS=133-148` (wire numbers; the editor shows 134-149).
   Nobody but you knows what lives in your banks, so there is no default.
+- **IR installs are disabled until YOU enable them**, via
+  `TONECOMMAND_CAB_SLOTS` (see `config/README.md` for the scratch-slot
+  convention). Auditioning a cab never writes a slot: it is an edit-buffer
+  selection that is put back when you are done.
 - **Never touches firmware,** system settings, or global setup.
 - **Back up first anyway.** Run a full Fractal-Bot backup before using any
   third-party MIDI tool, this one included.

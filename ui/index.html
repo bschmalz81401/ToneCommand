@@ -450,6 +450,24 @@
   .tonecheck li { margin: 3px 0; color: var(--text); }
   .tonecheck li.tc-fail::marker { color: #ff785a; }
   .tonecheck li.tc-warn::marker { color: var(--amber, #ffb454); }
+  /* Issue #98: a request that asks for two opposed things gets named here,
+     above the summary, in the tool's own words. Not inside the model's
+     prose, where it can be skipped or quietly resolved one way. */
+  .tension { margin: 0 0 8px; padding: 9px 12px; border-radius: 6px;
+    font-size: var(--fs-hint); border: 1px solid rgba(255,180,84,0.4);
+    background: rgba(255,180,84,0.07); color: var(--text); }
+  .tension .tshead { font-weight: 600; margin-bottom: 5px; letter-spacing: 0.02em;
+    color: var(--amber, #ffb454); }
+  .tension .tsrow { margin: 3px 0; }
+  .tension .tsrow b { color: var(--amber, #ffb454); }
+  .tension .tslean { color: var(--muted); }
+  /* Issues #82/#83: hear a candidate in the rig, then put the original back. */
+  .cabacts { display: flex; gap: 8px; align-items: center; white-space: nowrap; }
+  .cabhear { white-space: nowrap; }
+  .cabhear.on { border-color: var(--amber, #ffb454); color: var(--amber, #ffb454); }
+  .cabrestore { margin-top: 8px; display: flex; gap: 10px; align-items: center;
+    min-width: 0; }
+  .cabrestore .cabtag { flex: 1; min-width: 0; white-space: normal; }
   .tonecheck .tcmark { font-weight: 700; margin-right: 4px; }
 
   .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
@@ -3419,6 +3437,7 @@
         </div>
         <div class="stagecard">
           <div class="cardtitle">PLAN SUMMARY</div>
+          <div id="tension" class="tension" hidden></div>
           <div id="plansummary"></div>
           <div id="tonecheck" hidden></div>
           <div id="planhead"></div>
@@ -3454,6 +3473,7 @@
           <div id="cabcurrent"></div>
           <div id="cablink"></div>
           <div class="cabalts" id="cabalts"></div>
+          <div class="cabrestore" id="cabrestore" hidden></div>
           <div class="cabalts" id="cabblend"></div>
           <div class="cabfoot" id="cabfoot"></div>
         </div>
@@ -7135,6 +7155,9 @@ function describe(a) {
   // rendered as "Mix: null", because an unbind carries no value. Reachable
   // from the planner, which is allowed to propose one.
   if (a.kind === 'unbind_pedal') return `Pedal 2 ✕ ${a.block} ${a.instance} ${a.param}`;
+  // A cab selection is a bank and an ordinal, not a parameter; without this
+  // it fell through to the set_param wording as "cab 1 / null: set to 40".
+  if (a.kind === 'set_cab') return `Cab → ${a.cab_name || 'ordinal ' + a.value}${a.bank != null ? ' (bank ' + a.bank + ')' : ''}`;
   if (a.kind === 'rename_preset') return `Rename preset → "${a.type_name}"`;
   if (a.kind === 'rename_scene') return `Rename scene ${a.value} → "${a.type_name}"`;
   // danger first, and one parenthetical rather than two: the slot label
@@ -7160,6 +7183,22 @@ let planRecipe = null;
 // The pre-ship tone check (config/tone_rules.md rule 14), run on the plan by
 // the server and shown here before send: a clean cut quiet, a dry clean, or a
 // lead that does not out-saturate the rhythm. Green when it passes.
+// Issue #98: the request asked for two things that pull apart. Say so, say
+// which way the build leans and why, from the deterministic detector's own
+// data (plan.request_tensions), never from whether the model repeated it.
+function renderTension(tensions) {
+  const el = $('tension');
+  if (!el) return;
+  if (!tensions.length) { el.hidden = true; el.innerHTML = ''; return; }
+  el.hidden = false;
+  el.innerHTML = `<div class="tshead">REQUEST TENSION &middot; two things in this `
+    + `request pull in opposite directions</div>`
+    + tensions.map(t =>
+      `<div class="tsrow"><b>${esc(t.side_a)}</b> vs <b>${esc(t.side_b)}</b>: `
+      + `this build leans <b>${esc(t.lean)}</b>. `
+      + `<span class="tslean">${esc(t.reason)}</span></div>`).join('');
+}
+
 function renderToneCheck(findings) {
   const box = $('tonecheck');
   if (!box) return;
@@ -7198,6 +7237,7 @@ function showPlan(plan) {
   refreshBlastRadius(plan);
   const prevSrc = $('plansrc'); if (prevSrc) prevSrc.remove();
   $('plansummary').textContent = plan.summary;
+  renderTension(plan.request_tensions || []);
   renderToneCheck(plan.tone_review || []);
   // What the plan DOES, in one line, above the button that sends it. An
   // eight-scene build is 140 cards; the things that matter (how many changes,
@@ -9920,6 +9960,7 @@ function cabRow(r, chosen, canUse) {
       ${why ? `<span class="cabwhy">${esc(why)}</span>` : ''}
       ${bits.length ? `<span class="cabwhy">${esc(bits.join(' &middot; '))}</span>` : ''}</div>
     <div class="cabtag">${esc(r.pack || '')}</div>
+    <span class="cabacts">
     ${canUse !== undefined && r.slot
       ? `<button class="cabuse${chosenSlot(r) ? ' on' : ''}"
                  data-bank="${esc(String(r.slot.bank))}"
@@ -9938,10 +9979,72 @@ function cabRow(r, chosen, canUse) {
       ? `<button class="cabplay" data-path="${esc(r.path)}"
                  title="Representative preview: a synthetic DI through a generic
                  amp stage, then this cab. Not your amp path.">PREVIEW</button>`
-      : `<span class="cabtag" title="Fractal .syx and factory cabs are an
-          encoded device format that cannot be rendered; audition them on the
-          rig">ON RIG ONLY</span>`}
+      : r.slot
+        ? `<button class="cabhear${hearing(r.slot) ? ' on' : ''}"
+                   data-bank="${esc(String(r.slot.bank))}"
+                   data-ordinal="${esc(String(r.slot.ordinal))}"
+                   title="Hear this cab in your rig right now. Edit buffer
+                   only: nothing is stored, and RESTORE ORIGINAL puts the cab
+                   you had back. USE THIS is still the only way it enters the
+                   build.">${hearing(r.slot) ? 'HEARING NOW' : 'AUDITION ON RIG'}</button>`
+        : `<span class="cabtag" title="Fractal .syx and factory cabs are an
+            encoded device format that cannot be rendered; audition them on the
+            rig">ON RIG ONLY</span>`}
+    </span>
   </div>`;
+}
+
+// Issues #82/#83: the audition session as the server reports it. `current`
+// is what the CABINET block points at right now; `original` is what it
+// pointed at before the first audition, which RESTORE ORIGINAL brings back.
+let cabAudition = { open: false, original: null, current: null, last_error: null };
+
+function hearing(slot) {
+  const c = cabAudition.open && cabAudition.current;
+  return !!(c && slot && Number(c.bank) === Number(slot.bank)
+            && Number(c.ordinal) === Number(slot.ordinal));
+}
+
+async function auditionCab(bank, ordinal) {
+  try {
+    const r = await fetch('/api/cab/audition', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bank, ordinal }) });
+    const d = await r.json();
+    if (d.audition) cabAudition = d.audition;
+    if (!r.ok) log(d.error || 'audition failed', 'err');
+    else log(`hearing ${d.hearing} in the rig; nothing is stored`);
+  } catch (e) {
+    log(`audition failed: ${e.message}`, 'err');
+  }
+  renderCabPanel();
+}
+
+async function restoreCab() {
+  try {
+    const r = await fetch('/api/cab/audition/end', { method: 'POST' });
+    const d = await r.json();
+    if (d.audition) cabAudition = d.audition;
+    if (!r.ok) log(d.error || 'restore failed; try again', 'err');
+    else log(d.detail || 'original cab restored');
+  } catch (e) {
+    log(`restore failed: ${e.message}`, 'err');
+  }
+  renderCabPanel();
+}
+
+function renderCabRestore() {
+  const el = $('cabrestore');
+  if (!el) return;
+  if (!cabAudition.open) { el.hidden = true; el.innerHTML = ''; return; }
+  el.hidden = false;
+  const cur = cabAudition.current || {};
+  const orig = cabAudition.original || {};
+  el.innerHTML = `<span class="cabtag">HEARING ${esc(cur.label || '')} &middot; `
+    + `your cab was ${esc(orig.label || '')}. Nothing is stored.`
+    + (cabAudition.last_error ? ` <b>${esc(cabAudition.last_error)}</b>` : '')
+    + `</span><button class="cabhear" id="cabrestorebtn">RESTORE ORIGINAL</button>`;
+  $('cabrestorebtn').onclick = restoreCab;
 }
 
 // Blend partners: which owned IRs combine with this one, and by how much to
@@ -10199,6 +10302,10 @@ async function renderCabPanel() {
     b.onclick = () => useCab(Number(b.dataset.bank), Number(b.dataset.ordinal),
                              b.dataset.label);
   }
+  for (const b of panel.querySelectorAll('.cabhear[data-bank]')) {
+    b.onclick = () => auditionCab(Number(b.dataset.bank), Number(b.dataset.ordinal));
+  }
+  renderCabRestore();
   for (const b of panel.querySelectorAll('.cabdrive')) {
     b.onclick = () => { cabDrive = b.dataset.drive; stopCabAudio(); renderCabPanel(); };
   }

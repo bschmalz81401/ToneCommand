@@ -69,6 +69,14 @@ class Scene:
     #: post-build fine-tune handle, so this is tracked the same way effects
     #: engagement already is.
     eq_engaged: bool = False
+    #: DISTORT_MID on the 0-10 amp scale, when the plan sets it. Rule 19
+    #: (issue #96): a scooped/thin rhythm is one of the bland test's named
+    #: triggers, and mid position is the one number that says it.
+    amp_mid: float | None = None
+    #: Utility families the plan engages in this scene (rule 20, issue #97):
+    #: family -> what the plan did with it beyond engaging it (a param set,
+    #: a pedal bound, a channel picked). Empty set means bare engagement.
+    utilities: dict = field(default_factory=dict)
 
     def shape(self) -> tuple:
         """What this scene stores, and therefore what makes it itself.
@@ -172,11 +180,34 @@ def _voiced(s: Scene) -> bool:
             or s.boost_gain is not None or bool(s.fx_mix) or bool(s.bypass))
 
 
-def review(scenes: list[Scene]) -> list[Finding]:
+#: Words in a request that ask for movement on the clean (rule 18). The
+#: rulebook's own 80s/big clean is "chorus AND delay AND reverb"; a request
+#: in these terms and a clean with no modulation engaged is the bland
+#: test's "clean with no modulation where the style wants it".
+MODULATION_WANTED = frozenset({
+    "80s", "eighties", "big", "lush", "shimmer", "chorus", "wide", "dreamy",
+    "ambient", "shoegaze", "washy",
+})
+MODULATION_FAMILIES = frozenset({"CHORUS", "FLANGER", "PHASER", "TREMOLO",
+                                 "ROTARY"})
+#: Rule 19: at or below this on the amp's 0-10 MID, a rhythm or lead has
+#: given up the low-mid body rule 9 says never to scoop away.
+SCOOPED_MID_MAX = 2.0
+
+
+def _wants_modulation(request_text: str | None) -> bool:
+    import re
+    words = set(re.findall(r"[a-z0-9]+", (request_text or "").lower()))
+    return bool(words & MODULATION_WANTED)
+
+
+def review(scenes: list[Scene], request_text: str | None = None) -> list[Finding]:
     """Run the deterministic role checks and return what failed, worst first.
 
     The rhythm scenes are the reference the others are judged against (rule 4:
     rhythm is the loudness reference; rule 10: a lead out-saturates the rhythm).
+    `request_text` is the player's own words, for the one rule (18) whose
+    verdict depends on what was asked for rather than only on the plan.
     """
     out: list[Finding] = list(clones(scenes))
 
@@ -292,6 +323,41 @@ def review(scenes: list[Scene]) -> list[Finding]:
             "leave the player a real fine-tune handle to adjust to their "
             "ears/room/guitar without a rebuild"))
 
+    # Issue #96, rules 18 and 19: two more of the bland test's named
+    # triggers, as warnings. Warnings, not fails, for the reason rule 17
+    # gives: the professional reference pack carries no modulation presence
+    # or mid position, so neither tendency has been measured against real
+    # gigging presets, and an unmeasured hard fail is how rule 10 once
+    # rejected work that gigs (issue #65).
+    if _wants_modulation(request_text):
+        for s in scenes:
+            if s.role == "clean" and _voiced(s) \
+                    and not (s.effects & MODULATION_FAMILIES):
+                out.append(Finding(s.n, "18", "warn",
+                    "the request asks for a big/80s/lush clean and this clean "
+                    "scene has no modulation engaged (chorus, flanger, phaser, "
+                    "tremolo or rotary); rule 8's 80s clean is chorus AND "
+                    "delay AND reverb"))
+    for s in scenes:
+        if s.role in ("rhythm", "lead") and _voiced(s) \
+                and s.amp_mid is not None and s.amp_mid <= SCOOPED_MID_MAX:
+            out.append(Finding(s.n, "19", "warn",
+                f"amp MID at {s.amp_mid:g} reads as scooped/thin for a "
+                f"{s.role}; rule 9 keeps the low-mid body (do not scoop "
+                "past about 2 on the 0-10 scale)"))
+
+    # Issue #97, rule 20: a utility block the plan engages and then says
+    # nothing else about is clutter. A parameter set on it, a pedal bound
+    # to it or a channel chosen for it is the plan saying what it is for.
+    for s in scenes:
+        for fam, uses in sorted(s.utilities.items()):
+            if not uses:
+                out.append(Finding(s.n, "20", "warn",
+                    f"{fam} is engaged in scene {s.n} with nothing set on "
+                    "it, no pedal bound and no channel chosen; a utility "
+                    "block belongs only where this tone needs it (set its "
+                    "level, bind a pedal, or leave it out)"))
+
     order = {"fail": 0, "warn": 1}
     out.sort(key=lambda f: (order.get(f.severity, 2), f.scene))
     return out
@@ -368,6 +434,13 @@ FAMILY_CLASS: dict[str, str] = {
     "CROSSOVER": "dynamics",
     # eq: rule 17's concern, not rule 16's
     "GEQ": "eq", "PEQ": "eq",
+    # utility: routing and housekeeping, no sound of their own. Rule 20
+    # (issue #97): welcome when a specific tone needs them, clutter when a
+    # plan engages one and then says nothing else about it.
+    "VOLUME": "utility", "MIXER": "utility", "LOOPER": "utility",
+    "FDBKSEND": "utility", "FDBKRET": "utility", "IRCAPTURE": "utility",
+    "MULTIPLEXER": "utility", "MIDIBLOCK": "utility", "RTA": "utility",
+    "NULL": "utility",
     # amp / boost: tracked via their own dedicated Scene fields
     "DISTORT": "amp", "FUZZ": "boost",
 }
@@ -402,6 +475,8 @@ def _apply_family_engagement(s: Scene, fam: str, *, meaningful: bool) -> None:
         s.boosted = True
     elif cls == "eq":
         s.eq_engaged = True
+    elif cls == "utility":
+        s.utilities.setdefault(fam, set())
     # dynamics / amp / unclassified: no engagement flag lives here.
     # Dynamics is real but not a tonal dimension (rule 16); amp is
     # tracked via amp_gain/amp_level, not this mechanism.
@@ -491,6 +566,8 @@ def summary_from_plan(actions: list[dict], reg=None) -> list[Scene]:
                 scn(cur).amp_gain = val
             elif p == "DISTORT_LEVEL":
                 scn(cur).amp_level = val
+            elif p == "DISTORT_MID":
+                scn(cur).amp_mid = val
             elif p == "FUZZ_DRIVE":
                 scn(cur).boost_gain = val
                 # Setting a boost's own gain is intent to use it, whether or
@@ -519,6 +596,15 @@ def summary_from_plan(actions: list[dict], reg=None) -> list[Scene]:
                 tail = p.replace("OUTPUT_SCENE", "")
                 if tail.isdigit():
                     scn(int(tail)).scene_level = val
+            # Rule 20: a parameter set on a utility block is the plan saying
+            # what the block is FOR, which is what separates use from clutter.
+            ufam = block.upper()
+            if FAMILY_CLASS.get(ufam) == "utility" and val is not None:
+                scn(cur).utilities.setdefault(ufam, set()).add(f"param {p}")
+        elif kind == "bind_pedal" and cur is not None:
+            ufam = block.upper()
+            if FAMILY_CLASS.get(ufam) == "utility":
+                scn(cur).utilities.setdefault(ufam, set()).add("pedal bound")
         elif kind == "set_bypass" and cur is not None:
             # Record the structural fact FIRST, for both directions. Only
             # engagement used to be kept, so a scene that differs from another
@@ -536,6 +622,10 @@ def summary_from_plan(actions: list[dict], reg=None) -> list[Scene]:
             v = a.get("value")
             if v is not None:
                 scn(cur).channels[block] = int(v)
+                ufam = block.upper()
+                if FAMILY_CLASS.get(ufam) == "utility":
+                    scn(cur).utilities.setdefault(ufam, set()).add(
+                        f"channel {int(v)}")
         elif kind == "add_block":
             # Grid-global (see the comment above the loop): not tied to
             # `cur`, and never written into channels/bypass, so it cannot

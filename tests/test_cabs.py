@@ -68,6 +68,9 @@ def test_the_cab_family_is_not_on_the_main_send_surface():
 @pytest.fixture
 def client(monkeypatch):
     monkeypatch.setenv("TONECOMMAND_CAB_SLOTS", "0-15")
+    # The fn 0x19 read is off by default since #43 (it hangs fw 12.x); the
+    # simulator is the one place it is safe, so these tests opt in.
+    monkeypatch.setenv("TONECOMMAND_ALLOW_CAB_READ", "1")
     monkeypatch.setattr(server, "_fm9", SimFM9(server.reg))
     monkeypatch.setattr(server, "_gig_mode", {"on": False})
     monkeypatch.setattr(server, "_install_cache", {})

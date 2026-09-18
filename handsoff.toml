@@ -13,8 +13,8 @@ require_live_verification = true
 deployment_requires_explicit_approval = true
 
 [agents]
-architect = "codex"
-supervisor = "codex"
+architect = "host"
+supervisor = "host"
 implementer = "codex"
 reviewer = "codex"
 
@@ -38,6 +38,14 @@ commands = [
   ".venv/bin/python -m pytest tests/test_headrush_client.py -q",
   ".venv/bin/python -m pytest tests/test_headrush_amp_models.py tests/test_grounding_envelope.py -q",
   ".venv/bin/python -m pytest tests/test_headrush_schema.py -q",
+  "TONECOMMAND_SIM=1 .venv/bin/python -m pytest tests/test_cab_audition.py -q",
+  "TONECOMMAND_SIM=1 .venv/bin/python -m pytest tests/test_cab_audition.py -q -k cleanup",
+  "TONECOMMAND_SIM=1 .venv/bin/python -m pytest tests/test_cab_shortlist.py -q",
+  "TONECOMMAND_SIM=1 .venv/bin/python -m pytest tests/test_cab_read_guard.py -q",
+  ".venv/bin/python -m pytest tests/test_tone_review.py -q -k rule18",
+  ".venv/bin/python -m pytest tests/test_tone_review.py -q -k rule19",
+  ".venv/bin/python -m pytest tests/test_tone_review.py -q -k rule20",
+  ".venv/bin/python -m pytest tests/test_request_tension.py -q",
 ]
 # Commands that verify the deployed system. Phase 8 is blocked until these
 # run successfully after deployment approval. This app has no hosted server;

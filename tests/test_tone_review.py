@@ -259,7 +259,8 @@ def test_every_catalogued_mix_or_depth_family_is_classified():
     assert catalogued, "fixture sanity: the real catalog must yield some families"
     missing = catalogued - set(tr.FAMILY_CLASS)
     assert not missing, f"unclassified catalog families: {sorted(missing)}"
-    assert set(tr.FAMILY_CLASS.values()) <= {"audible", "dynamics", "eq", "amp", "boost"}
+    assert set(tr.FAMILY_CLASS.values()) <= {"audible", "dynamics", "eq", "amp", "boost",
+                                            "utility"}   # rule 20 (#97)
 
 
 def test_wet_families_excludes_dynamics_eq_amp_and_boost():
@@ -660,3 +661,112 @@ def test_a_plan_touching_nothing_structural_is_not_accused_of_missing_eq():
     plan = [{"kind": "rename_scene", "value": 1, "type_name": "Clean"}]
     scenes = tr.summary_from_plan(plan)
     assert not [f for f in tr.review(scenes) if f.rule == "17"]
+
+
+# --- issue #96 rules 18 and 19, issue #97 rule 20 ---------------------------
+
+def _voiced_clean(**kw):
+    s = tr.Scene(n=1, name="Clean", role="clean", amp_gain=2.0,
+                 effects={"DELAY", "REVERB"}, fx_mix={"REVERB": 40})
+    for k, v in kw.items():
+        setattr(s, k, v)
+    return s
+
+
+def test_rule18_warns_on_a_clean_with_no_modulation_when_the_style_wants_it():
+    f = [x for x in tr.review([_voiced_clean()], "a big 80s clean") if x.rule == "18"]
+    assert len(f) == 1 and f[0].severity == "warn"
+    assert "modulation" in f[0].message
+
+
+def test_rule18_is_silent_when_modulation_is_engaged_or_not_asked_for():
+    with_chorus = _voiced_clean(effects={"DELAY", "REVERB", "CHORUS"})
+    assert not [x for x in tr.review([with_chorus], "a big 80s clean") if x.rule == "18"]
+    assert not [x for x in tr.review([_voiced_clean()], "a dry jazz clean") if x.rule == "18"]
+    assert not [x for x in tr.review([_voiced_clean()]) if x.rule == "18"]
+    # only voiced scenes, and only cleans
+    bare = tr.Scene(n=2, name="Clean 2", role="clean")
+    assert not [x for x in tr.review([bare], "lush clean") if x.rule == "18"]
+    rhythm = tr.Scene(n=3, name="Rhythm", role="rhythm", amp_gain=6, effects={"DELAY"})
+    assert not [x for x in tr.review([rhythm], "lush 80s") if x.rule == "18"]
+
+
+def test_rule19_warns_on_a_scooped_rhythm_or_lead():
+    rhythm = tr.Scene(n=2, name="Rhythm", role="rhythm", amp_gain=6.5,
+                      amp_mid=1.5, effects={"DELAY"})
+    f = [x for x in tr.review([rhythm]) if x.rule == "19"]
+    assert len(f) == 1 and f[0].severity == "warn" and "scooped" in f[0].message
+    lead = tr.Scene(n=3, name="Lead", role="lead", amp_gain=8, amp_mid=2.0,
+                    effects={"DELAY"})
+    assert [x for x in tr.review([lead]) if x.rule == "19"]
+
+
+def test_rule19_is_silent_with_body_or_no_mid_or_on_a_clean():
+    ok = tr.Scene(n=2, name="Rhythm", role="rhythm", amp_gain=6.5, amp_mid=5,
+                  effects={"DELAY"})
+    assert not [x for x in tr.review([ok]) if x.rule == "19"]
+    unknown = tr.Scene(n=2, name="Rhythm", role="rhythm", amp_gain=6.5,
+                       effects={"DELAY"})
+    assert not [x for x in tr.review([unknown]) if x.rule == "19"]
+    clean = _voiced_clean(amp_mid=1.0)
+    assert not [x for x in tr.review([clean]) if x.rule == "19"]
+
+
+def test_rule19_reads_amp_mid_from_the_plan():
+    scenes = tr.summary_from_plan([
+        {"kind": "set_scene", "value": 2},
+        {"kind": "rename_scene", "value": 2, "type_name": "Rhythm"},
+        {"kind": "set_param", "block": "amp", "param": "DISTORT_MID", "value": 1.0},
+        {"kind": "set_param", "block": "amp", "param": "DISTORT_DRIVE", "value": 6.0},
+        {"kind": "set_bypass", "block": "delay", "bypassed": False},
+    ])
+    assert scenes[0].amp_mid == 1.0
+    assert [x for x in tr.review(scenes) if x.rule == "19"]
+
+
+def _rhythm_with(*extra):
+    return [
+        {"kind": "set_scene", "value": 2},
+        {"kind": "rename_scene", "value": 2, "type_name": "Rhythm"},
+        {"kind": "set_param", "block": "amp", "param": "DISTORT_DRIVE", "value": 6.0},
+        {"kind": "set_bypass", "block": "delay", "bypassed": False},
+        *extra,
+    ]
+
+
+def test_rule20_warns_on_a_bare_utility_block():
+    scenes = tr.summary_from_plan(_rhythm_with(
+        {"kind": "set_bypass", "block": "volume", "bypassed": False}))
+    f = [x for x in tr.review(scenes) if x.rule == "20"]
+    assert len(f) == 1 and f[0].severity == "warn" and "VOLUME" in f[0].message
+    # an add_block of a utility with nothing else said is the same clutter
+    scenes = tr.summary_from_plan(_rhythm_with({"kind": "add_block", "block": "mixer"}))
+    assert [x for x in tr.review(scenes) if x.rule == "20" and "MIXER" in x.message]
+
+
+def test_rule20_is_silent_when_the_plan_says_what_the_block_is_for():
+    with_level = tr.summary_from_plan(_rhythm_with(
+        {"kind": "set_bypass", "block": "volume", "bypassed": False},
+        {"kind": "set_param", "block": "volume", "param": "VOLUME_VOLUME", "value": -3.0}))
+    assert not [x for x in tr.review(with_level) if x.rule == "20"]
+    with_pedal = tr.summary_from_plan(_rhythm_with(
+        {"kind": "set_bypass", "block": "volume", "bypassed": False},
+        {"kind": "bind_pedal", "block": "volume", "param": "VOLUME_VOLUME", "value": 2}))
+    assert not [x for x in tr.review(with_pedal) if x.rule == "20"]
+    with_channel = tr.summary_from_plan(_rhythm_with(
+        {"kind": "set_bypass", "block": "volume", "bypassed": False},
+        {"kind": "set_channel", "block": "volume", "value": 1}))
+    assert not [x for x in tr.review(with_channel) if x.rule == "20"]
+    # a utility block the plan leaves bypassed is not engaged, so not clutter
+    off = tr.summary_from_plan(_rhythm_with(
+        {"kind": "set_bypass", "block": "volume", "bypassed": True}))
+    assert not [x for x in tr.review(off) if x.rule == "20"]
+
+
+def test_rules_18_to_20_are_warnings_so_the_bland_test_still_passes():
+    scenes = tr.summary_from_plan(_rhythm_with(
+        {"kind": "set_param", "block": "amp", "param": "DISTORT_MID", "value": 1.0},
+        {"kind": "set_bypass", "block": "volume", "bypassed": False}))
+    findings = tr.review(scenes, "big 80s")
+    assert {x.rule for x in findings} >= {"19", "20"}
+    assert tr.bland_test_passed(findings)

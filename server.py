@@ -412,6 +412,15 @@ def _pump_coremidi() -> None:
 def drop_fm9():
     global _fm9
     if _fm9 is not None:
+        # #84: an open audition is put back before the handle goes, when the
+        # unit is still answering; if it is not, the session stays open with
+        # the reason and the next plan or /api/cab/audition/end retries.
+        if _audition["open"]:
+            try:
+                ok, detail = _audition_restore(_fm9)
+            except Exception as e:      # noqa: BLE001
+                ok, detail = False, str(e)
+            (log.info if ok else log.warning)("audition at drop_fm9: %s", detail)
         try:
             _fm9.close()
         except Exception:
@@ -464,6 +473,136 @@ def full_cab_catalog_search(query: str, limit: int = 5) -> list[tuple[int, int, 
                 out.append((bank, int(ordn), str(name)))
                 if len(out) >= limit:
                     return out
+    return out
+
+
+_CAB_SUFFIX_RE = re.compile(r"\s*\((RW|RIB|OH)\)\s*$")
+_CAB_MIC_RE = re.compile(
+    r"\s+(SM57|R121|MD421|906|421|121|57|160|AT4047|M160|4047|"
+    r"OFF-?AXIS|ON-?AXIS|CONE|BLEND|MIX|DYN|RIBBON)\b.*$", re.I)
+
+
+def _cab_base_and_mic(name: str, family: str = "") -> tuple[str, str]:
+    """"4x12 UBER V30 (RW)" -> ("4x12 UBER V30", ""); "4x12 FRACTAL V30
+    AT4047" -> ("4x12 FRACTAL V30", "AT4047"). The same split the curated
+    roster uses, so the two agree on what "one cabinet" means. With a
+    `family` word (the query, e.g. "V30"), everything after that word is
+    the take: "2x12o V30 107 Room_L CEL" and "... Room_R CEL" are one
+    cabinet heard two ways, not two cabinets."""
+    bare = _CAB_SUFFIX_RE.sub("", str(name)).strip()
+    base = _CAB_MIC_RE.sub("", bare).strip()
+    fam = (family or "").strip().lower()
+    if fam:
+        toks = bare.split()
+        for i, t in enumerate(toks):
+            if t.lower() == fam:
+                base = " ".join(toks[:i + 1])
+                break
+    mic = bare[len(base):].strip() if bare.startswith(base) else ""
+    return base, mic
+
+
+def factory_cab_shortlist(query: str, limit: int = 5) -> list[dict]:
+    """Issue #82: never one arbitrary pick. Every factory cab whose name
+    contains the query, across every bank, reduced to MEANINGFULLY different
+    takes: one row per cabinet base first (different speakers/boxes), then,
+    if room remains, further mics or positions of bases already listed.
+    Everything here is on the unit already, so each row can be auditioned
+    in the edit buffer at once (on_rig)."""
+    q = (query or "").strip().lower()
+    if not q:
+        return []
+    hits: list[tuple[int, int, str]] = []
+    for bank_key, roster in reg.cab_rosters.items():
+        try:
+            bank = int(bank_key)
+        except (TypeError, ValueError):
+            continue
+        for ordn, name in roster.items():
+            if q in str(name).lower():
+                hits.append((bank, int(ordn), str(name)))
+    hits.sort(key=lambda h: (h[0], h[1]))
+    rows: list[dict] = []
+    seen_base: set[str] = set()
+    seen_exact: set[str] = set()
+
+    def row(bank, ordn, name, base, mic):
+        return {"bank": bank, "ordinal": ordn, "name": name, "base": base,
+                "mic": mic, "on_rig": True,
+                "slot": {"bank": bank, "ordinal": ordn,
+                         "label": cab_label(bank, ordn)}}
+
+    for bank, ordn, name in hits:            # pass 1: distinct cabinets
+        base, mic = _cab_base_and_mic(name, q)
+        if base in seen_base or name in seen_exact:
+            continue
+        seen_base.add(base)
+        seen_exact.add(name)
+        rows.append(row(bank, ordn, name, base, mic))
+        if len(rows) >= limit:
+            return rows
+    for bank, ordn, name in hits:            # pass 2: other mics of those
+        if name in seen_exact:
+            continue
+        base, mic = _cab_base_and_mic(name, q)
+        seen_exact.add(name)
+        rows.append(row(bank, ordn, name, base, mic))
+        if len(rows) >= limit:
+            break
+    return rows
+
+
+def _factory_fallback(result: dict, out: dict) -> dict:
+    """Issue #82: a plan that selects a cab and has nothing to compare it
+    against gets the factory shortlist for that cab's own name (or the
+    plan's cab target) as its candidates, so no cab is handed out alone.
+    Library candidates, when there are any, are left exactly as they are."""
+    if out.get("candidates"):
+        return out
+    picks = [a for a in (result.get("actions") or [])
+             if a.get("kind") == "set_cab" and a.get("value") is not None]
+    if not picks:
+        return out
+    pick = picks[-1]
+    query = (pick.get("cab_name") or result.get("cab_need") or "").strip()
+    # A full factory name ("4x12 UBER V30 (RW)") matches only itself; the
+    # family word is what finds its siblings. Take the last speaker-ish
+    # token of the base as the family when the full name finds under two.
+    rows = factory_cab_shortlist(query) if query else []
+    if len(rows) < 2 and query:
+        base, _mic = _cab_base_and_mic(query)
+        for token in reversed(base.split()):
+            if len(token) >= 3 and not token[0].isdigit():
+                rows = factory_cab_shortlist(token)
+                if len(rows) >= 2:
+                    break
+    if len(rows) < 2:
+        out["why"] = (out.get("why") or "") + (
+            " No factory alternatives were found for this cab, so there is "
+            "nothing to audition it against.").strip()
+        return out
+    try:
+        chosen = (int(pick.get("bank") or 0), int(pick.get("value")))
+    except (TypeError, ValueError):
+        chosen = None
+    # The plan's own pick is always in the set, first, so the comparison is
+    # "this against its siblings" rather than a list the pick fell off.
+    if chosen and not any((r["bank"], r["ordinal"]) == chosen for r in rows):
+        base, mic = _cab_base_and_mic(cab_label(*chosen), query)
+        rows.insert(0, {"bank": chosen[0], "ordinal": chosen[1],
+                        "name": cab_label(*chosen), "base": base, "mic": mic,
+                        "on_rig": True,
+                        "slot": {"bank": chosen[0], "ordinal": chosen[1],
+                                 "label": cab_label(*chosen)}})
+    out["candidates"] = [{
+        "name": r["name"], "path": None, "pack": "FM9 factory",
+        "match": None, "why": ["factory catalog, same family"],
+        "measured": None, "distance_from_current": None,
+        "slot": r["slot"], "on_rig": True,
+        "chosen": (r["bank"], r["ordinal"]) == chosen,
+    } for r in rows]
+    out["source"] = "factory"
+    out["why"] = None
     return out
 
 
@@ -756,7 +895,14 @@ def _plan_request_text(result: dict) -> str:
 
 
 def cab_listening_set(result: dict, anchor: dict, k: int = 3) -> dict:
-    """The ONE place a cab listening set is produced. Brief 19.5 and 26.4.
+    """The ONE place a cab listening set is produced: the library search,
+    then (#82) the factory shortlist when the library gave the plan's own
+    cab nothing to be compared against."""
+    return _factory_fallback(result, _library_listening_set(result, anchor, k))
+
+
+def _library_listening_set(result: dict, anchor: dict, k: int = 3) -> dict:
+    """The library half of cab_listening_set. Brief 19.5 and 26.4.
 
     Runs AFTER the planner, for live, remembered and shared-profile state
     alike, so the search is driven by the planner's validated `cab_need`
@@ -2155,6 +2301,10 @@ def _plan_for(body: PromptBody, on_count=None, cancel=None, on_status=None):
     blast-radius maths, which is exactly the kind of duplication that goes
     subtly wrong six months later on one path only.
     """
+    # #84: a new plan reads the rig as it is; an audition still hanging in
+    # the edit buffer would be read as the player's cab. Put it back first.
+    with _lock:
+        _audition_restore_if_open("plan start")
     # A loaded profile outranks both the live device and the remembered
     # reading: you asked to design for someone else's rig, so designing for
     # your own instead would be answering a different question.
@@ -2378,7 +2528,7 @@ def _plan_for(body: PromptBody, on_count=None, cancel=None, on_status=None):
         try:
             from fm9 import tone_review
             summary = tone_review.summary_from_plan(result.get("actions", []))
-            findings = tone_review.review(summary)
+            findings = tone_review.review(summary, body.prompt)   # rule 18
             result["tone_review"] = tone_review.findings_as_dicts(findings)
             # An empty findings list is not a pass on its own: it can also mean
             # nothing could be checked. Coverage says which (#54).
@@ -2391,6 +2541,14 @@ def _plan_for(body: PromptBody, on_count=None, cancel=None, on_status=None):
             result["tone_coverage"] = {"status": "unknown", "checks_run": 0,
                                        "why": "the tone review did not run"}
             result["bland_test_passed"] = True
+        # Issue #98: the tensions the planner was TOLD about (see
+        # _plan_counting) ride on the result as data, so the UI states them
+        # itself rather than hoping the model repeated them in its summary.
+        try:
+            from fm9 import request_tension
+            result["request_tensions"] = request_tension.as_dicts(body.prompt)
+        except Exception:
+            result["request_tensions"] = []
         return result
     except planner.PlanCancelled:
         return {"error": "stopped"}
@@ -2887,6 +3045,38 @@ def _unbind_pedal(fm9: DeviceAdapter, a: Action) -> dict:
     return {"ok": False, "detail": f"{spec.name} has no modifier on it"}
 
 
+def _read_cab(fm9: DeviceAdapter, instance: int = 1) -> tuple:
+    """(bank, ordinal) the CABINET block currently points at, wire values."""
+    return (fm9.get_param_wire(reg.spec("CABINET", 0, instance)),
+            fm9.get_param_wire(reg.spec("CABINET", 4, instance)))
+
+
+def _select_cab(fm9: DeviceAdapter, bank: int, ordinal: int, instance: int = 1):
+    """Point the CABINET block at (bank, ordinal) in the edit buffer and read
+    it back. The ONE cab write, shared by the plan executor (set_cab) and
+    the audition routes (#83), so an audition can never do anything a plan
+    could not: two discrete parameter writes, no store, nothing on the
+    user-cab wire. Returns (ok, (before_bank, before_ordinal),
+    (landed_bank, landed_ordinal)).
+    """
+    bspec = reg.spec("CABINET", 0, instance)
+    tspec = reg.spec("CABINET", 4, instance)
+    before_b, before_o = _read_cab(fm9, instance)
+    if before_b != bank:
+        fm9.set_param_ordinal(bspec, bank)
+    fm9.set_param_ordinal(tspec, ordinal)
+    import time as _t
+    landed_o = landed_b = None
+    for _ in range(4):
+        _t.sleep(0.15)
+        landed_o = fm9.get_param_wire(tspec)
+        landed_b = fm9.get_param_wire(bspec)
+        if landed_o == ordinal and landed_b == bank:
+            break
+    ok = landed_o == ordinal and landed_b == bank
+    return ok, (before_b, before_o), (landed_b, landed_o)
+
+
 def run_action(fm9: DeviceAdapter, a: Action) -> dict:
     if a.kind == "rename_preset":
         name = a.type_name.strip()
@@ -2969,22 +3159,8 @@ def run_action(fm9: DeviceAdapter, a: Action) -> dict:
         # a discrete write of 200 reads back as exactly 200.
         bank = 0 if a.bank is None else int(a.bank)
         ordinal = int(a.value)
-        bspec = reg.spec("CABINET", 0, a.instance)
-        tspec = reg.spec("CABINET", 4, a.instance)
-        before_o = fm9.get_param_wire(tspec)
-        before_b = fm9.get_param_wire(bspec)
-        if before_b != bank:
-            fm9.set_param_ordinal(bspec, bank)
-        fm9.set_param_ordinal(tspec, ordinal)
-        import time as _t
-        landed_o = landed_b = None
-        for _ in range(4):
-            _t.sleep(0.15)
-            landed_o = fm9.get_param_wire(tspec)
-            landed_b = fm9.get_param_wire(bspec)
-            if landed_o == ordinal and landed_b == bank:
-                break
-        ok = landed_o == ordinal and landed_b == bank
+        ok, (before_b, before_o), (landed_b, landed_o) = _select_cab(
+            fm9, bank, ordinal, a.instance)
         return {"action": a.model_dump(), "ok": ok,
                 "detail": (f"cab -> {reg.cab_description(landed_o, landed_b)}"
                            if ok else
@@ -3132,6 +3308,168 @@ def api_acquire(body: dict):
             "cab_slots_configured": bool(get_cab_slots())}
 
 
+# --- issue #83: audition a cab in the edit buffer before anything commits ---
+#
+# One session, process-local, one rig: what the CABINET block pointed at
+# before the first audition, what it points at now, and the last thing
+# that went wrong. Nothing here is a plan and nothing here stores: it is
+# the same two discrete parameter writes set_cab makes (_select_cab), and
+# ending the session puts the original back. A store still only happens
+# through a plan the player confirms and sends.
+_audition = {"open": False, "original": None, "current": None,
+             "last_error": None}
+
+
+def _audition_state() -> dict:
+    def _lab(pair):
+        if not pair:
+            return None
+        return {"bank": pair[0], "ordinal": pair[1],
+                "label": cab_label(pair[0], pair[1])}
+    return {"open": bool(_audition["open"]),
+            "original": _lab(_audition["original"]),
+            "current": _lab(_audition["current"]),
+            "last_error": _audition["last_error"]}
+
+
+def _audition_restore(fm9: DeviceAdapter) -> tuple[bool, str]:
+    """Put the pre-audition cab back. On success the session closes; on a
+    failed or wrong read-back it stays OPEN with last_error set, so the
+    player (or the next plan) can retry rather than lose track of what the
+    unit was left pointing at (design review F1.2)."""
+    if not _audition["open"]:
+        return True, "no audition open"
+    bank, ordinal = _audition["original"]
+    try:
+        ok, _before, landed = _select_cab(fm9, bank, ordinal)
+    except Exception as e:      # noqa: BLE001  the unit going away mid-restore
+        _audition["last_error"] = f"restore failed: {e}"
+        return False, _audition["last_error"]
+    if not ok:
+        _audition["current"] = landed
+        _audition["last_error"] = (
+            f"restore read back bank {landed[0]} cab {landed[1]}, wanted "
+            f"bank {bank} cab {ordinal}")
+        return False, _audition["last_error"]
+    _audition.update(open=False, original=None, current=None, last_error=None)
+    return True, f"restored {cab_label(bank, ordinal)}"
+
+
+def _audition_restore_if_open(where: str) -> None:
+    """Called at the start of a plan and on device drop (#84): an audition
+    never outlives the thing it was for. A failed restore is logged and
+    left open with its error for the UI, never swallowed."""
+    if not _audition["open"]:
+        return
+    try:
+        fm9 = get_fm9()
+    except Exception as e:      # noqa: BLE001
+        _audition["last_error"] = f"restore skipped at {where}: {e}"
+        log.warning("audition left open at %s: %s", where, e)
+        return
+    ok, detail = _audition_restore(fm9)
+    (log.info if ok else log.warning)("audition at %s: %s", where, detail)
+
+
+@app.get("/api/cab/audition")
+def api_cab_audition_state():
+    return _audition_state()
+
+
+@app.post("/api/cab/audition")
+def api_cab_audition(body: dict):
+    """Hear (bank, ordinal) in the rig right now. Edit buffer only.
+
+    Transactional (design review F1.1): if either write or the read-back
+    fails, the pre-audition cab is put back, the session is cleared and the
+    answer is 502 with the read-back detail. No store, no user-cab frame,
+    on any path.
+    """
+    try:
+        bank = int(body.get("bank") if body.get("bank") is not None else 0)
+        ordinal = int(body.get("ordinal"))
+    except (TypeError, ValueError):
+        return JSONResponse({"error": "say which cab: a bank and an ordinal"},
+                            status_code=400)
+    with _lock:
+        if _gig_mode["on"]:
+            return JSONResponse(
+                {"error": "GIG LOCK is on: refusing to touch the rig."},
+                status_code=423)
+        try:
+            fm9 = get_fm9()
+        except FM9NotFound:
+            drop_fm9()
+            return JSONResponse({"error": "FM9 not connected"}, status_code=503)
+        first = not _audition["open"]
+        if first:
+            try:
+                original = _read_cab(fm9)
+            except Exception as e:      # noqa: BLE001
+                return JSONResponse({"error": f"could not read the current "
+                                              f"cab: {e}"}, status_code=502)
+            _audition.update(open=True, original=original, current=original,
+                             last_error=None)
+        try:
+            ok, _before, landed = _select_cab(fm9, bank, ordinal)
+        except Exception as e:      # noqa: BLE001
+            ok, landed = False, (None, None)
+            detail = f"cab write failed: {e}"
+        else:
+            detail = (f"read-back mismatch: wanted bank {bank} cab {ordinal}, "
+                      f"unit reports bank {landed[0]} cab {landed[1]}")
+        if not ok:
+            restored, rdetail = _audition_restore(fm9)
+            if first or restored:
+                _audition.update(open=False, original=None, current=None,
+                                 last_error=None)
+            return JSONResponse({"error": detail, "restored": restored,
+                                 "restore_detail": rdetail,
+                                 "audition": _audition_state()},
+                                status_code=502)
+        _audition["current"] = landed
+        _audition["last_error"] = None
+    return {"ok": True, "hearing": cab_label(bank, ordinal),
+            "audition": _audition_state()}
+
+
+@app.post("/api/cab/audition/end")
+def api_cab_audition_end():
+    """Put the pre-audition cab back. Nothing was committed, so nothing is
+    left behind (#84); a failed restore keeps the session open for retry."""
+    with _lock:
+        if _gig_mode["on"]:
+            return JSONResponse(
+                {"error": "GIG LOCK is on: refusing to touch the rig."},
+                status_code=423)
+        if not _audition["open"]:
+            return {"ok": True, "detail": "no audition open",
+                    "audition": _audition_state()}
+        try:
+            fm9 = get_fm9()
+        except FM9NotFound:
+            drop_fm9()
+            return JSONResponse({"error": "FM9 not connected",
+                                 "audition": _audition_state()},
+                                status_code=503)
+        ok, detail = _audition_restore(fm9)
+    if not ok:
+        return JSONResponse({"error": detail, "audition": _audition_state()},
+                            status_code=502)
+    return {"ok": True, "detail": detail, "audition": _audition_state()}
+
+
+@app.get("/api/cab/shortlist")
+def api_cab_shortlist(q: str = "", limit: int = 5):
+    """Issue #82: meaningfully different factory takes on a cab family."""
+    rows = factory_cab_shortlist(q, max(1, min(int(limit), 12)))
+    out = {"query": q, "candidates": rows}
+    if len(rows) < 2:
+        out["why"] = (f"fewer than two factory cabs match {q!r}; nothing "
+                      "to audition against" if q else "say which cab family")
+    return out
+
+
 @app.post("/api/install-cab")
 def api_install_cab(body: dict):
     """Send a previewed IR file to a whitelisted user-cab slot. FLASH.
@@ -3180,6 +3518,13 @@ def api_install_cab(body: dict):
             return JSONResponse({"error": str(e)}, status_code=422)
         except CapabilityDeclined:
             raise
+        except RuntimeError as e:
+            # The fn 0x19 read is refused at the transport layer on this
+            # firmware (issue #43): a conflict with the unit, not a fault in
+            # the request, so 409 and the message says what works instead.
+            if str(e).startswith("user-cab read (fn 0x19) is disabled"):
+                return JSONResponse({"error": str(e)}, status_code=409)
+            return JSONResponse({"error": str(e)}, status_code=500)
         except Exception as e:
             return JSONResponse({"error": str(e)}, status_code=500)
     sent = [f[6:-2] for f in cabfile.retarget(cf, idx, tag=tag)[1:-1]]

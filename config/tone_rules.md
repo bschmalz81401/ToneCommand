@@ -561,3 +561,34 @@ A player should be able to adjust to their ears, room, or guitar without a
 rebuild. The pre-ship review warns (not fails - several professional presets
 gig fine with no EQ block at all, the same tendency-not-law reasoning as rule
 10's margin) when a whole build engages no PEQ or GEQ block anywhere.
+
+## 18. A big, 80s, lush or shimmering clean moves (issue #96)
+When the request says big, 80s, lush, shimmer, chorus, wide, dreamy, ambient,
+shoegaze or washy, a clean scene with no modulation engaged (chorus, flanger,
+phaser, tremolo or rotary) has not answered it: rule 8's 80s clean is chorus
+AND delay AND reverb. The pre-ship review warns on a voiced clean that has
+none of those engaged when the request asked in those words.
+
+## 19. Do not scoop a rhythm or lead thin (issue #96)
+Rule 9 keeps the low-mid body. A rhythm or lead whose amp MID sits at or
+below 2 on the 0-10 scale reads as scooped and thin in a mix; the pre-ship
+review warns on it. Get darkness or aggression from cab, drive and presence
+choices, not by pulling the mids out.
+
+## 20. Utility blocks only where the tone needs them (issue #97)
+A VOLUME, MIXER, LOOPER, send/return, IR capture, multiplexer, RTA or MIDI
+block that a plan engages and then says nothing about (no parameter set on
+it, no pedal bound to it, no channel chosen for it) is clutter the player has
+to read past. Engage one only with a reason the plan states through its
+settings: set its level, bind the pedal, pick its channel, or leave it out.
+The pre-ship review warns on a bare engagement.
+
+## 21. A cab is auditioned, never assumed (issues #82, #83, #84)
+When a build selects a cab, the review offers meaningfully different takes of
+the same family (different cabinets first, then mics) from the unit's own
+catalog when the IR library has nothing to compare against. The player can
+hear any on-rig candidate in the edit buffer and put the original back; only
+a plan the player confirms commits a cab, and nothing is stored or loaded
+into a user slot before that. An IR that is not on the unit is previewed in
+the browser and, if wanted, loaded through Cab-Lab into the scratch slot
+(the highest TONECOMMAND_CAB_SLOTS entry) before it can be heard in the rig.

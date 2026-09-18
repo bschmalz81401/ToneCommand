@@ -185,6 +185,36 @@ def _parse_slots(raw: str) -> set[int]:
     return {n for n in slots if 0 <= n <= 511}
 
 
+#: Issue #43, measured 2026-09-05 on firmware 12.x: a single fn 0x19 user-cab
+#: read DISCONNECTED the FM9's MIDI and the unit needed a power cycle to come
+#: back. Ordinary reads immediately before it were fine. So the read that was
+#: meant to make a cab install safe (probe before write) is itself the hazard
+#: on this firmware, and every user-cab install path runs through it. The
+#: supported route today is a WAV at 48 kHz through Fractal's Cab-Lab 4 into a
+#: user slot, then set_cab from here. Until the Bank 2+ encoding is captured a
+#: different way, the read is off by default at the transport layer: it is
+#: refused before any frame is built, on both entry points, so no candidate
+#: address path can reach the wire without the operator turning it on.
+CAB_READ_FLAG = "TONECOMMAND_ALLOW_CAB_READ"
+CAB_READ_REFUSED = (
+    "user-cab read (fn 0x19) is disabled: on firmware 12.x it disconnects the "
+    "FM9's MIDI and the unit needs a power cycle to recover (issue #43). "
+    "To put an IR on the unit today: export it as a 48 kHz WAV, load it into "
+    "a user cab slot with Fractal's Cab-Lab 4 (free), then select that slot "
+    "from here. Set " + CAB_READ_FLAG + "=1 only to investigate on a unit "
+    "you are prepared to power cycle."
+)
+
+
+def cab_read_guard() -> None:
+    """Refuse the fn 0x19 read unless the operator opted in. First statement
+    of every entry point that could lead to it, so nothing is built or sent
+    before the check."""
+    import os
+    if os.environ.get(CAB_READ_FLAG, "").strip() != "1":
+        raise RuntimeError(CAB_READ_REFUSED)
+
+
 @dataclass
 class SetResult:
     ok: bool
@@ -690,8 +720,10 @@ class FM9:
         Returns (head_payload, chunk_payloads) when the device answered,
         else None. An empty slot still ANSWERS (all-0x7F body per the
         upstream capture), which is what makes read-probing a destination
-        safe and conclusive before any write.
+        safe and conclusive before any write. Not on firmware 12.x, where
+        the read itself hangs the port (issue #43): see cab_read_guard.
         """
+        cab_read_guard()
         req = p.envelope(0x19, [(idx >> 7) & 0x7F, idx & 0x7F, tag & 0x7F])
         self.cab_guard.check(req[5])
         self._drain()
@@ -750,6 +782,7 @@ class FM9:
         addressing the device itself answered for; verified by callers via
         read_user_cab_addr comparing byte-for-byte.
         """
+        cab_read_guard()          # before parse, whitelist or probe (#43)
         from fm9 import cabfile
         if bank < 1 or number < 1:
             raise ValueError("bank and number are 1-based, as FM9-Edit "

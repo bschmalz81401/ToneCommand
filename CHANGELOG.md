@@ -4,6 +4,75 @@ Notable changes to ToneCommand. Dates are UTC.
 
 ## Unreleased
 
+### Added (FM9 lane tranche, 2026-09-18: #43, #82, #83, #84, #96, #97, #98)
+- AUDITION BEFORE COMMIT (#83). `POST /api/cab/audition {bank, ordinal}`
+  points the CABINET block at a cab that is already on the unit, in the edit
+  buffer, through the same two discrete writes a plan's `set_cab` makes
+  (`server._select_cab`, now shared by both); `POST /api/cab/audition/end`
+  puts the pre-audition cab back; `GET /api/cab/audition` reports the
+  session. Start is transactional: a write or read-back that does not land
+  restores the original, clears the session and answers 502. A restore that
+  does not land keeps the session OPEN with `last_error` so it can be
+  retried, rather than leaving the unit quietly pointed at the audition cab.
+  Nothing here stores and nothing touches the user-cab wire; the simulator
+  tests assert both from the sent frames. Proven live on the FM9: preset 18
+  read back `1x12 AC-20 DLX MIX`, the audition read back `4x12 1960B V30
+  (RW)`, the end read back the original.
+- NEVER ONE CAB (#82). `server.factory_cab_shortlist()` and
+  `GET /api/cab/shortlist?q=` search the whole factory catalog and return
+  meaningfully different takes: distinct cabinets first (mic and take
+  stripped, split at the family word so `2x12o V30 107 Room_L` and `Room_R`
+  are one cabinet), then further mics of those. A plan whose `set_cab` got
+  nothing from the IR library to be compared against now carries that
+  shortlist as its listening set, the plan's own pick first and marked, so
+  no cab is handed out alone; fewer than two matches says so in `why`.
+- The review's cab panel gives every on-rig row an AUDITION ON RIG button
+  (HEARING NOW on the one playing) and a RESTORE ORIGINAL control that names
+  the cab you had. USE THIS is still the only way a cab enters the build.
+- SCRATCH SLOT CLEANUP (#84). An audition never writes a slot, so there are
+  no leftovers by construction; ending it, starting a new plan, or the
+  device handle being dropped restores the original first. `config/README.md`
+  documents the highest `TONECOMMAND_CAB_SLOTS` entry as the scratch slot for
+  Cab-Lab installs and the lower one(s) as the commit target.
+- REQUEST TENSION, SECOND PASS (#98). `fm9/request_tension.py` gains a
+  synonym layer (punchy/percussive/chunky for tight, smooth/mellow/woolly/
+  muffled for warm, washy/cavernous for wet, bedroom/whisper for quiet,
+  retro/classic for vintage, brutal/chuggy for modern high-gain, and a new
+  bright/sparkly/glassy versus dim/dull/no-top-end pair leaning bright per
+  rule 9). Matching is word-boundary, longest phrase first, one finding per
+  pair, and every term belongs to exactly one pair (checked at import and by
+  test; design review caught `muffled` and `woolly` listed on two pairs).
+  Plan results carry `request_tensions` and the plan stage shows a REQUEST
+  TENSION card above the summary, built from that data rather than from
+  whether the model repeated it.
+- RULES 18, 19 AND 20 (#96, #97) in `fm9/tone_review.py`, all warnings for
+  the reason rule 17 is one: no professional reference data measures them.
+  Rule 18: a voiced clean with no modulation engaged when the request asks
+  for a big/80s/lush/shimmer clean (`review()` now takes the request text).
+  Rule 19: a rhythm or lead with amp MID at or below 2 on the 0-10 scale
+  reads as scooped/thin (`Scene.amp_mid` from `DISTORT_MID`). Rule 20: a
+  utility block (VOLUME, MIXER, LOOPER, sends, IR capture, ...) the plan
+  engages and then sets nothing on, binds no pedal to and picks no channel
+  for is clutter. `FAMILY_CLASS` gains the `utility` class.
+
+### Security (#43)
+- THE fn 0x19 USER-CAB READ IS OFF BY DEFAULT. Measured 2026-09-05 on
+  firmware 12.x: one read disconnected the FM9's MIDI and the unit needed a
+  power cycle. That read was the safety step of every user-cab install
+  (probe the address before writing), so every install inherited the hang.
+  `fm9.device.cab_read_guard()` now refuses as the FIRST statement of both
+  `read_user_cab_addr` and `install_user_cab_at`, before parse, whitelist or
+  any candidate address is tried, so no frame can be built without
+  `TONECOMMAND_ALLOW_CAB_READ=1`. The message names the hang, the recovery,
+  the supported route (48 kHz WAV through the free Cab-Lab 4 into a user
+  slot, then `set_cab`) and the issue; `/api/install-cab` answers it as 409.
+  Bank 2+ addressing itself stays open on #43: it cannot be probed without
+  the read that hangs the unit.
+- The broad-except audit now covers 78 blocks (34 re-raise, 44 unreachable):
+  the six new ones wrap `get_param_wire`/`set_param_ordinal` on
+  `DeviceAdapter`, behind no gate, and `request_tension`, which has no
+  device handle.
+
 ### Verified (HeadRush scene model, 2026-09-18)
 - THE SIMULATOR'S SCENE MAPPING IS CORRECT. `devices/headrush/sim.py` models
   scene slots as `{0: no_change, 1: on, 2: off}`; that constant is on `main`,
