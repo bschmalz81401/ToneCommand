@@ -901,8 +901,9 @@ def test_invariant_6_pedal_1_is_never_touched_by_any_route():
 
 def test_changelog_names_the_gates_and_touched_files_have_no_em_dash():
     changelog = (ROOT / "CHANGELOG.md").read_text()
-    unreleased = changelog.split("## Unreleased", 1)[1].split("\n## ", 1)[0]
-    assert "CapabilityDeclined" in unreleased and "#111" in unreleased
+    # The section this work shipped in (it sat under Unreleased until 1.3.0).
+    section = changelog.split("## 1.3.0", 1)[1].split("\n## 1.2", 1)[0]
+    assert "CapabilityDeclined" in section and "#111" in section
     em_dash = chr(0x2014)
     for rel in ("server.py", "tests/test_capability_gates.py",
                 "tests/sentinel_device.py", "tests/data/broad_except_audit.json",

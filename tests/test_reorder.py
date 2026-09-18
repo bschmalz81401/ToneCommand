@@ -54,7 +54,8 @@ class _GridDev:
             out.append(_Cell(self.row, c, eid, eid is None, self.mask.get(c, 0)))
         return out
 
-    def place_block(self, row_1, col_1, eid):
+    def place_block(self, position, eid):
+        _row_1, col_1 = position             # a GridPos or a pair (#123)
         c = col_1 - 1
         if eid == 0:
             self.cells[c] = None            # clear to a pass-through

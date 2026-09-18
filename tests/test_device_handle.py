@@ -377,9 +377,10 @@ def test_changelog_entry_exists_and_touched_files_have_no_em_dash():
     """Docs drift silently: ARCHITECTURE.md described a server.py less than
     half the size of the real one."""
     changelog = (ROOT / "CHANGELOG.md").read_text()
-    unreleased = changelog.split("## Unreleased", 1)[1].split("\n## ", 1)[0]
-    assert "device handle" in unreleased.lower() or "contract" in unreleased.lower(), (
-        "no Unreleased changelog entry for this work")
+    # The section this work shipped in (it sat under Unreleased until 1.3.0).
+    section = changelog.split("## 1.3.0", 1)[1].split("\n## 1.2", 1)[0]
+    assert "device handle" in section.lower() or "contract" in section.lower(), (
+        "no 1.3.0 changelog entry for this work")
 
     architecture = (ROOT / "ARCHITECTURE.md").read_text()
     assert "2,470 lines and 46 routes" not in architecture, (
