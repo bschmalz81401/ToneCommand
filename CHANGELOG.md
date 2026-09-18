@@ -11,21 +11,27 @@ Notable changes to ToneCommand. Dates are UTC.
   inverted mapping would have inverted every scene an adapter wrote, with the
   simulator agreeing all the way down because both share the constant.
 - `Scene{n}_{m}_Mode` publishes no option names, so this is not readable from
-  the schema. 1 and 2 were measured by comparing a live scene's declared modes
-  against each block's own `On`: nineteen block-scene predictions across three
-  scenes, none wrong. 0 was measured as a RETAINED state rather than a
-  coincidence: a block was forced off by one scene, turned on by hand so it
-  contradicted that scene, and kept the contrary value when a scene declaring
-  Mode 0 for it moved nine other blocks.
-- ONE SCENE HAS FOUR DIFFERENT NUMBERS, confirmed twice: the label a player
-  reads, the footswitch index, `LastScene`, and the index the slot data lives
-  under. `Scene{n}_{m}_Mode` and `SceneActive{n}` share an index; `LastScene` is
-  that minus one. An adapter writing `Scene1_*` because a user said "scene 1"
-  would configure a scene nobody can reach from the front panel.
-- Scene ACTIVATION is not on the API. `SceneActive{n}`, `LastScene`,
-  `ModeNew{n}`, `FootswitchHeld{n}` and `FootSwitchOn{n}` each accepted a write
-  and changed nothing; every scene change recorded was a footswitch press. How
-  an adapter would select a scene is unknown.
+  the schema. 1 and 2 were measured by engaging four scenes and comparing every
+  Mode 1 or 2 slot against that block's own `On`: 38 predictions, none wrong,
+  counted by script after an earlier draft reported the total wrong.
+- 0 was measured as a RETAINED state rather than a coincidence: a block was
+  forced off by one scene, turned on by hand so it contradicted that scene, and
+  kept the contrary value when a scene declaring Mode 0 for it moved nine other
+  blocks.
+- SCENE ACTIVATION IS ON THE API: writing `SceneActive{n} = true` engages scene
+  n and applies its table, provided `ModeNew{n} = 2`. An earlier version of this
+  entry said activation was not available at all, which came from writing
+  `SceneActive` on a blank preset where no switch was in scene mode. The
+  dependency on `ModeNew` was already measured and documented in
+  `bschmalz81401/HeadrushRigBuilder` on 2026-09-07, and was not consulted.
+- The index is CONSISTENT: `ModeNew{n}`, `FootSwitchText{n}`, `SceneActive{n}`
+  and `Scene{n}_{m}_Mode` share one n, and only `LastScene` is zero based at
+  n - 1. An earlier version claimed four different numbers for one scene, with
+  the footswitch index below the SceneActive index. That was wrong, and it
+  rested on a property read taken WHILE a rig was loading: the labels were
+  shifted by one against the settled values and `loadedName` came back empty in
+  the same response. A read during a load can mix rigs, and a scene table is
+  exactly the shape where that is invisible.
 - The simulator models the slot data and not whether a scene is CONFIGURED.
   Slots exist on every rig including blank ones, so their presence says nothing;
   `SceneNumberOfStates{n}` and `ModeNew{n}` carry that. Recorded as a gap.

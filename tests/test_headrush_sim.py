@@ -179,9 +179,10 @@ def test_the_mode_integers_are_the_measured_ones(sim):
     VERIFIED ON A CORE, 2026-09-18 (#126, findings 4), on a rig that actually
     uses scenes:
 
-      1 and 2   nineteen block-scene predictions across three live scenes,
-                comparing each slot's declared Mode against that block's own
-                `On` property. None wrong.
+      1 and 2   38 block-scene predictions across four live scenes, comparing
+                each slot's declared Mode against that block's own `On`
+                property. None wrong. Counted by script; an earlier version of
+                this docstring reported the total wrong.
 
       0         a block was forced off by one scene's Mode 2, turned ON by
                 hand so it contradicted that scene, and then a scene declaring

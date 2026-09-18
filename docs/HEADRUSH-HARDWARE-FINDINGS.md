@@ -245,7 +245,7 @@ read out of the vendor's editor rather than measured: that is #130, and nothing
 in this commit implements it. What belongs here is only the six readings, which
 are what a later decode has to reproduce.
 
-## FINDING 4: the simulator's scene model is correct, and scene numbering is a trap
+## FINDING 4: the simulator's scene model is correct
 
 The first check in this file that CONFIRMS something rather than correcting it.
 
@@ -274,16 +274,17 @@ change and not a reason to claim it.
 
 ### 1 and 2, measured
 
-Reading a live scene's declared modes against what each block was actually
-doing, with `block.On` as the observable:
+Each scene was engaged, then every Mode 1 or 2 slot was compared against that
+block's own `On` property. Counted by script rather than by eye, after an
+earlier draft of this section reported the total wrong:
 
-| scene | Mode=1 blocks | Mode=2 blocks | wrong |
-|---|---|---|---|
-| 5 | 4, all `On` | 5, all `Off` | 0 |
-| 8 | 5, all `On` | 5, all `Off` | 0 |
-| 6 | 5, all `On` | 4, all `Off` | 0 |
+    scene 6    9 predictions
+    scene 7    9 predictions
+    scene 8   10 predictions
+    scene 9   10 predictions
+    TOTAL     38 predictions, 0 wrong
 
-Nineteen block-scene predictions, none wrong. `1` is on and `2` is off.
+`1` is on and `2` is off.
 
 ### 0, measured as a retained state rather than a coincidence
 
@@ -301,50 +302,44 @@ The scene change demonstrably acted, on nine blocks, and left this one alone
 while it held a value the previous scene had forbidden. That is `no_change`
 behaving as named, and it is not explicable as inertia.
 
-### THE SAME SCENE HAS FOUR DIFFERENT NUMBERS
+### Scene activation IS on the API, and two earlier claims here were wrong
 
-Confirmed twice, and the most likely thing here to be got wrong silently:
+Writing `SceneActive{n} = true` engages scene `n` and applies its whole table,
+provided that switch is in scene mode (`ModeNew{n} = 2`). Confirmed on four
+scenes; the 38 predictions above were all taken on scenes engaged this way.
 
-    footswitch 5, labelled "SCENE 1"   ->  SceneActive6, LastScene 5
-    footswitch 7, labelled "SCENE 3"   ->  SceneActive8, LastScene 7
+An earlier version of this finding said activation was not on the API at all.
+That came from writing `SceneActive` on a BLANK test preset where `ModeNew` was
+0 on every switch, so there was no scene to engage, and then, after setting
+`ModeNew1 = 2`, trying `FootswitchHeld` and `FootSwitchOn` and never retrying
+`SceneActive`. An absence concluded from a test that could not have shown the
+presence.
 
-So for one scene there is the label a player reads, the footswitch index, the
-`LastScene` value, and the index the slot data lives under. The mode predictions
-above were 9 for 9 and 10 for 10 using the `SceneActive` index, so
-`Scene{n}_{m}_Mode` and `SceneActive{n}` share an index while `LastScene` is that
-index minus one.
+`bschmalz81401/HeadrushRigBuilder` had this measured and documented correctly on
+2026-09-07, including the same dependency on `ModeNew`. It was not consulted.
 
-An adapter that wrote `Scene1_*` because a user said "scene 1" would configure a
-scene nobody can reach from the front panel.
+### The index is consistent; only LastScene is zero based
 
-Two samples, both from footswitches in Scene mode on one rig. The OFFSET is
-measured; that it is always exactly one, on every rig and every footswitch, is
-not.
+    ModeNew{n}   FootSwitchText{n}   SceneActive{n}   Scene{n}_{m}_Mode
+    all share the same n
 
-### What the simulator does not model
+    LastScene = n - 1
 
-Real, and a gap rather than an error. The slot data exists on every rig, blank
-ones included, so its presence says nothing about whether a scene is configured.
-What carries that is elsewhere:
+Measured by engaging scenes 6, 7, 8 and 9 and reading back: `LastScene` was 5,
+6, 7 and 8. The label (`FootSwitchText{n}`) is free operator text and on this
+rig reads "SCENE 1" through "SCENE 4" on switches 6 through 9, so it is the one
+number that carries no relationship at all.
 
-    SceneNumberOfStates{n}    1 on a blank rig
-    ModeNew{n}                0 Toggle, 1 Hold, 2 Scene, per footswitch
-    SceneActive{n}            which scene is live
-    FootSwitchText{n}         the label a player reads
+AN EARLIER VERSION OF THIS FINDING CLAIMED FOUR DIFFERENT NUMBERS FOR ONE
+SCENE, with the footswitch index one below the `SceneActive` index. That was
+wrong. It rested on a property read taken WHILE a rig was loading: the labels in
+that read were shifted by one against the ones the same rig reports when
+settled, and `loadedName` came back empty in the same response, which was
+noticed at the time and not treated as the warning it was.
 
-A blank test preset has all 140 slots present and no scene reachable, which is
-why an earlier attempt to activate one on such a rig did nothing at all.
-
-### Scene activation is not on the API
-
-Every property that looked like it should select a scene accepted a write and
-changed nothing: `SceneActive{n}`, `LastScene`, `ModeNew{n}`, `FootswitchHeld{n}`
-and `FootSwitchOn{n}` all took the value while `block.On` stayed put. Those
-properties report state; they do not accept input.
-
-Every scene change recorded here was made by @bschmalz81401 pressing a
-footswitch. How an adapter would select a scene is UNKNOWN, and the
-`object-method` surface is the obvious place to look next.
+The practical lesson is narrower than the wrong claim was: a read taken during
+a load can mix rigs, and a scene table is exactly the shape where that is
+invisible. Settle before reading, or check `loadedName` is non-empty first.
 
 ### Method calls do work, and return values
 
@@ -360,7 +355,7 @@ how poorly read-back performed in finding 1, that is worth knowing.
 | AC | status |
 |---|---|
 | 1. model and firmware | done, above |
-| 2. discovery, rigs, topology, scenes, reads, verified writes | PARTIAL. The ADAPTER cannot be verified without #125. The device behaviour behind three of these now has been: rig listing and selection (`loadRig`, finding 4), scene tri-state (finding 4), and parameter reads (finding 3). Topology selection and verified writes are still only #109's per-slot result and finding 1 |
+| 2. discovery, rigs, topology, scenes, reads, verified writes | PARTIAL. The ADAPTER cannot be verified without #125. The device behaviour behind three of these now has been: rig SELECTION (`loadRig`, finding 4; listing is not shown), scene tri-state (finding 4), and parameter reads (finding 3). Topology selection and verified writes are still only #109's per-slot result and finding 1 |
 | 3. read-back after each write | PARTIAL. Every write in this session was read back. The AC2 write set was not run, because there is no adapter. AC3 is a procedure requirement, not a claim that read-back detects crashes; the argument that it does not is under finding 1 |
 | 4. non-allowlisted object-method refused before transport | BLOCKED, the allowlist is #125 |
 | 5. record failures rather than weaken claims | done, findings 1 and 2 |
