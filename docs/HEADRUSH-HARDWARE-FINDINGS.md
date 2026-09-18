@@ -141,9 +141,11 @@ The three backed siblings are inert controls: written the same way, they take
 the value and keep it.
 
 **Unbacked does not predict a crash.** Only ordinal 20 does. The recommendation
-to refuse all three, which was published to #125, rested on generalising from
-the single member that had been tried, and two thirds of that generalisation is
-now wrong.
+to refuse all three, which was published to #125, rested on a class generalised
+from the single member that had been tried. The CLASS was wrong. The
+recommendation itself was conservative rather than false: it refused 4 and 254
+as a judgement pending measurement, not as measured crashes, and said so. What
+is retracted is the reason given for it, not a claim that those two crash.
 
 #### Ordinal 4 is rejected by the device, silently
 
