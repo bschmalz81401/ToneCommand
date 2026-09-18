@@ -61,7 +61,7 @@ def test_add_block_still_refuses_when_the_row_cannot_shift(fm9):
     for block in ("wah", "phaser", "chorus"):
         run_action(fm9, Action(kind="add_block", block=block))
     for col in range(12, 15):                     # fill the row to the end
-        fm9.place_block(2, col, 100 + col)
+        fm9.place_block((2, col), 100 + col)
     res = run_action(fm9, Action(kind="add_block", block="flanger"))
     assert not res["ok"]
     assert res.get("reason") == "no_room_right", res

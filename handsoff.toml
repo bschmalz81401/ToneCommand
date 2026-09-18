@@ -46,6 +46,15 @@ commands = [
   ".venv/bin/python -m pytest tests/test_tone_review.py -q -k rule19",
   ".venv/bin/python -m pytest tests/test_tone_review.py -q -k rule20",
   ".venv/bin/python -m pytest tests/test_request_tension.py -q",
+  ".venv/bin/python -m pytest tests/test_validation.py -q -k conformance",
+  "TONECOMMAND_SIM=1 .venv/bin/python -m pytest tests/test_opaque_position.py -q",
+  "TONECOMMAND_SIM=1 .venv/bin/python -m pytest tests/test_device_context.py -q",
+  "TONECOMMAND_SIM=1 .venv/bin/python -m pytest tests/test_device_select.py -q",
+  ".venv/bin/python -m pytest tests/test_headrush_adapter.py -q",
+  ".venv/bin/python -m pytest tests/test_headrush_adapter.py -q -k readback",
+  ".venv/bin/python -m pytest tests/test_headrush_adapter.py -q -k allowlist",
+  ".venv/bin/python -m pytest tests/test_headrush_adapter.py -q -k evidence",
+  ".venv/bin/python -m pytest tests/test_headrush_sim.py tests/test_headrush_topology.py -q",
 ]
 # Commands that verify the deployed system. Phase 8 is blocked until these
 # run successfully after deployment approval. This app has no hosted server;

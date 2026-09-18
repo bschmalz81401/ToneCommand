@@ -15,7 +15,7 @@ def chain(dev):
     """INPUT -> amp -> cab -> OUTPUT on row 3, fully cabled."""
     dev.select_preset(386)
     for col, eid in ((1, 37), (2, 58), (3, 62), (4, 42)):
-        dev.place_block(ROW, col, eid)
+        dev.place_block((ROW, col), eid)
     for col in (1, 2, 3):
         dev.connect_cells(ROW, col, ROW)
 
@@ -75,7 +75,7 @@ def test_removal_is_selective_on_a_multi_source_cell():
     dev = SimFM9(Registry())
     with dev:
         chain(dev)
-        dev.place_block(4, 2, 102)              # a VOLUME on row 4
+        dev.place_block((4, 2), 102)              # a VOLUME on row 4
         dev.connect_cells(4, 2, ROW)            # second feed into the cab
         both = masks(dev)[3]
         assert bin(both).count("1") == 2, f"expected two source bits, got {bin(both)}"
@@ -93,7 +93,7 @@ def test_verified_same_row_geometry_is_not_reported_as_undecoded():
     with dev:
         dev.select_preset(386)
         for row in (2, 3, 4, 5):
-            dev.place_block(row, 1, 102 + row)
+            dev.place_block((row, 1), 102 + row)
             dev.connect_cells(row, 1, row)
         cable_notes = [u for u in dev.sim_core.undecoded if "cable" in u]
         assert cable_notes == [], f"unexpected undecoded report: {cable_notes}"

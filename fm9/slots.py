@@ -101,7 +101,7 @@ def clear(dev, slot: int) -> dict:
 
     cells = dev.read_grid() or []
     for c in sorted(cells, key=lambda c: (c.col, c.row)):
-        dev.place_block(c.row + 1, c.col + 1, 0)
+        dev.place_block((c.row + 1, c.col + 1), 0)
         time.sleep(0.18)
     steps.append(f"emptied {len(cells)} grid cells")
 

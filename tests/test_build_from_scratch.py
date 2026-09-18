@@ -88,7 +88,7 @@ def test_every_block_lands_and_the_chain_is_continuous():
     with dev() as d:
         d.select_preset(386)
         for col, (eid, _) in enumerate(CHAIN, start=1):
-            d.place_block(ROW, col, eid)
+            d.place_block((ROW, col), eid)
         for col in range(1, len(CHAIN)):
             d.connect_cells(ROW, col, ROW)
         cells = {c.col + 1: c for c in d.read_grid() or []}
@@ -121,7 +121,7 @@ def test_it_refuses_when_the_select_lands_somewhere_else(sim, capsys, monkeypatc
     inserts = []
     monkeypatch.setattr(FM9, "select_preset", lambda self, n: (n + 1, "somewhere else"))
     monkeypatch.setattr(FM9, "place_block",
-                        lambda self, r, c, e: inserts.append((r, c, e)))
+                        lambda self, pos, e: inserts.append((*pos, e)))
     assert main([]) == 1
     assert inserts == [], "nothing may be edited once the slot is in doubt"
     assert "refusing to build" in capsys.readouterr().out
@@ -136,7 +136,7 @@ def test_a_present_but_stranded_block_is_not_a_live_path():
     with dev() as d:
         d.select_preset(386)
         for col, (eid, _) in enumerate(CHAIN, start=1):
-            d.place_block(ROW, col, eid)
+            d.place_block((ROW, col), eid)
         for col in range(1, len(CHAIN)):
             d.connect_cells(ROW, col, ROW)
         cells = d.read_grid() or []
@@ -145,8 +145,8 @@ def test_a_present_but_stranded_block_is_not_a_live_path():
         assert alive, f"the built chain should be alive: {why}"
 
         # now strand the input: present, un-starved, off the path
-        d.place_block(ROW, 1, 0)
-        d.place_block(1, 1, 37)
+        d.place_block((ROW, 1), 0)
+        d.place_block((1, 1), 37)
         cells = d.read_grid() or []
         blocks = {b.effect_id: b for b in d.status_dump() or []}
         present = {c.effect_id for c in cells}
@@ -171,7 +171,7 @@ def test_the_build_leaves_no_undecoded_geometry_on_the_sim():
     with dev() as d:
         d.select_preset(386)
         for col, (eid, _) in enumerate(CHAIN, start=1):
-            d.place_block(ROW, col, eid)
+            d.place_block((ROW, col), eid)
         for col in range(1, len(CHAIN)):
             d.connect_cells(ROW, col, ROW)
         cable_notes = [u for u in d.sim_core.undecoded if "cable" in u]

@@ -96,7 +96,7 @@ def test_it_refuses_when_the_row_has_no_slack():
     is the sharpest case: there is nowhere to the right at all."""
     with dev() as d:
         d.select_preset(0)
-        d.place_block(ROW, 14, VOLUME)
+        d.place_block((ROW, 14), VOLUME)
         assert any(c.col == 13 and c.row == ROW - 1 for c in (d.read_grid() or [])), \
             "the last column must be occupied for this to test what it claims"
         r = d.splice_block(ROW, 14, CHORUS, settle=SETTLE)
@@ -118,7 +118,7 @@ def test_it_refuses_when_the_span_is_fed_from_another_row():
     """Same-row redraw would silently break routing this code does not model."""
     with dev() as d:
         d.select_preset(0)
-        d.place_block(ROW + 1, 3, VOLUME)
+        d.place_block((ROW + 1, 3), VOLUME)
         d.connect_cells(ROW + 1, 3, ROW)          # cross-row feed into the span
         r = d.splice_block(ROW, 3, CHORUS, settle=SETTLE)
         assert r["ok"] is False

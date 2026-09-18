@@ -13,7 +13,7 @@ from dataclasses import dataclass
 import mido
 
 from . import protocol as p
-from .adapter import Capabilities, ReadPath, Topology
+from .adapter import Capabilities, GridPos, ReadPath, Topology
 from .registry import Registry, ParamSpec
 from .safety import sysex_guard
 from .signal_path import scene_alive
@@ -561,10 +561,13 @@ class FM9:
         return self._request(p.build_request_grid_layout(), p.parse_grid_layout,
                              timeout)
 
-    def place_block(self, row_1based: int, col_1based: int, effect_id: int):
+    def place_block(self, position, effect_id: int):
         """Place a block (or 0 to clear) at a grid cell. Edit buffer only.
+        `position` is a GridPos or a plain (row_1based, col_1based) pair:
+        the FM9's geometry behind the contract's opaque position (#123).
         Sends the cell-select first; without it the insert lands on the
         device's internal cursor instead of the target cell."""
+        row_1based, col_1based = GridPos(*position)
         self._drain()
         self._send(p.build_select_grid_cell(row_1based, col_1based))
         time.sleep(0.05)
@@ -1024,13 +1027,13 @@ class FM9:
         moved = []
         for move in intent["moves"]:
             col = move["from_col"]
-            self.place_block(row, col, 0)      # clear frees the cell AND cables
+            self.place_block((row, col), 0)    # clear frees the cell AND cables
             time.sleep(settle)
-            self.place_block(row, col + 1, move["effect_id"])
+            self.place_block((row, col + 1), move["effect_id"])
             time.sleep(settle)
             moved.append((move["effect_id"], col, col + 1))
 
-        self.place_block(row, at_col, effect_id)
+        self.place_block((row, at_col), effect_id)
         time.sleep(settle)
 
         # Clearing destroys cables, so redraw the whole disturbed span.
@@ -1187,10 +1190,10 @@ class FM9:
         # Clear the run to pass-throughs (frees cells and their cables), then
         # lay the new order back into the same columns.
         for col in cols:
-            self.place_block(row + 1, col + 1, 0)
+            self.place_block((row + 1, col + 1), 0)
             time.sleep(settle)
         for col, eid in zip(cols, new_order):
-            self.place_block(row + 1, col + 1, eid)
+            self.place_block((row + 1, col + 1), eid)
             time.sleep(settle)
 
         # Clearing destroyed cables; redraw the whole disturbed span same-row,

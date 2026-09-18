@@ -36,7 +36,7 @@ def test_a_free_column_spends_nothing():
     """Sliding into empty space costs nobody anything, and must not claim to."""
     with SimFM9(Registry()) as dev:
         dev.select_preset(0)
-        dev.place_block(2, 12, 102)           # occupy past the shunts
+        dev.place_block((2, 12), 102)           # occupy past the shunts
         intent = dev.plan_splice(2, 12)
     assert intent["ok"] and intent["spends_shunt"] is False
 
@@ -45,9 +45,9 @@ def test_refusals_name_themselves():
     with SimFM9(Registry()) as dev:
         dev.select_preset(0)
         assert dev.plan_splice(2, 13)["reason"] == "already_free"
-        dev.place_block(2, 14, 102)
+        dev.place_block((2, 14), 102)
         assert dev.plan_splice(2, 14)["reason"] == "no_room_right"
-        dev.place_block(3, 3, 103)
+        dev.place_block((3, 3), 103)
         dev.connect_cells(3, 3, 2)            # cross-row feed into the span
         assert dev.plan_splice(2, 3)["reason"] == "fed_from_another_row"
 

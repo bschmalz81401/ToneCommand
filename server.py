@@ -2856,7 +2856,7 @@ def _add_block(fm9: DeviceAdapter, a: Action) -> dict:
                          f"{intent['at_col']}; " + res.get("detail", ""))
         return res
     row, col = sorted(shunts, key=lambda rc: rc[1])[0]
-    fm9.place_block(row + 1, col + 1, eid)
+    fm9.place_block((row + 1, col + 1), eid)
     after = fm9.read_grid() or []
     placed = [c for c in after
               if c.effect_id == eid and (c.row, c.col) == (row, col)]

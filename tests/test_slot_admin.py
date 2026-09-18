@@ -108,7 +108,7 @@ def test_all_three_parts_are_written(client):
     name is not empty to anything that asks."""
     import inspect
     src = inspect.getsource(clear_slot.clear)
-    assert "place_block(c.row + 1, c.col + 1, 0)" in src
+    assert "place_block((c.row + 1, c.col + 1), 0)" in src
     assert "rename_scene(scene, \"\")" in src
     assert "rename_preset(p.EMPTY_SLOT_NAME)" in src
 

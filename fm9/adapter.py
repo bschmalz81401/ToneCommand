@@ -41,7 +41,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum, IntEnum
-from typing import Any, Protocol, runtime_checkable
+from typing import NamedTuple, Any, Protocol, runtime_checkable
 
 
 class ReadPath(IntEnum):
@@ -106,6 +106,14 @@ class SceneSlotState(Enum):
     NO_CHANGE = "no_change"
     OFF = "off"
     ON = "on"
+
+
+class GridPos(NamedTuple):
+    """The FM9's position on the ChainEditing contract: a 1-based grid cell,
+    as FM9-Edit numbers rows and columns. One device's geometry, kept out of
+    the contract's signature (#123) and passed as the opaque `position`."""
+    row_1based: int
+    col_1based: int
 
 
 @dataclass(frozen=True)
@@ -332,9 +340,16 @@ class ChainEditing(Protocol):
     every device can honestly promise is that positions are enumerable,
     comparable and addressable. Anything richer is one device's geometry
     wearing the contract's name.
+
+    Until #123 the signature still spelled the FM9's geometry
+    (`row_1based, col_1based`), so a rig device with fourteen linear slots
+    could not implement it without inventing a row. Now `position` is ONE
+    device-owned value: the FM9 takes a `GridPos` (or a plain (row, col)
+    pair), a rig device takes its slot number. The contract says nothing
+    about what is inside.
     """
 
-    def place_block(self, row_1based: int, col_1based: int, effect_id: int) -> Any: ...
+    def place_block(self, position: Any, effect_id: int) -> Any: ...
     def reorder_block(self, moving_eid: int, ref_eid: int) -> Any: ...
 
 

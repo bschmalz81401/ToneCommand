@@ -133,8 +133,8 @@ def test_grid_insert_requires_select(fm9):
     assert cells.get((1, 1)) == 94                # landed on the cursor cell
     # recovery mirrors the hardware session: clear the stray, then
     # select-then-insert (place_block does both) lands correctly
-    fm9.place_block(1, 1, 0)
-    fm9.place_block(4, 10, 94)
+    fm9.place_block((1, 1), 0)
+    fm9.place_block((4, 10), 94)
     cells = {(c.row + 1, c.col + 1): c.effect_id for c in fm9.read_grid() or []}
     assert cells.get((4, 10)) == 94
 
@@ -142,20 +142,20 @@ def test_grid_insert_requires_select(fm9):
 def test_move_is_ignored_and_clear_kills_cables(fm9):
     grid = {(c.row + 1, c.col + 1): c for c in fm9.read_grid() or []}
     assert grid[(2, 6)].effect_id == 70           # delay in default chain
-    fm9.place_block(2, 9, 70)                     # "move" attempt: ignored
+    fm9.place_block((2, 9), 70)                     # "move" attempt: ignored
     grid = {(c.row + 1, c.col + 1): c for c in fm9.read_grid() or []}
     assert (2, 9) not in grid or grid[(2, 9)].effect_id != 70
     assert grid[(2, 6)].effect_id == 70
     had_cables = grid[(2, 6)].cable_in_mask != 0
-    fm9.place_block(2, 6, 0)                      # clear the cell
+    fm9.place_block((2, 6), 0)                      # clear the cell
     grid = {(c.row + 1, c.col + 1): c for c in fm9.read_grid() or []}
     assert (2, 6) not in grid                     # gone, cables and all
     assert had_cables
 
 
 def test_cable_draw_roundtrip(fm9):
-    fm9.place_block(2, 6, 0)                      # make room downstream
-    fm9.place_block(3, 6, 126)                    # mixer on row 3 col 6
+    fm9.place_block((2, 6), 0)                      # make room downstream
+    fm9.place_block((3, 6), 126)                    # mixer on row 3 col 6
     fm9.connect_cells(2, 5, 3)                    # cable r2c5 -> r3c6
     grid = {(c.row + 1, c.col + 1): c for c in fm9.read_grid() or []}
     assert grid[(3, 6)].cable_in_mask & (1 << 2)  # fed from display row 2
@@ -231,8 +231,8 @@ def test_undecoded_territory_is_reported(fm9):
     """The sim must name what hardware never verified instead of passing
     silently: modifier curve writes and unproven cable geometries."""
     fm9.bind_modifier(1, 70, 0, 11, min_norm=0.0, max_norm=0.5)
-    fm9.place_block(2, 6, 0)
-    fm9.place_block(5, 6, 126)
+    fm9.place_block((2, 6), 0)
+    fm9.place_block((5, 6), 126)
     fm9.connect_cells(2, 5, 5)                 # 3-row jump: never verified
     rep = "\n".join(sorted(fm9.sim_core.undecoded))
     assert "modifier slot" in rep and "issue #11" in rep

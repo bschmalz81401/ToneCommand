@@ -87,7 +87,7 @@ def build(dev, reg, slot: int | None = None,
                      f"re-selecting it restores it")
         for c in sorted(dev.read_grid() or [], key=lambda c: (c.col, c.row),
                         reverse=True):
-            dev.place_block(c.row + 1, c.col + 1, 0)   # clear frees cell + cables
+            dev.place_block((c.row + 1, c.col + 1), 0)   # clear frees cell + cables
             time.sleep(SETTLE)
     else:
         try:
@@ -121,7 +121,7 @@ def build(dev, reg, slot: int | None = None,
                 f"checked as empty.", steps)
 
     for col, (eid, label) in enumerate(chain, start=1):
-        dev.place_block(ROW, col, eid)
+        dev.place_block((ROW, col), eid)
         time.sleep(SETTLE)
         steps.append(f"placed {label} (eid {eid}) at row {ROW} col {col}")
     for col in range(1, len(chain)):

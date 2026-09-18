@@ -147,11 +147,11 @@ class StubDevice:
 
     # --- ChainEditing ----------------------------------------------------
 
-    def place_block(self, row_1based: int, col_1based: int, effect_id: int):
-        # Position is opaque to the contract. Here it is a slot number, and
-        # there is no second row to write.
-        self._chain[int(col_1based)] = int(effect_id)
-        return int(col_1based)
+    def place_block(self, position, effect_id: int):
+        # Position is opaque to the contract (#123). Here it is a slot number
+        # in 1..14, and there is no row to invent.
+        self._chain[int(position)] = int(effect_id)
+        return int(position)
 
     def reorder_block(self, moving_eid: int, ref_eid: int):
         order = [s for s, e in sorted(self._chain.items())]
