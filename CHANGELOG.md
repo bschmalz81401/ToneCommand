@@ -152,17 +152,24 @@ Notable changes to ToneCommand. Dates are UTC.
   254 sticks and does not crash, but `/Evil/Engine/Patch/C-Verb_2` stays absent
   while it is placed, so the slot holds a block with no object to address. The
   three backed siblings (3, 19, 253) all simply stick.
-- SO "UNBACKED" DOES NOT PREDICT A CRASH, and the earlier recommendation to
-  refuse all three was a generalisation from the one member that had been
-  tried. Two thirds of it were wrong. Revised: refuse 20 on the evidence;
-  nothing is required for 4, which the device rejects itself; 254 is worth
-  flagging for being unusable rather than dangerous.
-- Read-back verification now has three distinct demonstrated failure modes
-  rather than one. 20: read-back agrees and then the engine dies. 4: read-back
-  agrees at t+0.04s and the write is gone by t+0.39s, so a prompt verify
-  reports success for a write that does not survive. 254: read-back agrees and
-  persists, but the block has no object, so a later parameter write has nowhere
-  to go.
+- SO "UNBACKED" DOES NOT PREDICT A CRASH. The earlier recommendation to refuse
+  all three rested on a class generalised from the one member that had been
+  tried, and the CLASS was wrong; the recommendation itself was conservative,
+  refusing 4 and 254 as a judgement pending measurement rather than claiming
+  they crashed. Revised now that they are measured: refuse 20 on the evidence;
+  no refusal is required for 4, which the device rejects itself, though a
+  prompt read-back is not enough to see that; refuse 254 as well, for the much
+  weaker reason that it occupies a slot with no object to address.
+- Verification needs three different checks, and read-back of the written value
+  is only one of them. 20: no read of the ModuleType catches it, prompt or
+  delayed, because the value is not what went wrong. 4: a prompt read-back
+  reports success for a write the device discards by t+0.39s, but a DELAYED
+  re-read sees 0 and is correct. 254: read-back is correct and stays correct,
+  so this is not a read-back failure at all; what detects it is object presence
+  (`C-Verb_2` is 404 while the block is placed). An earlier version of this
+  entry flattened all three into "read-back does not catch these", which is
+  false for 4 and would send #125 to delayed re-reads for 254, where no re-read
+  of that value can help.
 - Ordinal 19 was tested directly before 4 and 254, same rig, same slot, same
   protocol, with health sampled every 0.5s: acknowledged, read back, and the
   unit stayed up for 30s. That pair rules out the reading that the NAM module

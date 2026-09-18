@@ -124,6 +124,10 @@ path" as the class that mattered, having tested exactly one member of it.
 Testing the other two falsified that. Same rig, same slot 3, same empty chain,
 same protocol, health sampled every 0.5s:
 
+Each write was followed by 30 seconds of health polling at 0.5s before the slot
+was restored, so "no crash" means the unit was still answering 30s later, not
+merely that the write returned.
+
 | ordinal | name | object | what the write does | crash |
 |---|---|---|---|---|
 | 3 | ReValver Amp | present | sticks | no |
@@ -160,19 +164,31 @@ still absent (404) while the block is placed, and `EffectType3` reads 0. So the
 slot holds something with no object through which any parameter of it could be
 read or written.
 
-### What this means for read-back verification
+### What this means for verification
 
-Stronger than the earlier write-up, and in three distinct ways. Read-back is not
-sufficient here, and each unbacked ordinal breaks it differently:
+Stronger than the earlier write-up, and more precisely: read-back of the written
+value is not sufficient, but it fails differently in each case and one of them
+it does not fail at all.
 
-    ordinal 20   read-back agrees, then the engine dies
-    ordinal 4    read-back agrees at t+0.04s, and the device has discarded the
-                 write by t+0.39s. A verified-write that reads back promptly
-                 reports success for a write that does not survive
-    ordinal 254  read-back agrees and persists, but the block it names has no
-                 object, so any subsequent parameter write has nowhere to go
+    ordinal 20   read-back agrees, then the engine dies. No read of the
+                 ModuleType catches this, prompt or delayed, because the value
+                 is not what went wrong.
 
-An adapter cannot tell any of these from a good write by reading the value back.
+    ordinal 4    an IMMEDIATE read-back agrees and is wrong: the device has
+                 discarded the write by t+0.39s. A read taken after a short
+                 delay sees 0, which is the honest answer, so a delayed
+                 re-read DOES catch this one.
+
+    ordinal 254  read-back of the value is correct and stays correct. This is
+                 not a read-back failure. The slot genuinely holds 254; what is
+                 missing is the object, so the check that catches it is object
+                 presence (`/Evil/Engine/Patch/C-Verb_2` is 404 while the block
+                 is placed), not any re-read of the ordinal.
+
+So an adapter needs three different things, and an earlier version of this
+section flattened them into "read-back does not catch any of these", which is
+false for 4 and misdirects on 254: it would send someone to delayed re-reads for
+a problem no re-read of that value can see.
 
 ### What this suggests for #125, revised
 
@@ -181,12 +197,15 @@ wrong, and here is what the measurements actually support:
 
 - **Ordinal 20: refuse.** It is the one measured unit-down, and read-back does
   not catch it.
-- **Ordinal 4: nothing is required.** The device rejects it itself, promptly and
-  without harm. An adapter that wrote it and then verified after a short delay
-  would see the slot empty, which is the correct outcome arrived at honestly.
-- **Ordinal 254: not a crash, but not usable either.** It occupies a slot with
-  nothing to address. Worth refusing or flagging, for a different reason than
-  20 and a much weaker one.
+- **Ordinal 4: no refusal is required, but a prompt read-back is not enough.**
+  The device rejects it itself, promptly and without harm. An adapter that
+  verified after a short delay would see the slot empty, which is the correct
+  outcome arrived at honestly; one that verified immediately would report
+  success for a write that is already gone.
+- **Ordinal 254: refuse it too, for a different and much weaker reason.** It
+  does not crash, and the value reads back correctly; it occupies a slot with
+  no object to address, so nothing downstream can set a parameter on it. The
+  check that detects it is object presence, not a re-read of the ordinal.
 
 Whether some property shared by 20 and not by 4 or 254 explains the crash is
 unknown. NAM is the capture engine and the other two are not, which is a
