@@ -257,12 +257,17 @@ class HeadrushAdapter:
             return {"ok": False,
                     "detail": f"switch {n} is not in scene mode (ModeNew{n} "
                               f"= {mode!r}); SceneActive would be ignored"}
-        self.client.set_property(FOOTSWITCH, f"SceneActive{n}", True)
-        self._sleep(self.settle_s)
+        # Through the one write path like every other property (review
+        # round 1), and THEN through the effect the write is for: LastScene
+        # is what says the scene actually engaged (finding 4).
+        w = self._write_verified(FOOTSWITCH, f"SceneActive{n}", True)
         last = self.client.get_property(FOOTSWITCH, "LastScene")
-        ok = last == n - 1
-        return {"ok": ok, "detail": (f"scene {n} engaged" if ok else
-                                     f"scene {n} written, LastScene reads {last!r}")}
+        engaged = last == n - 1
+        ok = w["ok"] and engaged
+        return {"ok": ok, "written": w["ok"], "engaged": engaged,
+                "detail": (f"scene {n} engaged; {w['detail']}" if ok else
+                           f"scene {n}: {w['detail']}; LastScene reads {last!r}"
+                           f" (wanted {n - 1})")}
 
     # --- SceneSlots -----------------------------------------------------------
 

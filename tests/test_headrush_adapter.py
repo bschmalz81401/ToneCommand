@@ -134,6 +134,21 @@ def test_set_scene_needs_scene_mode_and_reads_last_scene_back(reg):
     assert a.set_scene(2)["ok"]
 
 
+def test_readback_scene_activation_goes_through_the_verified_write_path(reg):
+    """Review round 1: SceneActive is a property write like any other, so it
+    is read back through _write_verified, and the scene is only reported
+    engaged when LastScene agrees as well."""
+    sim, opener, a = make(reg, revert={(hr.FOOTSWITCH, "SceneActive2"): False})
+    sim.set_properties(hr.FOOTSWITCH, {"ModeNew2": 2, "LastScene": 1})
+    r = a.set_scene(2)
+    assert r["ok"] is False and r["written"] is False and r["engaged"] is True
+    assert "SceneActive2" in r["detail"]
+    sim2, _op, a2 = make(reg)
+    sim2.set_properties(hr.FOOTSWITCH, {"ModeNew2": 2})
+    r = a2.set_scene(2)                       # written, but LastScene never moved
+    assert r["ok"] is False and r["written"] is True and r["engaged"] is False
+
+
 def test_bypass_writes_the_blocks_own_on_switch(reg):
     sim, _op, a = make(reg)
     a.place_block(1, 19)
