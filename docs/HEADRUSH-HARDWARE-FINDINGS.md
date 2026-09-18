@@ -255,7 +255,7 @@ had never met a unit. If it were inverted, every scene an adapter wrote would be
 inverted, and the simulator would agree with the adapter all the way down
 because they share the constant.
 
-It is correct. Measured across three scenes on a rig that actually uses them.
+It is correct. Measured across four scenes on a rig that actually uses them.
 
 ### What the schema does and does not settle
 
