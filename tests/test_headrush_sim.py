@@ -171,9 +171,28 @@ def test_scenes_are_stored_on_the_devices_own_properties(sim):
 
 
 def test_the_mode_integers_are_the_measured_ones(sim):
-    """0/1/2 carry no names on the device. Which is which was measured on a
-    Core and cross-read from its bundle; guessing the order would put a
-    scene's blocks in exactly the wrong places."""
+    """0/1/2 carry no names on the device; `Scene{n}_{m}_Mode` publishes a bare
+    integer 0..2. Guessing the order would put a scene's blocks in exactly the
+    wrong places, and the simulator and anything written against it would agree
+    with each other the whole way down, because they share this constant.
+
+    VERIFIED ON A CORE, 2026-09-18 (#126, findings 4), on a rig that actually
+    uses scenes:
+
+      1 and 2   nineteen block-scene predictions across three live scenes,
+                comparing each slot's declared Mode against that block's own
+                `On` property. None wrong.
+
+      0         a block was forced off by one scene's Mode 2, turned ON by
+                hand so it contradicted that scene, and then a scene declaring
+                Mode 0 for it was selected. Nine other blocks moved to their
+                declared states; that one kept the contrary value. So 0 is
+                no_change rather than off, which a single off-and-happens-to-
+                be-off observation could not have distinguished.
+
+    The device's own sibling enums agree by convention, each naming index 0
+    "No Change": SceneDoubleSwitch, ScenePathSwitch, SceneExtAmp.
+    """
     from devices.headrush.sim import MODE_VALUE, SLOT_MODE
     assert SLOT_MODE == {0: "no_change", 1: "on", 2: "off"}
     assert MODE_VALUE["on"] == 1 and MODE_VALUE["off"] == 2

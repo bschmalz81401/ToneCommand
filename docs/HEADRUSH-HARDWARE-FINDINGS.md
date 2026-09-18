@@ -245,12 +245,122 @@ read out of the vendor's editor rather than measured: that is #130, and nothing
 in this commit implements it. What belongs here is only the six readings, which
 are what a later decode has to reproduce.
 
+## FINDING 4: the simulator's scene model is correct, and scene numbering is a trap
+
+The first check in this file that CONFIRMS something rather than correcting it.
+
+`devices/headrush/sim.py` models scene slots as `{0: no_change, 1: on, 2: off}`.
+That constant is on `main`, phases 4 and 5 will be written against it, and it
+had never met a unit. If it were inverted, every scene an adapter wrote would be
+inverted, and the simulator would agree with the adapter all the way down
+because they share the constant.
+
+It is correct. Measured across three scenes on a rig that actually uses them.
+
+### What the schema does and does not settle
+
+`Scene{n}_{m}_Mode` publishes no option names: `integer`, 0..2, nothing else. So
+the mapping is not readable from the device's self-description.
+
+Its siblings on the same object do publish names, and all three put "No Change"
+at index 0:
+
+    SceneDoubleSwitch{n}   ['No Change', 'A', 'B']
+    ScenePathSwitch{n}     ['No Change', 'A', 'B']
+    SceneExtAmp{n}         ['No Change', 'None', 'Tip', 'Ring', 'Both']
+
+That is convention within one object, which is a reason to expect 0 to mean no
+change and not a reason to claim it.
+
+### 1 and 2, measured
+
+Reading a live scene's declared modes against what each block was actually
+doing, with `block.On` as the observable:
+
+| scene | Mode=1 blocks | Mode=2 blocks | wrong |
+|---|---|---|---|
+| 5 | 4, all `On` | 5, all `Off` | 0 |
+| 8 | 5, all `On` | 5, all `Off` | 0 |
+| 6 | 5, all `On` | 4, all `Off` | 0 |
+
+Nineteen block-scene predictions, none wrong. `1` is on and `2` is off.
+
+### 0, measured as a retained state rather than a coincidence
+
+One block with Mode 0 that happens to be off proves nothing: that is equally
+consistent with 0 meaning off. So the test was built to be contrary.
+
+`Black Wah` is Mode 2 in scene 8 and Mode 0 in scene 6.
+
+    scene 8 active        Black Wah forced off by its Mode 2
+    turned ON by hand     now ON while the live scene declares OFF for it
+    scene 6 selected      nine other blocks moved to their declared states
+    Black Wah             still ON
+
+The scene change demonstrably acted, on nine blocks, and left this one alone
+while it held a value the previous scene had forbidden. That is `no_change`
+behaving as named, and it is not explicable as inertia.
+
+### THE SAME SCENE HAS FOUR DIFFERENT NUMBERS
+
+Confirmed twice, and the most likely thing here to be got wrong silently:
+
+    footswitch 5, labelled "SCENE 1"   ->  SceneActive6, LastScene 5
+    footswitch 7, labelled "SCENE 3"   ->  SceneActive8, LastScene 7
+
+So for one scene there is the label a player reads, the footswitch index, the
+`LastScene` value, and the index the slot data lives under. The mode predictions
+above were 9 for 9 and 10 for 10 using the `SceneActive` index, so
+`Scene{n}_{m}_Mode` and `SceneActive{n}` share an index while `LastScene` is that
+index minus one.
+
+An adapter that wrote `Scene1_*` because a user said "scene 1" would configure a
+scene nobody can reach from the front panel.
+
+Two samples, both from footswitches in Scene mode on one rig. The OFFSET is
+measured; that it is always exactly one, on every rig and every footswitch, is
+not.
+
+### What the simulator does not model
+
+Real, and a gap rather than an error. The slot data exists on every rig, blank
+ones included, so its presence says nothing about whether a scene is configured.
+What carries that is elsewhere:
+
+    SceneNumberOfStates{n}    1 on a blank rig
+    ModeNew{n}                0 Toggle, 1 Hold, 2 Scene, per footswitch
+    SceneActive{n}            which scene is live
+    FootSwitchText{n}         the label a player reads
+
+A blank test preset has all 140 slots present and no scene reachable, which is
+why an earlier attempt to activate one on such a rig did nothing at all.
+
+### Scene activation is not on the API
+
+Every property that looked like it should select a scene accepted a write and
+changed nothing: `SceneActive{n}`, `LastScene`, `ModeNew{n}`, `FootswitchHeld{n}`
+and `FootSwitchOn{n}` all took the value while `block.On` stayed put. Those
+properties report state; they do not accept input.
+
+Every scene change recorded here was made by @bschmalz81401 pressing a
+footswitch. How an adapter would select a scene is UNKNOWN, and the
+`object-method` surface is the obvious place to look next.
+
+### Method calls do work, and return values
+
+Separately established while setting this up: `loadRig(<rig id>, "")` on
+`/Evil/API/Rigs` loads a rig and returns `True`. That is the first
+`object-method` call this project has made on hardware, and it matters for #125
+beyond rig loading: the method surface returns meaningful values rather than
+only 200 or 504, so an allowlisted method can be verified by its return. Given
+how poorly read-back performed in finding 1, that is worth knowing.
+
 ## Not verified, and why
 
 | AC | status |
 |---|---|
 | 1. model and firmware | done, above |
-| 2. discovery, rigs, topology, scenes, reads, verified writes | BLOCKED, verifies the adapter from #125 |
+| 2. discovery, rigs, topology, scenes, reads, verified writes | PARTIAL. The ADAPTER cannot be verified without #125. The device behaviour behind three of these now has been: rig listing and selection (`loadRig`, finding 4), scene tri-state (finding 4), and parameter reads (finding 3). Topology selection and verified writes are still only #109's per-slot result and finding 1 |
 | 3. read-back after each write | PARTIAL. Every write in this session was read back. The AC2 write set was not run, because there is no adapter. AC3 is a procedure requirement, not a claim that read-back detects crashes; the argument that it does not is under finding 1 |
 | 4. non-allowlisted object-method refused before transport | BLOCKED, the allowlist is #125 |
 | 5. record failures rather than weaken claims | done, findings 1 and 2 |

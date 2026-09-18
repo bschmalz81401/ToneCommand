@@ -4,6 +4,37 @@ Notable changes to ToneCommand. Dates are UTC.
 
 ## Unreleased
 
+### Verified (HeadRush scene model, 2026-09-18)
+- THE SIMULATOR'S SCENE MAPPING IS CORRECT. `devices/headrush/sim.py` models
+  scene slots as `{0: no_change, 1: on, 2: off}`; that constant is on `main`,
+  phases 4 and 5 get written against it, and it had never met a unit. An
+  inverted mapping would have inverted every scene an adapter wrote, with the
+  simulator agreeing all the way down because both share the constant.
+- `Scene{n}_{m}_Mode` publishes no option names, so this is not readable from
+  the schema. 1 and 2 were measured by comparing a live scene's declared modes
+  against each block's own `On`: nineteen block-scene predictions across three
+  scenes, none wrong. 0 was measured as a RETAINED state rather than a
+  coincidence: a block was forced off by one scene, turned on by hand so it
+  contradicted that scene, and kept the contrary value when a scene declaring
+  Mode 0 for it moved nine other blocks.
+- ONE SCENE HAS FOUR DIFFERENT NUMBERS, confirmed twice: the label a player
+  reads, the footswitch index, `LastScene`, and the index the slot data lives
+  under. `Scene{n}_{m}_Mode` and `SceneActive{n}` share an index; `LastScene` is
+  that minus one. An adapter writing `Scene1_*` because a user said "scene 1"
+  would configure a scene nobody can reach from the front panel.
+- Scene ACTIVATION is not on the API. `SceneActive{n}`, `LastScene`,
+  `ModeNew{n}`, `FootswitchHeld{n}` and `FootSwitchOn{n}` each accepted a write
+  and changed nothing; every scene change recorded was a footswitch press. How
+  an adapter would select a scene is unknown.
+- The simulator models the slot data and not whether a scene is CONFIGURED.
+  Slots exist on every rig including blank ones, so their presence says nothing;
+  `SceneNumberOfStates{n}` and `ModeNew{n}` carry that. Recorded as a gap.
+- `loadRig(<rig id>, "")` on `/Evil/API/Rigs` loads a rig and returns `True`:
+  the first `object-method` call this project has made on hardware. The method
+  surface returns meaningful values rather than only 200 or 504, so an
+  allowlisted method can be verified by its return, which matters given how
+  poorly read-back performed on the ordinal tests.
+
 ### Added (HeadRush block and parameter registry, 2026-09-15)
 - `config/headrush_registry.json` plus `tools/build_headrush_registry.py` and
   `devices/headrush/registry.py` (#122): the committed schema turned into the
