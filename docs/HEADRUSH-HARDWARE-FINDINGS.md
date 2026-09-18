@@ -299,12 +299,132 @@ read out of the vendor's editor rather than measured: that is #130, and nothing
 in this commit implements it. What belongs here is only the six readings, which
 are what a later decode has to reproduce.
 
+## FINDING 4: the simulator's scene model is correct
+
+The first check in this file that CONFIRMS something rather than correcting it.
+
+`devices/headrush/sim.py` models scene slots as `{0: no_change, 1: on, 2: off}`.
+That constant is on `main`, phases 4 and 5 will be written against it, and it
+had never met a unit. If it were inverted, every scene an adapter wrote would be
+inverted, and the simulator would agree with the adapter all the way down
+because they share the constant.
+
+It is correct. Measured across four scenes on a rig that actually uses them.
+
+### What the schema does and does not settle
+
+`Scene{n}_{m}_Mode` publishes no option names: `integer`, 0..2, nothing else. So
+the mapping is not readable from the device's self-description.
+
+Its siblings on the same object do publish names, and all three put "No Change"
+at index 0:
+
+    SceneDoubleSwitch{n}   ['No Change', 'A', 'B']
+    ScenePathSwitch{n}     ['No Change', 'A', 'B']
+    SceneExtAmp{n}         ['No Change', 'None', 'Tip', 'Ring', 'Both']
+
+That is convention within one object, which is a reason to expect 0 to mean no
+change and not a reason to claim it.
+
+### 1 and 2, measured
+
+Each scene was engaged, then every Mode 1 or 2 slot was compared against that
+block's own `On` property. Counted by script rather than by eye, after an
+earlier draft of this section reported the total wrong:
+
+    scene 6    9 predictions
+    scene 7    9 predictions
+    scene 8   10 predictions
+    scene 9   10 predictions
+    TOTAL     38 predictions, 0 wrong
+
+`1` is on and `2` is off.
+
+### 0, measured in both directions
+
+One observation is not enough here, and an earlier version of this section
+stopped at one.
+
+A block at Mode 0 that happens to be off is equally consistent with `0` meaning
+off, so the test has to make the block hold a value the previous scene forbade.
+Do only that, and the block ends ON, which is equally consistent with `0`
+meaning ON and the scene writing a value the slot already held. The 38 Mode 1/2
+predictions never constrained Mode 0, so they do not close it either.
+
+Both directions, on the same scene and the same block. `Black Wah` is Mode 2 in
+scene 8 and Mode 0 in scene 6, and scene 6 declares Mode 1 or 2 for nine other
+slots, which move on each engage and show the scene acted:
+
+    scene 8 engaged      Black Wah forced off by its own Mode 2
+    turned ON by hand    holding a value scene 8 forbids
+    scene 6 engaged      nine others move; Black Wah stays ON
+                         -> 0 is not OFF
+
+    scene 8 engaged      Black Wah on, then turned OFF by hand
+    scene 6 engaged      nine others move; Black Wah stays OFF
+                         -> 0 is not ON
+
+Neither result alone identifies `no_change`; together they do. The unit declines
+to touch the slot rather than writing anything to it.
+
+Caught by independent review, which pointed out that the one-directional version
+left "actively declines to touch" unsupported while this document was being
+cited elsewhere as the evidence base for the tri-state.
+
+### Scene activation IS on the API, and two earlier claims here were wrong
+
+Writing `SceneActive{n} = true` engages scene `n` and applies its whole table,
+provided that switch is in scene mode (`ModeNew{n} = 2`). Confirmed on four
+scenes; the 38 predictions above were all taken on scenes engaged this way.
+
+An earlier version of this finding said activation was not on the API at all.
+That came from writing `SceneActive` on a BLANK test preset where `ModeNew` was
+0 on every switch, so there was no scene to engage, and then, after setting
+`ModeNew1 = 2`, trying `FootswitchHeld` and `FootSwitchOn` and never retrying
+`SceneActive`. An absence concluded from a test that could not have shown the
+presence.
+
+`bschmalz81401/HeadrushRigBuilder` had this measured and documented correctly on
+2026-09-07, including the same dependency on `ModeNew`. It was not consulted.
+
+### The index is consistent; only LastScene is zero based
+
+    ModeNew{n}   FootSwitchText{n}   SceneActive{n}   Scene{n}_{m}_Mode
+    all share the same n
+
+    LastScene = n - 1
+
+Measured by engaging scenes 6, 7, 8 and 9 and reading back: `LastScene` was 5,
+6, 7 and 8. The label (`FootSwitchText{n}`) is free operator text and on this
+rig reads "SCENE 1" through "SCENE 4" on switches 6 through 9, so it is the one
+number that carries no relationship at all.
+
+AN EARLIER VERSION OF THIS FINDING CLAIMED FOUR DIFFERENT NUMBERS FOR ONE
+SCENE, with the footswitch index one below the `SceneActive` index. That was
+wrong. It rested on a property read taken WHILE a rig was loading: the labels in
+that read were shifted by one against the ones the same rig reports when
+settled, and `loadedName` came back empty in the same response, which was
+noticed at the time and not treated as the warning it was.
+
+The practical lesson is narrower than the wrong claim was: a read taken during
+a load can mix rigs, and a scene table is exactly the shape where that is
+invisible. Settle before reading, or check `loadedName` is non-empty first.
+
+### Method calls do work, and return values
+
+Separately established while setting this up: `loadRig(<rig id>, "")` on
+`/Evil/API/Rigs` loads a rig and returns `True`. That is the first
+`object-method` call this project has made on hardware, and it matters for #125
+beyond rig loading: the method surface returns meaningful values rather than
+only 200 or 504, so an allowlisted method can be verified by its return. Given
+how poorly read-back performed in finding 1, that is worth knowing.
+
 ## Not verified, and why
 
 | AC | status |
 |---|---|
 | 1. model and firmware | done, above |
-| 2. discovery, rigs, topology, scenes, reads, verified writes | BLOCKED, verifies the adapter from #125 |
+| 2. discovery, rigs, topology, scenes, reads, verified writes | PARTIAL. The ADAPTER cannot be verified without #125. The device behaviour behind three of these now has been: rig SELECTION (`loadRig`, finding 4; listing is not shown), scene tri-state (finding 4), and parameter reads (finding 3). Topology selection and verified writes are still only #109's per-slot result and finding 1 |
 | 3. read-back after each write | PARTIAL. Every write in this session was read back. The AC2 write set was not run, because there is no adapter. AC3 is a procedure requirement, not a claim that read-back detects crashes; the argument that it does not is under finding 1 |
 | 4. non-allowlisted object-method refused before transport | BLOCKED, the allowlist is #125 |
 | 5. record failures rather than weaken claims | done, findings 1 and 2 |

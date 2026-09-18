@@ -4,6 +4,45 @@ Notable changes to ToneCommand. Dates are UTC.
 
 ## Unreleased
 
+### Verified (HeadRush scene model, 2026-09-18)
+- THE SIMULATOR'S SCENE MAPPING IS CORRECT. `devices/headrush/sim.py` models
+  scene slots as `{0: no_change, 1: on, 2: off}`; that constant is on `main`,
+  phases 4 and 5 get written against it, and it had never met a unit. An
+  inverted mapping would have inverted every scene an adapter wrote, with the
+  simulator agreeing all the way down because both share the constant.
+- `Scene{n}_{m}_Mode` publishes no option names, so this is not readable from
+  the schema. 1 and 2 were measured by engaging four scenes and comparing every
+  Mode 1 or 2 slot against that block's own `On`: 38 predictions, none wrong,
+  counted by script after an earlier draft reported the total wrong.
+- 0 was measured in BOTH DIRECTIONS, because one is not enough. A block held ON
+  through a Mode 0 scene shows 0 is not off; on its own it is equally consistent
+  with 0 meaning ON and the scene writing a value the slot already held. So the
+  same block was also turned OFF by hand and held OFF through the same scene,
+  which moved nine other slots each time. Neither alone identifies no_change;
+  together they do. The one-directional version was caught by review.
+- SCENE ACTIVATION IS ON THE API: writing `SceneActive{n} = true` engages scene
+  n and applies its table, provided `ModeNew{n} = 2`. An earlier version of this
+  entry said activation was not available at all, which came from writing
+  `SceneActive` on a blank preset where no switch was in scene mode. The
+  dependency on `ModeNew` was already measured and documented in
+  `bschmalz81401/HeadrushRigBuilder` on 2026-09-07, and was not consulted.
+- The index is CONSISTENT: `ModeNew{n}`, `FootSwitchText{n}`, `SceneActive{n}`
+  and `Scene{n}_{m}_Mode` share one n, and only `LastScene` is zero based at
+  n - 1. An earlier version claimed four different numbers for one scene, with
+  the footswitch index below the SceneActive index. That was wrong, and it
+  rested on a property read taken WHILE a rig was loading: the labels were
+  shifted by one against the settled values and `loadedName` came back empty in
+  the same response. A read during a load can mix rigs, and a scene table is
+  exactly the shape where that is invisible.
+- The simulator models the slot data and not whether a scene is CONFIGURED.
+  Slots exist on every rig including blank ones, so their presence says nothing;
+  `SceneNumberOfStates{n}` and `ModeNew{n}` carry that. Recorded as a gap.
+- `loadRig(<rig id>, "")` on `/Evil/API/Rigs` loads a rig and returns `True`:
+  the first `object-method` call this project has made on hardware. The method
+  surface returns meaningful values rather than only 200 or 504, so an
+  allowlisted method can be verified by its return, which matters given how
+  poorly read-back performed on the ordinal tests.
+
 ### Fixed (post-merge corrections, 2026-09-16)
 - A follow-up review of the final state of #127, #128, #129 and #130, after all
   four merged, found things the first pass could not: the fix commits were
