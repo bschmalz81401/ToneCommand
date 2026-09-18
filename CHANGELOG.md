@@ -146,18 +146,36 @@ Notable changes to ToneCommand. Dates are UTC.
 - Read-back verification does NOT detect it. The write was acknowledged, the
   read-back agreed, and the engine died after. That is the part that generalises
   and it constrains any verified-write built on read-and-compare.
-- Three roster entries have an ordinal and no object (4, 20, 254). That class is
-  a schema fact. 4 and 254 were NOT tested, because a test costs a crash on
-  someone's hardware, and refusing them is not free either: it means an adapter
-  can never select them and whether they work is unknown. Refusing all three is
-  offered to #125 as a judgement for the maintainer, not as a measurement.
-- Ordinal 19 was then TESTED directly, same rig, same slot, same protocol, with
-  health sampled every 0.5s: it was acknowledged, read back, and the unit stayed
-  up for 30s. So the pair is a controlled comparison. 19 (object published) is
-  harmless and 20 (no object published) took the unit down, which is the
-  strongest support here for "roster entry with no object" being what matters,
-  and it rules out the reading that the NAM module is dangerous to place.
-  Still n=1 per side; one pair is not a mechanism.
+- ALL THREE unbacked ordinals have now been tested, with their backed siblings
+  as controls, and they do three different things. 4 is acknowledged and then
+  silently reverted to 0 by the device within ~0.4s. 20 takes the unit down.
+  254 sticks and does not crash, but `/Evil/Engine/Patch/C-Verb_2` stays absent
+  while it is placed, so the slot holds a block with no object to address. The
+  three backed siblings (3, 19, 253) all simply stick.
+- SO "UNBACKED" DOES NOT PREDICT A CRASH. The earlier recommendation to refuse
+  all three rested on a class generalised from the one member that had been
+  tried, and the CLASS was wrong; the recommendation itself was conservative,
+  refusing 4 and 254 as a judgement pending measurement rather than claiming
+  they crashed. Revised now that they are measured: refuse 20 on the evidence;
+  no refusal is required for 4, which the device rejects itself, though a
+  prompt read-back is not enough to see that; refuse 254 as well, for the much
+  weaker reason that it occupies a slot with no object to address.
+- Verification needs three different checks, and read-back of the written value
+  is only one of them. 20: no read of the ModuleType catches it, prompt or
+  delayed, because the value is not what went wrong. 4: a prompt read-back
+  reports success for a write the device discards by t+0.39s, but a DELAYED
+  re-read sees 0 and is correct. 254: read-back is correct and stays correct,
+  so this is not a read-back failure at all; what detects it is object presence
+  (`C-Verb_2` is 404 while the block is placed). An earlier version of this
+  entry flattened all three into "read-back does not catch these", which is
+  false for 4 and would send #125 to delayed re-reads for 254, where no re-read
+  of that value can help.
+- Ordinal 19 was tested directly before 4 and 254, same rig, same slot, same
+  protocol, with health sampled every 0.5s: acknowledged, read back, and the
+  unit stayed up for 30s. That pair rules out the reading that the NAM module
+  is dangerous to place. It does NOT support "roster entry with no object" as
+  the class that matters, which the bullet above records as falsified; an
+  earlier version of this entry claimed it did.
 - A previous draft had cleared 19 on the wrong grounds, that the unit rebooted
   into a rig containing it, which is load-from-disk and not an API write. That
   had already been published to #125 as settled, and was corrected there.
