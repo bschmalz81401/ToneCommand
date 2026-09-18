@@ -55,3 +55,6 @@ handsoff-verifications.jsonl
 .handsoff-writeahead.json
 .handsoff-archive/
 .venv
+.handsoff-preflight.json
+.handsoff-analysis/
+.handsoff-digests/
