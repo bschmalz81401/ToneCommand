@@ -543,3 +543,21 @@ Observed 2026-09-05 on a fresh 80s build: scenes 4 and 8 were identical, and
 after that was fixed, scenes 1 and 7 were. Both passed the pre-ship review at
 the time, because it only looked at parameters the plan set and never at the
 channel map. It checks the channel map now, before anything is sent.
+
+## 16. Never a bare amp+cab (issue #96)
+A scene the plan voices with real gain/level values but no engaged effect and
+no boost is a generic preset, not a tone. The pre-ship review enforces this as
+a hard fail: a scene needs at least one audible tone-shaping dimension
+(modulation, time-based, pitch, filter/spatial, resonator, or synth - a
+compressor, gate, or crossover is real but does not count, and neither does
+an EQ block on its own, rule 17's separate concern) or a boost, engaged
+either by unbypassing the block or by dialling in a meaningful value on its
+own mix/depth/drive parameter directly (adding the block via add_block also
+counts - the grid is shared preset-wide, so a block placed there voices every
+scene that does not explicitly bypass it).
+
+## 17. Leave a fine-tune handle: an EQ block somewhere in the build (issue #97)
+A player should be able to adjust to their ears, room, or guitar without a
+rebuild. The pre-ship review warns (not fails - several professional presets
+gig fine with no EQ block at all, the same tendency-not-law reasoning as rule
+10's margin) when a whole build engages no PEQ or GEQ block anywhere.

@@ -9558,8 +9558,12 @@ let armTimer = null;          // the eight-second SEND window
 let armLeft = 0;
 
 function hasBlockers() {
-  return !!currentPlan && currentPlan.actions.some(
-    a => (a.validation_errors || []).length);
+  return !!currentPlan && (
+    currentPlan.actions.some(a => (a.validation_errors || []).length)
+    // Issue #96: the bland test is a gate, not a line item in a findings
+    // list a player can scroll past. A build that is only a bare amp+cab
+    // does not get to CONTINUE TO CONFIRM.
+    || currentPlan.bland_test_passed === false);
 }
 
 function canEnter(name) {
@@ -10356,10 +10360,18 @@ function setDirty(on) {
 
 // --- one request surface --------------------------------------------------
 
+// Issue #71: an open-ended, undecided message has no explicit build or
+// change request in it yet, so it must not fall through to 'build'/'modify'
+// (both of which go straight to engage(), the build/propose/confirm/send
+// path). It belongs in the conversation instead, where it can be clarified
+// before anything is proposed.
+const OPEN_ENDED_RE = /\b(not sure|no idea|don'?t know|help me decide|help me figure out|what should i|what do you think|thinking about|any ideas|any suggestions|brainstorm|talk it through|talk through|not decided|undecided)\b/i;
+
 function requestRoute(text) {
   const said = String(text || '').trim();
   if (/https?:\/\/\S+/i.test(said) || said.includes('\n') || said.length > 600)
     return 'source';
+  if (OPEN_ENDED_RE.test(said)) return 'chat';
   if (!(lastState.blocks || []).length
       || /\b(from scratch|whole rig|build|create|make me|give me|tone like|sound like)\b/i.test(said))
     return 'build';
@@ -10371,6 +10383,7 @@ function submitRequest() {
   const said = $('prompt').value.trim();
   if (!said) return;
   if (acquireIntent(said)) { talk(); return; }
+  if (requestRoute(said) === 'chat') { talk(); return; }
   if (copyIntent(said)) {
     $('prompt').value = '';
     growPrompt();

@@ -441,6 +441,71 @@ def curated_cab_roster() -> list[tuple[int, int, str]]:
     return out
 
 
+def full_cab_catalog_search(query: str, limit: int = 5) -> list[tuple[int, int, str]]:
+    """Search the WHOLE factory cab catalog (~2,235 entries across banks 0,
+    1 and 3; issue #6), not just curated_cab_roster()'s deduped bank-3 slice.
+
+    Retrieval-on-demand instead of inlining: the full catalog is too large to
+    put in the static planner reference (issue #6's own narrowed remaining
+    scope), so this answers "does the player's OWN wording name a specific
+    cab that isn't in the curated list" on demand, per request.
+    """
+    q = (query or "").strip().lower()
+    if not q:
+        return []
+    out: list[tuple[int, int, str]] = []
+    for bank_key, roster in reg.cab_rosters.items():
+        try:
+            bank = int(bank_key)
+        except (TypeError, ValueError):
+            continue
+        for ordn, name in roster.items():
+            if q in str(name).lower():
+                out.append((bank, int(ordn), str(name)))
+                if len(out) >= limit:
+                    return out
+    return out
+
+
+def cab_retrieval_context(request_text: str) -> str:
+    """A short grounding note for THIS turn only, when the request names a
+    cab the static curated_cab_roster() would not surface (issue #6).
+
+    Deliberately narrow: it only fires on a whole-word match of a token from
+    the request against a full-catalog cab name, so it cannot inject noise
+    into an unrelated request. It does not select a cab, bypass validation,
+    or bypass confirm-before-send; it only adds a fact for the planner to
+    reason with, same as the rest of param_reference().
+    """
+    text = (request_text or "").strip()
+    if not text:
+        return ""
+    # A short/common word ("warm", "tone", "clean") would false-match cab
+    # names that happen to contain it as an unrelated substring (e.g. "1x10
+    # Prince Tone 57 A" for the word "tone"). Six characters is long enough
+    # to mostly catch actual cab/gear names without also catching ordinary
+    # tone-descriptor vocabulary.
+    words = {w for w in re.findall(r"[A-Za-z0-9\-]+", text) if len(w) >= 6}
+    curated_keys = {(b, o) for b, o, _ in curated_cab_roster()}
+    seen: set[tuple[int, int]] = set()
+    hits: list[tuple[int, int, str]] = []
+    for w in sorted(words):
+        for bank, ordn, name in full_cab_catalog_search(w, limit=3):
+            key = (bank, ordn)
+            if key in curated_keys or key in seen:
+                continue
+            seen.add(key)
+            hits.append((bank, ordn, name))
+    if not hits:
+        return ""
+    lines = ["\nFULL CATALOG MATCH for this request (not in the curated cab "
+             "list above; select with set_cab using `bank` and `value` "
+             "exactly as given, only if this is really the cab meant):"]
+    for bank, ordn, name in hits[:5]:
+        lines.append(f"bank {bank} cab {ordn} = {name}")
+    return "\n".join(lines)
+
+
 def _tone_target_lines() -> list:
     """The numeric floors, given to the planner so it BUILDS to them.
 
@@ -518,6 +583,13 @@ def param_reference() -> str:
         for section in ("delay_types", "chorus_types", "multitap_types"):
             for name, model in (et.get(section) or {}).items():
                 lines.append(f"{name} = {model}")
+        no_source = et.get("unmapped_no_source") or {}
+        if no_source:
+            fams = ", ".join(sorted(no_source))
+            lines.append(f"\nNo real-world reference has been found for: {fams}. "
+                         "Do not guess or invent lineage for these; describe "
+                         "them only by what they do, never by what gear they "
+                         "supposedly model.")
     lines.append("\nReverb types selectable via set_type (block=reverb):")
     lines.append(", ".join(str(v) for v in reg.reverb_roster.values()))
     cabs = curated_cab_roster()
@@ -1964,12 +2036,21 @@ def _plan_counting(prompt: str, context: str, on_count=None, cancel=None):
     old = _os.environ.get("PLANNER_TIMEOUT")
     if planner.timeout_s() < describe.timeout_s():
         _os.environ["PLANNER_TIMEOUT"] = str(describe.timeout_s())
+    # Issue #6: retrieval-on-demand over the full ~2,235-entry cab catalog,
+    # scoped to THIS request only, rather than inlining it into the static
+    # PARAM_REFERENCE every request pays for.
+    ref = PARAM_REFERENCE + cab_retrieval_context(prompt)
+    # Issue #98: an internally opposed request ("tight but really warm and
+    # dark") gets named and leaned on deterministically, rather than left
+    # for the model to silently resolve one way with no explanation.
+    from fm9 import request_tension
+    ref += "\n".join(request_tension.context_lines(prompt))
     try:
         if on_count is None:
-            return planner.plan(prompt, context, PARAM_REFERENCE)
+            return planner.plan(prompt, context, ref)
         result = None
         for kind, payload in planner.plan_stream(prompt, context,
-                                                 PARAM_REFERENCE, cancel=cancel):
+                                                 ref, cancel=cancel):
             if kind == "count":
                 try:
                     on_count(payload)
@@ -2297,15 +2378,19 @@ def _plan_for(body: PromptBody, on_count=None, cancel=None, on_status=None):
         try:
             from fm9 import tone_review
             summary = tone_review.summary_from_plan(result.get("actions", []))
-            result["tone_review"] = tone_review.findings_as_dicts(
-                tone_review.review(summary))
+            findings = tone_review.review(summary)
+            result["tone_review"] = tone_review.findings_as_dicts(findings)
             # An empty findings list is not a pass on its own: it can also mean
             # nothing could be checked. Coverage says which (#54).
             result["tone_coverage"] = tone_review.coverage(summary)
+            # Issue #96: the bland test (rule 16) as a real gate, not just one
+            # more line in the findings list a player can scroll past.
+            result["bland_test_passed"] = tone_review.bland_test_passed(findings)
         except Exception:
             result["tone_review"] = []
             result["tone_coverage"] = {"status": "unknown", "checks_run": 0,
                                        "why": "the tone review did not run"}
+            result["bland_test_passed"] = True
         return result
     except planner.PlanCancelled:
         return {"error": "stopped"}

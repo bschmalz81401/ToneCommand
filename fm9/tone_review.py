@@ -17,11 +17,13 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
+from functools import lru_cache
 from pathlib import Path
 
 #: Numeric floors per role, so "generous mix" is arithmetic rather than taste.
 #: See config/tone_targets.json for why each number is what it is.
 TARGETS_PATH = Path(__file__).resolve().parent.parent / "config" / "tone_targets.json"
+CATALOG_PATH = Path(__file__).resolve().parent.parent / "config" / "fm9_catalog.json"
 
 
 def targets() -> dict:
@@ -62,6 +64,11 @@ class Scene:
     #: configured purely by set_channel was invisible here.
     channels: dict = field(default_factory=dict)
     bypass: dict = field(default_factory=dict)
+    #: True once an engaged (non-bypassed) PEQ or GEQ block is seen in this
+    #: scene's plan. Issue #97: a build must leave the player a real
+    #: post-build fine-tune handle, so this is tracked the same way effects
+    #: engagement already is.
+    eq_engaged: bool = False
 
     def shape(self) -> tuple:
         """What this scene stores, and therefore what makes it itself.
@@ -138,6 +145,31 @@ def clones(scenes: list[Scene]) -> list[Finding]:
                 f"nothing here makes scene {m.n} a different sound from scene "
                 f"{members[0].n}, and its footswitch would do nothing"))
     return out
+
+
+def _voiced(s: Scene) -> bool:
+    """True once the plan has said something SUBSTANTIVE about this scene's
+    TONE: a real gain/level/boost/depth value, or an explicit bypass state
+    for some block. Deliberately excludes two things that are NOT tone
+    voicing on their own:
+
+    - A bare set_channel reassignment (channels populated, everything else
+      empty) - that says WHICH channel a block sits on, not whether the
+      scene has been voiced at all, which is exactly the case
+      test_a_structural_finding_does_not_make_the_values_verified (#54)
+      pins as "nothing was verified about how this sounds".
+    - scene_level alone (OUTPUT_SCENEn). That is an output-level TRIM, the
+      same category of fact as a channel assignment: it says how loud this
+      scene is relative to the others, nothing about what it sounds like.
+      A plan that only balances scene volume has not voiced a tone any
+      more than one that only picks a channel has (explicit decision,
+      independent review round 3: see
+      test_scene_level_alone_is_not_tone_voicing).
+
+    Rules 16/17 have no opinion on a scene the plan does not actually build.
+    """
+    return (s.amp_gain is not None or s.amp_level is not None
+            or s.boost_gain is not None or bool(s.fx_mix) or bool(s.bypass))
 
 
 def review(scenes: list[Scene]) -> list[Finding]:
@@ -219,14 +251,194 @@ def review(scenes: list[Scene]) -> list[Finding]:
             out.append(Finding(s.n, "4", "warn",
                 f"amp level {s.amp_level:g} dB is very low; check it is not inaudible"))
 
+    # Issue #96, rule 16: the bland test's own "bare amp with no boost where
+    # one belongs" trigger, made real. A scene the plan leaves with zero
+    # engaged effects AND no boost is exactly the never-ship-a-bare-preset
+    # case - but only checkable once the plan has actually VOICED the scene
+    # (some real value: gain, level, boost, fx depth, or a bypass state),
+    # not merely reassigned which channel a block sits on. A first cut used
+    # s.bypass alone as that guard, which missed the realistic case of a
+    # scene built purely from set_param (amp gain/level) with no set_bypass
+    # call at all - exactly a bare amp+cab build, and exactly what this rule
+    # exists to catch.
+    for s in scenes:
+        if _voiced(s) and not s.effects and not s.boosted:
+            out.append(Finding(s.n, "16", "fail",
+                f"scene {s.n} is a bare amp+cab with nothing else engaged "
+                "(no effects, no boost); never ship a generic preset - add "
+                "the dimension the role needs (effects, boost, or both)"))
+
+    # Issue #97, rule 17: every build leaves a real post-build fine-tune
+    # handle. Whole-build, not per-scene: an EQ block is typically shared
+    # infrastructure, not something every single scene needs its own copy
+    # of, so one engaged EQ block anywhere in the build satisfies it. Same
+    # _voiced guard as rule 16.
+    #
+    # WARN, not fail. NOT because the professional reference pack proves
+    # real presets skip EQ - it does not capture PEQ/GEQ presence at all
+    # (tests/data/austinbuddy_sample.json has no such field), so it is
+    # silent on this question, not evidence either way (caught in
+    # independent review: citing it as proof here would have been
+    # overclaiming). The honest reason is the same PRECAUTION rule 10's
+    # margin already applies for a genuinely unmeasured tendency (issue
+    # #65): without real presence data to check this against, a hard fail
+    # risks blocking real professional work on a dimension nobody has
+    # actually verified matters as strictly as rule 16's bare-preset case
+    # does. Warn until that data exists.
+    if scenes and not any(s.eq_engaged for s in scenes) \
+            and any(_voiced(s) for s in scenes):
+        out.append(Finding(scenes[0].n, "17", "warn",
+            "no EQ block (PEQ or GEQ) is engaged anywhere in this build; "
+            "leave the player a real fine-tune handle to adjust to their "
+            "ears/room/guitar without a rebuild"))
+
     order = {"fail": 0, "warn": 1}
     out.sort(key=lambda f: (order.get(f.severity, 2), f.scene))
     return out
 
 
-# Effect families that count as "engaged wet/boost" when their block is on.
-_WET = {"DELAY", "REVERB", "CHORUS", "FLANGER", "PHASER", "MULTITAP"}
-_BOOST = {"FUZZ", "DRIVE"}
+def bland_test_passed(findings: list[Finding]) -> bool:
+    """The gate issue #96 asks for: has the bland test (rule 16) actually
+    passed, so a build can be proposed as-is. A "fail" on any other rule
+    does not block this specifically - rule 16 is the bare-preset check;
+    the other rules (8, 10, 15) have their own, separately surfaced meaning.
+    """
+    return not any(f.rule == "16" and f.severity == "fail" for f in findings)
+
+
+# Independent review found TWO different failures from inferring meaning
+# out of catalog parameter NAMES:
+#
+#   round 3: a hand-maintained short list (delay/reverb/chorus/flanger/
+#   phaser/multitap) missed real catalog families entirely.
+#
+#   round 4: the fix for that ("any family with a _MIX param") was ALSO
+#   wrong, in both directions at once. COMP/MULTICOMP/GATE/CROSSOVER/GEQ
+#   all have a _MIX param but add no tonal dimension (a compressor or gate
+#   is not what rule 16 means by "an effect"), so a scene with only those
+#   engaged wrongly PASSED as not-bare - and GEQ specifically, despite
+#   being declared interchangeable with PEQ for rule 17, silently also
+#   satisfied rule 16, while PEQ (no _MIX param) correctly did not.
+#   Meanwhile ENHANCER has only a _DEPTH param, no _MIX, so it fell out of
+#   the _MIX-only derivation entirely and a genuinely voiced ENHANCER-only
+#   scene wrongly FAILED as bare.
+#
+# "Has a blend parameter" is simply not the same fact as "is an audible
+# tone-shaping dimension." There is no naming convention left to lean on,
+# so this is an explicit, hand-classified, exhaustive table instead -
+# the semantic judgment a name pattern cannot make for us. Every family
+# the catalog gives a _MIX OR _DEPTH parameter to MUST appear here in
+# exactly one category; completeness is enforced by
+# test_every_catalogued_mix_or_depth_family_is_classified so a future roster addition
+# fails loudly in CI rather than silently reopening either loophole.
+#
+#   audible   a real tone-shaping dimension: modulation, time-based,
+#             pitch, filter/spatial, resonator, synth. Satisfies rule 16.
+#   dynamics  level/gain-staging utility (compressor, gate, crossover
+#             split). Real and useful, but adds no TONAL dimension, so it
+#             does not satisfy rule 16 on its own.
+#   eq        PEQ/GEQ. A DIFFERENT fine-tune handle, rule 17's concern,
+#             not rule 16's - engaging one sets eq_engaged, never effects,
+#             so it does not silently also satisfy rule 16.
+#   amp       DISTORT, the amp block itself: tracked via amp_gain/
+#             amp_level, a different dimension than "effects".
+#   boost     FUZZ, the dedicated boost/drive stage: tracked via
+#             boost_gain/boosted, not "effects".
+#
+# PEQ has no _MIX/_DEPTH parameter at all (confirmed against the
+# catalog), so it is not one of the 27 families the completeness test
+# requires - it is listed here anyway because it is still reachable
+# through set_bypass, and _apply_family_engagement below needs ONE table
+# that covers every family either path can produce, not two.
+FAMILY_CLASS: dict[str, str] = {
+    # audible: modulation
+    "CHORUS": "audible", "FLANGER": "audible", "PHASER": "audible",
+    "TREMOLO": "audible", "ROTARY": "audible", "RINGMOD": "audible",
+    # audible: time-based (delay family)
+    "DELAY": "audible", "MULTITAP": "audible", "MEGATAP": "audible",
+    "TENTAP": "audible", "PLEX": "audible",
+    # audible: pitch
+    "PITCH": "audible", "FORMANT": "audible",
+    # audible: filter / spatial / resonator / synth
+    "FILTER": "audible", "REVERB": "audible", "RESONATOR": "audible",
+    "SYNTH": "audible", "VOCODER": "audible", "WAH": "audible",
+    "ENHANCER": "audible",
+    # dynamics: level/gain-staging utility, not a tonal dimension
+    "COMP": "dynamics", "MULTICOMP": "dynamics", "GATE": "dynamics",
+    "CROSSOVER": "dynamics",
+    # eq: rule 17's concern, not rule 16's
+    "GEQ": "eq", "PEQ": "eq",
+    # amp / boost: tracked via their own dedicated Scene fields
+    "DISTORT": "amp", "FUZZ": "boost",
+}
+
+
+def _apply_family_engagement(s: Scene, fam: str, *, meaningful: bool) -> None:
+    """The ONE place a family's engagement turns into effects/boosted/
+    eq_engaged, used identically whether it was learned from
+    set_bypass(bypassed=False) or from a meaningful value on the family's
+    own _MIX/_DEPTH/_DRIVE parameter.
+
+    Independent review found this split into two hand-maintained,
+    divergent implementations FOUR times in a row (rounds 1, 2, 4, 5):
+    each round's fix patched one path (usually set_bypass) while the
+    other (usually the _MIX/_DEPTH param path) stayed stale, so the same
+    class of false pass/fail kept resurfacing under a new parameter name
+    every round. One function, called from both places against the same
+    FAMILY_CLASS, is the actual fix: a family cannot register as engaged
+    through one path and not the other, because there is only one path.
+
+    `meaningful` lets a caller say "this specific observation does not
+    count" (bypassed=True does not reach here at all; an explicit 0 or
+    missing _MIX/_DEPTH value is not real engagement) without that
+    judgment being duplicated at every call site.
+    """
+    if not meaningful:
+        return
+    cls = FAMILY_CLASS.get(fam)
+    if cls == "audible":
+        s.effects.add(fam)
+    elif cls == "boost":
+        s.boosted = True
+    elif cls == "eq":
+        s.eq_engaged = True
+    # dynamics / amp / unclassified: no engagement flag lives here.
+    # Dynamics is real but not a tonal dimension (rule 16); amp is
+    # tracked via amp_gain/amp_level, not this mechanism.
+
+
+def _catalog_mix_or_depth_families() -> frozenset[str]:
+    """Every family the catalog actually gives a _MIX or _DEPTH parameter
+    to - the exhaustive set FAMILY_CLASS must cover. Read fresh (not
+    cached): this is a completeness CHECK, run once at test time, not a
+    hot path."""
+    try:
+        data = json.loads(CATALOG_PATH.read_text())
+        return frozenset(
+            p["family"] for p in data["data"]["FM9_PARAMS"]
+            if str(p.get("name", "")).upper().endswith(("_MIX", "_DEPTH")))
+    except (OSError, ValueError, KeyError, TypeError):
+        return frozenset()
+
+
+#: A small, known-good fallback if the catalog cannot be read (missing
+#: file, unexpected shape). Degrades to less coverage rather than raising -
+#: same philosophy as targets() above: a missing/corrupt file must never
+#: take a tone review down, only make it less complete. Unreachable in
+#: practice once FAMILY_CLASS covers every real catalog family; kept as
+#: the honest degrade path if the file itself ever goes missing.
+_WET_FALLBACK = frozenset({"DELAY", "REVERB", "CHORUS", "FLANGER", "PHASER", "MULTITAP"})
+
+
+@lru_cache(maxsize=1)
+def wet_families() -> frozenset[str]:
+    """Every family classified "audible" in FAMILY_CLASS - an explicit,
+    exhaustive semantic judgment, not an inference from parameter naming
+    (see the long comment above FAMILY_CLASS for why naming alone failed
+    twice in independent review)."""
+    if not _catalog_mix_or_depth_families():
+        return _WET_FALLBACK
+    return frozenset(fam for fam, cls in FAMILY_CLASS.items() if cls == "audible")
 
 
 def summary_from_plan(actions: list[dict], reg=None) -> list[Scene]:
@@ -242,6 +454,22 @@ def summary_from_plan(actions: list[dict], reg=None) -> list[Scene]:
         return scenes.setdefault(n, Scene(n=n))
 
     cur = None
+    # add_block places a block on the shared grid, not into "the scene
+    # active when it ran" - the FM9 invariant this module documents
+    # elsewhere is that a scene's identity is its BYPASS and CHANNEL
+    # state, and neither of those is what add_block sets. A newly added
+    # block exists in every scene at once (arrives un-bypassed, per
+    # server.py's own "factory-default settings" behavior), and a given
+    # scene only differs from that shared default once something scene-
+    # specific (set_bypass, set_channel) says so. So this is tracked
+    # separately from `cur` here and applied to every scene at the end,
+    # rather than folded into whichever scene happened to be selected
+    # when the add_block action ran (found in independent review: a
+    # scene voiced purely by adding a new effect block - the documented,
+    # correct way to place chorus/phaser/wah/pitch/etc, none of which are
+    # on the starter template - produced no Scene entry for the block at
+    # all, so it read as a bare amp+cab and a false rule-16 fail).
+    added_families: set[tuple[str, str]] = set()
     for a in actions:
         kind = a.get("kind")
         if kind == "set_scene":
@@ -265,12 +493,28 @@ def summary_from_plan(actions: list[dict], reg=None) -> list[Scene]:
                 scn(cur).amp_level = val
             elif p == "FUZZ_DRIVE":
                 scn(cur).boost_gain = val
+                # Setting a boost's own gain is intent to use it, whether or
+                # not this same plan also (re-)states set_bypass - a donor/
+                # inherited channel can already be engaged, with the plan
+                # only touching its level.
+                _apply_family_engagement(scn(cur), "FUZZ",
+                                          meaningful=val is not None and val != 0)
             elif p.endswith("_MIX") or p.endswith("_DEPTH"):
                 fam = p.rsplit("_", 1)[0]
                 # Depth is what makes an effect audible. A plan that engages
                 # reverb and leaves it at 12 percent has not made a lush clean.
                 if val is not None:
                     scn(cur).fx_mix[fam] = val
+                # Same reasoning as FUZZ_DRIVE above: dialling a family's own
+                # mix/depth is intent to use it, independent of whether this
+                # plan also touches that block's bypass. An explicit 0 is
+                # not real engagement (found in independent review: FUZZ_MIX
+                # and GEQ_MIX set this way used to reach only `effects` via
+                # wet_families(), silently never reaching boosted/eq_engaged
+                # for FUZZ/GEQ - one shared classification now covers all
+                # three outcomes for both this path and set_bypass below).
+                _apply_family_engagement(scn(cur), fam,
+                                          meaningful=val is not None and val != 0)
             elif p.startswith("OUTPUT_SCENE"):
                 tail = p.replace("OUTPUT_SCENE", "")
                 if tail.isdigit():
@@ -284,10 +528,7 @@ def summary_from_plan(actions: list[dict], reg=None) -> list[Scene]:
                 fam = block.upper()
                 # normalise a couple of friendly names
                 fam = {"AMP": "DISTORT", "DRIVE": "FUZZ"}.get(fam, fam)
-                if fam in _WET:
-                    scn(cur).effects.add(fam)
-                if fam in _BOOST:
-                    scn(cur).boosted = True
+                _apply_family_engagement(scn(cur), fam, meaningful=True)
         elif kind == "set_channel" and cur is not None:
             # The action that was dropped entirely. A scene voiced purely by
             # pointing blocks at already-voiced channels sets no parameters,
@@ -295,11 +536,32 @@ def summary_from_plan(actions: list[dict], reg=None) -> list[Scene]:
             v = a.get("value")
             if v is not None:
                 scn(cur).channels[block] = int(v)
+        elif kind == "add_block":
+            # Grid-global (see the comment above the loop): not tied to
+            # `cur`, and never written into channels/bypass, so it cannot
+            # manufacture a false rule-15 clone difference between two
+            # scenes that both simply inherit the same shared block. Kept
+            # as (raw block key, classified family): bypass is keyed by
+            # the RAW block string (lowercase, unmapped - see set_bypass
+            # above), so the override check below must look up the same
+            # key a later set_bypass for this block would actually use.
+            fam = {"AMP": "DISTORT", "DRIVE": "FUZZ"}.get(block.upper(), block.upper())
+            added_families.add((block, fam))
 
     # fill roles for any scene named but not yet role'd
     for s in scenes.values():
         if s.role is None and s.name:
             s.role = infer_role(s.name)
+
+    # Apply every globally-added block's engagement to every scene that
+    # does not explicitly bypass it. An explicit set_bypass for THIS scene
+    # (either direction) is the scene-specific fact that wins; add_block
+    # only supplies the shared default.
+    for block_key, fam in added_families:
+        for s in scenes.values():
+            if s.bypass.get(block_key) is not True:
+                _apply_family_engagement(s, fam, meaningful=True)
+
     return [scenes[k] for k in sorted(scenes)]
 
 

@@ -185,5 +185,10 @@ def test_a_plan_that_sets_a_mix_still_records_its_depth():
 
 
 def test_a_scene_with_no_role_is_still_not_judged():
-    assert tone_review.review(
-        [Scene(4, "Scene 4", None, amp_gain=2.0, amp_level=-8.0)]) == []
+    # no role -> no ROLE-SPECIFIC findings (rules 8, 10). Rules 16/17 are
+    # role-agnostic and correctly still apply: this scene has real gain/
+    # level but no effects, no boost, and no EQ, which is a bare amp+cab
+    # regardless of whether its role could be inferred.
+    f = tone_review.review([Scene(4, "Scene 4", None, amp_gain=2.0, amp_level=-8.0)])
+    assert not [x for x in f if x.rule in ("8", "10")]
+    assert {x.rule for x in f} == {"16", "17"}

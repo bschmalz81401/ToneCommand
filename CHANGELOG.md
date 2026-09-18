@@ -408,6 +408,66 @@ Notable changes to ToneCommand. Dates are UTC.
   pivot looks like string matching and is not: exact matching after
   normalisation finds 4 of 100. Cross-device translation needs a
   human-confirmed mapping and is its own piece of work.
+### Security
+- **A clarifying question could ship alongside actions anyway.** The prompt
+  already told the planner "actions must be empty when clarification is
+  set", but nothing in code enforced it, so a model that ignored the
+  instruction could return both: the UI would show the question in the
+  conversation while still proposing the actions for confirm/send.
+  `fm9/planner.py`'s `_validate` now forces `actions = []` whenever
+  `clarification` is truthy, unconditionally (#72).
+- **An open-ended, undecided message went straight to the build path.**
+  `requestRoute()` (ui/index.html) only ever classified a first-contact
+  message as `source`, `build`, or `modify`; a message with no explicit
+  build/change trigger yet ("not sure what I want", "any ideas?") fell into
+  `modify` and was sent straight to the planner instead of the
+  conversation. `requestRoute()` now recognises open-ended phrasing and
+  routes it to chat first (#71).
+
+### Added
+- **Never a bare amp+cab preset.** config/tone_rules.md's own "bland test"
+  (rule 14) is now a real, enforced gate rather than prose a build could
+  quietly fail: `fm9/tone_review.py` rule 16 fails a scene the plan leaves
+  with zero engaged effects and no boost, `bland_test_passed` rides on the
+  plan result, and the UI will not let CONTINUE TO CONFIRM proceed past it
+  (#96).
+- **Every build leaves an EQ fine-tune handle.** `tone_review.py` now
+  tracks PEQ/GEQ engagement and warns when a build leaves no engaged EQ
+  block anywhere, so a player is nudged toward a real post-build
+  adjustment handle. A warning rather than a hard fail, the same call
+  already made for rule 10's lead margin (issue #65): several presets in
+  the professional reference pack gig fine with no EQ block at all (#97).
+- **Conflicting requests get named, not silently resolved.** A curated,
+  deterministic table (`fm9/request_tension.py`) recognises tonal
+  descriptor pairs that genuinely pull in opposite directions on an FM9
+  ("tight" vs "warm/dark", "dry" vs "ambient", ...), each with a documented
+  lean cited to a specific tone_rules.md rule, and surfaces the tension in
+  the planner's context for that request instead of letting one reading
+  win with no explanation (#98).
+- **Retrieval over the full cab catalog.** The planner's static reference
+  only ever carried a curated, deduped slice of bank 3 (issue #45); the
+  other ~2,200 factory cab entries across banks 0 and 1 were invisible to
+  it no matter what a player asked for. `full_cab_catalog_search`/
+  `cab_retrieval_context` (server.py) search the whole catalog on demand
+  and append a match to that turn's context only when the request actually
+  names something the curated list doesn't carry (#6).
+- **Flanger/phaser/wah are marked "no source found", not silently absent.**
+  Issue #5's own gate is "if no usable reference exists for a family,
+  report that and stop for that family, never guess"; before this, an
+  unmapped family just wasn't in `config/effect_type_models.json`, which
+  looked identical to "nobody checked yet". `unmapped_no_source` now
+  records the reason per family, and the planner reference states it by
+  name (#5).
+- **Local, secret-scrubbed error logging.** `fm9/diagnostics.py` logs
+  structured JSON-lines entries to a local, per-machine file, scrubbed on
+  write against Anthropic/generic API-key and Bearer-token shapes and
+  `*_API_KEY`/`*_TOKEN`/`*_SECRET`-style assignments, pruned to a 14-day
+  retention window. The module makes no network call of any kind, so
+  nothing is uploaded anywhere by default (#107, Epic H).
+- **Voluntary "share this error".** `package_for_sharing()` builds a
+  pre-filled GitHub issue (title, body, URL) from the scrubbed local log
+  for a player to review; it never sends anything itself, only a click on
+  the URL does (#108, Epic H).
 
 ### Changed
 - **The device contract stopped being decorative, so a second device can
