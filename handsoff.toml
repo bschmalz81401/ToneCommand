@@ -53,3 +53,10 @@ live_commands = [
 # Per-command timeout. A hanging check is killed and recorded as exit 124
 # rather than hanging the Supervisor indefinitely.
 timeout_seconds = 600
+
+[agent_budget]
+architect = 120000
+supervisor = 40000
+implementer = 160000
+reviewer = 100000
+followup_design = 100000

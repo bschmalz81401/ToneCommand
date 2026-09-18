@@ -88,6 +88,21 @@ def test_gate_matrix_is_derived_from_the_contract():
         "FIXED is the bottom rung; Topology has no NONE member"
 
 
+def test_set_tempo_reports_unverified_send_once():
+    """REQ-001: no tempo read-back means the result cannot be ok=True."""
+    dev = SimFM9(server.Registry())
+    sent: list[int] = []
+    dev.set_tempo = lambda bpm: sent.append(int(bpm))
+
+    got = server.run_action(dev, server.Action(kind="set_tempo", value=135))
+
+    assert sent == [135]
+    assert got == {
+        "ok": False,
+        "detail": "tempo 135 bpm sent (unverified; no read-back)",
+    }
+
+
 # --- the world around the device, stubbed or isolated ---------------------
 
 STUB_PLAN = {

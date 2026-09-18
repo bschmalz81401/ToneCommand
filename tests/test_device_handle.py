@@ -358,14 +358,7 @@ def test_scene_state_is_tri_state_and_slots_are_addressed_by_name():
 
 
 def test_set_tempo_action_still_reports_what_it_reported_before():
-    """The tempo write is the one production call site this ticket converts
-    from `fm9._send` to a public method.
-
-    It reports ok:True without reading anything back, unlike every other write
-    in run_action. That is #110 and is deliberately NOT fixed here; this pins
-    the current output so converting the call site cannot absorb that fix by
-    accident, in either direction.
-    """
+    """REQ-001: a single tempo send is explicitly unverified."""
     import server
     from fm9.sim import SimFM9
     from fm9.registry import Registry
@@ -376,8 +369,8 @@ def test_set_tempo_action_still_reports_what_it_reported_before():
 
     got = server.run_action(dev, server.Action(kind="set_tempo", value=120))
     assert sent == [120], "the action no longer reaches the device"
-    assert got["ok"] is True
-    assert got["detail"] == "tempo 120 bpm sent"
+    assert got["ok"] is False
+    assert got["detail"] == "tempo 120 bpm sent (unverified; no read-back)"
 
 
 def test_changelog_entry_exists_and_touched_files_have_no_em_dash():

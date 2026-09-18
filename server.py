@@ -2847,7 +2847,7 @@ def run_action(fm9: DeviceAdapter, a: Action) -> dict:
                 "detail": f"scene {got}" + (f" \"{name[1]}\"" if name else "")}
     if a.kind == "set_tempo":
         fm9.set_tempo(int(a.value))
-        return {"ok": True, "detail": f"tempo {int(a.value)} bpm sent"}
+        return {"ok": False, "detail": f"tempo {int(a.value)} bpm sent (unverified; no read-back)"}
 
     fam, eid = reg.resolve_block(a.block or "", a.instance)
     if a.kind == "set_bypass":
