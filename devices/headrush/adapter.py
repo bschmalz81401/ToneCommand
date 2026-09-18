@@ -258,16 +258,25 @@ class HeadrushAdapter:
                     "detail": f"switch {n} is not in scene mode (ModeNew{n} "
                               f"= {mode!r}); SceneActive would be ignored"}
         # Through the one write path like every other property (review
-        # round 1), and THEN through the effect the write is for: LastScene
-        # is what says the scene actually engaged (finding 4).
+        # round 1), so the flag IS read back and reported. But success is
+        # judged on the effect the write is for: LastScene moving to n - 1
+        # is what finding 4 measured as "the scene engaged". Whether
+        # SceneActive stays True afterwards or is a pulse the unit clears is
+        # NOT measured, so `written` is reported and not required; requiring
+        # it would turn a working activation into a false negative on the
+        # one behaviour here that hardware has confirmed.
         w = self._write_verified(FOOTSWITCH, f"SceneActive{n}", True)
         last = self.client.get_property(FOOTSWITCH, "LastScene")
         engaged = last == n - 1
-        ok = w["ok"] and engaged
-        return {"ok": ok, "written": w["ok"], "engaged": engaged,
-                "detail": (f"scene {n} engaged; {w['detail']}" if ok else
-                           f"scene {n}: {w['detail']}; LastScene reads {last!r}"
-                           f" (wanted {n - 1})")}
+        if not w["ok"]:
+            self.undecoded.add(
+                f"SceneActive{n} did not read back True after the settle; "
+                "whether it is a pulse the unit clears is unmeasured")
+        return {"ok": engaged, "written": w["ok"], "engaged": engaged,
+                "detail": (f"scene {n} engaged (LastScene {last}); {w['detail']}"
+                           if engaged else
+                           f"scene {n} not engaged: LastScene reads {last!r} "
+                           f"(wanted {n - 1}); {w['detail']}")}
 
     # --- SceneSlots -----------------------------------------------------------
 
