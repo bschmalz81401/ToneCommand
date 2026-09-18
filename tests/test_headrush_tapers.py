@@ -29,7 +29,11 @@ def blob():
 # --- the one that earns the module ---------------------------------------
 
 def test_every_curve_matches_the_vendors_own_output(table, blob):
-    """All 726 vectors, each computed by executing the vendor's function.
+    """Every vector, each computed by executing the vendor's function.
+
+    The count itself is pinned next door in
+    test_the_vector_set_covers_every_taper_and_several_shapes, so this one
+    derives rather than repeating a number that has already drifted once.
 
     Relative tolerance, because these span 1e-10 to 16000 and an absolute
     epsilon would be meaningless at both ends.
@@ -44,7 +48,16 @@ def test_every_curve_matches_the_vendors_own_output(table, blob):
         assert got == pytest.approx(expected, rel=1e-9, abs=1e-12), (
             f"algo {algo} ({table.name(algo)}) at wire {wire} on {lo}..{hi}")
         checked += 1
-    assert checked == 939, f"expected every finite vector, compared {checked}"
+    # Derived rather than hardcoded, and that is safe only because the two
+    # numbers it derives FROM are pinned elsewhere: the row count (990) in
+    # test_the_vector_set_covers_every_taper_and_several_shapes and the refusal
+    # count (51) in test_the_points_the_vendor_has_no_number_for. With both
+    # fixed, the finite count is determined, so non-finite creep at a constant
+    # row count fails there rather than passing quietly here.
+    expected = sum(1 for v in blob["vectors"]
+                   if v["display"] is not None and math.isfinite(v["display"]))
+    assert checked == expected, f"expected every finite vector, compared {checked}"
+    assert checked == len(blob["vectors"]) - 51, "and the two pins agree"
 
 
 def test_the_vector_set_covers_every_taper_and_several_shapes(blob):

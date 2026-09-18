@@ -22,7 +22,7 @@ HOW THE FORMULAS GOT HERE
 Not by reading the minified JavaScript and retyping the maths. `Db` and
 `AllenHeathFaderVolume` are exactly the shapes that survive a typo and still
 return plausible numbers. The generator runs the vendor's own code under node
-over a grid of 726 points and commits the results, and the Python below is
+over a grid of 990 points and commits the results, and the Python below is
 checked against those vectors. So a mistake in this file fails a test rather
 than becoming a confidently wrong dB value.
 

@@ -87,10 +87,16 @@ def test_an_unknown_path_is_a_404_not_a_blank_object(sim, client):
     raising its own type would let phase 4 be written to catch something
     hardware never throws, so this pins HTTPError rather than SimError.
     """
+    import json as _json
+
     with pytest.raises(urllib.error.HTTPError) as err:
         client.get_properties("/Evil/Engine/Patch/NotAThing")
     assert err.value.code == 404
-    assert "no object at" in str(err.value)
+    # The description is in the BODY, not in str(error): the unit puts the
+    # standard phrase in the reason slot. This assertion used to read
+    # str(err.value), which passed only while the sim was shaping errors in a
+    # way the hardware does not. See the shaping test below.
+    assert "no object at" in _json.loads(err.value.read())["desc"]
 
 
 def test_calling_the_sim_directly_still_raises_its_own_type(sim):
@@ -237,3 +243,49 @@ def test_the_sim_serves_only_the_integer_the_device_serves(sim, client):
     assert chain["Routing"] == 0
     assert not any("role" in k.lower() or "branch" in k.lower() for k in chain)
     assert sim.topologies.api_readable is False
+
+
+# --- the wire boundary matches the shape a real unit sends -----------------
+
+def test_an_error_is_shaped_the_way_the_real_unit_shapes_one(sim, client):
+    """Measured on a Core, 2026-09-18. Two earlier attempts got this wrong in
+    opposite directions and nothing failed, because nothing asserted it.
+
+    The first put the whole SimError text in the reason slot, so urllib
+    rendered "HTTP Error 404: 404 no object at ...". The second used the bare
+    message, which stopped the doubling and still did not match: the unit puts
+    the standard HTTP phrase in reason and the description in a JSON body.
+    """
+    import json as _json
+
+    with pytest.raises(urllib.error.HTTPError) as err:
+        client.get_properties("/Evil/Engine/Patch/NotAThing")
+    error = err.value
+
+    assert error.code == 404
+    assert error.reason == "Not Found", "the phrase, not prose"
+    assert not str(error.reason).startswith("404"), "and never the status twice"
+    assert "404 404" not in str(error), "which is how the doubling showed up"
+
+    # .headers must be usable, and the type urllib actually attaches
+    from http.client import HTTPMessage
+    assert isinstance(error.headers, HTTPMessage)
+    assert error.headers.get("Content-Type") == "application/json"
+
+    # the description lives in the body, as JSON, as the unit sends it
+    body = _json.loads(error.read())
+    assert set(body) == {"desc", "reason", "status"}
+    assert body["status"] == 404 and body["reason"] == "Not Found"
+    assert "no object at" in body["desc"]
+    assert not body["desc"].startswith("404"), "body must not double it either"
+
+
+def test_the_refused_method_error_has_the_same_shape(sim, client):
+    """The other status this sim raises, so the shaping is not 404-only."""
+    import json as _json
+
+    with pytest.raises(urllib.error.HTTPError) as err:
+        client.call_method("/Evil/Engine/Patch/Chain", "doSomething")
+    assert err.value.code == 501
+    assert err.value.reason == "Not Implemented"
+    assert _json.loads(err.value.read())["status"] == 501

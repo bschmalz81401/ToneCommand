@@ -52,7 +52,7 @@ file carries `provenance: "vendor editor bundle"` and `api_readable: false`.
 NOTHING IS TRANSCRIBED BY EYE. A hand-copied formula is a guess that looks like
 a fact, and `Db` and `AllenHeathFaderVolume` are exactly the shapes that survive
 a typo while returning plausible numbers. The generator extracts the vendor's
-own functions, RUNS them under node over a grid of 726 points, and commits the
+own functions, RUNS them under node over a grid of 990 points, and commits the
 results. `devices/headrush/tapers.py` is checked against those vectors rather
 than against anyone's reading of the JavaScript.
 

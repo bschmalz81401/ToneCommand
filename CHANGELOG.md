@@ -4,6 +4,57 @@ Notable changes to ToneCommand. Dates are UTC.
 
 ## Unreleased
 
+### Fixed (post-merge corrections, 2026-09-16)
+- A follow-up review of the final state of #127, #128, #129 and #130, after all
+  four merged, found things the first pass could not: the fix commits were
+  themselves unreviewed, and several published numbers had moved.
+- `describe_unreachable()` was BLANKET-CLAIMING that a 404 rules out HeadRush
+  Remote. The measured table is path dependent: with Remote off,
+  `object-properties` and `object-meta` answer 403 but `subtree` answers 404.
+  So the claim was wrong for exactly the endpoint `client.subtree()` uses. It
+  now classifies on the request URL as well as the status, and says how to
+  disambiguate. The test that covered this asserted the overclaim, which is
+  what kept it alive; it is replaced by one test per path shape.
+- Five published strings still said the taper grid was 726 points after it
+  became 990 (`CHANGELOG`, `THIRD_PARTY_NOTICES`, `config/README.md`,
+  `devices/headrush/tapers.py`, and the docstring of the test that asserts 990).
+  The notices one was a false statement about the committed file.
+- The registry's read-only count was wrong in a comment: 893 per object comes
+  from 448 unique metas among those the registry INCLUDES, not from the 491
+  that counts all 161 metas and expands to 936. Different scopes rather than
+  unique versus expanded of one set.
+- `grid` versus format precision is 1840 of the 1880 that publish both, with 40
+  diverging, not 1841 of 1881. `UsedSpace` publishes a format and no grid.
+- `wire_encoding.measured_on` counted `Amp.TremDepth` among the readings that
+  establish the 0..1 wire. It does not: 0 reads as 0 under either scale, so it
+  discriminates nothing. Recorded as a reading that was taken and does not bear
+  on the claim.
+- Two registry docstrings restated findings that had already been withdrawn:
+  one kept the "high pass off" interpretation the generator had dropped, and
+  one said nothing in the schema tells two tapers apart, which stopped being
+  true when `normalizeAlgo` was carried through as `taper_id`.
+- `devices/headrush/sim.py` now shapes an error the way the REAL unit shapes
+  one, MEASURED on a Core rather than reasoned about. Two earlier attempts got
+  it wrong in opposite directions and nothing failed, because nothing asserted
+  it: the first put the whole `SimError` text in the reason slot, so a missing
+  path rendered "HTTP Error 404: 404 no object at ..."; the second used the
+  bare message, which stopped the doubling and still did not match.
+- What the unit sends: `reason` is the standard phrase (`Not Found`), the
+  description is in a JSON body (`{"desc": ..., "reason": ..., "status": ...}`)
+  with `Content-Type: application/json`, and the header object is
+  `http.client.HTTPMessage`, not the `email.message.Message` an earlier fix
+  used because it merely was not None. The body also still carried the doubled
+  prefix the previous entry claimed to have removed.
+- Tests now assert that shape, including that neither the reason nor the body
+  starts with the status. A test that read the description out of
+  `str(error)` was passing only because the sim was wrong, and now reads the
+  body.
+- `describe_unreachable()`'s 404 branch classifies on the ENDPOINT SEGMENT
+  rather than a `"/subtree" in url` substring, and only makes the "this is not
+  Remote" claim for `object-properties` and `object-meta`, the two endpoints it
+  was measured on. `object-method` and an unreadable url now get neither claim
+  and say the behaviour there was not measured.
+
 ### Added (HeadRush block and parameter registry, 2026-09-15)
 - `config/headrush_registry.json` plus `tools/build_headrush_registry.py` and
   `devices/headrush/registry.py` (#122): the committed schema turned into the
@@ -194,7 +245,7 @@ Notable changes to ToneCommand. Dates are UTC.
   same provenance class as `headrush_topologies.json` and carries
   `api_readable: false`.
 - NOTHING IS TRANSCRIBED BY EYE. The generator extracts the vendor's own
-  functions, RUNS them under node across 726 points, and commits the results;
+  functions, RUNS them under node across 990 points, and commits the results;
   the Python is tested against those vectors rather than against a reading of
   the JavaScript. `Db` and `AllenHeathFaderVolume` are exactly the shapes that
   survive a typo while still returning plausible numbers.
