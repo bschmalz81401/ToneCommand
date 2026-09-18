@@ -3381,9 +3381,11 @@ def api_cab_audition(body: dict):
     """Hear (bank, ordinal) in the rig right now. Edit buffer only.
 
     Transactional (design review F1.1): if either write or the read-back
-    fails, the pre-audition cab is put back, the session is cleared and the
-    answer is 502 with the read-back detail. No store, no user-cab frame,
-    on any path.
+    fails, the pre-audition cab is put back and the answer is 502 with the
+    read-back detail. The session closes only when that restore itself
+    lands; a restore that does not land keeps it open with last_error so
+    /api/cab/audition/end can retry (same rule as _audition_restore). No
+    store, no user-cab frame, on any path.
     """
     try:
         bank = int(body.get("bank") if body.get("bank") is not None else 0)
