@@ -134,6 +134,36 @@ def test_start_is_transactional_on_a_bad_read_back(client, rig, monkeypatch):
     _no_store_no_cab_wire(rig)
 
 
+def test_a_failed_start_whose_restore_also_fails_stays_open(client, rig, monkeypatch):
+    """Review round 1: the start path used to clear a FIRST audition's session
+    even when putting the original back had not landed, so the unit sat on
+    a wrong cab with nothing on record. Same rule as /end: not restored
+    means open, with the error, until a retry lands."""
+    before = server._read_cab(rig)
+    real = server._select_cab
+    calls = {"n": 0}
+
+    def wrong_then_wrong_then_right(fm9, bank, ordinal, instance=1):
+        calls["n"] += 1
+        if calls["n"] == 1:                    # the audition write
+            real(fm9, 3, 40, instance)
+            return False, before, (3, 40)
+        if calls["n"] == 2:                    # the restore, not landing
+            return False, (3, 40), (3, 40)
+        return real(fm9, bank, ordinal, instance)
+
+    monkeypatch.setattr(server, "_select_cab", wrong_then_wrong_then_right)
+    r = client.post("/api/cab/audition", json={"bank": 3, "ordinal": 46})
+    assert r.status_code == 502 and r.json()["restored"] is False
+    st = r.json()["audition"]
+    assert st["open"] is True and "restore" in st["last_error"]
+    assert (st["original"]["bank"], st["original"]["ordinal"]) == before
+    r = client.post("/api/cab/audition/end")
+    assert r.status_code == 200 and server._read_cab(rig) == before
+    assert client.get("/api/cab/audition").json()["open"] is False
+    _no_store_no_cab_wire(rig)
+
+
 def test_a_failed_restore_keeps_the_session_open_for_retry(client, rig, monkeypatch):
     """Design review F1.2: the unit is never silently left on the audition
     cab. A restore that does not land stays open with last_error; the

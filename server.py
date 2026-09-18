@@ -3419,10 +3419,17 @@ def api_cab_audition(body: dict):
             detail = (f"read-back mismatch: wanted bank {bank} cab {ordinal}, "
                       f"unit reports bank {landed[0]} cab {landed[1]}")
         if not ok:
+            # A restore that lands closes the session (it is as if nothing
+            # happened). One that does not land keeps it OPEN with the
+            # error, first audition or not, so /api/cab/audition/end can
+            # retry and the unit is never quietly left on a wrong cab
+            # (review round 1: a first-audition failure used to clear it).
             restored, rdetail = _audition_restore(fm9)
-            if first or restored:
+            if restored:
                 _audition.update(open=False, original=None, current=None,
                                  last_error=None)
+            else:
+                _audition["last_error"] = f"{detail}; {rdetail}"
             return JSONResponse({"error": detail, "restored": restored,
                                  "restore_detail": rdetail,
                                  "audition": _audition_state()},
