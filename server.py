@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import logging
 import re
+import contextlib
 import threading
 import uuid
 import json
@@ -44,7 +45,184 @@ app = FastAPI(title="FM9 Tone Control")
 #: meant asking the player to read their screen back.
 log = logging.getLogger("tonecommand.server")
 
-reg = Registry()
+# --- the selected device context (#124) ------------------------------------
+#
+# One active adapter paired with ITS registry. Before this there was one
+# global FM9 Registry and get_fm9() could only ever build an FM9, so a second
+# adapter could conform to the contract and still be unusable: every action
+# would have been validated and planned through the FM9 catalog. The context
+# is the seam #94's device selection stands on.
+#
+# The default context is the FM9 exactly as before: the adapter is connected
+# lazily by get_fm9() (simulator under TONECOMMAND_SIM=1, hardware with the
+# MIDI rescan otherwise) and held in the module-level `_fm9`, which the test
+# suite injects directly and which therefore stays.
+from dataclasses import dataclass as _dataclass
+from typing import Any as _Any
+
+
+@_dataclass
+class DeviceContext:
+    kind: str                 # "fm9", "headrush", ...
+    registry: _Any            # the catalog that names this device's blocks
+    adapter: _Any = None      # a connected DeviceAdapter, or None for the
+                              # lazily connected default FM9
+    label: str = ""
+
+
+FM9_REGISTRY = Registry()
+_default_context = DeviceContext("fm9", FM9_REGISTRY, None, "Fractal FM9")
+_context: DeviceContext = _default_context
+
+
+def device_context() -> DeviceContext:
+    """The selected device: exactly one adapter and its matching registry."""
+    return _context
+
+
+class _RegistryProxy:
+    """`reg` as the code has always spelled it, resolved on every attribute
+    access to the SELECTED context's registry. Validation, planning and
+    snapshots read `reg.xxx` in seventy-odd places; routing them through the
+    context here means each of them reads the right catalog without a
+    registry parameter threaded through every signature. The default is the
+    FM9 registry, so nothing changes until a device is selected."""
+    __slots__ = ()
+
+    def __getattr__(self, name):
+        return getattr(device_context().registry, name)
+
+    def __repr__(self) -> str:
+        return f"<reg -> {device_context().kind} registry>"
+
+
+reg = _RegistryProxy()
+
+
+@contextlib.contextmanager
+def use_device(kind: str, adapter, registry, label: str = ""):
+    """Select a device for the duration of a block: the seam a test uses to
+    put a non-FM9 adapter behind every route without touching the FM9 class,
+    and the operation /api/device/select performs for real. Restores the
+    previous context on exit, whatever happened inside."""
+    global _context
+    previous = _context
+    _context = DeviceContext(kind, registry, adapter, label or kind)
+    try:
+        yield _context
+    finally:
+        _context = previous
+
+
+def select_device_context(ctx: DeviceContext) -> DeviceContext:
+    """Make `ctx` the selected device until further notice."""
+    global _context
+    _context = ctx
+    return ctx
+
+
+# --- device discovery and selection (#94) -----------------------------------
+#
+# What this process can reach, by a stable id. The FM9 is always listed: it
+# is the default and its own connect path decides whether one is present. A
+# HeadRush is listed when the owner names one (TONECOMMAND_HEADRUSH_HOST) or
+# asks for its simulator (TONECOMMAND_HEADRUSH_SIM=1). With exactly one kind
+# available it is the target and nothing changes; with more than one, a plan
+# is refused until the player says which, rather than acted on a guess.
+DEVICE_KINDS = {
+    "fm9": "Fractal FM9",
+    "headrush": "HeadRush",
+}
+#: Chosen explicitly, by kind, through /api/device/select. None means no
+#: choice has been made, which is only a problem when there is a choice.
+_selected_kind: dict = {"kind": None}
+
+
+def available_devices() -> list[dict]:
+    import os
+    out = [{"kind": "fm9", "label": DEVICE_KINDS["fm9"]}]
+    if os.environ.get("TONECOMMAND_HEADRUSH_HOST") or \
+            os.environ.get("TONECOMMAND_HEADRUSH_SIM") == "1":
+        out.append({"kind": "headrush", "label": DEVICE_KINDS["headrush"]})
+    return out
+
+
+def device_target() -> tuple[str | None, list[dict]]:
+    """(the kind a plan may act on, the available kinds). The kind is None
+    exactly when more than one device is reachable and none was selected."""
+    avail = available_devices()
+    if len(avail) == 1:
+        return avail[0]["kind"], avail
+    chosen = _selected_kind["kind"]
+    if chosen in {d["kind"] for d in avail}:
+        return chosen, avail
+    return None, avail
+
+
+def _build_context(kind: str) -> DeviceContext:
+    """A connected context for `kind`. The FM9 keeps its lazy path (the
+    adapter is None until get_fm9 connects it); a HeadRush is connected here,
+    through the committed client, against the simulator when asked."""
+    import os
+    if kind == "fm9":
+        return _default_context
+    if kind == "headrush":
+        from devices.headrush import registry as hr_registry
+        from devices.headrush.adapter import HeadrushAdapter
+        from devices.headrush.client import HeadrushClient
+        if os.environ.get("TONECOMMAND_HEADRUSH_SIM") == "1":
+            from devices.headrush.sim import HeadrushSim
+            sim = HeadrushSim()
+            client = HeadrushClient("sim.local", "127.0.0.1", opener=sim.opener)
+        else:
+            client = HeadrushClient.connect(os.environ["TONECOMMAND_HEADRUSH_HOST"])
+        registry = hr_registry.load()
+        return DeviceContext("headrush", registry,
+                             HeadrushAdapter(client, registry),
+                             DEVICE_KINDS["headrush"])
+    raise KeyError(kind)
+
+
+@app.get("/api/device")
+def api_device():
+    kind, avail = device_target()
+    return {"selected": kind, "active": device_context().kind,
+            "available": avail,
+            "ambiguous": kind is None}
+
+
+@app.post("/api/device/select")
+def api_device_select(body: dict):
+    """Say which device a build targets. Refused under GIG LOCK (the rig is
+    frozen), while a reviewed plan is pending (it was planned for the other
+    device), and for a kind this process cannot reach."""
+    kind = str(body.get("kind") or "")
+    avail = {d["kind"] for d in available_devices()}
+    if kind not in avail:
+        return JSONResponse({"error": f"no device {kind!r} here; available: "
+                                      f"{sorted(avail)}"}, status_code=404)
+    with _lock:
+        if _gig_mode["on"]:
+            return JSONResponse({"error": "GIG LOCK is on: the target device "
+                                          "cannot change"}, status_code=423)
+        if _plan_revisions and kind != device_context().kind:
+            return JSONResponse(
+                {"error": "a reviewed plan is pending for the current device; "
+                          "send or discard it before switching"},
+                status_code=409)
+        if kind != device_context().kind:
+            if device_context().kind == "fm9":
+                drop_fm9()
+            elif device_context().adapter is not None:
+                try:
+                    device_context().adapter.close()
+                except Exception:      # noqa: BLE001  a dead handle is being dropped anyway
+                    pass
+            select_device_context(_build_context(kind))
+        _selected_kind["kind"] = kind
+    return {"ok": True, "selected": kind, "active": device_context().kind}
+
+
 _lock = threading.Lock()
 # Planner configuration lives in os.environ, which the settings panel rewrites
 # and the planner rereads inside each backend runner. A save landing mid-plan
@@ -289,12 +467,20 @@ RESCAN_EVERY = 2.0
 
 
 def get_fm9() -> DeviceAdapter:
+    """The selected device, gated. The name predates #124: every route
+    calls this for "the device", and under a non-FM9 context that is the
+    context's adapter, gated exactly the same way."""
     global _fm9
+    ctx = device_context()
+    if ctx.kind != "fm9" or ctx.adapter is not None:
+        if ctx.adapter is None:
+            raise FM9NotFound(f"no {ctx.kind} adapter is connected")
+        return GatedDevice(ctx.adapter)
     if _fm9 is None:
         import os
         if os.environ.get("TONECOMMAND_SIM") == "1":
             from fm9.sim import SimFM9
-            _fm9 = SimFM9(reg)     # virtual device: UI/planner dev offline
+            _fm9 = SimFM9(FM9_REGISTRY)     # virtual device: UI/planner dev offline
         else:
             # Look at the bus again before trying. Without this the retry is
             # pointless: the rtmidi backend enumerates through a CoreMIDI
@@ -306,7 +492,7 @@ def get_fm9() -> DeviceAdapter:
             if now - _last_rescan["at"] >= RESCAN_EVERY:
                 _last_rescan["at"] = now
                 rescan_midi()
-            _fm9 = FM9(reg)
+            _fm9 = FM9(FM9_REGISTRY)
     return GatedDevice(_fm9)
 
 
@@ -2052,6 +2238,8 @@ def _name_the_build(result: dict, name: str | None,
 def api_plan(body: PromptBody):
     """The plan, in one request. Kept for callers that cannot hold a stream."""
     result = _plan_for(body)
+    if isinstance(result, dict) and "ambiguous_device" in result:
+        return JSONResponse(result, status_code=409)        # #94: say which
     if isinstance(result, dict) and "error" in result and len(result) == 1:
         return JSONResponse(result, status_code=502)
     return result
@@ -2301,6 +2489,13 @@ def _plan_for(body: PromptBody, on_count=None, cancel=None, on_status=None):
     blast-radius maths, which is exactly the kind of duplication that goes
     subtly wrong six months later on one path only.
     """
+    # #94: more than one device reachable and no choice made is a question,
+    # not a guess. Nothing is planned until the player says which.
+    kind, avail = device_target()
+    if kind is None:
+        return {"error": "say which device this build is for: "
+                         + ", ".join(d["label"] for d in avail),
+                "ambiguous_device": [d["kind"] for d in avail]}
     # #84: a new plan reads the rig as it is; an audition still hanging in
     # the edit buffer would be read as the player's cab. Put it back first.
     with _lock:
@@ -5622,6 +5817,15 @@ def api_plan_stream(body: PromptBody):
     tell "still going" apart from "the connection died", which is the whole
     difference between waiting and being stuck.
     """
+    # #94: an ambiguous target is refused before the stream opens, as a real
+    # 409, the same way a capability decline is (see the audit ledger).
+    kind, avail = device_target()
+    if kind is None:
+        return JSONResponse(
+            {"error": "say which device this build is for: "
+                      + ", ".join(d["label"] for d in avail),
+             "ambiguous_device": [d["kind"] for d in avail]}, status_code=409)
+
     def work(emit, cancel):
         result = _plan_for(body,
                            on_count=lambda n: emit("count", n),

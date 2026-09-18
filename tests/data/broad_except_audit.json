@@ -390,6 +390,11 @@
    "function": "api_cab_audition",
    "ordinal": 2,
    "disposition": "unreachable: _select_cab uses get_param_wire and set_param_ordinal on DeviceAdapter, behind no gate"
+  },
+  {
+   "function": "api_device_select",
+   "ordinal": 1,
+   "disposition": "unreachable: wraps close() on the adapter being dropped, on DeviceAdapter, behind no gate"
   }
  ]
 }

@@ -362,6 +362,10 @@ def _table(sim) -> list[dict]:
         ("GET", "/api/cab/audition", {}, None, None),
         ("POST", "/api/cab/audition", {}, {"bank": 3, "ordinal": 40}, None),
         ("POST", "/api/cab/audition/end", {}, None, None),
+        # #94: the target-device seam. Selecting reads the environment and
+        # swaps the context; neither touches a gated method.
+        ("GET", "/api/device", {}, None, None),
+        ("POST", "/api/device/select", {}, {"kind": "fm9"}, None),
         ("GET", "/api/ir/audition/integrity", {}, None, None),
         ("POST", "/api/ir/config", {}, {"url": ""}, None),
         ("GET", "/api/ai-settings", {}, None, None),
@@ -595,7 +599,7 @@ def _handles_decline_first(before) -> bool:
 
 
 def test_broad_except_audit_every_block_reraises_the_decline_or_says_why_it_cannot_see_one():
-    """78 `except Exception` blocks, each accounted for by identity. A block
+    """79 `except Exception` blocks, each accounted for by identity. A block
     that a decline can reach re-raises CapabilityDeclined before its handler
     runs; the rest state why a decline cannot reach them. An unlisted block,
     or a listed identity that no longer exists, fails."""
@@ -644,9 +648,9 @@ def test_audit_counts_are_reported_honestly():
     blocks = _except_exception_blocks(ast.parse(SERVER.read_text()))
     reraised = sum(1 for _h, before, _b in blocks.values()
                    if _handles_decline_first(before))
-    assert len(blocks) == 78
+    assert len(blocks) == 79
     assert reraised == 34
-    assert len(blocks) - reraised == 44
+    assert len(blocks) - reraised == 45
 
 
 def test_capability_declined_is_its_own_type_and_the_handler_shapes_the_409(world):

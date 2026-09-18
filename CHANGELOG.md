@@ -4,6 +4,48 @@ Notable changes to ToneCommand. Dates are UTC.
 
 ## Unreleased
 
+### Added (HeadRush lane, 2026-09-18: #123, #124, #125, #94)
+- ONE DEVICE-OWNED POSITION (#123). `ChainEditing.place_block(position,
+  effect_id)`: the FM9 passes a `GridPos(row_1based, col_1based)` (or a
+  plain pair) and sends exactly the select-cell and set-cell frames it always
+  sent, asserted against the protocol builders; a rig device passes its slot
+  number and invents no row. Every caller converted; `conformance()` rejects
+  the old row/col shape.
+- A SELECTED DEVICE CONTEXT (#124). `server.DeviceContext(kind, registry,
+  adapter)` pairs exactly one adapter with its own catalog; `get_fm9()` hands
+  out the selected adapter, gated as before, and the module-level `reg`
+  resolves on every access to the selected context's registry, so the
+  seventy-odd validation, planning and snapshot lookups read the right
+  catalog without a parameter threaded through each. The default is the FM9
+  with its lazy connect, unchanged. Tests inject a device through
+  `server.use_device(...)`, never by patching the FM9 class.
+- WHICH DEVICE (#94). `available_devices()` lists what this process can
+  reach (the FM9 always; a HeadRush when `TONECOMMAND_HEADRUSH_HOST` or
+  `TONECOMMAND_HEADRUSH_SIM=1` is set); `GET /api/device` reports it;
+  `POST /api/device/select {kind}` switches the context (423 under GIG
+  LOCK, 409 with a reviewed plan pending, 404 for a kind not here). With
+  more than one device and no choice, `/api/plan` and `/api/plan/stream`
+  answer 409 naming the choices instead of acting on a guess; with one
+  device nothing changes.
+- THE HEADRUSH ADAPTER (#125). `devices/headrush/adapter.py` implements
+  the contract over the committed client, registry and topology table:
+  ten routings by index, fourteen slots by number, tri-state scenes by slot
+  name, bypass through the block's own `On`. Capabilities are the measured
+  ones and each False states why (no store, no modifiers, no installs, no
+  rename measured; chain state unreadable until a rig is loaded).
+  `conformance()` is empty. Every property write goes through one path that
+  reads the value back after a 0.5 s settle (finding 1: ordinal 4 is
+  acknowledged and gone by 0.39 s), and a placement additionally requires
+  the module's object to answer (ordinal 254 sticks with no object).
+  `object-method` is deny-by-default: only `/Evil/API/Rigs loadRig` is
+  reachable; ModuleType 20 (measured engine death) and 254 are refused
+  before transport. `evidence()` names the unit (HeadRush Core,
+  5.1.0.2a63755, 2026-09-15) and the unverified models (Prime, Flex
+  Prime). Continuous parameters are written on the 0..1 wire only:
+  display conversion is refused with the registry's reason, because the
+  curve is an opaque taper id the device never explains (finding 3).
+- The broad-except audit now covers 79 blocks (34 re-raise, 45 unreachable).
+
 ### Added (FM9 lane tranche, 2026-09-18: #43, #82, #83, #84, #96, #97, #98)
 - AUDITION BEFORE COMMIT (#83). `POST /api/cab/audition {bank, ordinal}`
   points the CABINET block at a cab that is already on the unit, in the edit
