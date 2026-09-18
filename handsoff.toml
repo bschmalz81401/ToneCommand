@@ -1,4 +1,5 @@
 [project]
+logo = "docs/img/logo.png"
 name = "fm9-tone"
 status_file = "handsoff-status.json"
 acceptance_file = "handsoff-acceptance.json"
