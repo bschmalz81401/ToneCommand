@@ -343,6 +343,11 @@ def describe_unreachable(error: BaseException, target: str) -> str:
             # because Remote's behaviour there was never observed.
             url = getattr(error, "url", "") or ""
             after = url.partition("/api/v1/")[2]
+            # strip query and fragment before taking the segment, or
+            # "/subtree?x=1" reads as the endpoint "/subtree?x=1" and misses,
+            # falling through to the not-measured wording on the one path this
+            # branch exists to get right
+            after = after.split("?", 1)[0].split("#", 1)[0]
             endpoint = "/" + after.split("/", 1)[0] if after else ""
             on_subtree = endpoint == "/subtree"
             measured_object = endpoint in ("/object-properties", "/object-meta")

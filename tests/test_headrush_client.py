@@ -714,16 +714,49 @@ def test_the_subtree_test_is_a_path_segment_not_a_substring():
     assert "NOT HeadRush Remote" in described, "it is an object path"
 
 
-def test_the_two_states_give_opposite_instructions():
-    """They both leave the unit serving its editor page, so an operator cannot
-    tell them apart by looking. The messages must not converge."""
+def test_a_certain_cause_instructs_and_an_uncertain_one_only_lists():
+    """Both states leave the unit serving its editor page, so an operator
+    cannot tell them apart by looking.
+
+    This used to say the messages "must not converge", which stopped describing
+    the test once the subtree 404 started naming Remote as one candidate. They
+    do both mention Remote now, and should: on a 403 it is the measured cause,
+    on a subtree 404 it is one of three. What must not converge is the
+    CONFIDENCE. A 403 gives an instruction; a subtree 404 offers candidates and
+    a way to discriminate.
+    """
     forbidden = describe_unreachable(urllib.error.HTTPError(
         "http://u/api/v1/object-properties/Evil/Gui", 403, "Forbidden", {}, None),
         "unit")
-    missing = describe_unreachable(urllib.error.HTTPError(
+    subtree = describe_unreachable(urllib.error.HTTPError(
         "http://u/api/v1/subtree/Evil/Gui", 404, "Not Found", {}, None), "unit")
-    assert "Turn HeadRush Remote on" in forbidden
-    assert "Turn HeadRush Remote on" not in missing
+
+    assert "Turn HeadRush Remote on" in forbidden, "certain: instruct"
+    assert "Turn HeadRush Remote on" not in subtree, "uncertain: do not instruct"
+    assert "HeadRush Remote is off" in subtree, "but do name it as a candidate"
+    assert "three causes" in subtree and "tell the last one apart" in subtree
+
+
+def test_both_measured_object_endpoints_are_covered_not_just_one():
+    """`object-meta` is in the measured set the copy names, and only
+    `object-properties` was asserted. The set and the claim should match."""
+    for endpoint in ("object-properties", "object-meta"):
+        described = describe_unreachable(urllib.error.HTTPError(
+            f"http://u/api/v1/{endpoint}/Evil/Gui", 404, "Not Found", {}, None),
+            "unit")
+        assert "NOT HeadRush Remote" in described, endpoint
+        assert "answers 403 here" in described, endpoint
+
+
+def test_a_query_string_does_not_hide_the_endpoint():
+    """The segment is taken after stripping query and fragment, or
+    `/subtree?x=1` reads as an unknown endpoint and loses the wording this
+    whole branch exists to get right."""
+    for url in ("http://u/api/v1/subtree/Evil/Gui?depth=1",
+                "http://u/api/v1/subtree/Evil/Gui#frag"):
+        described = describe_unreachable(urllib.error.HTTPError(
+            url, 404, "Not Found", {}, None), "unit")
+        assert "This was a subtree request" in described, url
 
 
 def test_other_http_codes_are_untouched_by_the_403_and_404_branches():

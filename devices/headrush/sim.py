@@ -116,12 +116,16 @@ class SimError(Exception):
     def __init__(self, status: int, message: str):
         super().__init__(f"{status} {message}")
         self.status = status
-        #: The message WITHOUT the status prefix, for the wire boundary. The
-        #: opener puts this in HTTPError's reason slot: urllib renders that as
-        #: "HTTP Error 404: <reason>" and describe_unreachable as "The unit
-        #: answered 404 <reason>", so passing str(self) produced "404 404 no
-        #: object at ...". The whole point of raising urllib's type there is
-        #: that callers see what production shows them.
+        #: The description WITHOUT the status prefix. `_as_device_error` puts
+        #: this in the JSON body's `desc` field, NOT in HTTPError's reason
+        #: slot: the unit puts the standard phrase ("Not Found") in reason and
+        #: the description in the body, and this sim matches that because it
+        #: was measured doing so.
+        #:
+        #: Said explicitly because the obvious next edit is wrong. Anyone
+        #: fixing a doubled "404 404 ..." by moving self.message into the
+        #: reason slot would undo the hardware match; that doubling came from
+        #: passing str(self), and the fix is the body shaping, not the slot.
         self.message = message
 
 
