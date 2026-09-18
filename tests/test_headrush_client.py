@@ -752,8 +752,13 @@ def test_a_query_string_does_not_hide_the_endpoint():
     """The segment is taken after stripping query and fragment, or
     `/subtree?x=1` reads as an unknown endpoint and loses the wording this
     whole branch exists to get right."""
-    for url in ("http://u/api/v1/subtree/Evil/Gui?depth=1",
-                "http://u/api/v1/subtree/Evil/Gui#frag"):
+    # The URLs must be ones where the strip actually MATTERS. With a path
+    # after the endpoint ("/subtree/Evil/Gui?depth=1") the split on "/" already
+    # yields "subtree", so an earlier version of this test passed with the fix
+    # reverted and proved nothing. These have the query directly on the
+    # endpoint, which is the shape the production comment names.
+    for url in ("http://u/api/v1/subtree?depth=1",
+                "http://u/api/v1/subtree#frag"):
         described = describe_unreachable(urllib.error.HTTPError(
             url, 404, "Not Found", {}, None), "unit")
         assert "This was a subtree request" in described, url
