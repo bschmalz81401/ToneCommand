@@ -286,21 +286,36 @@ earlier draft of this section reported the total wrong:
 
 `1` is on and `2` is off.
 
-### 0, measured as a retained state rather than a coincidence
+### 0, measured in both directions
 
-One block with Mode 0 that happens to be off proves nothing: that is equally
-consistent with 0 meaning off. So the test was built to be contrary.
+One observation is not enough here, and an earlier version of this section
+stopped at one.
 
-`Black Wah` is Mode 2 in scene 8 and Mode 0 in scene 6.
+A block at Mode 0 that happens to be off is equally consistent with `0` meaning
+off, so the test has to make the block hold a value the previous scene forbade.
+Do only that, and the block ends ON, which is equally consistent with `0`
+meaning ON and the scene writing a value the slot already held. The 38 Mode 1/2
+predictions never constrained Mode 0, so they do not close it either.
 
-    scene 8 active        Black Wah forced off by its Mode 2
-    turned ON by hand     now ON while the live scene declares OFF for it
-    scene 6 selected      nine other blocks moved to their declared states
-    Black Wah             still ON
+Both directions, on the same scene and the same block. `Black Wah` is Mode 2 in
+scene 8 and Mode 0 in scene 6, and scene 6 declares Mode 1 or 2 for nine other
+slots, which move on each engage and show the scene acted:
 
-The scene change demonstrably acted, on nine blocks, and left this one alone
-while it held a value the previous scene had forbidden. That is `no_change`
-behaving as named, and it is not explicable as inertia.
+    scene 8 engaged      Black Wah forced off by its own Mode 2
+    turned ON by hand    holding a value scene 8 forbids
+    scene 6 engaged      nine others move; Black Wah stays ON
+                         -> 0 is not OFF
+
+    scene 8 engaged      Black Wah on, then turned OFF by hand
+    scene 6 engaged      nine others move; Black Wah stays OFF
+                         -> 0 is not ON
+
+Neither result alone identifies `no_change`; together they do. The unit declines
+to touch the slot rather than writing anything to it.
+
+Caught by independent review, which pointed out that the one-directional version
+left "actively declines to touch" unsupported while this document was being
+cited elsewhere as the evidence base for the tri-state.
 
 ### Scene activation IS on the API, and two earlier claims here were wrong
 

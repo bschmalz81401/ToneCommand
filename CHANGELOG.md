@@ -14,10 +14,12 @@ Notable changes to ToneCommand. Dates are UTC.
   the schema. 1 and 2 were measured by engaging four scenes and comparing every
   Mode 1 or 2 slot against that block's own `On`: 38 predictions, none wrong,
   counted by script after an earlier draft reported the total wrong.
-- 0 was measured as a RETAINED state rather than a coincidence: a block was
-  forced off by one scene, turned on by hand so it contradicted that scene, and
-  kept the contrary value when a scene declaring Mode 0 for it moved nine other
-  blocks.
+- 0 was measured in BOTH DIRECTIONS, because one is not enough. A block held ON
+  through a Mode 0 scene shows 0 is not off; on its own it is equally consistent
+  with 0 meaning ON and the scene writing a value the slot already held. So the
+  same block was also turned OFF by hand and held OFF through the same scene,
+  which moved nine other slots each time. Neither alone identifies no_change;
+  together they do. The one-directional version was caught by review.
 - SCENE ACTIVATION IS ON THE API: writing `SceneActive{n} = true` engages scene
   n and applies its table, provided `ModeNew{n} = 2`. An earlier version of this
   entry said activation was not available at all, which came from writing

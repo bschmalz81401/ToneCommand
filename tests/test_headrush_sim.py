@@ -184,12 +184,12 @@ def test_the_mode_integers_are_the_measured_ones(sim):
                 property. None wrong. Counted by script; an earlier version of
                 this docstring reported the total wrong.
 
-      0         a block was forced off by one scene's Mode 2, turned ON by
-                hand so it contradicted that scene, and then a scene declaring
-                Mode 0 for it was selected. Nine other blocks moved to their
-                declared states; that one kept the contrary value. So 0 is
-                no_change rather than off, which a single off-and-happens-to-
-                be-off observation could not have distinguished.
+      0         both directions, because one does not identify it. A block
+                held ON through a Mode 0 scene shows 0 is not off; alone that
+                is equally consistent with 0 meaning ON and the scene writing
+                a value already held. The same block was also turned OFF by
+                hand and held OFF through the same scene. Nine other slots
+                moved on each engage, so the scene acted both times.
 
     The device's own sibling enums agree by convention, each naming index 0
     "No Change": SceneDoubleSwitch, ScenePathSwitch, SceneExtAmp.
