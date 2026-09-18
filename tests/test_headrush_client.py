@@ -685,23 +685,33 @@ def test_a_404_names_its_causes_without_overclaiming():
     """This test previously ASSERTED the bug, which is why it is worth a note.
 
     It used a subtree URL and required the message to say Remote was not the
-    problem. That came from a real correction (Remote off is 403, and an even
-    earlier version had sent 404 to check Remote), but it overshot: the measured
-    table is path dependent, and subtree answers 404 with Remote off. So the
-    test pinned a blanket claim the measurements never supported, and pinning it
-    is what kept it alive.
+    problem. That came from a real correction (Remote off is 403), but it
+    overshot: the measured table is path dependent and subtree answers 404 with
+    Remote off. Pinning a claim the measurements never supported is what kept
+    it alive.
 
-    The two tests below now check each path shape separately.
+    It now covers the endpoint NOT measured either way, which is the case the
+    message must be quietest about.
     """
     described = describe_unreachable(urllib.error.HTTPError(
-        "http://10.8.72.116/api/v1/object-properties/Evil/Gui", 404,
+        "http://10.8.72.116/api/v1/object-method/Evil/API/Rigs/loadRig", 404,
         "Not Found", {}, None), "10.8.72.116")
     assert "404" in described
     assert "no such path" in described, "one cause"
     assert "engine is not running" in described, "and the other"
-    # still not misclassified as the network or the name being at fault
+    assert "was not measured" in described, "and no claim about Remote here"
     assert "Nothing answered" not in described
     assert "did not resolve" not in described
+
+
+def test_the_subtree_test_is_a_path_segment_not_a_substring():
+    """`"/subtree" in url` would take the subtree branch for any path or query
+    that merely contained the word."""
+    described = describe_unreachable(urllib.error.HTTPError(
+        "http://10.8.72.116/api/v1/object-properties/Evil/Gui/subtree-ish", 404,
+        "Not Found", {}, None), "10.8.72.116")
+    assert "This was a subtree request" not in described
+    assert "NOT HeadRush Remote" in described, "it is an object path"
 
 
 def test_the_two_states_give_opposite_instructions():
@@ -750,4 +760,4 @@ def test_a_404_on_an_object_path_still_rules_remote_out():
     )
     described = describe_unreachable(error, "10.8.72.116")
     assert "NOT HeadRush Remote" in described
-    assert "answers 403 there" in described
+    assert "answers 403 here" in described

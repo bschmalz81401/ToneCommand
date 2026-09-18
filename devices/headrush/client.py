@@ -335,7 +335,17 @@ def describe_unreachable(error: BaseException, target: str) -> str:
             # object endpoints, and this classifies on the request URL rather
             # than on the status alone. Still not on message text, which is the
             # rule this module keeps.
-            on_subtree = "/subtree" in (getattr(error, "url", "") or "")
+            # Classified on the ENDPOINT SEGMENT, not a substring: "/subtree"
+            # anywhere in a path or query would otherwise pick the subtree
+            # wording. And the object-endpoint claim below is only made for the
+            # two endpoints it was measured on. Anything else, including
+            # object-method and a url this cannot read, gets neither claim,
+            # because Remote's behaviour there was never observed.
+            url = getattr(error, "url", "") or ""
+            after = url.partition("/api/v1/")[2]
+            endpoint = "/" + after.split("/", 1)[0] if after else ""
+            on_subtree = endpoint == "/subtree"
+            measured_object = endpoint in ("/object-properties", "/object-meta")
             measured = (
                 "measured after a crash, every /api/v1 object path returned "
                 "404 while the unit still served its editor page"
@@ -350,13 +360,23 @@ def describe_unreachable(error: BaseException, target: str) -> str:
                     f"object endpoints. Ask for an object path to tell the last "
                     f"one apart: 403 there means Remote, 404 there does not."
                 )
+            if measured_object:
+                return (
+                    f"The unit answered 404 for {target}. Either this firmware "
+                    f"has no such path, or its engine is not running: "
+                    f"{measured}. On this endpoint it is NOT HeadRush Remote "
+                    f"being off, which answers 403 here. Open http://<unit>/ in "
+                    f"a browser to tell the two apart: if the page loads and "
+                    f"reports it cannot connect, the problem is the unit rather "
+                    f"than this path."
+                )
             return (
                 f"The unit answered 404 for {target}. Either this firmware has "
-                f"no such path, or its engine is not running: {measured}. On an "
-                f"object path this is NOT HeadRush Remote being off, which "
-                f"answers 403 there. Open http://<unit>/ in a browser to tell "
-                f"the two apart: if the page loads and reports it cannot "
-                f"connect, the problem is the unit rather than this path."
+                f"no such path, or its engine is not running: {measured}. "
+                f"Whether HeadRush Remote being off also answers 404 on this "
+                f"endpoint was not measured; it answers 403 on "
+                f"object-properties and object-meta and 404 on subtree. Ask "
+                f"for an object path to settle it: 403 there means Remote."
             )
         return _sentence(f"The unit answered {error.code} {error.reason} for {target}")
 

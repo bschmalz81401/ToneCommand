@@ -50,7 +50,7 @@ from __future__ import annotations
 
 import json
 import urllib.error
-from email.message import Message as HTTPMessage
+from http.client import HTTPMessage, responses as HTTP_REASONS
 from io import BytesIO
 from pathlib import Path
 from typing import Any
@@ -74,6 +74,40 @@ SCENES = 10
 #: a scene's blocks in exactly the wrong places.
 SLOT_MODE = {0: "no_change", 1: "on", 2: "off"}
 MODE_VALUE = {v: k for k, v in SLOT_MODE.items()}
+
+
+def _as_device_error(url: str, err: "SimError") -> urllib.error.HTTPError:
+    """Shape a SimError the way the REAL unit shapes an error.
+
+    Measured on a Core, 2026-09-18, because two earlier attempts at this got it
+    wrong in different directions. The first put "404 no object at ..." in the
+    reason slot, so urllib rendered "HTTP Error 404: 404 no object at ...". The
+    second put the bare message there, which stopped the doubling and still did
+    not match the unit.
+
+    What the unit actually sends:
+
+        code    404
+        reason  'Not Found'                         the standard phrase, not prose
+        headers Content-Type: application/json
+        body    {"desc": "DataModel: Object not found",
+                 "reason": "Not Found", "status": 404}
+
+    So the description lives in the BODY and the reason slot carries the HTTP
+    phrase. A caller that reads `.reason` sees what production gives it, and one
+    that reads the body gets JSON it can parse rather than a bare string. The
+    header object is http.client.HTTPMessage, which is what urllib attaches,
+    rather than the email.message.Message an earlier fix used because it was
+    merely non-None.
+    """
+    phrase = HTTP_REASONS.get(err.status, "Error")
+    headers = HTTPMessage()
+    headers["Content-Type"] = "application/json"
+    body = json.dumps(
+        {"desc": err.message, "reason": phrase, "status": err.status},
+        indent=2,
+    ).encode()
+    return urllib.error.HTTPError(url, err.status, phrase, headers, BytesIO(body))
 
 
 class SimError(Exception):
@@ -328,9 +362,7 @@ class HeadrushSim:
         try:
             return self._serve(url, method, body)
         except SimError as err:
-            raise urllib.error.HTTPError(
-                url, err.status, err.message, hdrs=HTTPMessage(),
-                fp=BytesIO(str(err).encode())) from err
+            raise _as_device_error(url, err) from err
 
     def _serve(self, url: str, method: str, body: bytes | None) -> bytes:
         try:

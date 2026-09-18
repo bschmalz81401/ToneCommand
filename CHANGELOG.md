@@ -33,12 +33,27 @@ Notable changes to ToneCommand. Dates are UTC.
   one kept the "high pass off" interpretation the generator had dropped, and
   one said nothing in the schema tells two tapers apart, which stopped being
   true when `normalizeAlgo` was carried through as `taper_id`.
-- `devices/headrush/sim.py` put the full `SimError` text into `HTTPError`'s
-  reason slot, so a missing path rendered as "HTTP Error 404: 404 no object at
-  ...". Since the reason for raising urllib's type there is that callers see
-  what production shows them, doubling the status defeated it. It also passed
-  `hdrs=None`, where any caller touching `.headers` would get AttributeError
-  rather than the header object production carries.
+- `devices/headrush/sim.py` now shapes an error the way the REAL unit shapes
+  one, MEASURED on a Core rather than reasoned about. Two earlier attempts got
+  it wrong in opposite directions and nothing failed, because nothing asserted
+  it: the first put the whole `SimError` text in the reason slot, so a missing
+  path rendered "HTTP Error 404: 404 no object at ..."; the second used the
+  bare message, which stopped the doubling and still did not match.
+- What the unit sends: `reason` is the standard phrase (`Not Found`), the
+  description is in a JSON body (`{"desc": ..., "reason": ..., "status": ...}`)
+  with `Content-Type: application/json`, and the header object is
+  `http.client.HTTPMessage`, not the `email.message.Message` an earlier fix
+  used because it merely was not None. The body also still carried the doubled
+  prefix the previous entry claimed to have removed.
+- Tests now assert that shape, including that neither the reason nor the body
+  starts with the status. A test that read the description out of
+  `str(error)` was passing only because the sim was wrong, and now reads the
+  body.
+- `describe_unreachable()`'s 404 branch classifies on the ENDPOINT SEGMENT
+  rather than a `"/subtree" in url` substring, and only makes the "this is not
+  Remote" claim for `object-properties` and `object-meta`, the two endpoints it
+  was measured on. `object-method` and an unreadable url now get neither claim
+  and say the behaviour there was not measured.
 
 ### Added (HeadRush block and parameter registry, 2026-09-15)
 - `config/headrush_registry.json` plus `tools/build_headrush_registry.py` and
