@@ -151,8 +151,13 @@ Notable changes to ToneCommand. Dates are UTC.
   writer's fault. This is what the "unexplained" topology transient was.
   `Routing` itself is fast, read back in 17..38 ms over 14 writes, so a slow
   write was never the explanation.
-- `wait_for_rig` waits for the name AND for the chain to be identical across
-  three consecutive samples. Quiescence is the signal; the name is not. Three
+- `wait_for_rig` waits for the name, for the chain to differ from the shape
+  captured BEFORE the load, and for that shape to hold across three reads.
+  Quiescence alone was the first fix and it was wrong: the previous rig's
+  chain is quiet too, and was measured quiet for about a second, so waiting
+  for stillness could succeed on the old chain and return just as early. A
+  chain that legitimately never differs, from reloading a rig or loading one
+  with the same chain, waits out a 2.5 s ceiling instead of failing. Three
   consecutive full runs pass, where the previous build failed two of five.
 - The same race applies to anything that loads a rig and then writes,
   `select_preset` included. Reported on #134; the adapter is @monzta1's.

@@ -215,14 +215,45 @@ def test_wait_for_rig_returns_once_the_name_matches_and_the_chain_is_quiet():
     assert client.reads == 3
 
 
-def test_wait_for_rig_keeps_waiting_while_the_chain_is_still_changing():
-    """The measured failure: the name flips while the chain is still the
-    previous rig's, so a write issued then races the tail of the load."""
-    moving = [{"Routing": 0, "ModuleType1": 9}] * 3 + \
-             [{"Routing": 0, "ModuleType1": 4}] * 6
-    client = _RigClient(["##HRB Wanted"], chain_shapes=moving)
-    assert vh.wait_for_rig(client, "##HRB Wanted", timeout_s=5.0) is not None
-    assert client.chain_reads > 3, "it stopped before the chain settled"
+def test_wait_for_rig_does_not_accept_the_previous_rigs_chain():
+    """The measured case, and the trap the first fix fell into.
+
+    The unit flips the name while the PREVIOUS rig's chain is still in place,
+    and that chain was measured sitting unchanged for about a second. It is
+    perfectly quiet. Waiting for stillness alone therefore succeeds on the old
+    chain and returns just as early as not waiting at all, so a write issued
+    next still races the tail of the load.
+
+    The old shape is held here for well past the quiet window, which is what
+    the hardware did and what the previous test failed to encode.
+    """
+    old = (0, tuple([9] + [0] * 13))
+    new = (0, tuple([4] + [0] * 13))
+    held = [{"Routing": 0, **{f"ModuleType{n}": v for n, v in
+                              enumerate(shape[1], start=1)}}
+            for shape in [old] * 8 + [new] * 6]
+    client = _RigClient(["##HRB Wanted"], chain_shapes=held)
+    got = vh.wait_for_rig(client, "##HRB Wanted", timeout_s=8.0, before=old)
+    assert got is not None, "it never settled"
+    assert client.chain_reads > 8, (
+        f"returned after {client.chain_reads} chain reads, while the previous "
+        f"rig's chain was still in place")
+
+
+def test_wait_for_rig_waits_out_the_ceiling_when_the_chain_cannot_change():
+    """Reloading the same rig, or loading one with an identical chain, means
+    the shape legitimately never differs. That must not hang or fail."""
+    same = [{"Routing": 0, "ModuleType1": 4}] * 40
+    client = _RigClient(["##HRB Wanted"], chain_shapes=same)
+    before = (0, tuple([4] + [None] * 13))
+    original = vh.REBUILD_CEILING_S
+    vh.REBUILD_CEILING_S = 0.6                       # keep the test quick
+    try:
+        got = vh.wait_for_rig(client, "##HRB Wanted", timeout_s=6.0,
+                              before=before)
+    finally:
+        vh.REBUILD_CEILING_S = original
+    assert got is not None, "an unchanged chain was treated as a failed load"
 
 
 def test_wait_for_rig_times_out_if_the_chain_never_settles():

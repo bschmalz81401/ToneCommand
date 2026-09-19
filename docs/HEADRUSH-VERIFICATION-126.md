@@ -68,9 +68,9 @@ verifying against <host>, starting on a ##HRB preset
   [ok  ] AC2  unit returned to its starting rig
          restored directly, by rig id (name not recorded, AC7)
   [ok  ] AC4  refused ModuleType blocks before transport
-         PermissionError: ordinal 254 refused; opener went 23 -> 23. 20 is refused by the same table, asserted above without writing it
+         PermissionError: ordinal 254 refused; opener went 24 -> 24. 20 is refused by the same table, asserted above without writing it
   [ok  ] AC4  nothing reached the unit during that refusal
-         opener call count unchanged (23 -> 23)
+         opener call count unchanged (24 -> 24)
   [ok  ] AC2  topology selection is verified by read-back
          routing moved 0 -> 1 and read back; adapter reports ok=True
   [ok  ] AC2  topology restored
@@ -89,8 +89,8 @@ verifying against <host>, starting on a ##HRB preset
          set_scene(second) -> ok=True, engaged=True, LastScene=6
   [ok  ] #33  SceneActive is a latch, not a pulse (OPEN)
          first scene's flag was True while it was active; after engaging the second, the second reads True and the first reads False -> a LATCH the unit maintains and clears on change, not a pulse
-  [n/a ] #33  scene restored
-         no scene was engaged when this pass started, so there is nothing to restore to; the final reload settles it
+  [ok  ] #33  scene restored
+         back on the scene this pass found engaged at entry
   [ok  ] #33  set_scene_slot writes both Effect and Mode
          a slot in scene 9 moved off -> on and read back on
   [ok  ] #33  scene slot restored
@@ -382,13 +382,29 @@ That also explains why it was intermittent. It only bites when a write closely
 follows a rig load, which is this procedure's order, and only when that load
 happens to be one of the slow ones.
 
-### What this procedure does about it
+### What this procedure does about it, and the wrong fix first
 
-`wait_for_rig` now waits for two separate things, because the unit reports them
-separately: the name matching, and then the chain being **identical across
-three consecutive samples** 250 ms apart. Quiescence is the signal; the name is
-not. Three consecutive full runs pass with this in place, where the previous
-build failed two of five.
+The first attempt waited for **quiescence**: the chain identical across
+consecutive samples. That is not sufficient, and the reason is in the
+measurement above. **The previous rig's chain is quiet too.** It was measured
+sitting unchanged for roughly a second after the name flipped, which is longer
+than any sensible quiet window, so waiting for stillness can succeed on the old
+chain and return exactly as early as not waiting at all.
+
+`wait_for_rig` therefore waits for three things:
+
+1. `loadedName` matching the requested rig.
+2. The chain no longer being the shape captured **before** the load.
+3. That shape holding still across three consecutive reads, 250 ms apart.
+
+Condition 2 needs the caller to snapshot first, so every load site here takes a
+`chain_shape()` before calling `loadRig`. Two rigs can share a chain, and
+reloading a rig certainly does, so a shape that never differs is not treated as
+an error: `REBUILD_CEILING_S` (2.5 s, against a longest measured rebuild of
+1392 ms) is waited out instead.
+
+Three consecutive full runs pass with this in place, where the previous build
+failed two of five.
 
 ### What it means beyond this procedure
 

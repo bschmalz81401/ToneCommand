@@ -81,11 +81,18 @@ from devices.headrush.registry import (  # noqa: E402
 TEST_PREFIX = "##HRB"
 RIGS = "/Evil/API/Rigs"
 
-# How still the chain has to be before a rig counts as loaded.
-# Three samples 250 ms apart covers the measured ~1 s rebuild tail
-# with margin, and costs about half a second on a quiet unit.
+# How still the chain has to be before a rig counts as loaded. Three identical
+# observations is two intervals, so half a second of quiet.
 QUIET_SAMPLES = 3
 QUIET_INTERVAL_S = 0.25
+
+# Quiet alone is NOT enough, because the PREVIOUS rig's chain is also quiet:
+# it was measured sitting unchanged for about a second after the name flipped.
+# So the chain must also have stopped being the one from before the load. When
+# it legitimately never differs - reloading the same rig, or two rigs with the
+# same chain - that can never be observed, and this is the ceiling to wait out
+# instead. The longest rebuild measured was 1392 ms after loadRig.
+REBUILD_CEILING_S = 2.5
 
 # AC7. Filled in once the host and library are known, then applied to EVERY
 # printed line. Redacting at the call sites was the earlier design and it
@@ -120,10 +127,21 @@ def redact(text: str) -> str:
     return out
 
 
-def wait_for_rig(client: HeadrushClient, name: str, timeout_s: float = 8.0):
-    """Wait until `name` is loaded AND the engine has stopped rebuilding it.
+def chain_shape(client: HeadrushClient):
+    """What the chain looks like right now: routing plus every slot's module.
 
-    Two separate waits, because the unit reports them separately.
+    The comparison value for "has the rig actually changed underneath us".
+    """
+    chain = client.get_properties(CHAIN) or {}
+    return (chain.get("Routing"),
+            tuple(chain.get(f"ModuleType{n}") for n in range(1, 15)))
+
+
+def wait_for_rig(client: HeadrushClient, name: str, timeout_s: float = 12.0,
+                 before=None):
+    """Wait until `name` is loaded AND the engine has finished building it.
+
+    Three things, because the unit gives no single signal for "loaded".
 
     `loadedName` flips early. Measured on a Core at 5.1.0.2a63755, it flips
     185..332 ms after loadRig while the chain is STILL THE PREVIOUS RIG'S, and
@@ -133,12 +151,21 @@ def wait_for_rig(client: HeadrushClient, name: str, timeout_s: float = 8.0):
                  became 4 modules at t+1392 ms
         trial 3: name flipped at t+185 ms, chain changed at t+1140 ms
 
-    So a write issued when the name says loaded races the tail of the load and
-    loses: the #126 topology check wrote Routing, read back the value the load
-    then installed, and reported a mismatch that was not the adapter's fault.
+    A write issued when the name says loaded therefore races the tail of the
+    load and loses: the #126 topology check wrote Routing, read back the value
+    the load then installed, and reported a mismatch that was not the
+    adapter's fault.
 
-    Quiescence is therefore the signal: the chain identical across consecutive
-    samples. Returns the loaded name, or None if either wait timed out.
+    Quiescence alone does not fix that, which is the trap this fell into first
+    (review of #136). The PREVIOUS rig's chain is quiet too, and it was
+    measured quiet for longer than any reasonable quiet window, so waiting for
+    stillness can succeed on the old chain and return just as early. The chain
+    must also have STOPPED BEING the one from before the load.
+
+    `before` is that pre-load shape, from `chain_shape()`. Two rigs can share
+    a chain, and reloading a rig certainly does, so a shape that never differs
+    is not an error: `REBUILD_CEILING_S` past the name flip is waited out
+    instead. Returns the loaded name, or None if any wait timed out.
     """
     deadline = time.monotonic() + timeout_s
     loaded = None
@@ -155,19 +182,22 @@ def wait_for_rig(client: HeadrushClient, name: str, timeout_s: float = 8.0):
     if loaded is None:
         return None
 
+    named_at = time.monotonic()
+    changed = before is None
     stable = 0
     previous = None
     while time.monotonic() < deadline:
         try:
-            chain = client.get_properties(CHAIN) or {}
+            shape = chain_shape(client)
         except Exception:                           # noqa: BLE001
-            time.sleep(0.1)
+            time.sleep(QUIET_INTERVAL_S)
             continue
-        shape = (chain.get("Routing"),
-                 tuple(chain.get(f"ModuleType{n}") for n in range(1, 15)))
-        stable = stable + 1 if shape == previous else 0
+        if before is not None and shape != before:
+            changed = True
+        stable = stable + 1 if shape == previous else 1
         previous = shape
-        if stable >= QUIET_SAMPLES:
+        waited_out = time.monotonic() - named_at >= REBUILD_CEILING_S
+        if stable >= QUIET_SAMPLES and (changed or waited_out):
             return loaded
         time.sleep(QUIET_INTERVAL_S)
     return None
@@ -331,11 +361,12 @@ def verify(adapter: HeadrushAdapter, client: HeadrushClient,
                       "needs a second test preset to switch to; only one found")
     else:
         def select():
-            out = adapter.select_preset(target)
+            was_chain = chain_shape(client)      # before the load, or the
+            out = adapter.select_preset(target)  # "has it changed" test is inert
             # loadRig returns before the engine swaps. Measured on this unit,
             # the swap lands 159..679 ms after the call, so a fixed wait is
             # either a flake or slower than it needs to be; poll instead.
-            now = wait_for_rig(client, target)
+            now = wait_for_rig(client, target, before=was_chain)
             ok = now is not None
             return ok, (f"adapter loaded the requested test preset and it read "
                         f"back after {'polling' if ok else 'a timeout'}; "
@@ -346,9 +377,10 @@ def verify(adapter: HeadrushAdapter, client: HeadrushClient,
         # route hardware accepts. Recorded separately so a broken adapter path
         # does not leave the run unable to continue.
         ids = dict(zip(library["AllRigNames"], library["AllRigIds"]))
+        was_chain = chain_shape(client)
         client.call_method(RIGS, "loadRig", [ids[was], ""])
         report.record("AC2", "unit returned to its starting rig",
-                      wait_for_rig(client, was) is not None,
+                      wait_for_rig(client, was, before=was_chain) is not None,
                       "restored directly, by rig id (name not recorded, AC7)")
 
     # --- AC4: the refusal blocks before transport, using a safe ordinal ---
@@ -617,8 +649,9 @@ def discard_edits(client: HeadrushClient) -> tuple[Any, Any]:
     lib = client.get_properties(RIGS)
     name = lib["loadedName"]
     rid = lib["AllRigIds"][lib["AllRigNames"].index(name)]
+    was_chain = chain_shape(client)
     client.call_method(RIGS, "loadRig", [rid, ""])
-    if wait_for_rig(client, name) is None:
+    if wait_for_rig(client, name, before=was_chain) is None:
         raise TimeoutError("the rig did not reload within the timeout, so the "
                            "edit buffer was NOT discarded")
     return before, client.get_property(RIGS, "dirty")
@@ -701,7 +734,11 @@ def main(argv: list[str] | None = None) -> int:
                       f"{type(crashed).__name__}: {str(crashed)[:110]}; the "
                       f"restore above still ran")
     if interrupted is not None:
-        print("\ninterrupted; the unit was restored before exiting")
+        restored = report.rows[-1]["ok"] if report.rows else None
+        print("\ninterrupted; the unit was restored before exiting"
+              if restored else
+              "\ninterrupted; THE RESTORE WAS ATTEMPTED AND DID NOT CONFIRM. "
+              "Reload the rig on the unit; nothing was stored.")
         raise interrupted
 
     print(f"\n{len(report.rows)} checks, {len(report.failed)} failed")
