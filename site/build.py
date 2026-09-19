@@ -323,6 +323,18 @@ def load_theme() -> str:
     return (SITE / "theme.css").read_text()
 
 
+#: Traffic: the same GA4 property shieldbearerusa.com reports to (a web stream
+#: accepts hits from any hostname; the reports split by `hostname`), so this
+#: site shows up in the dashboard Moncy already reads. Direct gtag, no GTM:
+#: the Shieldbearer container's tags are wired to that site's events. Set
+#: TONECOMMAND_SITE_GA4="" to build without it.
+GA4_ID = os.environ.get("TONECOMMAND_SITE_GA4", "G-QTHJRB1B7G")
+GA4_SNIPPET = ("" if not GA4_ID else
+               f'<script async src="https://www.googletagmanager.com/gtag/js?id={GA4_ID}"></script>\n'
+               f'<script>window.dataLayer=window.dataLayer||[];function gtag(){{dataLayer.push(arguments);}}'
+               f'gtag("js",new Date());gtag("config","{GA4_ID}",{{"anonymize_ip":true}});</script>')
+
+
 def page(*, title: str, description: str, body: str, path: str,
          version: str, mermaid: bool = False, wide: bool = False) -> str:
     full_title = "ToneCommand" if path == "/" else f"{title} | ToneCommand"
@@ -354,6 +366,7 @@ def page(*, title: str, description: str, body: str, path: str,
 <meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="/theme.css">
 <script src="/fx.js" defer></script>
+{GA4_SNIPPET}
 </head>
 <body>
 <div id="splash" aria-hidden="true"><img src="{img_url('logo.png')}" alt="" width="520" height="520" fetchpriority="high"></div>
