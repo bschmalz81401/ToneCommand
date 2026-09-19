@@ -1,0 +1,53 @@
+{
+  "generatedAt": "2026-09-19T13:43:25.138Z",
+  "period": {
+    "label": "September 2026 so far",
+    "start": "2026-09-01",
+    "end": "2026-09-30"
+  },
+  "headline": {
+    "sessions": 2,
+    "deltaPct": null,
+    "comparison": "vs August 2026"
+  },
+  "channels": [
+    {
+      "name": "Unassigned",
+      "sessions": 2,
+      "share": 66.7
+    },
+    {
+      "name": "Direct",
+      "sessions": 1,
+      "share": 33.3
+    }
+  ],
+  "geography": [
+    {
+      "name": "United States",
+      "sessions": 1,
+      "share": 50
+    },
+    {
+      "name": "Vietnam",
+      "sessions": 1,
+      "share": 50
+    }
+  ],
+  "cities": [
+    {
+      "name": "Unknown, Virginia",
+      "sessions": 1,
+      "share": 50
+    },
+    {
+      "name": "Da Nang, Da Nang",
+      "sessions": 1,
+      "share": 50
+    }
+  ],
+  "events": [],
+  "shipped": [],
+  "source": "ga4-data-api",
+  "note": "Numbers are aggregates only. Refreshed daily at 04:00 ET."
+}
