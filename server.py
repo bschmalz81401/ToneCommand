@@ -134,6 +134,7 @@ def select_device_context(ctx: DeviceContext) -> DeviceContext:
 DEVICE_KINDS = {
     "fm9": "Fractal FM9",
     "headrush": "HeadRush",
+    "tonex": "IK Multimedia ToneX",
 }
 #: Chosen explicitly, by kind, through /api/device/select. None means no
 #: choice has been made, which is only a problem when there is a choice.
@@ -146,6 +147,10 @@ def available_devices() -> list[dict]:
     if os.environ.get("TONECOMMAND_HEADRUSH_HOST") or \
             os.environ.get("TONECOMMAND_HEADRUSH_SIM") == "1":
         out.append({"kind": "headrush", "label": DEVICE_KINDS["headrush"]})
+    # #163: the ToneX is read-only here (captures listed, nothing written)
+    if os.environ.get("TONECOMMAND_TONEX_PORT") or \
+            os.environ.get("TONECOMMAND_TONEX_SIM") == "1":
+        out.append({"kind": "tonex", "label": DEVICE_KINDS["tonex"]})
     return out
 
 
@@ -182,6 +187,13 @@ def _build_context(kind: str) -> DeviceContext:
         return DeviceContext("headrush", registry,
                              HeadrushAdapter(client, registry),
                              DEVICE_KINDS["headrush"])
+    if kind == "tonex":
+        # No registry of its own yet: the pedal's surface is captures, not
+        # blocks and parameters. The FM9 registry is lent so the device-blind
+        # code above has something to answer with; nothing here writes.
+        from devices.tonex.adapter import from_environment
+        return DeviceContext("tonex", FM9_REGISTRY, from_environment(),
+                             DEVICE_KINDS["tonex"])
     raise KeyError(kind)
 
 

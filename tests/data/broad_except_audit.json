@@ -410,6 +410,11 @@
    "function": "_advisory_route",
    "ordinal": 1,
    "disposition": "unreachable: scene_name, set_scene and editbuffer.capture (status_dump, bulk_read) are on DeviceAdapter, behind no gate; advisory has no device handle"
+  },
+  {
+   "function": "_connected_for_gallery",
+   "ordinal": 1,
+   "disposition": "re-raises CapabilityDeclined first; a unit that does not answer its firmware is 'no device' for the gallery, never an error page (#156)"
   }
  ]
 }

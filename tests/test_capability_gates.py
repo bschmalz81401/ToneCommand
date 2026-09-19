@@ -216,6 +216,12 @@ def _stub_world(monkeypatch, tmp_path) -> list[str]:
         "ok": False, "detail": "stubbed: no update runs under test"})
     monkeypatch.setattr(acquire, "search_local", lambda q: [])
     monkeypatch.setattr(acquire, "catalog", lambda: [])
+    # The J1 catalog reads the site first (#154); under the tripwire that is
+    # an AssertionError out of urlopen, which no route should swallow into a
+    # 500. The committed local copy is the honest offline answer.
+    from fm9 import gift_of_tone
+    monkeypatch.setattr(gift_of_tone, "fetch",
+                        lambda timeout=6.0: (gift_of_tone._from_local(), "local", None))
     monkeypatch.setattr(ai_settings, "list_models",
                         lambda backend, base_url="": {
                             "models": [], "source": "stub"})
@@ -288,6 +294,9 @@ def _table(sim) -> list[dict]:
         ("GET", "/api/tone-dir", {}, None, None),
         ("POST", "/api/tone-dir", {}, {"dir": ""}, None),
         ("POST", "/api/acquire", {}, {"query": "nothing on the catalogue"}, None),
+        ("GET", "/api/gift-of-tone", {}, None, None),
+        ("POST", "/api/gift-of-tone/fetch", {}, {"id": "no-such-entry"}, None),
+        ("POST", "/api/artist-pack", {}, {"query": "sound like Nobody Here"}, None),
         ("POST", "/api/install-cab", {}, {"hash": JUNK_HASH, "bank": 1, "number": 1},
          "installs_files"),
         ("POST", "/api/install", {}, {"hash": JUNK_HASH, "slot": 138}, "installs_files"),
@@ -604,7 +613,7 @@ def _handles_decline_first(before) -> bool:
 
 
 def test_broad_except_audit_every_block_reraises_the_decline_or_says_why_it_cannot_see_one():
-    """82 `except Exception` blocks, each accounted for by identity. A block
+    """83 `except Exception` blocks, each accounted for by identity. A block
     that a decline can reach re-raises CapabilityDeclined before its handler
     runs; the rest state why a decline cannot reach them. An unlisted block,
     or a listed identity that no longer exists, fails."""
@@ -653,8 +662,8 @@ def test_audit_counts_are_reported_honestly():
     blocks = _except_exception_blocks(ast.parse(SERVER.read_text()))
     reraised = sum(1 for _h, before, _b in blocks.values()
                    if _handles_decline_first(before))
-    assert len(blocks) == 82
-    assert reraised == 34
+    assert len(blocks) == 83
+    assert reraised == 35
     assert len(blocks) - reraised == 48
 
 

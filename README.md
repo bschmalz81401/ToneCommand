@@ -296,6 +296,10 @@ unreachable, on every device, forever.
 - **Back up first anyway.** Run a full Fractal-Bot backup before using any
   third-party MIDI tool, this one included.
 
+The IK Multimedia ToneX pedal is on the same capture contract, read-only for
+now: its 128 programs are listed by name and category from the pedal's own
+dumps, and nothing is written to it until the upload path is decoded (#27).
+
 ## Next: NAM captures
 
 Fractal showed a NAM (Neural Amp Modeler) block running on the Axe-Fx III on

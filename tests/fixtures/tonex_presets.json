@@ -1,0 +1,645 @@
+{
+ "source": "the pedal's 0x0204 preset dumps for PC 0..127, recorded 2026-08-24 over the CDC serial port (kb/tone_library/tonex_captures, local); names and categories only, two raw frames beside this file",
+ "programs": [
+  {
+   "pc": 0,
+   "name": "MES LS I Clean BAL CAB",
+   "category": "CLEAN"
+  },
+  {
+   "pc": 1,
+   "name": "MES LS II Crunch BRI CAB",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 2,
+   "name": "5150 Aggression (Advanced)",
+   "category": "HI-GAIN"
+  },
+  {
+   "pc": 3,
+   "name": "MES LS I Clean WRM CAB EL34",
+   "category": "CLEAN"
+  },
+  {
+   "pc": 4,
+   "name": "MES LS I Crunch BAL CAB",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 5,
+   "name": "MES LS I Lead AT TDR CAB EL34",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 6,
+   "name": "MES LS I Crunch BRI CAB",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 7,
+   "name": "MES LS I Drive BAL KOT CAB",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 8,
+   "name": "MES LS I Edge AT CAB EL34",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 9,
+   "name": "MES LS I Edge BAL CAB",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 10,
+   "name": "MES LS I Edge BAL CAB EL34",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 11,
+   "name": "MES LS I Edge BRI CAB",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 12,
+   "name": "MES LS I Edge PED CAB",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 13,
+   "name": "MES LS I Edge SCP CAB",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 14,
+   "name": "MES LS I Edge WRM CAB",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 15,
+   "name": "MES LS I Lead AT SHR CAB EL34",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 16,
+   "name": "MES LS I Lead AT SHR2 CAB EL34",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 17,
+   "name": "MES LS I Crunch BRI CAB",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 18,
+   "name": "MES LS I Lead BRI KOT CAB",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 19,
+   "name": "MES LS II Crunch BAL CAB EL34",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 20,
+   "name": "MES LS I Clean BRI CAB",
+   "category": "CLEAN"
+  },
+  {
+   "pc": 21,
+   "name": "MES LS II Crunch FAT CAB EL34",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 22,
+   "name": "MES LS II Crunch SCP CAB",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 23,
+   "name": "MES LS II Crunch WRM CAB",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 24,
+   "name": "MES LS II Drive BAL CAB",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 25,
+   "name": "MES LS II Drive BAL2 CAB",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 26,
+   "name": "MES LS II Drive BRI CAB",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 27,
+   "name": "MES LS II Drive FAT CAB",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 28,
+   "name": "MES LS II Drive SCP CAB",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 29,
+   "name": "MES LS II Drive WRM CAB EL34",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 30,
+   "name": "MES LS II Drive WRM2 CAB EL34",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 31,
+   "name": "MES LS II Lead AT CAB EL34",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 32,
+   "name": "MES LS II Lead BAL CAB",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 33,
+   "name": "MES LS II Lead BAL2 CAB",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 34,
+   "name": "MES LS II Lead BRI CAB",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 35,
+   "name": "MES LS II Lead WRM CAB EL34",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 36,
+   "name": "BT Ecstasy Blue A Br",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 37,
+   "name": "BT Ecstasy Blue B Br",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 38,
+   "name": "BT Ecstasy Blue C Br",
+   "category": "HI-GAIN"
+  },
+  {
+   "pc": 39,
+   "name": "BT Ecstasy Blue D Br",
+   "category": "HI-GAIN"
+  },
+  {
+   "pc": 40,
+   "name": "BT Ecstasy Green A",
+   "category": "CLEAN"
+  },
+  {
+   "pc": 41,
+   "name": "BT Ecstasy Green A Br",
+   "category": "CLEAN"
+  },
+  {
+   "pc": 42,
+   "name": "BT Ecstasy Green B",
+   "category": "CLEAN"
+  },
+  {
+   "pc": 43,
+   "name": "BT Ecstasy Green B Br",
+   "category": "CLEAN"
+  },
+  {
+   "pc": 44,
+   "name": "BT Ecstasy Green C Br",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 45,
+   "name": "BT Ecstasy Plexi A Br",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 46,
+   "name": "BT Ecstasy Plexi B Br",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 47,
+   "name": "BT Ecstasy Plexi C Br",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 48,
+   "name": "BT Ecstasy Red A Br",
+   "category": "HI-GAIN"
+  },
+  {
+   "pc": 49,
+   "name": "BT Ecstasy Red B Br",
+   "category": "HI-GAIN"
+  },
+  {
+   "pc": 50,
+   "name": "The Dipper",
+   "category": "HI-GAIN"
+  },
+  {
+   "pc": 51,
+   "name": "Bad Gal 68 V",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 52,
+   "name": "Bad Gal 68 V (Amp)",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 53,
+   "name": "Bad Gal 68 V Hot",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 54,
+   "name": "Bad Gal 68 V Hot (Amp)",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 55,
+   "name": "Bad Gal 68 V Hot Alt",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 56,
+   "name": "Bad Gal 68 V LR",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 57,
+   "name": "Bad Gal 68 V LR (Amp)",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 58,
+   "name": "Bad Gal 68 V LR Hot",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 59,
+   "name": "Bad Gal 68 V LR Hot (Amp)",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 60,
+   "name": "Bad Gal 68 V LR Raw",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 61,
+   "name": "Bad Gal 68 V LR Raw Hot",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 62,
+   "name": "Bad Gal 68 V LR Room",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 63,
+   "name": "Bad Gal 68 V LR Room Hot",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 64,
+   "name": "Bad Gal 68 V Mid Forward",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 65,
+   "name": "Bad Gal 68 V Raw",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 66,
+   "name": "Bad Gal 68 V Raw Hot",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 67,
+   "name": "Bad Gal 68 V Raw Hot Alt",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 68,
+   "name": "Bad Gal 68 V Room",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 69,
+   "name": "Bad Gal 68 V Room Hot",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 70,
+   "name": "Bad Gal 68 V Room Hot Alt",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 71,
+   "name": "Bad Gal 68 V Sharp",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 72,
+   "name": "Bad Gal 68 V Upper Mids",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 73,
+   "name": "Bad Gal 68 V Upper Mids 2",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 74,
+   "name": "Central 72 V",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 75,
+   "name": "Central 72 V Hot",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 76,
+   "name": "Central 72 V Hot (Amp)",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 77,
+   "name": "Central 72 V Raw",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 78,
+   "name": "Central 72 V Raw Hot",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 79,
+   "name": "Central 72 V Room",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 80,
+   "name": "Central 72 V Room Hot",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 81,
+   "name": "Good Times 68 V LR Frown Curve",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 82,
+   "name": "Good Times 68 V LR LowMid Push",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 83,
+   "name": "Good Times 73 V LR  Raw",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 84,
+   "name": "Good Times 73 V LR (Amp)",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 85,
+   "name": "Good Times 73 V LR Even",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 86,
+   "name": "Good Times 73 V LR Full",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 87,
+   "name": "Good Times 73 V LR Room",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 88,
+   "name": "Good Times 73 V LR Scoop Fizz",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 89,
+   "name": "Good Times 73 V LR Sec",
+   "category": "CLEAN"
+  },
+  {
+   "pc": 90,
+   "name": "Good Times 73 V LR Sec (Amp)",
+   "category": "CLEAN"
+  },
+  {
+   "pc": 91,
+   "name": "Good Times 73 V LR Subtle Scoop",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 92,
+   "name": "Good Times 73 V LR Subtle Scoop",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 93,
+   "name": "Good Times 73 V LR UpperMid + 1",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 94,
+   "name": "Good Times 73 V LR Wrm and Tight",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 95,
+   "name": "MES LS I Clean SCP CAB",
+   "category": "CLEAN"
+  },
+  {
+   "pc": 96,
+   "name": "51st Cunch",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 97,
+   "name": "51st Hi-Gain",
+   "category": "HI-GAIN"
+  },
+  {
+   "pc": 98,
+   "name": "51st Lead",
+   "category": "HI-GAIN"
+  },
+  {
+   "pc": 99,
+   "name": "A Shot At Fame",
+   "category": "HI-GAIN"
+  },
+  {
+   "pc": 100,
+   "name": "All That Shreds",
+   "category": "HI-GAIN"
+  },
+  {
+   "pc": 101,
+   "name": "All That Shreds (Amp)",
+   "category": "HI-GAIN"
+  },
+  {
+   "pc": 102,
+   "name": "At The Core",
+   "category": "HI-GAIN"
+  },
+  {
+   "pc": 103,
+   "name": "Back From Sanity",
+   "category": "HI-GAIN"
+  },
+  {
+   "pc": 104,
+   "name": "Back From Sanity (Amp)",
+   "category": "HI-GAIN"
+  },
+  {
+   "pc": 105,
+   "name": "Barks and Bites",
+   "category": "HI-GAIN"
+  },
+  {
+   "pc": 106,
+   "name": "Boosted And Scooped",
+   "category": "HI-GAIN"
+  },
+  {
+   "pc": 107,
+   "name": "Chugfeel",
+   "category": "HI-GAIN"
+  },
+  {
+   "pc": 108,
+   "name": "Chugs 4 Sure",
+   "category": "HI-GAIN"
+  },
+  {
+   "pc": 109,
+   "name": "Crunchin' Tubes",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 110,
+   "name": "Crunchy Snack",
+   "category": "DRIVE"
+  },
+  {
+   "pc": 111,
+   "name": "Dark Shredder",
+   "category": "HI-GAIN"
+  },
+  {
+   "pc": 112,
+   "name": "Dense Honey",
+   "category": "HI-GAIN"
+  },
+  {
+   "pc": 113,
+   "name": "Disclosed Secret",
+   "category": "HI-GAIN"
+  },
+  {
+   "pc": 114,
+   "name": "EV 5050 II Gain BAL CAB",
+   "category": "HI-GAIN"
+  },
+  {
+   "pc": 115,
+   "name": "Evergreen Boost",
+   "category": "HI-GAIN"
+  },
+  {
+   "pc": 116,
+   "name": "Evergreen Boost (Amp)",
+   "category": "HI-GAIN"
+  },
+  {
+   "pc": 117,
+   "name": "EVH 5150III Metal Rhythm [VVX]",
+   "category": "HI-GAIN"
+  },
+  {
+   "pc": 118,
+   "name": "EVH\ufffd\ufffd 5150III\ufffd\ufffd 50W 6L6 Head",
+   "category": "HI-GAIN"
+  },
+  {
+   "pc": 119,
+   "name": "Fierce Attack",
+   "category": "HI-GAIN"
+  },
+  {
+   "pc": 120,
+   "name": "Five10Six",
+   "category": "HI-GAIN"
+  },
+  {
+   "pc": 121,
+   "name": "Five10Six (Amp)",
+   "category": "HI-GAIN"
+  },
+  {
+   "pc": 122,
+   "name": "Going Bananas",
+   "category": "HI-GAIN"
+  },
+  {
+   "pc": 123,
+   "name": "Going Bananas (Amp)",
+   "category": "HI-GAIN"
+  },
+  {
+   "pc": 124,
+   "name": "Grinding Gears",
+   "category": "HI-GAIN"
+  },
+  {
+   "pc": 125,
+   "name": "Grinding Gears (Amp)",
+   "category": "HI-GAIN"
+  },
+  {
+   "pc": 126,
+   "name": "Heavy Hitter",
+   "category": "HI-GAIN"
+  },
+  {
+   "pc": 127,
+   "name": "Heavy Load",
+   "category": "HI-GAIN"
+  }
+ ]
+}

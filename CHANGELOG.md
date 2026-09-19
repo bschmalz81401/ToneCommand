@@ -4,6 +4,35 @@ Notable changes to ToneCommand. Dates are UTC.
 
 ## Unreleased
 
+### Added (ToneX on the capture primitive, read-only, 2026-09-19: #163)
+- `devices/tonex/`: the pedal on K1's `CaptureSlots`. `frames.py` is the
+  serial frame decoder moved out of `tools/tonex_decode.py` (which now
+  re-exports it): HDLC unstuffing, the X-25 FCS check, the tag walk.
+  `adapter.py` declares `capabilities()` with `plays_captures=True` and
+  `capture_capabilities()` as `('.tmodel',)`, 128 slots, an empty
+  whitelist; `list_captures()` names all 128 programs (bank N, footswitch
+  A/B/C = PC N*3+0/1/2) from the pedal's own 0x0204 preset dumps (name and
+  category); `install_capture` and `remove_capture` refuse in one line
+  naming #27 and invariant 0 before any frame exists. The rest of the
+  device contract is there honestly: reads answer from the frames, every
+  write refuses as read-only before any transport, and there is no method
+  that sends. Frames come through a source: recorded frames in tests
+  (`tests/fixtures/tonex_presets.json` with the 128 factory names and
+  categories plus two raw frames; the full local capture set when
+  present), the pedal's port behind `TONECOMMAND_TONEX_PORT` (read-only,
+  never in tests). `tonex` is a device kind the picker offers only when
+  that or `TONECOMMAND_TONEX_SIM=1` is set.
+- Still open on #163: acceptance 2, the pedal's own list read against the
+  adapter with the ToneX plugged in.
+
+### Fixed (gate audit on main, 2026-09-19)
+- `tests/test_capability_gates.py` had four failures on main since this
+  evening's #156/#157/#158 routes: the three routes are now in the request
+  table, the world fixture serves the local Gift of Tone catalog instead
+  of letting the network tripwire surface as a 500, and
+  `_connected_for_gallery`'s broad except is in the audit (83 blocks, 35
+  re-raising).
+
 ### Added (artist names resolve to the catalog, 2026-09-19: #158)
 - `fm9/artist_pack.py`: "sound like Devin Townsend", "give me Devin's rig",
   "install the Periphery pack", "Steve Vai tones" yield the name, which is
