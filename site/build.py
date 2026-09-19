@@ -323,12 +323,14 @@ def load_theme() -> str:
     return (SITE / "theme.css").read_text()
 
 
-#: Traffic: the same GA4 property shieldbearerusa.com reports to (a web stream
-#: accepts hits from any hostname; the reports split by `hostname`), so this
-#: site shows up in the dashboard Moncy already reads. Direct gtag, no GTM:
-#: the Shieldbearer container's tags are wired to that site's events. Set
-#: TONECOMMAND_SITE_GA4="" to build without it.
-GA4_ID = os.environ.get("TONECOMMAND_SITE_GA4", "G-QTHJRB1B7G")
+#: Traffic: the tonecommand.com web stream (G-LQMWGNMFT3, stream 15807627613)
+#: in the same GA4 property shieldbearerusa.com reports to ("Shieldbearer USA -
+#: Production", property 531353319), so both sites sit in the dashboard Moncy
+#: already reads, each on its own stream. Direct gtag, no GTM: the Shieldbearer
+#: container's tags are wired to that site's events. Set
+#: TONECOMMAND_SITE_GA4="" to build without it. Cloudflare Web Analytics is on
+#: for the domain at the account level as well (automatic, no beacon here).
+GA4_ID = os.environ.get("TONECOMMAND_SITE_GA4", "G-LQMWGNMFT3")
 GA4_SNIPPET = ("" if not GA4_ID else
                f'<script async src="https://www.googletagmanager.com/gtag/js?id={GA4_ID}"></script>\n'
                f'<script>window.dataLayer=window.dataLayer||[];function gtag(){{dataLayer.push(arguments);}}'
