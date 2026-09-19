@@ -35,6 +35,9 @@ Notable changes to ToneCommand. Dates are UTC.
   hints when it did not echo them.
 
 ### Fixed
+- Two page classes had no CSS rule (`cabgroup` from #137 and `cbuildthis` from
+  the advisory lane); `tests/test_ui_warning.py` caught them in CI. Both are
+  styled now.
 - Cab rows: the reasons and measured moves under a candidate's name were
   ellipsized with the name and the separator showed as a literal `&middot;`;
   they now wrap on their own line with a real middle dot.

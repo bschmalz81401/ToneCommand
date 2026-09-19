@@ -2013,6 +2013,13 @@
   .cabuse.on { border-color: var(--cyan); color: var(--cyan); }
   .cablinkpick { white-space: nowrap; }
   .cabfoot { color: var(--muted); font-size: var(--fs-hint); margin-top: 8px; }
+  /* #137: the two candidate groups, on the rig first */
+  .cabgroup { margin-top: 12px; letter-spacing: 0.06em; }
+  /* Advisory lane: the one button that turns a gap into a build request */
+  .cbuildthis { font: inherit; font-size: var(--fs-hint); letter-spacing: 0.08em;
+    padding: 5px 10px; margin-top: 6px; background: rgba(0,0,0,0.4); color: var(--cyan);
+    border: 1px solid var(--cyan-dim); border-radius: 3px; cursor: pointer; }
+  .cbuildthis:hover { border-color: var(--cyan); }
   .intentlist { display: grid; gap: 8px; margin-top: 16px; }
   .intentrow { display: grid; grid-template-columns: 180px minmax(0,1fr) 72px;
     gap: 14px; align-items: center; min-height: 54px; padding: 9px 12px;
