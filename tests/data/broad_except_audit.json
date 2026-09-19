@@ -395,6 +395,21 @@
    "function": "api_device_select",
    "ordinal": 1,
    "disposition": "unreachable: wraps close() on the adapter being dropped, on DeviceAdapter, behind no gate"
+  },
+  {
+   "function": "_resolve_source",
+   "ordinal": 1,
+   "disposition": "unreachable: scene_name is on DeviceAdapter, behind no gate"
+  },
+  {
+   "function": "_apply_actions_to_capture",
+   "ordinal": 1,
+   "disposition": "unreachable: reg.resolve_block; no device handle in the try body"
+  },
+  {
+   "function": "_advisory_route",
+   "ordinal": 1,
+   "disposition": "unreachable: scene_name, set_scene and editbuffer.capture (status_dump, bulk_read) are on DeviceAdapter, behind no gate; advisory has no device handle"
   }
  ]
 }

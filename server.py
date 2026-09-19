@@ -34,6 +34,7 @@ from fm9 import (acquire, ai_settings, bundlefile, cabfile, describe, designs, d
 from fm9 import slots as slotops
 from tools import path_audit
 from fm9 import protocol as proto
+from fm9 import advisory
 from fm9.signal_path import resolve_aliases
 
 ROOT = Path(__file__).resolve().parent
@@ -873,6 +874,56 @@ def _tone_target_lines() -> list:
     return out
 
 
+def amp_pairing(ordinal) -> str:
+    """'pairs with <orig_cab>; DynaCab <dynacab>' from the guide sidecar, or
+    '' when the sidecar names neither. Facts from config/amp_models.json
+    only; an amp with no pairing gets no text, never 'pairs with None'."""
+    rec = reg.amp_models.get(str(ordinal), {}) or {}
+    orig, dyna = rec.get("orig_cab"), rec.get("dynacab")
+    bits = []
+    if orig:
+        bits.append(f"pairs with {orig}")
+    if dyna:
+        bits.append(f"DynaCab {dyna}")
+    return "; ".join(bits)
+
+
+_DYNACAB_CACHE: dict = {}
+
+
+def amp_line(ordinal) -> str:
+    """The roster line: 'Fractal = real amp (pairs with <cab>; DynaCab <name>
+    -> factory bank B ordinal O <name>)'. The factory arrow appears only
+    when the DynaCab name resolves in the factory catalog, so the planner is
+    handed a real set_cab target and never a guessed one."""
+    base = reg.amp_description(ordinal)
+    pairing = amp_pairing(ordinal)
+    if not pairing:
+        return base
+    dyna = (reg.amp_models.get(str(ordinal), {}) or {}).get("dynacab")
+    if dyna:
+        if dyna not in _DYNACAB_CACHE:
+            _DYNACAB_CACHE[dyna] = resolve_dynacab(dyna)
+        hit = _DYNACAB_CACHE[dyna]
+        if hit:
+            pairing += f" -> factory bank {hit[0]} ordinal {hit[1]} {hit[2]}"
+    return f"{base} ({pairing})"
+
+
+def resolve_dynacab(name: str) -> tuple[int, int, str] | None:
+    """A DynaCab name from the guide ('4x10 Bassguy RI') to a factory cab
+    (bank, ordinal, name) whose roster name carries it. The factory names
+    add a mic and a take ('4x10 Bassguy 57 B'), so the match is the longest
+    leading run of the DynaCab's words that the catalog knows; None when
+    even the first two words find nothing."""
+    words = (name or "").split()
+    for n in range(len(words), 1, -1):
+        hits = full_cab_catalog_search(" ".join(words[:n]), limit=1)
+        if hits:
+            return hits[0]
+    return None
+
+
 def param_reference() -> str:
     """Static text listing controllable params, for the planner (cacheable)."""
     lines = []
@@ -894,7 +945,14 @@ def param_reference() -> str:
     lines.append("\nAmp models selectable via set_type (block=amp). One per line as "
                  "`type_name = the real-world amp it models`; use the name to the "
                  "LEFT of the '=' as type_name, verbatim:")
-    lines.extend(reg.amp_description(o) for o in reg.amp_roster)
+    lines.extend(amp_line(o) for o in reg.amp_roster)
+    lines.append("\nCab pairing (issue #6): the guide names the cabinet each amp was "
+                 "voiced with, and set_cab (block=cab, bank + ordinal from the cab "
+                 "list or a shortlist) is a plannable action verified by read-back. "
+                 "When the request does not name a cab, pair the chosen amp with its "
+                 "listed cab where the factory catalog has it: resolve a DynaCab name "
+                 "to a factory bank/ordinal with the cab list below, and prefer the "
+                 "player's own words over the pairing when they name one.")
     lines.append("\nDrive models selectable via set_type (block=drive). One per line as "
                  "`type_name = the real pedal it models` where known; use the LEFT name "
                  "verbatim as type_name. Entries without an '=' have no confirmed "
@@ -5778,6 +5836,224 @@ class ChatBody(BaseModel):
     messages: list[dict]
 
 
+# --- Epic A, advisory: compare, close the gap, diagnose (#68 #69 #70) --------
+#
+# Three advice-only routes over fm9.advisory plus the routing that lets
+# /api/chat answer three question shapes from numbers. Nothing under this
+# heading builds an action: the responses have no `actions` key, the module
+# they call imports no executor, and BUILD THIS in the UI is an ordinary
+# /api/plan request with a sentence the player chose to send.
+
+def _resolve_source(name: str) -> tuple[dict | None, str, str | None]:
+    """(capture, label, error). Sources: snapshot:a|b|undo, scene:N or a
+    scene name of the loaded preset, design:NAME. A scene source stands in
+    the scene to capture it and returns to the original scene before
+    answering; nothing else is written."""
+    key = (name or "").strip()
+    low = key.lower()
+    if low.startswith("snapshot:") or low in ("a", "b", "undo", "snapshot a", "snapshot b"):
+        slot = low.split(":", 1)[-1].replace("snapshot", "").strip()
+        snap = _snaps.get(slot)
+        if snap is None:
+            return None, key, f"snapshot {slot} is empty"
+        return snap, f"snapshot {slot}", None
+    if low.startswith("design:"):
+        want = key.split(":", 1)[1].strip().lower()
+        for d in designs.listing():
+            if str(d.get("name", "")).strip().lower() == want:
+                full = designs.load(d["id"]) or d
+                fm9 = get_fm9()
+                base = editbuffer.capture(fm9, reg)
+                return _apply_actions_to_capture(base, full.get("actions") or []), f"design {d.get('name')}", None
+        return None, key, f"no saved design named {key.split(':', 1)[1].strip()!r}"
+    # a scene: "scene N", "N", or a scene name of the loaded preset
+    fm9 = get_fm9()
+    m = re.fullmatch(r"(?:scene\s*)?([1-8])", low)
+    target = int(m.group(1)) if m else None
+    if target is None:
+        for n in range(1, 9):
+            try:
+                got = fm9.scene_name(n)
+            except Exception:
+                got = None
+            if got and str(got[1]).strip().lower() == low:
+                target = n
+                break
+    if target is None:
+        return None, key, f"{key!r} is not a scene, a snapshot slot or a saved design"
+    current = fm9.scene_name()
+    origin = current[0] if current else None
+    try:
+        if origin != target:
+            fm9.set_scene(target)
+        cap = editbuffer.capture(fm9, reg)
+    finally:
+        if origin is not None and origin != target:
+            fm9.set_scene(origin)
+    label = f"scene {target}" + (f" ({cap.get('scene_name')})" if cap.get("scene_name") else "")
+    return cap, label, None
+
+
+def _apply_actions_to_capture(cap: dict, actions: list) -> dict:
+    """A saved design as it WOULD read once applied: the current capture
+    with the design's set_param/set_bypass/set_cab/set_type values written
+    in. Read-only; nothing touches the device."""
+    import copy
+    out = copy.deepcopy(cap)
+    by_key = {(b["family"], b["instance"]): b for b in out.get("blocks") or []}
+    for a in actions:
+        kind = a.get("kind")
+        try:
+            fam, _eid = reg.resolve_block(a.get("block") or "", a.get("instance") or 1)
+        except Exception:
+            continue
+        blk = by_key.get((fam, int(a.get("instance") or 1)))
+        if blk is None:
+            continue
+        if kind == "set_bypass":
+            blk["bypassed"] = bool(a.get("bypassed"))
+        elif kind == "set_channel" and a.get("value") is not None:
+            blk["channel"] = int(a["value"])
+        elif kind == "set_param" and a.get("value") is not None:
+            spec = _resolve_param(fam, a.get("param") or "", int(a.get("instance") or 1))
+            if spec is None or spec.dmin is None or not blk.get("values"):
+                continue
+            from fm9.protocol import display_to_normalized
+            wire = int(round(display_to_normalized(float(a["value"]), spec.dmin, spec.dmax, spec.scale) * 65534))
+            stride = len(blk["values"]) // max(1, blk.get("channels", 1)) if blk.get("channels", 1) > 1 else len(blk["values"])
+            i = blk.get("channel", 0) * stride + spec.param_id
+            if 0 <= i < len(blk["values"]):
+                blk["values"][i] = wire
+        elif kind == "set_cab" and a.get("value") is not None and blk.get("values"):
+            stride = len(blk["values"]) // max(1, blk.get("channels", 1)) if blk.get("channels", 1) > 1 else len(blk["values"])
+            base = blk.get("channel", 0) * stride
+            blk["values"][base + advisory.CAB_BANK_PID] = int(a.get("bank") or 0)
+            blk["values"][base + advisory.CAB_TYPE_PID] = int(a["value"])
+        elif kind == "set_type" and blk.get("values"):
+            resolved = resolve_type_ordinal(fam, a.get("type_name") or "")
+            pid = advisory.TYPE_PARAMS.get(fam, (None,))[0]
+            if resolved and pid is not None:
+                stride = len(blk["values"]) // max(1, blk.get("channels", 1)) if blk.get("channels", 1) > 1 else len(blk["values"])
+                blk["values"][blk.get("channel", 0) * stride + pid] = resolved[0]
+    return out
+
+
+def _advise_pair(a: str, b: str) -> tuple[dict | None, dict | None]:
+    """Resolve both sources ONCE, under one lock, and diff them. Returns
+    ({a, b, diffs, differences, lines}, error). Every advisory caller goes
+    through here, so a scene source is stood in exactly once per question
+    (a second resolve would switch the live rig's scene again and could
+    read a different buffer than the first)."""
+    with _lock:
+        try:
+            ca, la, ea = _resolve_source(a)
+            cb, lb, eb = _resolve_source(b)
+        except FM9NotFound:
+            drop_fm9()
+            return None, {"error": "FM9 not connected", "status": 503}
+    if ea or eb:
+        return None, {"error": ea or eb, "status": 404}
+    diffs = advisory.compare(ca, cb, reg)
+    return {"a": la, "b": lb, "diffs": diffs,
+            "differences": [d.as_dict() for d in diffs],
+            "lines": advisory.narrate(diffs, la, lb)}, None
+
+
+def _advise_compare(a: str, b: str) -> tuple[dict | None, dict | None]:
+    out, err = _advise_pair(a, b)
+    if err:
+        return None, err
+    return {k: v for k, v in out.items() if k != "diffs"}, None
+
+
+def _advise_gap(a: str, b: str) -> tuple[dict | None, dict | None]:
+    out, err = _advise_pair(a, b)
+    if err:
+        return None, err
+    advice, prompt = advisory.gap(out["diffs"], reg)
+    return {"a": out["a"], "b": out["b"], "advice": [x.as_dict() for x in advice],
+            "build_prompt": prompt}, None
+
+
+@app.post("/api/advise/compare")
+def api_advise_compare(body: dict):
+    out, err = _advise_compare(str(body.get("a") or ""), str(body.get("b") or ""))
+    if err:
+        return JSONResponse({"error": err["error"]}, status_code=err["status"])
+    return out
+
+
+@app.post("/api/advise/gap")
+def api_advise_gap(body: dict):
+    """How to take A toward B. Advice and one sentence; no actions."""
+    out, err = _advise_gap(str(body.get("a") or ""), str(body.get("b") or ""))
+    if err:
+        return JSONResponse({"error": err["error"]}, status_code=err["status"])
+    return out
+
+
+@app.post("/api/advise/diagnose")
+def api_advise_diagnose(body: dict):
+    symptom = str(body.get("symptom") or "")
+    scene = body.get("scene")
+    with _lock:
+        try:
+            if scene not in (None, ""):
+                cap, label, err = _resolve_source(str(scene))
+                if err:
+                    return JSONResponse({"error": err}, status_code=404)
+            else:
+                cap, label = editbuffer.capture(get_fm9(), reg), "the loaded scene"
+        except FM9NotFound:
+            drop_fm9()
+            return JSONResponse({"error": "FM9 not connected"}, status_code=503)
+    try:
+        out = advisory.diagnose(cap, symptom, reg)
+    except ValueError as e:
+        return JSONResponse({"error": str(e), "symptoms": advisory.symptoms()}, status_code=400)
+    out["scene"] = label
+    return out
+
+
+def _advisory_route(messages: list[dict]) -> tuple[str, dict | None]:
+    """The one place both chat endpoints ask whether the latest message is a
+    question the deterministic core can answer. Returns (context prefix,
+    payload): an empty prefix and None when it is not."""
+    last = ""
+    for m in reversed(messages or []):
+        if m.get("role") == "user":
+            last = str(m.get("content") or "")
+            break
+    q = advisory.parse_question(last)
+    if not q:
+        return "", None
+    try:
+        if q["kind"] == "diagnose":
+            with _lock:
+                cap, label, err = _resolve_source(q["scene"])
+            if err:
+                return "", None                      # not a scene of this preset: not our question
+            payload = advisory.diagnose(cap, q["symptom"], reg)
+            payload["scene"] = label
+            return advisory.findings_text("diagnose", payload), {"diagnosis": payload}
+        if q["kind"] == "compare":
+            out, err = _advise_compare(q["a"], q["b"])
+            if err:
+                return "", None                      # an object that is not a source: not our question
+            return advisory.findings_text("compare", out), {"comparison": out}
+        if q["kind"] == "gap":
+            a = q["a"] or "scene " + str((get_fm9().scene_name() or (1,))[0])
+            payload, err = _advise_gap(a, q["b"])
+            if err:
+                return "", None
+            return advisory.findings_text("gap", payload), {"gap": payload}
+    except FM9NotFound:
+        drop_fm9()
+    except Exception as exc:      # noqa: BLE001  advice must never take the chat down
+        log.info("advisory route skipped: %s", exc)
+    return "", None
+
+
 @app.post("/api/chat")
 def api_chat(body: ChatBody):
     """Talk a tone through before planning it.
@@ -5794,12 +6070,16 @@ def api_chat(body: ChatBody):
     """
     if not body.messages:
         return JSONResponse({"error": "nothing to talk about"}, status_code=400)
-    context = _chat_context()
+    prefix, advisory_payload = _advisory_route(body.messages)
+    context = prefix + _chat_context()
     try:
         with _settings_lock:
-            return planner.converse(body.messages, context, PARAM_REFERENCE)
+            out = planner.converse(body.messages, context, PARAM_REFERENCE)
     except Exception as exc:
         return JSONResponse({"error": str(exc)}, status_code=502)
+    if advisory_payload:
+        out = dict(out, advisory=advisory_payload)
+    return out
 
 
 @app.post("/api/plan/stream")
@@ -5856,7 +6136,8 @@ def api_chat_stream(body: ChatBody):
     """
     if not body.messages:
         return JSONResponse({"error": "nothing to talk about"}, status_code=400)
-    context = _chat_context()
+    prefix, advisory_payload = _advisory_route(body.messages)
+    context = prefix + _chat_context()
 
     def work(emit, cancel):
         if not _hold_settings(cancel, lambda s: emit("status", s)):
@@ -5864,6 +6145,8 @@ def api_chat_stream(body: ChatBody):
         try:
             for kind, payload in planner.converse_stream(
                     body.messages, context, PARAM_REFERENCE, cancel=cancel):
+                if kind == "done" and advisory_payload and isinstance(payload, dict):
+                    payload = dict(payload, advisory=advisory_payload)
                 emit(kind, payload)
         except planner.PlanCancelled:
             pass                    # the listener left; nobody to tell

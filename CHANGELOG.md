@@ -41,6 +41,49 @@ Notable changes to ToneCommand. Dates are UTC.
   anything. It also reads `PresetName` back with no settle, though `loadRig`
   returns before the engine swaps. Evidence in
   `docs/HEADRUSH-VERIFICATION-126.md`; the fix is #125's, reported separately.
+### Added (advisory lane, 2026-09-18: #68, #69, #70, #6)
+- ADVISORY MODE, THE DETERMINISTIC HALF. `fm9/advisory.py` reads
+  edit-buffer captures and answers three questions from numbers, never
+  with an action (it imports no executor; its routes have no `actions`
+  key):
+  - compare (#68): every difference between two captures, exhaustively
+    (blocks on one side only, engagement, active channel, amp model, cab,
+    typed families, every parameter on each capture's active channel, raw
+    for uncalibrated ones), narrated in plain lines ("B has more amp gain
+    (7.2 vs 5.5)", "B runs the 4x12 1960B V30 cab, a brighter cab").
+  - close the gap (#69): the moves that take A toward B as advice
+    (block, parameter, from, to, why) plus one sentence the planner can
+    act on; BUILD THIS in the chat sends that sentence to /api/plan like
+    any typed request, through validation and confirm-before-send.
+  - diagnose (#70): muddy, boomy, thin, harsh, fizzy, dark, buried. A
+    curated table of checks against the capture (amp bass/mid/treble/
+    presence/gain/depth, low and high cut, drive engaged, delay and reverb
+    mix, EQ engaged, cab name voice), each answering likely (with the
+    value read and the tone_rules.md rule it rests on), cleared, or not
+    readable; at most three directions to try; an unknown symptom is
+    refused with the list.
+- Routes `POST /api/advise/compare`, `/gap`, `/diagnose`. Sources are
+  `snapshot:a|b|undo`, `scene:N` or a scene name (the tool stands in the
+  scene to capture it and puts the original scene back; nothing else is
+  written) and `design:NAME` (a saved design applied to the current
+  capture, read-only). Comparing two stored presets means comparing their
+  snapshots: selecting another preset would discard the edit buffer,
+  which is the loss undo exists to prevent.
+- The chat routes three question shapes deterministically before the
+  model sees them ("difference between X and Y", "get X closer to Y",
+  "why does my <scene> sound <symptom>"), prepends the measured findings
+  under a fixed heading, and shows them as a card under the reply, so the
+  prose rests on numbers. Ordinary sentences with those words go to the
+  model unchanged; objects must be a scene of the loaded preset, a
+  snapshot slot or a saved design, or the question is not routed.
+- CAB PAIRING IN THE PLANNER REFERENCE (#6, closing). Every amp line
+  carries its guide pairing ("pairs with Fender 4x10 Jensens; DynaCab
+  4x10 Bassguy RI -> factory bank 1 ordinal 194 4x10 Bassguy 57 B") where
+  the sidecar has one, with the factory target only when the DynaCab name
+  resolves in the catalog (24 of 47 do; none are guessed). The reference
+  now says that set_cab is a plannable, read-back-verified write. Growth
+  measured: 741 to 743 lines.
+- The broad-except audit now covers 82 blocks (34 re-raise, 48 unreachable).
 
 ## 1.3.0 (2026-09-18)
 
