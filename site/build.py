@@ -323,6 +323,20 @@ def load_theme() -> str:
     return (SITE / "theme.css").read_text()
 
 
+#: Traffic: the tonecommand.com web stream (G-LQMWGNMFT3, stream 15807627613)
+#: in the same GA4 property shieldbearerusa.com reports to ("Shieldbearer USA -
+#: Production", property 531353319), so both sites sit in the dashboard Moncy
+#: already reads, each on its own stream. Direct gtag, no GTM: the Shieldbearer
+#: container's tags are wired to that site's events. Set
+#: TONECOMMAND_SITE_GA4="" to build without it. Cloudflare Web Analytics is on
+#: for the domain at the account level as well (automatic, no beacon here).
+GA4_ID = os.environ.get("TONECOMMAND_SITE_GA4", "G-LQMWGNMFT3")
+GA4_SNIPPET = ("" if not GA4_ID else
+               f'<script async src="https://www.googletagmanager.com/gtag/js?id={GA4_ID}"></script>\n'
+               f'<script>window.dataLayer=window.dataLayer||[];function gtag(){{dataLayer.push(arguments);}}'
+               f'gtag("js",new Date());gtag("config","{GA4_ID}",{{"anonymize_ip":true}});</script>')
+
+
 def page(*, title: str, description: str, body: str, path: str,
          version: str, mermaid: bool = False, wide: bool = False) -> str:
     full_title = "ToneCommand" if path == "/" else f"{title} | ToneCommand"
@@ -354,6 +368,7 @@ def page(*, title: str, description: str, body: str, path: str,
 <meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="/theme.css">
 <script src="/fx.js" defer></script>
+{GA4_SNIPPET}
 </head>
 <body>
 <div id="splash" aria-hidden="true"><img src="{img_url('logo.png')}" alt="" width="520" height="520" fetchpriority="high"></div>
@@ -590,10 +605,32 @@ def build_home(readme: str, release: dict) -> None:
     safe_html, _ = render_md(sec.get("Safety", ""))
     out.append(section("07", "Safety", safe_html))
 
-    # 08 support: the README's own words, with the merch as direct links
+    # 08 next: NAM captures, the README's roadmap section, examples as chips
+    nxt_intro, nxt_groups = bold_groups(sec.get("Next: NAM captures", ""))
+    nxt_html, _ = render_md(nxt_intro)
+    nxt_chips = ""
+    for title, body in nxt_groups:
+        joined: list[str] = []
+        for ln in body.splitlines():
+            if ln.startswith("- "):
+                joined.append(ln[2:].strip())
+            elif ln.startswith("  ") and joined:
+                joined[-1] += " " + ln.strip()
+        lis = "".join(f"<li>{render_md(it)[0].replace('<p>', '').replace('</p>', '')}</li>" for it in joined)
+        nxt_chips += f'<div class="saygroup"><h3>{html.escape(title)}</h3><ul class="chips">{lis}</ul></div>'
+    # the closing paragraph (after the bold groups) is part of the last group's body in bold_groups;
+    # render it back under the chips
+    tail = ""
+    if nxt_groups:
+        last_body = nxt_groups[-1][1]
+        tail_md = "\n".join(ln for ln in last_body.splitlines() if not ln.startswith("- ") and not ln.startswith("  "))
+        tail, _ = render_md(tail_md.strip())
+    out.append(section("08", "Next: NAM captures", nxt_html + f'<div class="say">{nxt_chips}</div>' + tail, "next"))
+
+    # 09 support: the README's own words, with the merch as direct links
     support_html, _ = render_md(sec.get("Support", ""))
     merch = MERCH_HTML if MERCH_HTML else ""
-    out.append(section("08", "Support", support_html + f"""
+    out.append(section("09", "Support", support_html + f"""
 <div class="merchgrid">
   <a class="merchcard" href="{TEE_URL}" rel="noopener">{merch_card('tee')}<span class="merchname">ToneCommand emblem tee</span><span class="merchcta">See it in the shop</span></a>
   <a class="merchcard" href="{JERSEY_URL}" rel="noopener">{merch_card('jersey')}<span class="merchname">ToneCommand performance jersey</span><span class="merchcta">See it in the shop</span></a>
@@ -605,7 +642,7 @@ def build_home(readme: str, release: dict) -> None:
     install_short, _ = render_md(sec.get("Install", ""))
     out.append(f"""
 <section id="install" class="block reveal">
-  <p class="kicker">09 · INSTALL</p>
+  <p class="kicker">10 · INSTALL</p>
   <h2>Install</h2>
   {install_short}
   <p><a class="btn primary sweep" href="/install/">The full install guide</a></p>
@@ -829,8 +866,26 @@ def build_static(recipes: list[dict]) -> None:
         "/slack " + SLACK_URL + " 302\n"
         "/shop https://shop.shieldbearerusa.com 302\n"
         "/releases https://github.com/monzta1/ToneCommand/releases 302\n"
-        "/issues https://github.com/monzta1/ToneCommand/issues 302\n")
-    (DIST / "robots.txt").write_text(f"User-agent: *\nAllow: /\nSitemap: {SITE_URL}/sitemap.xml\n")
+        "/issues https://github.com/monzta1/ToneCommand/issues 302\n"
+        "/nam /#next-nam-captures 302\n")
+    (DIST / "robots.txt").write_text(f"User-agent: *\nAllow: /\nSitemap: {SITE_URL}/sitemap.xml\nDisallow: /admin/\n")
+    # /admin/metrics/: the operator view of the site's traffic, ported from
+    # shieldbearerusa.com/admin/metrics (same passphrase gate, same JSON shape,
+    # cities included). site/metrics.json is written daily by the
+    # tonecommand-metrics-publisher Lambda (GA4 Data API, hostname-scoped) and
+    # served at /admin/metrics.json; unlinked and noindex, like the original.
+    admin_dir = DIST / "admin"
+    admin_dir.mkdir(exist_ok=True)
+    metrics_json = SITE / "metrics.json"
+    (admin_dir / "metrics.json").write_text(metrics_json.read_text() if metrics_json.exists()
+                                            else '{"generatedAt": null, "note": "no refresh has landed yet"}\n')
+    (admin_dir / "metrics" / "index.html").parent.mkdir(exist_ok=True)
+    (admin_dir / "metrics" / "index.html").write_text(
+        "<!doctype html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n"
+        "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n"
+        "<meta name=\"robots\" content=\"noindex, nofollow\">\n"
+        "<title>ToneCommand metrics</title>\n<link rel=\"icon\" type=\"image/png\" href=\"/img/logo.png\">\n"
+        + (SITE / "metrics_admin.html").read_text() + "\n</body>\n</html>\n")
     urls = [href for href, _ in NAV] + [f"/docs/{s}/" for s, *_ in DOC_PAGES if s != "setup"]
     urls += [f"/recipes/{r.get('name', r['_file'].stem)}/" for r in recipes]
     (DIST / "sitemap.xml").write_text(

@@ -148,6 +148,21 @@
      that changes what every other control on this page will do, and a mode
      that silent is a mode you forget you are in. */
   #gig { font: inherit; cursor: pointer; }
+  /* #139: the device pill and its popover. Amber while a choice is owed,
+     because a build will be refused until it is made. */
+  .devwrap { position: relative; display: inline-block; }
+  .devwrap[hidden] { display: none; }
+  #device { font: inherit; cursor: pointer; }
+  #device:hover { border-color: var(--cyan); color: var(--cyan); }
+  #device.owed { border-color: var(--amber); color: var(--amber); }
+  .devpop { width: 260px; padding: 6px; }
+  .devpop button { display: block; width: 100%; text-align: left; font: inherit;
+    padding: 8px 10px; margin: 2px 0; background: rgba(0,0,0,0.4); color: var(--text);
+    border: 1px solid var(--line); border-radius: 3px; cursor: pointer; }
+  .devpop button:hover { border-color: var(--cyan); }
+  .devpop button.active { border-color: var(--green); color: var(--green); }
+  .devpop .deverr { color: var(--red); font-size: var(--fs-hint); padding: 6px 4px 2px; }
+  .devpop .devhint { color: var(--muted); font-size: var(--fs-hint); padding: 2px 4px 6px; }
   #gig:hover { border-color: var(--amber); color: var(--amber); }
   #gig.on { border-color: var(--amber); color: var(--amber);
             background: rgba(255,180,84,0.12);
@@ -1984,8 +1999,11 @@
     border-bottom: 1px solid var(--line); }
   .cabrow:last-child { border-bottom: 0; }
   .cabrow.chosen { font-weight: 600; }
+  /* #137: the name may ellipsize, but the reasons and the measured moves
+     under it must never be cut; they wrap on their own line. */
   .cabname { min-width: 0; overflow: hidden; text-overflow: ellipsis;
     white-space: nowrap; }
+  .cabname .cabwhy { display: block; white-space: normal; }
   .cabwhy { color: var(--muted); font-size: var(--fs-hint); font-weight: 400; }
   .cabtag { color: var(--muted); font-size: var(--fs-hint); white-space: nowrap; }
   .cabplay { white-space: nowrap; }
@@ -1995,6 +2013,13 @@
   .cabuse.on { border-color: var(--cyan); color: var(--cyan); }
   .cablinkpick { white-space: nowrap; }
   .cabfoot { color: var(--muted); font-size: var(--fs-hint); margin-top: 8px; }
+  /* #137: the two candidate groups, on the rig first */
+  .cabgroup { margin-top: 12px; letter-spacing: 0.06em; }
+  /* Advisory lane: the one button that turns a gap into a build request */
+  .cbuildthis { font: inherit; font-size: var(--fs-hint); letter-spacing: 0.08em;
+    padding: 5px 10px; margin-top: 6px; background: rgba(0,0,0,0.4); color: var(--cyan);
+    border: 1px solid var(--cyan-dim); border-radius: 3px; cursor: pointer; }
+  .cbuildthis:hover { border-color: var(--cyan); }
   .intentlist { display: grid; gap: 8px; margin-top: 16px; }
   .intentrow { display: grid; grid-template-columns: 180px minmax(0,1fr) 72px;
     gap: 14px; align-items: center; min-height: 54px; padding: 9px 12px;
@@ -3313,6 +3338,13 @@
               title="performance lockout: while on, only scene changes reach the FM9">GIG LOCK</button>
       <button class="pill off" id="link" title="click to look for the FM9 again">
         <span class="dot"></span><span id="linktext">LINK</span></button>
+      <!-- #139: the target device, shown only when more than one is reachable.
+           With one device this stays hidden and the link pill is the whole
+           story, exactly as before. -->
+      <span class="devwrap" id="devwrap" hidden>
+        <button class="pill" id="device" title="which device this build is for">DEVICE</button>
+        <div class="pop devpop" id="devpop" hidden></div>
+      </span>
       <!-- The settings gear lives once, in the footer. AI/planner settings are
            reached by clicking the "using <model>" tag, so a second gear here
            was a duplicate. -->
@@ -6203,17 +6235,101 @@ $('gridbig').addEventListener('click', e => {
   }
 });
 
+// #139: the target device. Short names for the link text are a fixed map
+// here, never the API label, so the FM9 reads exactly 'FM9 · LINKED' as it
+// always has. `deviceGen` is bumped by a selection; a poll that started
+// before the bump leaves the device block alone (a stale answer must never
+// revert a fresh choice).
+const DEVICE_SHORT = { fm9: 'FM9', headrush: 'HEADRUSH' };
+let deviceGen = 0;
+let deviceState = null;
+function deviceShort(dev) {
+  const kind = dev && dev.active;
+  return DEVICE_SHORT[kind] || (kind ? String(kind).toUpperCase() : 'FM9');
+}
+function renderDevice(dev) {
+  deviceState = dev;
+  const wrap = $('devwrap');
+  if (!dev || !dev.available || dev.available.length < 2) { wrap.hidden = true; $('devpop').hidden = true; return; }
+  wrap.hidden = false;
+  const pill = $('device');
+  pill.className = 'pill' + (dev.ambiguous ? ' owed' : '');
+  pill.textContent = dev.ambiguous ? 'CHOOSE DEVICE' : (dev.label || deviceShort(dev)).toUpperCase();
+  if (!$('devpop').hidden) renderDevicePop('');
+}
+function renderDevicePop(error) {
+  const dev = deviceState || {};
+  const pop = $('devpop');
+  pop.innerHTML = `<div class="devhint">${dev.ambiguous
+      ? 'More than one device is reachable. Say which this build is for.'
+      : 'Which device this build is for.'}</div>`
+    + (dev.available || []).map(d =>
+        `<button data-kind="${esc(d.kind)}" class="${!dev.ambiguous && d.kind === dev.active ? 'active' : ''}">`
+        + `${esc(d.label)}${!dev.ambiguous && d.kind === dev.active ? ' · active' : ''}</button>`).join('')
+    + (error ? `<div class="deverr">${esc(error)}</div>` : '');
+  for (const b of pop.querySelectorAll('button[data-kind]')) {
+    b.onclick = () => selectDevice(b.dataset.kind);
+  }
+}
+function openDevicePicker(error) {
+  if ($('devwrap').hidden) return;
+  $('devpop').hidden = false;
+  renderDevicePop(error || '');
+}
+async function selectDevice(kind) {
+  const gen = ++deviceGen;
+  try {
+    const r = await fetch('/api/device/select', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({kind}),
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) { renderDevicePop(d.error || `the server said ${r.status}`); return; }
+    if (gen !== deviceGen) return;   // a newer selection is in flight
+    const dev = Object.assign({}, deviceState || {}, {active: d.active, selected: d.selected, ambiguous: false,
+      label: ((deviceState && deviceState.available) || []).filter(x => x.kind === d.active).map(x => x.label)[0] || d.active});
+    renderDevice(dev);
+    $('devpop').hidden = true;
+    if ($('link').classList.contains('on')) $('linktext').textContent = `${deviceShort(dev)} · LINKED`;
+    refresh();
+  } catch (e) {
+    renderDevicePop(String(e.message || e));
+  }
+}
+document.addEventListener('DOMContentLoaded', () => {
+  $('device').addEventListener('click', () => {
+    if ($('devpop').hidden) openDevicePicker(''); else $('devpop').hidden = true;
+  });
+  document.addEventListener('click', e => {
+    if (!e.target.closest('#devwrap')) $('devpop').hidden = true;
+  });
+});
+// A build refused because the device is ambiguous (#94's 409) opens the
+// picker and says so in words, never 'the server said 409'.
+function deviceRefusal(status, body) {
+  if (status === 409 && body && body.ambiguous_device) {
+    openDevicePicker('');
+    return 'choose a device first';
+  }
+  return null;
+}
+
 async function refresh() {
+  const pollGen = deviceGen;
   try {
     const r = await fetch('/api/state');
     const s = await r.json();
     // Before the connected check: the lockout state rides along even when
     // the rig is unplugged, and the pill has to stay true either way.
     if (typeof s.gig_mode === 'boolean') renderGig(s.gig_mode);
+    // The device block AND the link text come from the same poll: a stale
+    // answer (one that started before a selection) must touch neither.
+    const freshDevice = pollGen === deviceGen;
+    if (s.device && freshDevice) renderDevice(s.device);
     if (!s.connected) throw new Error(s.error || 'no link');
     if (!$('link').classList.contains('busy')) {
       $('link').className = 'pill on';
-      $('linktext').textContent = 'FM9 · LINKED';
+      $('linktext').textContent = `${deviceShort(freshDevice ? s.device : deviceState)} · LINKED`;
     }
     setRigOff(false);
     // the label carries both numbers: the wire number this tool sends and the
@@ -8488,7 +8604,10 @@ async function streamPlan(payload) {
       signal: chatAbort.signal,
       body: JSON.stringify(payload),
     });
-    if (!r.ok || !r.body) throw new Error(`the server said ${r.status}`);
+    if (!r.ok || !r.body) {
+      const body = r.ok ? null : await r.json().catch(() => null);
+      throw new Error(deviceRefusal(r.status, body) || (body && body.error) || `the server said ${r.status}`);
+    }
     let plan = null;
     for await (const [ev, d] of sseFrom(r)) {
       if (ev === 'ping') { chatAlive = Date.now(); renderChat(); }
@@ -10010,10 +10129,13 @@ function cabRow(r, chosen, canUse) {
   if (r.distance_from_current != null) {
     bits.push(`${r.distance_from_current} dB from current`);
   }
+  // #137: per-feature moves from a measured Current, in words, only when
+  // the server could measure both sides.
+  if (r.axes_words && r.axes_words.length) bits.push(r.axes_words.join(', '));
   return `<div class="cabrow${chosen ? ' chosen' : ''}">
     <div class="cabname">${chosen ? '&#9679; ' : ''}${esc(r.name || '')}
       ${why ? `<span class="cabwhy">${esc(why)}</span>` : ''}
-      ${bits.length ? `<span class="cabwhy">${esc(bits.join(' &middot; '))}</span>` : ''}</div>
+      ${bits.length ? `<span class="cabwhy">${esc(bits.join(' \u00b7 '))}</span>` : ''}</div>
     <div class="cabtag">${esc(r.pack || '')}</div>
     <span class="cabacts">
     ${canUse !== undefined && r.slot
@@ -10030,18 +10152,21 @@ function cabRow(r, chosen, canUse) {
             nothing here knows it is on the FM9, so it cannot be selected as a
             slot. Install it, then link the slot to it.">NOT ON THE RIG</span>`
         : ''}
+    ${r.slot
+      ? `<button class="cabhear${hearing(r.slot) ? ' on' : ''}"
+                 data-bank="${esc(String(r.slot.bank))}"
+                 data-ordinal="${esc(String(r.slot.ordinal))}"
+                 title="Hear this cab in your rig right now. Edit buffer
+                 only: nothing is stored, and RESTORE ORIGINAL puts the cab
+                 you had back. USE THIS is still the only way it enters the
+                 build.">${hearing(r.slot) ? 'HEARING NOW' : 'AUDITION ON RIG'}</button>`
+      : ''}
     ${playable
       ? `<button class="cabplay" data-path="${esc(r.path)}"
                  title="Representative preview: a synthetic DI through a generic
                  amp stage, then this cab. Not your amp path.">PREVIEW</button>`
       : r.slot
-        ? `<button class="cabhear${hearing(r.slot) ? ' on' : ''}"
-                   data-bank="${esc(String(r.slot.bank))}"
-                   data-ordinal="${esc(String(r.slot.ordinal))}"
-                   title="Hear this cab in your rig right now. Edit buffer
-                   only: nothing is stored, and RESTORE ORIGINAL puts the cab
-                   you had back. USE THIS is still the only way it enters the
-                   build.">${hearing(r.slot) ? 'HEARING NOW' : 'AUDITION ON RIG'}</button>`
+        ? ''
         : `<span class="cabtag" title="Fractal .syx and factory cabs are an
             encoded device format that cannot be rendered; audition them on the
             rig">ON RIG ONLY</span>`}
@@ -10212,7 +10337,48 @@ function renderCabLink(sel) {
 // constrains the search but proves no distance, and an unresolved current
 // proves nothing at all. Saying which one is in force is the difference
 // between a ranking and a guess.
+// #137: library candidates in two groups, what is on the rig first. Factory
+// fallback rows (the #82 shortlist) carry no `on_rig` key at all in the
+// library sense (they are on_rig by construction and have no path), so a
+// list with no library row gets no headers and renders exactly as before.
+function cabGroups(alts) {
+  const library = alts.filter(r => 'on_rig' in r && r.path);
+  if (!library.length) return alts.map(r => cabRow(r, false, chosenSlot(r))).join('');
+  const onRig = alts.filter(r => r.on_rig);
+  const offRig = alts.filter(r => !r.on_rig);
+  return (onRig.length
+            ? `<div class="cabfoot cabgroup">ON YOUR RIG &middot; audition in your own amp path</div>`
+              + onRig.map(r => cabRow(r, false, chosenSlot(r))).join('')
+            : '')
+       + (offRig.length
+            ? `<div class="cabfoot cabgroup">IN YOUR LIBRARY &middot; load it with Cab-Lab first</div>`
+              + offRig.map(r => cabRow(r, false, chosenSlot(r))).join('')
+            : '');
+}
+
+// #138: what the list was ranked FOR beyond the request: the scene's role
+// and the guitar's tuning, as IRCommand reported applying them.
+function cabHintNote(sel) {
+  const h = sel && sel.hints;
+  if (!h || (!h.role && !h.tuning)) return '';
+  if (h.undecided) {
+    return ' Your IR library is running an older build that ignores the scene and tuning hints.';
+  }
+  const applied = (h.applied || []).map(a => (a.sources || []).join(', '));
+  const usedRole = h.role && applied.some(s => s.split(', ').includes(h.role));
+  const usedTuning = h.tuning && applied.some(s => s.split(', ').includes(h.tuning));
+  const parts = [];
+  if (usedRole) parts.push(`a ${h.role} scene`);
+  if (usedTuning) parts.push(h.tuning.replace(/\b([a-g])\b/g, m => m.toUpperCase()));
+  if (!parts.length) return '';
+  return ` Ranked for ${parts.join(' in ')}.`;
+}
+
 function cabAnchorNote(sel) {
+  return cabAnchorBase(sel) + cabHintNote(sel);
+}
+
+function cabAnchorBase(sel) {
   const cur = sel.current ? String(sel.current) : 'the cab now loaded';
   const kept = sel.preserved ? `, keeping ${sel.preserved}` : '';
   if (sel.anchor === 'measured') {
@@ -10347,7 +10513,7 @@ async function renderCabPanel() {
          ${['clean', 'crunch', 'lead', 'high-gain'].map(d =>
            `<button class="cabplay cabdrive${d === cabDrive ? ' on' : ''}"
                     data-drive="${d}">${d}</button>`).join(' ')}</div>`
-      + alts.map(r => cabRow(r, false, chosenSlot(r))).join('')
+      + cabGroups(alts)
     : '';
 
   for (const b of panel.querySelectorAll('.cabplay[data-path]')) {

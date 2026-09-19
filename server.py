@@ -184,6 +184,16 @@ def _build_context(kind: str) -> DeviceContext:
     raise KeyError(kind)
 
 
+def device_block() -> dict:
+    """#139: what the header renders on every poll: the active device, its
+    label, every reachable kind and whether a choice is still owed. Derived
+    from the environment and the selection, so it costs nothing."""
+    kind, avail = device_target()
+    active = device_context().kind
+    return {"active": active, "label": DEVICE_KINDS.get(active, active),
+            "selected": kind, "available": avail, "ambiguous": kind is None}
+
+
 @app.get("/api/device")
 def api_device():
     kind, avail = device_target()
@@ -1138,14 +1148,58 @@ def _plan_request_text(result: dict) -> str:
     return str(result.get("request") or result.get("prompt") or "")
 
 
-def cab_listening_set(result: dict, anchor: dict, k: int = 3) -> dict:
+def cab_listening_set(result: dict, anchor: dict, k: int = 3,
+                      role: str = None, tuning: str = None) -> dict:
     """The ONE place a cab listening set is produced: the library search,
     then (#82) the factory shortlist when the library gave the plan's own
-    cab nothing to be compared against."""
-    return _factory_fallback(result, _library_listening_set(result, anchor, k))
+    cab nothing to be compared against. `role` and `tuning` (#138) are what
+    the caller knows about the scene and the guitar; this derives nothing."""
+    hints = {k2: v for k2, v in (("role", role), ("tuning", tuning)) if v}
+    return _factory_fallback(result, _library_listening_set(result, anchor, k, **hints))
 
 
-def _library_listening_set(result: dict, anchor: dict, k: int = 3) -> dict:
+#: #137: a per-feature move smaller than this says nothing. Band values are
+#: dB relative to the whole curve; brightness is a Hz centroid.
+AXES_THRESHOLDS = {"low": 1.0, "mid": 1.0, "presence": 1.0, "fizz": 1.0, "brightness": 150.0}
+AXES_WORDS = {
+    "low": ("fuller low", "tighter low"), "mid": ("more mid", "less mid"),
+    "presence": ("more presence", "less presence"), "fizz": ("more fizz", "less fizz"),
+    "brightness": ("brighter", "darker"),
+}
+
+
+def cab_axes(candidate: dict, current: dict) -> tuple[dict, list[str]]:
+    """Per-feature deltas of a measured candidate from a measured Current
+    (candidate minus Current) and the short words for the moves big enough
+    to hear. Both sides must carry IRCommand's five features; anything
+    missing on either side is left out rather than guessed."""
+    deltas: dict = {}
+    words: list[str] = []
+    for feature, threshold in AXES_THRESHOLDS.items():
+        a, b = candidate.get(feature), current.get(feature)
+        if a is None or b is None:
+            continue
+        delta = round(float(a) - float(b), 1)
+        deltas[feature] = delta
+        if abs(delta) >= threshold:
+            words.append(AXES_WORDS[feature][0 if delta > 0 else 1])
+    return deltas, words
+
+
+def scene_hints(snap, prompt: str, whole_rig: bool) -> tuple:
+    """(role, tuning) for a plan (#138): the role read from the CURRENT scene's
+    name (never on a whole-rig build, which targets every scene), the tuning
+    read from the player's own words. Either is None when it cannot be told."""
+    from fm9 import tone_review, tuning as tuning_mod
+    role = None
+    if not whole_rig:
+        scene = (snap or {}).get("scene") if isinstance(snap, dict) else None
+        role = tone_review.infer_role((scene or {}).get("name") or "") if scene else None
+    return role, tuning_mod.parse_tuning(prompt or "")
+
+
+def _library_listening_set(result: dict, anchor: dict, k: int = 3,
+                           role: str = None, tuning: str = None) -> dict:
     """The library half of cab_listening_set. Brief 19.5 and 26.4.
 
     Runs AFTER the planner, for live, remembered and shared-profile state
@@ -1226,10 +1280,18 @@ def _library_listening_set(result: dict, anchor: dict, k: int = 3) -> dict:
     reference = anchor.get("reference") if anchor.get("state") == "measured" else None
     out["reference"] = reference
     detail = {}
+    # #138: the hints go on the wire only when known, so a stub or a service
+    # that does not take them is unaffected.
+    hint_kwargs = {}
+    if role:
+        hint_kwargs["role"] = role
+    if tuning:
+        hint_kwargs["tuning"] = tuning
+    out["hints"] = {"role": role, "tuning": tuning, "applied": [], "ignored": [], "undecided": False}
     try:
         rows = ir_service.recommend(target, "fm9", k, reference=reference,
                                     preserve=preserve, preserve_when=words,
-                                    detail=detail) or []
+                                    detail=detail, **hint_kwargs) or []
     except (TypeError, AttributeError, KeyError, IndexError, ValueError) as exc:
         # A programming error here is NOT "the library did not answer". This
         # exact except swallowed a missing `preserve` parameter and reported a
@@ -1275,6 +1337,10 @@ def _library_listening_set(result: dict, anchor: dict, k: int = 3) -> dict:
         out["why"] = detail.get("why") or "nothing in the library answers that"
     if detail.get("unmatched"):
         out["unmatched"] = detail["unmatched"]
+    if hint_kwargs:
+        out["hints"].update({"applied": detail.get("hints_applied") or [],
+                             "ignored": detail.get("hints_ignored") or [],
+                             "undecided": bool(detail.get("hints_undecided"))})
     # The PLAN's own cab target was unreadable as gear. `cab_need` is a free
     # string and the planner is asked, not required, to write gear words in
     # it, so it can come back holding an artist name. That is a fault in the
@@ -1302,17 +1368,36 @@ def _library_listening_set(result: dict, anchor: dict, k: int = 3) -> dict:
         return {"bank": bank, "ordinal": ordinal,
                 "label": cab_label(bank, ordinal)}
 
-    out["candidates"] = [{
-        "name": r.get("name"), "path": r.get("path"), "pack": r.get("pack"),
-        "match": r.get("match"), "why": r.get("why"),
-        "measured": r.get("measured"),
-        # Only a measured Current supports a numeric delta. With gear identity
-        # alone a candidate may be AIMED darker, never called measurably
-        # darker than something nothing measured (brief 21.5).
-        "distance_from_current": (r.get("distance_from_reference")
-                                  if reference else None),
-        "slot": _slot(r.get("path")),
-    } for r in rows[:k]]
+    # #137: Current's own five features, read once, only for a measured
+    # Current. A gear-anchored or unresolved Current gets no deltas and no
+    # words: nothing measured it (brief 21.5).
+    current_features = None
+    if reference:
+        current_features = (ir_service.measured_check(reference) or {}).get("features") or None
+    candidates = []
+    for r in rows[:k]:
+        slot = _slot(r.get("path"))
+        row = {
+            "name": r.get("name"), "path": r.get("path"), "pack": r.get("pack"),
+            "match": r.get("match"), "why": r.get("why"),
+            "measured": r.get("measured"),
+            # Only a measured Current supports a numeric delta. With gear identity
+            # alone a candidate may be AIMED darker, never called measurably
+            # darker than something nothing measured (brief 21.5).
+            "distance_from_current": (r.get("distance_from_reference")
+                                      if reference else None),
+            "slot": slot,
+            # #137: on the unit already, so it can be heard in the real amp path
+            "on_rig": bool(slot),
+            "axes": None, "axes_words": [],
+        }
+        if current_features and isinstance(r.get("measured"), dict):
+            row["axes"], row["axes_words"] = cab_axes(r["measured"], current_features)
+        candidates.append(row)
+    # #137: what is on the rig comes first, then the rest, each group in
+    # IRCommand's own order (a stable partition, nothing re-scored).
+    out["candidates"] = ([c for c in candidates if c["on_rig"]]
+                         + [c for c in candidates if not c["on_rig"]])
     # Current as a row of its own, so the panel can show it as the permanent
     # A side of the comparison rather than as a sentence above the list
     # (brief 19.4: "Current as the permanent anchor"). Only a measured
@@ -1975,21 +2060,25 @@ def api_reconnect():
 
 @app.get("/api/state")
 def api_state():
+    # #139: the device block rides on every answer, connected or not, so the
+    # header can offer the choice while the chosen rig is still unplugged.
+    device = device_block()
     with _lock:
         try:
             snap = snapshot(get_fm9())
+            snap["device"] = device
             return snap
         except FM9NotFound:
             drop_fm9()
             # gig_mode rides along even unplugged, so the pill in the header
             # stays true while the rig is off.
-            return {"connected": False, "gig_mode": _gig_mode["on"]}
+            return {"connected": False, "gig_mode": _gig_mode["on"], "device": device}
         except CapabilityDeclined:
             raise
         except Exception as e:
             drop_fm9()
             return JSONResponse({"connected": False, "error": str(e),
-                                 "gig_mode": _gig_mode["on"]}, status_code=500)
+                                 "gig_mode": _gig_mode["on"], "device": device}, status_code=500)
 
 
 class DescribeBody(BaseModel):
@@ -2586,7 +2675,10 @@ def _plan_for(body: PromptBody, on_count=None, cancel=None, on_status=None):
                     result["timing"] = {"plan_s": round(time.monotonic() - _t_off, 1)}
                     result["whole_rig"] = bool(getattr(body, "whole_rig", False))
                     result["request"] = body.prompt
-                    result["cab_selection"] = cab_listening_set(result, _off_anchor)
+                    # A shared profile has no live scene: only the tuning hint applies.
+                    _off_role, _off_tuning = scene_hints(None, body.prompt, result["whole_rig"])
+                    result["cab_selection"] = cab_listening_set(
+                        result, _off_anchor, **{k2: v for k2, v in (("role", _off_role), ("tuning", _off_tuning)) if v})
             finally:
                 _settings_lock.release()
         except planner.PlanCancelled:
@@ -2670,8 +2762,11 @@ def _plan_for(body: PromptBody, on_count=None, cancel=None, on_status=None):
             result["request"] = body.prompt
             result["whole_rig"] = bool(getattr(body, "whole_rig", False))
             # ONE post-plan selector, driven by the planner's gear translation
-            # rather than the player's raw words (brief 19.5, 26.4).
-            result["cab_selection"] = cab_listening_set(result, anchor)
+            # rather than the player's raw words (brief 19.5, 26.4). #138: the
+            # scene's role and the guitar's tuning ride along as soft hints.
+            _role, _tuning = scene_hints(snap, body.prompt, result["whole_rig"])
+            result["cab_selection"] = cab_listening_set(
+                result, anchor, **{k2: v for k2, v in (("role", _role), ("tuning", _tuning)) if v})
             log.info("plan: %.1fs for %d action(s) via %s",
                      _plan_s, len(result.get("actions") or []),
                      result.get("backend", "?"))

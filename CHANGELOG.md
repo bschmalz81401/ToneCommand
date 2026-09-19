@@ -4,102 +4,6 @@ Notable changes to ToneCommand. Dates are UTC.
 
 ## Unreleased
 
-### Fixed (HeadRush adapter, 2026-09-18: #135, from the #126 hardware pass)
-- `HeadrushAdapter.select_preset()` sent the rig NAME to `loadRig`; the Core
-  answers 504 and loads nothing (found by @bschmalz81401's pass, PR #134). It
-  now resolves a name to the rig id through the parallel `AllRigNames` /
-  `AllRigIds` lists (an id is accepted directly), calls `loadRig(id, "")`,
-  and waits the settle before reading `PresetName` back, since `loadRig`
-  returns before the engine swaps. The simulator gains `loadRig` on
-  `/Evil/API/Rigs`, loading by id and answering 504 for a name, so the path
-  is executed under test: it was the one adapter method nothing had ever run.
-- `SceneActive{n}` is now a measured LATCH (engaging a second scene leaves its
-  flag True and clears the first's); the adapter's comments say so, and
-  `LastScene` stays the success signal because it names the scene.
-
-### Added (HeadRush adapter hardware verification, 2026-09-18: #126, #33)
-- `tools/verify_headrush.py`: the dedicated hardware verification procedure for
-  #126. Runs the #125 adapter against a real Core, one check per acceptance
-  criterion, each tagged with the criterion it serves. Refuses to start unless
-  the loaded rig is a `##HRB` test preset, restores what it touches, and ends by
-  reloading the rig by id so the edit buffer is discarded without storing.
-  Exit status is 0 when every check passes and 1 when any fails, so it can gate.
-- REFUSED BEFORE TRANSPORT IS CHECKED AS SUCH (AC4). Catching an exception
-  proves the adapter raised; it does not prove nothing reached the unit, which
-  is what the criterion asks. The client's opener is wrapped in a counter and
-  the check asserts the count is unchanged across the refused call, for both a
-  non-allowlisted `object-method` and `ModuleType` ordinal 20.
-- `docs/HEADRUSH-VERIFICATION-126.md`: the scrubbed report (AC7). Redaction
-  happens in the script at the point of printing, so the transcript is committed
-  verbatim rather than edited into shape; no rig name, rig id, setlist or preset
-  content appears in either file.
-- THE FIVE-STEP PASS FROM #33 is carried by the same procedure, tagged `#33`
-  rather than `AC` so the ticket's criteria stay separable. All five pass, and
-  both questions left open in that comment now have answers.
-- `SceneActive{n}` IS A LATCH, NOT A PULSE. Measured across a transition,
-  because a flag read back immediately after its own write is equally
-  consistent with both: engaging a second scene leaves the second's flag True
-  and clears the first's. `LastScene` remains the better success signal, so
-  `set_scene` requiring the flag is now an option rather than a defect.
-- ORDINAL 4 IS REPORTED NOT PLACED, AND NOT FALSELY OK. The device accepts the
-  write and silently reverts to 0; the adapter's 0.5 s settle catches it and
-  returns `ok=False`. An immediate read-back would have seen `4` and lied.
-
-### Known issues
-- `HeadrushAdapter.select_preset()` DOES NOT WORK AGAINST HARDWARE. It passes
-  the rig name as `loadRig`'s first argument; the unit answers `504 Gateway
-  Timeout` and loads nothing, where the rig id returns `True` and loads. The
-  method has no test, and `devices/headrush/sim.py` does not implement
-  `loadRig`, so it reached main and 1.3.0 having never been executed against
-  anything. It also reads `PresetName` back with no settle, though `loadRig`
-  returns before the engine swaps. Evidence in
-  `docs/HEADRUSH-VERIFICATION-126.md`; the fix is #125's, reported separately.
-### Added (advisory lane, 2026-09-18: #68, #69, #70, #6)
-- ADVISORY MODE, THE DETERMINISTIC HALF. `fm9/advisory.py` reads
-  edit-buffer captures and answers three questions from numbers, never
-  with an action (it imports no executor; its routes have no `actions`
-  key):
-  - compare (#68): every difference between two captures, exhaustively
-    (blocks on one side only, engagement, active channel, amp model, cab,
-    typed families, every parameter on each capture's active channel, raw
-    for uncalibrated ones), narrated in plain lines ("B has more amp gain
-    (7.2 vs 5.5)", "B runs the 4x12 1960B V30 cab, a brighter cab").
-  - close the gap (#69): the moves that take A toward B as advice
-    (block, parameter, from, to, why) plus one sentence the planner can
-    act on; BUILD THIS in the chat sends that sentence to /api/plan like
-    any typed request, through validation and confirm-before-send.
-  - diagnose (#70): muddy, boomy, thin, harsh, fizzy, dark, buried. A
-    curated table of checks against the capture (amp bass/mid/treble/
-    presence/gain/depth, low and high cut, drive engaged, delay and reverb
-    mix, EQ engaged, cab name voice), each answering likely (with the
-    value read and the tone_rules.md rule it rests on), cleared, or not
-    readable; at most three directions to try; an unknown symptom is
-    refused with the list.
-- Routes `POST /api/advise/compare`, `/gap`, `/diagnose`. Sources are
-  `snapshot:a|b|undo`, `scene:N` or a scene name (the tool stands in the
-  scene to capture it and puts the original scene back; nothing else is
-  written) and `design:NAME` (a saved design applied to the current
-  capture, read-only). Comparing two stored presets means comparing their
-  snapshots: selecting another preset would discard the edit buffer,
-  which is the loss undo exists to prevent.
-- The chat routes three question shapes deterministically before the
-  model sees them ("difference between X and Y", "get X closer to Y",
-  "why does my <scene> sound <symptom>"), prepends the measured findings
-  under a fixed heading, and shows them as a card under the reply, so the
-  prose rests on numbers. Ordinary sentences with those words go to the
-  model unchanged; objects must be a scene of the loaded preset, a
-  snapshot slot or a saved design, or the question is not routed.
-- CAB PAIRING IN THE PLANNER REFERENCE (#6, closing). Every amp line
-  carries its guide pairing ("pairs with Fender 4x10 Jensens; DynaCab
-  4x10 Bassguy RI -> factory bank 1 ordinal 194 4x10 Bassguy 57 B") where
-  the sidecar has one, with the factory target only when the DynaCab name
-  resolves in the catalog (24 of 47 do; none are guessed). The reference
-  now says that set_cab is a plannable, read-back-verified write. Growth
-  measured: 741 to 743 lines.
-- The broad-except audit now covers 82 blocks (34 re-raise, 48 unreachable).
-
-## Unreleased
-
 ### Changed (verification procedure, review of #134: 2026-09-19)
 - A SAFETY CHECK MUST NOT BE THE THING IT CHECKS FOR.
   `tools/verify_headrush.py` probed AC4 by calling `deleteRig` and by writing
@@ -189,6 +93,141 @@ Notable changes to ToneCommand. Dates are UTC.
 ### Verified on hardware
 - #135's `select_preset` fix passes against the Core at 5.1.0.2a63755. The
   full pass is 36 checks, 0 failed, three runs in a row.
+
+## 1.3.1 (2026-09-19)
+
+### Added (device picker, 2026-09-19: #139, the follow-up #94 left)
+- With more than one device reachable, the header shows a DEVICE pill (amber
+  CHOOSE DEVICE until a choice is made) with a popover listing every reachable
+  device; choosing one goes through `/api/device/select` and a refusal (GIG
+  LOCK, a reviewed plan pending, a kind not here) is shown in the server's own
+  words. `/api/state` carries a `device` block on every answer. The link pill
+  follows the active device by a fixed short-name map, so the FM9 still reads
+  exactly `FM9 · LINKED`, and with one device nothing is rendered at all. A
+  build refused with `ambiguous_device` opens the picker and says "choose a
+  device first". A stale poll can never revert a fresh selection (generation
+  guard).
+
+### Added (the IRCommand seam, 2026-09-19: #137, #138)
+- #137: a library candidate that is already on the FM9 (its file linked to a
+  user cab slot) is `on_rig` and comes first in the listening set, in
+  IRCommand's own order inside each group, and the cab panel gives it
+  AUDITION ON RIG (the real amp path) with PREVIEW kept beside it; the list
+  renders under ON YOUR RIG and IN YOUR LIBRARY (load it with Cab-Lab first).
+  With a measured Current, each measured candidate carries per-feature deltas
+  (low, mid, presence, fizz, brightness, via IRCommand's `/ir/measured`
+  features) and short words for the moves big enough to hear ("tighter low,
+  more presence"). A gear-anchored Current still gets no numbers.
+- #138: the scene's role (`tone_review.infer_role` on the current scene name,
+  never on a whole-rig build) and the guitar's tuning (`fm9/tuning.py`, a
+  deterministic parser over the player's words in IRCommand's vocabulary)
+  travel to `/ir/recommend` as `role=` and `tuning=`, only when known;
+  `cab_selection.hints` reports what IRCommand applied, and the cab note reads
+  "Ranked for a lead scene in drop C", or says the library build ignores the
+  hints when it did not echo them.
+
+### Fixed
+- Two page classes had no CSS rule (`cabgroup` from #137 and `cbuildthis` from
+  the advisory lane); `tests/test_ui_warning.py` caught them in CI. Both are
+  styled now.
+- Cab rows: the reasons and measured moves under a candidate's name were
+  ellipsized with the name and the separator showed as a literal `&middot;`;
+  they now wrap on their own line with a real middle dot.
+
+### Fixed (HeadRush adapter, 2026-09-18: #135, from the #126 hardware pass)
+- `HeadrushAdapter.select_preset()` sent the rig NAME to `loadRig`; the Core
+  answers 504 and loads nothing (found by @bschmalz81401's pass, PR #134). It
+  now resolves a name to the rig id through the parallel `AllRigNames` /
+  `AllRigIds` lists (an id is accepted directly), calls `loadRig(id, "")`,
+  and waits the settle before reading `PresetName` back, since `loadRig`
+  returns before the engine swaps. The simulator gains `loadRig` on
+  `/Evil/API/Rigs`, loading by id and answering 504 for a name, so the path
+  is executed under test: it was the one adapter method nothing had ever run.
+- `SceneActive{n}` is now a measured LATCH (engaging a second scene leaves its
+  flag True and clears the first's); the adapter's comments say so, and
+  `LastScene` stays the success signal because it names the scene.
+
+### Added (HeadRush adapter hardware verification, 2026-09-18: #126, #33)
+- `tools/verify_headrush.py`: the dedicated hardware verification procedure for
+  #126. Runs the #125 adapter against a real Core, one check per acceptance
+  criterion, each tagged with the criterion it serves. Refuses to start unless
+  the loaded rig is a `##HRB` test preset, restores what it touches, and ends by
+  reloading the rig by id so the edit buffer is discarded without storing.
+  Exit status is 0 when every check passes and 1 when any fails, so it can gate.
+- REFUSED BEFORE TRANSPORT IS CHECKED AS SUCH (AC4). Catching an exception
+  proves the adapter raised; it does not prove nothing reached the unit, which
+  is what the criterion asks. The client's opener is wrapped in a counter and
+  the check asserts the count is unchanged across the refused call, for both a
+  non-allowlisted `object-method` and `ModuleType` ordinal 20.
+- `docs/HEADRUSH-VERIFICATION-126.md`: the scrubbed report (AC7). Redaction
+  happens in the script at the point of printing, so the transcript is committed
+  verbatim rather than edited into shape; no rig name, rig id, setlist or preset
+  content appears in either file.
+- THE FIVE-STEP PASS FROM #33 is carried by the same procedure, tagged `#33`
+  rather than `AC` so the ticket's criteria stay separable. All five pass, and
+  both questions left open in that comment now have answers.
+- `SceneActive{n}` IS A LATCH, NOT A PULSE. Measured across a transition,
+  because a flag read back immediately after its own write is equally
+  consistent with both: engaging a second scene leaves the second's flag True
+  and clears the first's. `LastScene` remains the better success signal, so
+  `set_scene` requiring the flag is now an option rather than a defect.
+- ORDINAL 4 IS REPORTED NOT PLACED, AND NOT FALSELY OK. The device accepts the
+  write and silently reverts to 0; the adapter's 0.5 s settle catches it and
+  returns `ok=False`. An immediate read-back would have seen `4` and lied.
+
+### Known issues
+- (Fixed in this release by #135, see "Fixed (HeadRush adapter)" above; kept as
+  the #126 pass reported it.) `HeadrushAdapter.select_preset()` DOES NOT WORK AGAINST HARDWARE. It passes
+  the rig name as `loadRig`'s first argument; the unit answers `504 Gateway
+  Timeout` and loads nothing, where the rig id returns `True` and loads. The
+  method has no test, and `devices/headrush/sim.py` does not implement
+  `loadRig`, so it reached main and 1.3.0 having never been executed against
+  anything. It also reads `PresetName` back with no settle, though `loadRig`
+  returns before the engine swaps. Evidence in
+  `docs/HEADRUSH-VERIFICATION-126.md`; the fix is #125's, reported separately.
+### Added (advisory lane, 2026-09-18: #68, #69, #70, #6)
+- ADVISORY MODE, THE DETERMINISTIC HALF. `fm9/advisory.py` reads
+  edit-buffer captures and answers three questions from numbers, never
+  with an action (it imports no executor; its routes have no `actions`
+  key):
+  - compare (#68): every difference between two captures, exhaustively
+    (blocks on one side only, engagement, active channel, amp model, cab,
+    typed families, every parameter on each capture's active channel, raw
+    for uncalibrated ones), narrated in plain lines ("B has more amp gain
+    (7.2 vs 5.5)", "B runs the 4x12 1960B V30 cab, a brighter cab").
+  - close the gap (#69): the moves that take A toward B as advice
+    (block, parameter, from, to, why) plus one sentence the planner can
+    act on; BUILD THIS in the chat sends that sentence to /api/plan like
+    any typed request, through validation and confirm-before-send.
+  - diagnose (#70): muddy, boomy, thin, harsh, fizzy, dark, buried. A
+    curated table of checks against the capture (amp bass/mid/treble/
+    presence/gain/depth, low and high cut, drive engaged, delay and reverb
+    mix, EQ engaged, cab name voice), each answering likely (with the
+    value read and the tone_rules.md rule it rests on), cleared, or not
+    readable; at most three directions to try; an unknown symptom is
+    refused with the list.
+- Routes `POST /api/advise/compare`, `/gap`, `/diagnose`. Sources are
+  `snapshot:a|b|undo`, `scene:N` or a scene name (the tool stands in the
+  scene to capture it and puts the original scene back; nothing else is
+  written) and `design:NAME` (a saved design applied to the current
+  capture, read-only). Comparing two stored presets means comparing their
+  snapshots: selecting another preset would discard the edit buffer,
+  which is the loss undo exists to prevent.
+- The chat routes three question shapes deterministically before the
+  model sees them ("difference between X and Y", "get X closer to Y",
+  "why does my <scene> sound <symptom>"), prepends the measured findings
+  under a fixed heading, and shows them as a card under the reply, so the
+  prose rests on numbers. Ordinary sentences with those words go to the
+  model unchanged; objects must be a scene of the loaded preset, a
+  snapshot slot or a saved design, or the question is not routed.
+- CAB PAIRING IN THE PLANNER REFERENCE (#6, closing). Every amp line
+  carries its guide pairing ("pairs with Fender 4x10 Jensens; DynaCab
+  4x10 Bassguy RI -> factory bank 1 ordinal 194 4x10 Bassguy 57 B") where
+  the sidecar has one, with the factory target only when the DynaCab name
+  resolves in the catalog (24 of 47 do; none are guessed). The reference
+  now says that set_cab is a plannable, read-back-verified write. Growth
+  measured: 741 to 743 lines.
+- The broad-except audit now covers 82 blocks (34 re-raise, 48 unreachable).
 
 ## 1.3.0 (2026-09-18)
 

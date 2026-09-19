@@ -289,6 +289,44 @@ unreachable, on every device, forever.
 - **Back up first anyway.** Run a full Fractal-Bot backup before using any
   third-party MIDI tool, this one included.
 
+## Next: NAM captures
+
+Fractal showed a NAM (Neural Amp Modeler) block running on the Axe-Fx III on
+2026-09-17: captures in the open format the whole community trades, playing on
+Fractal hardware. ToneCommand has treated captures as a tone source since
+August (a capture as the sound a build aims for, captures as real gear facts,
+capture-capable devices in the plan); the piece that was missing was the FM9
+playing one. The plan for that half is written and public as Epic I
+([#140](https://github.com/monzta1/ToneCommand/issues/140)). None of it has
+shipped yet, and Fractal has not said when the FM9 gets the block.
+
+The product line: you never see a `.nam` file, a manager app, sysex, channels
+or slot numbers. One sentence in, a leveled, cab-paired, audited preset out,
+stored on the unit and read back to prove it landed.
+
+**What you will be able to say**
+
+- Give me that captured Friedman on the lead scene.
+- Swap the amp in scene 3 for a real capture of it, keep everything else.
+- Here are my six Mesa captures, spread them across scenes 3 to 8.
+- Use my own JCM800 capture for rhythm and the factory model for lead, so I
+  can hear the difference.
+- Make this a capture-based preset for drop C, tighter low end.
+- What captures are on my rig, and which presets use them?
+- Compare my captured 5150 against the built-in one on the same scene.
+- Share this preset with the band, and point them at the capture instead of
+  sending the file.
+
+**What it says when it cannot**
+
+- No NAM block on this unit's firmware yet.
+- That capture is too heavy for the FM9.
+- Gig lock is on, nothing changes tonight.
+
+The rules do not change for a capture: nothing is written to the unit blind,
+every write is read back, and the tone check runs on a capture the same way it
+runs on a model.
+
 ## Install
 
 **macOS, Windows and Linux are all supported.** Pick yours below. Drivers and
