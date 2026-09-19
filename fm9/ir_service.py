@@ -256,8 +256,17 @@ def safe_ir_path(path: str):
 
 def recommend(need: str, target: str = "fm9", k: int = 3,
               reference: str = None, preserve: str = None,
-              preserve_when: str = None, detail: dict = None):
+              preserve_when: str = None, detail: dict = None,
+              role: str = None, tuning: str = None):
     """Best-matching IRs for a need, or None when off / unreachable / empty.
+
+    `role` (clean, rhythm, lead) and `tuning` (drop c, eb, ...) are SOFT hints
+    (ToneCommand #138): IRCommand reorders near ties for them and never lets
+    them override a word the player said. Sent only when known, so an older
+    stub or service that does not take them is unaffected. `detail` gets
+    hints_applied and hints_ignored from the answer, or hints_undecided when
+    a hint was sent and the service did not say what it did with it (an
+    older build ignores unknown parameters silently).
 
     Each result carries at least name, path, tags and score. When IRCommand has
     been analysed it also carries `match` (absolute quality, unlike `score`
@@ -290,6 +299,13 @@ def recommend(need: str, target: str = "fm9", k: int = 3,
         # the loaded cab as a hard filter and reported preserving nothing.
         # A sentinel says "asked, and the answer is no words".
         q += f"&preserve_when={quote(preserve_when or NO_WORDS)}"
+    hints_sent = False
+    if role:
+        q += f"&role={quote(role)}"
+        hints_sent = True
+    if tuning:
+        q += f"&tuning={quote(tuning)}"
+        hints_sent = True
     d = _get(q)
     # Three different Nones used to come back as one. A caller doing
     # `recommend(...) or []` turned a DEAD SERVICE into a valid empty answer
@@ -305,6 +321,8 @@ def recommend(need: str, target: str = "fm9", k: int = 3,
         return None
     if detail is not None:
         detail.update({k2: v for k2, v in d.items() if k2 != "results"})
+        if hints_sent and "hints_applied" not in d:
+            detail["hints_undecided"] = True
         if not d["results"]:
             # Understood and unavailable are different answers and the
             # service now distinguishes them. Passing that through is the

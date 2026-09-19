@@ -4,6 +4,29 @@ Notable changes to ToneCommand. Dates are UTC.
 
 ## Unreleased
 
+### Added (the IRCommand seam, 2026-09-19: #137, #138)
+- #137: a library candidate that is already on the FM9 (its file linked to a
+  user cab slot) is `on_rig` and comes first in the listening set, in
+  IRCommand's own order inside each group, and the cab panel gives it
+  AUDITION ON RIG (the real amp path) with PREVIEW kept beside it; the list
+  renders under ON YOUR RIG and IN YOUR LIBRARY (load it with Cab-Lab first).
+  With a measured Current, each measured candidate carries per-feature deltas
+  (low, mid, presence, fizz, brightness, via IRCommand's `/ir/measured`
+  features) and short words for the moves big enough to hear ("tighter low,
+  more presence"). A gear-anchored Current still gets no numbers.
+- #138: the scene's role (`tone_review.infer_role` on the current scene name,
+  never on a whole-rig build) and the guitar's tuning (`fm9/tuning.py`, a
+  deterministic parser over the player's words in IRCommand's vocabulary)
+  travel to `/ir/recommend` as `role=` and `tuning=`, only when known;
+  `cab_selection.hints` reports what IRCommand applied, and the cab note reads
+  "Ranked for a lead scene in drop C", or says the library build ignores the
+  hints when it did not echo them.
+
+### Fixed
+- Cab rows: the reasons and measured moves under a candidate's name were
+  ellipsized with the name and the separator showed as a literal `&middot;`;
+  they now wrap on their own line with a real middle dot.
+
 ### Fixed (HeadRush adapter, 2026-09-18: #135, from the #126 hardware pass)
 - `HeadrushAdapter.select_preset()` sent the rig NAME to `loadRig`; the Core
   answers 504 and loads nothing (found by @bschmalz81401's pass, PR #134). It

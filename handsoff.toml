@@ -63,6 +63,10 @@ commands = [
   "TONECOMMAND_SIM=1 .venv/bin/python -m pytest tests/test_advisory.py -q -k chat",
   ".venv/bin/python -m pytest tests/test_advisory_separation.py -q",
   ".venv/bin/python -m pytest tests/test_grounding_reference.py -q",
+  "TONECOMMAND_SIM=1 .venv/bin/python -m pytest tests/test_cab_seam.py -q",
+  "TONECOMMAND_SIM=1 .venv/bin/python -m pytest tests/test_cab_seam.py -q -k on_rig",
+  "TONECOMMAND_SIM=1 .venv/bin/python -m pytest tests/test_cab_seam.py -q -k hints",
+  ".venv/bin/python -m pytest tests/test_tuning.py -q",
 ]
 # Commands that verify the deployed system. Phase 8 is blocked until these
 # run successfully after deployment approval. This app has no hosted server;

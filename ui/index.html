@@ -1984,8 +1984,11 @@
     border-bottom: 1px solid var(--line); }
   .cabrow:last-child { border-bottom: 0; }
   .cabrow.chosen { font-weight: 600; }
+  /* #137: the name may ellipsize, but the reasons and the measured moves
+     under it must never be cut; they wrap on their own line. */
   .cabname { min-width: 0; overflow: hidden; text-overflow: ellipsis;
     white-space: nowrap; }
+  .cabname .cabwhy { display: block; white-space: normal; }
   .cabwhy { color: var(--muted); font-size: var(--fs-hint); font-weight: 400; }
   .cabtag { color: var(--muted); font-size: var(--fs-hint); white-space: nowrap; }
   .cabplay { white-space: nowrap; }
@@ -10010,10 +10013,13 @@ function cabRow(r, chosen, canUse) {
   if (r.distance_from_current != null) {
     bits.push(`${r.distance_from_current} dB from current`);
   }
+  // #137: per-feature moves from a measured Current, in words, only when
+  // the server could measure both sides.
+  if (r.axes_words && r.axes_words.length) bits.push(r.axes_words.join(', '));
   return `<div class="cabrow${chosen ? ' chosen' : ''}">
     <div class="cabname">${chosen ? '&#9679; ' : ''}${esc(r.name || '')}
       ${why ? `<span class="cabwhy">${esc(why)}</span>` : ''}
-      ${bits.length ? `<span class="cabwhy">${esc(bits.join(' &middot; '))}</span>` : ''}</div>
+      ${bits.length ? `<span class="cabwhy">${esc(bits.join(' \u00b7 '))}</span>` : ''}</div>
     <div class="cabtag">${esc(r.pack || '')}</div>
     <span class="cabacts">
     ${canUse !== undefined && r.slot
@@ -10030,18 +10036,21 @@ function cabRow(r, chosen, canUse) {
             nothing here knows it is on the FM9, so it cannot be selected as a
             slot. Install it, then link the slot to it.">NOT ON THE RIG</span>`
         : ''}
+    ${r.slot
+      ? `<button class="cabhear${hearing(r.slot) ? ' on' : ''}"
+                 data-bank="${esc(String(r.slot.bank))}"
+                 data-ordinal="${esc(String(r.slot.ordinal))}"
+                 title="Hear this cab in your rig right now. Edit buffer
+                 only: nothing is stored, and RESTORE ORIGINAL puts the cab
+                 you had back. USE THIS is still the only way it enters the
+                 build.">${hearing(r.slot) ? 'HEARING NOW' : 'AUDITION ON RIG'}</button>`
+      : ''}
     ${playable
       ? `<button class="cabplay" data-path="${esc(r.path)}"
                  title="Representative preview: a synthetic DI through a generic
                  amp stage, then this cab. Not your amp path.">PREVIEW</button>`
       : r.slot
-        ? `<button class="cabhear${hearing(r.slot) ? ' on' : ''}"
-                   data-bank="${esc(String(r.slot.bank))}"
-                   data-ordinal="${esc(String(r.slot.ordinal))}"
-                   title="Hear this cab in your rig right now. Edit buffer
-                   only: nothing is stored, and RESTORE ORIGINAL puts the cab
-                   you had back. USE THIS is still the only way it enters the
-                   build.">${hearing(r.slot) ? 'HEARING NOW' : 'AUDITION ON RIG'}</button>`
+        ? ''
         : `<span class="cabtag" title="Fractal .syx and factory cabs are an
             encoded device format that cannot be rendered; audition them on the
             rig">ON RIG ONLY</span>`}
@@ -10212,7 +10221,48 @@ function renderCabLink(sel) {
 // constrains the search but proves no distance, and an unresolved current
 // proves nothing at all. Saying which one is in force is the difference
 // between a ranking and a guess.
+// #137: library candidates in two groups, what is on the rig first. Factory
+// fallback rows (the #82 shortlist) carry no `on_rig` key at all in the
+// library sense (they are on_rig by construction and have no path), so a
+// list with no library row gets no headers and renders exactly as before.
+function cabGroups(alts) {
+  const library = alts.filter(r => 'on_rig' in r && r.path);
+  if (!library.length) return alts.map(r => cabRow(r, false, chosenSlot(r))).join('');
+  const onRig = alts.filter(r => r.on_rig);
+  const offRig = alts.filter(r => !r.on_rig);
+  return (onRig.length
+            ? `<div class="cabfoot cabgroup">ON YOUR RIG &middot; audition in your own amp path</div>`
+              + onRig.map(r => cabRow(r, false, chosenSlot(r))).join('')
+            : '')
+       + (offRig.length
+            ? `<div class="cabfoot cabgroup">IN YOUR LIBRARY &middot; load it with Cab-Lab first</div>`
+              + offRig.map(r => cabRow(r, false, chosenSlot(r))).join('')
+            : '');
+}
+
+// #138: what the list was ranked FOR beyond the request: the scene's role
+// and the guitar's tuning, as IRCommand reported applying them.
+function cabHintNote(sel) {
+  const h = sel && sel.hints;
+  if (!h || (!h.role && !h.tuning)) return '';
+  if (h.undecided) {
+    return ' Your IR library is running an older build that ignores the scene and tuning hints.';
+  }
+  const applied = (h.applied || []).map(a => (a.sources || []).join(', '));
+  const usedRole = h.role && applied.some(s => s.split(', ').includes(h.role));
+  const usedTuning = h.tuning && applied.some(s => s.split(', ').includes(h.tuning));
+  const parts = [];
+  if (usedRole) parts.push(`a ${h.role} scene`);
+  if (usedTuning) parts.push(h.tuning.replace(/\b([a-g])\b/g, m => m.toUpperCase()));
+  if (!parts.length) return '';
+  return ` Ranked for ${parts.join(' in ')}.`;
+}
+
 function cabAnchorNote(sel) {
+  return cabAnchorBase(sel) + cabHintNote(sel);
+}
+
+function cabAnchorBase(sel) {
   const cur = sel.current ? String(sel.current) : 'the cab now loaded';
   const kept = sel.preserved ? `, keeping ${sel.preserved}` : '';
   if (sel.anchor === 'measured') {
@@ -10347,7 +10397,7 @@ async function renderCabPanel() {
          ${['clean', 'crunch', 'lead', 'high-gain'].map(d =>
            `<button class="cabplay cabdrive${d === cabDrive ? ' on' : ''}"
                     data-drive="${d}">${d}</button>`).join(' ')}</div>`
-      + alts.map(r => cabRow(r, false, chosenSlot(r))).join('')
+      + cabGroups(alts)
     : '';
 
   for (const b of panel.querySelectorAll('.cabplay[data-path]')) {
