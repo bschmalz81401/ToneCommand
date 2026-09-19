@@ -44,15 +44,25 @@ WHAT IT REFUSES BEFORE TRANSPORT
 WHAT IT DOES NOT PRETEND
 
   Continuous parameters take 0..1 on the wire and the device names each
-  curve only by an opaque taper id (finding 3), so `set_param_display` and
-  `get_param_display` refuse with the registry's own reason and the wire
-  value is offered instead. Channels, preset slots, file installs and
+  curve only by an opaque taper id (finding 3). BY DEFAULT both display
+  methods still refuse with the registry's own reason and the wire value is
+  offered instead. Passing `tapers=devices.headrush.tapers.load()` opts in to
+  the curves read out of the VENDOR'S EDITOR, which is a different source
+  and not a claim about the API: a converted read comes back as a
+  DerivedDisplay carrying `api_readable=False` and where the maths came
+  from, never as a bare number. Channels, preset slots, file installs and
   modifiers have no HeadRush meaning and raise NotSupported.
+
+  The `ok` flag on any write is EXACT WIRE EQUALITY, and on a parameter the
+  unit snaps to its display grid it reports False for a write the unit
+  honoured (#167). That is true of every write path here and predates the
+  display methods; it is not fixed by converting the units.
 """
 from __future__ import annotations
 
 import time
-from typing import Any, NamedTuple, Callable
+from dataclasses import dataclass
+from typing import Any, Callable
 
 from fm9.adapter import Capabilities, ReadPath, SceneSlotState, Topology
 from devices.headrush import topology as topo
@@ -102,7 +112,8 @@ class NotSupported(RuntimeError):
     """A contract method with no HeadRush meaning. Stated, not faked."""
 
 
-class DerivedDisplay(NamedTuple):
+@dataclass(frozen=True)
+class DerivedDisplay:
     """A display value the DEVICE NEVER SAID, and where the maths came from.
 
     `get_param_wire` returns a bare float because the unit sent that float.
@@ -116,6 +127,12 @@ class DerivedDisplay(NamedTuple):
 
     `api_readable` is False for every instance. It is a field rather than a
     constant so a caller filtering on it does not have to know that.
+
+    NOT a NamedTuple, which was the first shape here and was wrong: a tuple
+    unpacks, so `value, *_ = got` and `got[0]` would hand back exactly the
+    bare float this type exists to withhold. Indexing and unpacking are not
+    available on a dataclass, so the invariant is enforced rather than
+    described.
     """
     value: float
     text: str
@@ -408,8 +425,20 @@ class HeadrushAdapter:
         Without one this refuses, unchanged: the device publishes an opaque
         taper id and no formula (finding 3). With one, the display value is
         converted and then written through the same verified path as every
-        other write, so the read-back still compares WIRE values. Nothing
-        about the check weakens; only the caller's units change.
+        other write, so the read-back still compares WIRE values. Converting
+        the units neither strengthens nor weakens that check.
+
+        WHICH MEANS `ok` IS AS WRONG HERE AS IT IS EVERYWHERE ELSE, and this
+        is the first API that invites a caller to write in display units, so
+        it has to say so. `ok` is exact equality against the read-back. The
+        unit does not store what you send: it converts to display, snaps the
+        DISPLAY value to the published grid and converts back, so on a
+        quantized parameter a write the device honoured reports False. On
+        `Amp.TremSpeed` every wire value tested does. That is #167, it lives
+        in `_write_verified`, and until it is fixed `ok=False` from this
+        method does NOT mean the write failed. `display_wanted` is what was
+        asked for; read the parameter back with `get_param_display` to see
+        what the unit actually holds.
         """
         if self.tapers is None:
             raise NotMeasured(
@@ -491,7 +520,7 @@ class HeadrushAdapter:
         try:
             return fmt % value
         except (TypeError, ValueError):
-            return f"{value:g}"
+            return f"{value:g}{(' ' + spec.unit) if spec.unit else ''}"
 
     def get_param_wire(self, spec: Any) -> Any:
         block = self.registry.block(spec.block)

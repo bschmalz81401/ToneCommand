@@ -12,6 +12,8 @@ import pytest
 
 from devices.headrush import adapter as hr
 from devices.headrush import registry as hr_registry
+from devices.headrush import tapers as hr_tapers
+from devices.headrush.adapter import DerivedDisplay
 from devices.headrush.client import HeadrushClient
 from devices.headrush.registry import NotMeasured
 from devices.headrush.sim import HeadrushSim
@@ -344,17 +346,14 @@ def test_evidence_capabilities_docstring_cites_the_findings():
 # other kind of knowledge, read out of the vendor's editor, which a caller has
 # to opt into and which can never be mistaken for something the unit said.
 
-import json as _json
-from devices.headrush import tapers as hr_tapers
-from devices.headrush.adapter import DerivedDisplay
-
-HARDWARE_CHECK = _json.loads(
+HARDWARE_CHECK = json.loads(
     (ROOT / "config" / "headrush_tapers.json").read_text())["hardware_check"]
 
 
-def _converting(reg):
+def _converting(reg, **kw):
     sim = HeadrushSim()
-    client = HeadrushClient("sim.local", "127.0.0.1", opener=sim.opener)
+    opener = RecordingOpener(sim, **kw) if kw else sim.opener
+    client = HeadrushClient("sim.local", "127.0.0.1", opener=opener)
     return sim, hr.HeadrushAdapter(client, reg, tapers=hr_tapers.load(),
                                    sleep=lambda s: None)
 
@@ -394,8 +393,13 @@ def test_a_derived_value_never_arrives_as_a_bare_float(reg):
     sim.set_properties(reg.block("Amp").path, {"TremSpeed": 0.5})
     got = a.get_param_display(spec)
     assert isinstance(got, DerivedDisplay)
-    assert not isinstance(got, float)
     assert got.api_readable is False
+    # and it cannot be TURNED INTO one either: a NamedTuple would let
+    # `value, *_ = got` and `got[0]` strip the provenance back off.
+    with pytest.raises(TypeError):
+        got[0]
+    with pytest.raises(TypeError):
+        _value, *_rest = got
     assert got.curve == "Squared"
     assert got.provenance
     # the wire read, by contrast, is a plain number
@@ -481,7 +485,9 @@ def test_the_vendor_curve_predicts_what_the_device_stored(reg, wrote, held):
     snapped = round(display / 0.01) * 0.01
     predicted = table.to_wire(snapped, minimum=spec.display_minimum,
                               maximum=spec.display_maximum, algo=spec.taper_id)
-    assert predicted == pytest.approx(held, abs=1e-9)
+    # exact equality, not an approx: "matches to the last bit" is the claim
+    # the CHANGELOG makes, and a tolerance would not be evidence for it.
+    assert predicted == held
 
 
 def test_that_prediction_needs_the_real_curve(reg):
@@ -497,3 +503,62 @@ def test_that_prediction_needs_the_real_curve(reg):
         assert abs(linear_wire - held) > 1e-6, (
             f"a linear scale reproduced {held!r}, so the round-trip test "
             f"proves nothing about the curve")
+
+
+def test_a_wire_read_that_came_back_empty_is_not_converted(reg):
+    """A missing read is not a zero. `get_property` answers None when the
+    object does not carry the property, and 0.0 is a real value on every one
+    of these curves, so converting None would invent the bottom of the
+    range."""
+    bass = reg.resolve("Amp", "Bass")
+    _sim, a = _converting(reg)
+
+    class Absent:                      # a property this object does not carry
+        taper_id = bass.taper_id
+        block, name = "Amp", "NotAProperty"
+        display_minimum, display_maximum = bass.display_minimum, bass.display_maximum
+        display_format, unit = bass.display_format, bass.unit
+
+    spec = Absent()
+    assert a.get_param_wire(spec) is None
+    with pytest.raises(NotMeasured):
+        a.get_param_display(spec)
+
+
+def test_a_value_the_curve_cannot_express_is_refused_not_rounded(reg):
+    """`NotConvertible` is named in the adapter as deliberately uncaught.
+    `Volume` is log10(0) at wire 0, which the editor calls -Infinity and this
+    refuses rather than substituting the minimum."""
+    _sim, a = _converting(reg)
+    spec = reg.resolve("Amp", "Bass")
+
+    class Volume:                       # normalizeAlgo 2
+        taper_id = 2
+        block, name = "Amp", "Volume"
+        display_minimum, display_maximum = spec.display_minimum, spec.display_maximum
+        display_format, unit = spec.display_format, spec.unit
+
+    with pytest.raises(hr_tapers.NotConvertible):
+        a._converted(Volume(), "to_display", 0.0)
+
+
+def test_a_selector_is_not_dragged_onto_the_continuous_path(reg):
+    """The old refusal sent callers to `set_param_ordinal` for selectors, and
+    the new path always converts. It cannot swallow one: no parameter in the
+    registry carries both `options` and a display range, so a selector has
+    nothing to convert between and refuses."""
+    _sim, a = _converting(reg)
+    selectors = [p for p in _every_parameter(reg) if p.options is not None]
+    assert selectors, "the registry publishes no selectors, so this proves nothing"
+    assert not [p for p in selectors if p.display_minimum is not None], \
+        "a selector now carries a display range; set_param_display must gate on options"
+
+    spec = reg.resolve("Amp", "Type")
+    assert spec.options is not None
+    with pytest.raises(NotMeasured):
+        a.set_param_display(spec, 3.0)
+
+
+def _every_parameter(reg):
+    for block in reg.blocks.values():
+        yield from block.parameters.values()

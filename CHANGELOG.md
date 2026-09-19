@@ -41,6 +41,35 @@ Notable changes to ToneCommand. Dates are UTC.
   satisfies. This is stronger corroboration than a photographed screen,
   because a misread digit cannot produce it.
 
+### Changed (review of the display conversion, 2026-09-19)
+- THE METHOD DOCSTRING CLAIMED MORE THAN THE CODE DOES. It said "nothing
+  about the check weakens", which is true and beside the point: the check was
+  already wrong on a quantized parameter (#167), and this is the first API
+  that invites a caller to write in display units, so it is the first one
+  obliged to say so. `set_param_display` now states that `ok` is exact
+  equality against the read-back, that False does not mean the write failed
+  until #167 is fixed, and that `get_param_display` is how to see what the
+  unit actually holds.
+- The module's `WHAT IT DOES NOT PRETEND` contract still said both display
+  methods refuse. A caller who reads the adapter's contract rather than the
+  two methods would have been told the opposite of what the opt-in path does.
+- `DerivedDisplay` IS A FROZEN DATACLASS, NOT A NAMEDTUPLE. A NamedTuple is a
+  tuple, so `got[0]` and `value, *_ = got` handed back exactly the bare float
+  the type exists to withhold, and the test that guarded it (`not
+  isinstance(got, float)`) could never have failed. Indexing and unpacking now
+  raise, and the test asserts that instead.
+- `_formatted`'s fallback for a device format string that will not apply
+  dropped the unit, which the no-format path keeps.
+- The round-trip test asserted `approx(..., abs=1e-9)` while the changelog
+  claimed a match "to the last bit". It is exact, so it now asserts exact
+  equality.
+- Three cases the tests did not reach: a read that came back absent (refused,
+  because 0.0 is a real value on every one of these curves), `NotConvertible`
+  (named as deliberately uncaught and never asserted), and a selector, which
+  cannot be dragged onto the continuous path because no parameter in the
+  registry carries both `options` and a display range - asserted over the
+  whole registry, so it fails if one ever does.
+
 ### Known issues
 - `set_param_display` on a parameter the unit quantizes reports `ok=False` for
   a write the unit honoured. That is #167 and not this conversion: the write
