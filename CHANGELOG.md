@@ -4,6 +4,19 @@ Notable changes to ToneCommand. Dates are UTC.
 
 ## Unreleased
 
+### Fixed (HeadRush adapter, 2026-09-18: #135, from the #126 hardware pass)
+- `HeadrushAdapter.select_preset()` sent the rig NAME to `loadRig`; the Core
+  answers 504 and loads nothing (found by @bschmalz81401's pass, PR #134). It
+  now resolves a name to the rig id through the parallel `AllRigNames` /
+  `AllRigIds` lists (an id is accepted directly), calls `loadRig(id, "")`,
+  and waits the settle before reading `PresetName` back, since `loadRig`
+  returns before the engine swaps. The simulator gains `loadRig` on
+  `/Evil/API/Rigs`, loading by id and answering 504 for a name, so the path
+  is executed under test: it was the one adapter method nothing had ever run.
+- `SceneActive{n}` is now a measured LATCH (engaging a second scene leaves its
+  flag True and clears the first's); the adapter's comments say so, and
+  `LastScene` stays the success signal because it names the scene.
+
 ### Added (HeadRush adapter hardware verification, 2026-09-18: #126, #33)
 - `tools/verify_headrush.py`: the dedicated hardware verification procedure for
   #126. Runs the #125 adapter against a real Core, one check per acceptance

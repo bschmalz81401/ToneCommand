@@ -144,7 +144,7 @@ def test_readback_scene_activation_goes_through_the_verified_write_path(reg):
     sim.set_properties(hr.FOOTSWITCH, {"ModeNew2": 2, "LastScene": 1})
     r = a.set_scene(2)
     assert r["ok"] is True and r["written"] is False and r["engaged"] is True
-    assert "SceneActive2" in r["detail"] and any("pulse" in u for u in a.undecoded)
+    assert "SceneActive2" in r["detail"] and any("latches" in u for u in a.undecoded)
     puts = [u for m, u in opener.calls if m == "PUT"]
     assert len(puts) == 1 and "FootSwitch" in puts[0], "one verified write"
     sim2, _op, a2 = make(reg)
@@ -248,11 +248,54 @@ def test_allowlist_lets_nothing_dangerous_through_the_published_method_surface()
 def test_allowlist_the_one_allowed_method_reaches_the_wire(reg):
     _sim, opener, a = make(reg)
     n = len(opener.calls)
-    try:
-        a.call_method("/Evil/API/Rigs", "loadRig", ["Init Rig", ""])
-    except Exception:      # noqa: BLE001  the sim answers 501: not simulated
-        pass
+    assert a.call_method("/Evil/API/Rigs", "loadRig", ["rig-0000", ""]) is True
     assert len(opener.calls) == n + 1 and "object-method" in opener.calls[-1][1]
+
+
+# --- #135: select_preset loads by rig ID, found by the #126 hardware pass ---------
+
+def test_select_preset_resolves_a_name_to_the_rig_id_and_settles_before_reading(reg):
+    waits = []
+    sim = HeadrushSim(rigs=["Init Rig", "Gig", "##HRB ToneCommandTesting"])
+    opener = RecordingOpener(sim)
+    a = hr.HeadrushAdapter(HeadrushClient("sim.local", "127.0.0.1", opener=opener), reg,
+                           settle_s=0.5, sleep=waits.append)
+    r = a.select_preset("Gig")
+    assert r["ok"] is True and r["loaded"] == "Gig" and r["rig_id"] == "rig-0001", r
+    assert r["returned"] is True
+    assert waits == [0.5], "loadRig returns before the engine swaps: settle before the read-back"
+    assert sim.loaded_rig == "Gig"
+    # an id works directly too
+    r = a.select_preset("rig-0002")
+    assert r["ok"] and r["loaded"] == "##HRB ToneCommandTesting"
+
+
+def test_select_preset_sends_the_id_never_the_name(reg):
+    """The exact defect: a NAME in loadRig's first argument gets 504 on the
+    Core and loads nothing. The simulator answers the same way, so the
+    adapter cannot regress to sending the name without this test going red."""
+    sim = HeadrushSim(rigs=["Init Rig", "Gig"])
+    sent = []
+    real = sim.opener
+
+    def opener(url, method, body, headers, timeout):
+        if "/object-method" in url:
+            sent.append(json.loads(body or b"{}").get("arguments"))
+        return real(url, method, body, headers, timeout)
+
+    a = hr.HeadrushAdapter(HeadrushClient("sim.local", "127.0.0.1", opener=opener), reg, sleep=lambda s: None)
+    assert a.select_preset("Gig")["ok"]
+    assert sent == [["rig-0001", ""]], sent
+    with pytest.raises(Exception, match="504"):
+        a.client.call_method("/Evil/API/Rigs", "loadRig", ["Gig", ""])
+
+
+def test_select_preset_refuses_an_unknown_rig_before_transport(reg):
+    _sim, opener, a = make(reg)
+    n = len(opener.calls)
+    with pytest.raises(LookupError, match="no rig"):
+        a.select_preset("No Such Rig")
+    assert not any("object-method" in u for _m, u in opener.calls[n:])
 
 
 def test_allowlist_refused_module_ordinals_never_reach_the_wire(reg):

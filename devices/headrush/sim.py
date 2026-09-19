@@ -62,6 +62,7 @@ SCHEMA = CONFIG / "headrush_schema.json"
 
 CHAIN = "/Evil/Engine/Patch/Chain"
 RIG = "/Evil/Engine/Patch/Rig"
+RIGS = "/Evil/API/Rigs"
 FOOTSWITCH = "/Evil/Engine/FootSwitch"
 SLOTS = topo.SLOTS
 SCENES = 10
@@ -177,6 +178,14 @@ class HeadrushSim:
                                        else ["Init Rig"])
         self._loaded: str | None = self.library[0] if self.library else None
         self._values.setdefault(RIG, {})["PresetName"] = self._loaded or ""
+        # /Evil/API/Rigs publishes the library as parallel lists (measured on
+        # the Core, PR #134): names and ids line up by index. Ids here are
+        # deterministic strings; a real unit's are opaque.
+        rigs_obj = self._values.setdefault(RIGS, {})
+        rigs_obj["AllRigNames"] = list(self.library)
+        rigs_obj["AllRigIds"] = [f"rig-{i:04d}" for i in range(len(self.library))]
+        rigs_obj["RigNames"] = list(self.library)
+        rigs_obj["RigIds"] = list(rigs_obj["AllRigIds"])
         # a rig the owner has not saved reads as an empty name on a real unit
 
     # --- schema -----------------------------------------------------------
@@ -393,6 +402,17 @@ class HeadrushSim:
             return json.dumps(out).encode()
 
         if path.startswith("/object-method"):
+            target = path[len("/object-method"):]
+            if target == f"{RIGS}/loadRig" and method == "POST":
+                # The one method measured on hardware (finding 4; PR #134):
+                # loadRig(<rig id>, "") returns True and loads; a NAME in the
+                # first argument gets 504 and loads nothing (#135).
+                args = (json.loads(body or b"{}").get("arguments") or [None])
+                ids = self._values[RIGS]["AllRigIds"]
+                if args and args[0] in ids:
+                    self.load_rig(self._values[RIGS]["AllRigNames"][ids.index(args[0])])
+                    return json.dumps({"methodReturnValue": True}).encode()
+                raise SimError(504, "Gateway Timeout")
             self.undecoded.add(
                 f"object-method invoked ({path}): no method's behaviour is "
                 f"established here, and #125 gates these behind a "

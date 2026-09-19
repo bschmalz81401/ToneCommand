@@ -201,13 +201,32 @@ class HeadrushAdapter:
         name = self.client.get_property(RIG, "PresetName")
         return (None, str(name or ""))
 
+    def rig_id(self, preset: Any) -> tuple[str, str]:
+        """(rig id, rig name) for a name or an id. /Evil/API/Rigs publishes
+        AllRigNames and AllRigIds as parallel lists (measured, PR #134), so
+        a name resolves without a second round trip. Unknown: LookupError."""
+        rigs = self.client.get_properties(RIGS) or {}
+        names = list(rigs.get("AllRigNames") or rigs.get("RigNames") or [])
+        ids = list(rigs.get("AllRigIds") or rigs.get("RigIds") or [])
+        key = str(preset)
+        if key in ids:
+            return key, names[ids.index(key)] if ids.index(key) < len(names) else key
+        if key in names and names.index(key) < len(ids):
+            return ids[names.index(key)], key
+        raise LookupError(f"no rig named or identified {key!r} in the unit's library")
+
     def select_preset(self, preset: Any) -> Any:
-        """Load a rig by name through the one allowlisted method, then read
-        the loaded name back."""
-        name = str(preset)
-        result = self.call_method(RIGS, "loadRig", [name, ""])
+        """Load a rig, by name or id, through the one allowlisted method.
+
+        loadRig takes the rig ID: the name gets a 504 and loads nothing
+        (#135, found by the #126 hardware pass). The read-back waits the
+        settle first, because loadRig returns before the engine swaps."""
+        rig_id, name = self.rig_id(preset)
+        result = self.call_method(RIGS, "loadRig", [rig_id, ""])
+        self._sleep(self.settle_s)
         loaded = self.client.get_property(RIG, "PresetName")
-        return {"ok": loaded == name, "returned": result, "loaded": loaded}
+        return {"ok": loaded == name, "returned": result, "loaded": loaded,
+                "rig_id": rig_id}
 
     def slot_name(self, preset: Any) -> Any:
         """Rig names list without loading (RigNames on /Evil/API/Rigs);
@@ -258,20 +277,20 @@ class HeadrushAdapter:
                     "detail": f"switch {n} is not in scene mode (ModeNew{n} "
                               f"= {mode!r}); SceneActive would be ignored"}
         # Through the one write path like every other property (review
-        # round 1), so the flag IS read back and reported. But success is
-        # judged on the effect the write is for: LastScene moving to n - 1
-        # is what finding 4 measured as "the scene engaged". Whether
-        # SceneActive stays True afterwards or is a pulse the unit clears is
-        # NOT measured, so `written` is reported and not required; requiring
-        # it would turn a working activation into a false negative on the
-        # one behaviour here that hardware has confirmed.
+        # round 1), so the flag IS read back and reported. Success is judged
+        # on the effect the write is for: LastScene moving to n - 1 is what
+        # finding 4 measured as "the scene engaged". The #126 pass (PR #134)
+        # then measured SceneActive as a LATCH: engaging a second scene
+        # leaves the second's flag True and clears the first's. So
+        # `written` is honest evidence too, and is reported; LastScene stays
+        # the success signal because it is the one that names the scene.
         w = self._write_verified(FOOTSWITCH, f"SceneActive{n}", True)
         last = self.client.get_property(FOOTSWITCH, "LastScene")
         engaged = last == n - 1
         if not w["ok"]:
             self.undecoded.add(
-                f"SceneActive{n} did not read back True after the settle; "
-                "whether it is a pulse the unit clears is unmeasured")
+                f"SceneActive{n} did not read back True after the settle; on the "
+                "measured Core it latches (PR #134), so this is worth a look")
         return {"ok": engaged, "written": w["ok"], "engaged": engaged,
                 "detail": (f"scene {n} engaged (LastScene {last}); {w['detail']}"
                            if engaged else
