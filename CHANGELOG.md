@@ -2,6 +2,46 @@
 
 Notable changes to ToneCommand. Dates are UTC.
 
+## Unreleased
+
+### Added (HeadRush adapter hardware verification, 2026-09-18: #126, #33)
+- `tools/verify_headrush.py`: the dedicated hardware verification procedure for
+  #126. Runs the #125 adapter against a real Core, one check per acceptance
+  criterion, each tagged with the criterion it serves. Refuses to start unless
+  the loaded rig is a `##HRB` test preset, restores what it touches, and ends by
+  reloading the rig by id so the edit buffer is discarded without storing.
+  Exit status is 0 when every check passes and 1 when any fails, so it can gate.
+- REFUSED BEFORE TRANSPORT IS CHECKED AS SUCH (AC4). Catching an exception
+  proves the adapter raised; it does not prove nothing reached the unit, which
+  is what the criterion asks. The client's opener is wrapped in a counter and
+  the check asserts the count is unchanged across the refused call, for both a
+  non-allowlisted `object-method` and `ModuleType` ordinal 20.
+- `docs/HEADRUSH-VERIFICATION-126.md`: the scrubbed report (AC7). Redaction
+  happens in the script at the point of printing, so the transcript is committed
+  verbatim rather than edited into shape; no rig name, rig id, setlist or preset
+  content appears in either file.
+- THE FIVE-STEP PASS FROM #33 is carried by the same procedure, tagged `#33`
+  rather than `AC` so the ticket's criteria stay separable. All five pass, and
+  both questions left open in that comment now have answers.
+- `SceneActive{n}` IS A LATCH, NOT A PULSE. Measured across a transition,
+  because a flag read back immediately after its own write is equally
+  consistent with both: engaging a second scene leaves the second's flag True
+  and clears the first's. `LastScene` remains the better success signal, so
+  `set_scene` requiring the flag is now an option rather than a defect.
+- ORDINAL 4 IS REPORTED NOT PLACED, AND NOT FALSELY OK. The device accepts the
+  write and silently reverts to 0; the adapter's 0.5 s settle catches it and
+  returns `ok=False`. An immediate read-back would have seen `4` and lied.
+
+### Known issues
+- `HeadrushAdapter.select_preset()` DOES NOT WORK AGAINST HARDWARE. It passes
+  the rig name as `loadRig`'s first argument; the unit answers `504 Gateway
+  Timeout` and loads nothing, where the rig id returns `True` and loads. The
+  method has no test, and `devices/headrush/sim.py` does not implement
+  `loadRig`, so it reached main and 1.3.0 having never been executed against
+  anything. It also reads `PresetName` back with no settle, though `loadRig`
+  returns before the engine swaps. Evidence in
+  `docs/HEADRUSH-VERIFICATION-126.md`; the fix is #125's, reported separately.
+
 ## 1.3.0 (2026-09-18)
 
 ### Added (HeadRush lane, 2026-09-18: #123, #124, #125, #94)
