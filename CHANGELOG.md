@@ -4,6 +4,18 @@ Notable changes to ToneCommand. Dates are UTC.
 
 ## Unreleased
 
+### Added (device picker, 2026-09-19: #139, the follow-up #94 left)
+- With more than one device reachable, the header shows a DEVICE pill (amber
+  CHOOSE DEVICE until a choice is made) with a popover listing every reachable
+  device; choosing one goes through `/api/device/select` and a refusal (GIG
+  LOCK, a reviewed plan pending, a kind not here) is shown in the server's own
+  words. `/api/state` carries a `device` block on every answer. The link pill
+  follows the active device by a fixed short-name map, so the FM9 still reads
+  exactly `FM9 · LINKED`, and with one device nothing is rendered at all. A
+  build refused with `ambiguous_device` opens the picker and says "choose a
+  device first". A stale poll can never revert a fresh selection (generation
+  guard).
+
 ### Added (the IRCommand seam, 2026-09-19: #137, #138)
 - #137: a library candidate that is already on the FM9 (its file linked to a
   user cab slot) is `on_rig` and comes first in the listening set, in

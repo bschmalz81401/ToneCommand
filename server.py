@@ -184,6 +184,16 @@ def _build_context(kind: str) -> DeviceContext:
     raise KeyError(kind)
 
 
+def device_block() -> dict:
+    """#139: what the header renders on every poll: the active device, its
+    label, every reachable kind and whether a choice is still owed. Derived
+    from the environment and the selection, so it costs nothing."""
+    kind, avail = device_target()
+    active = device_context().kind
+    return {"active": active, "label": DEVICE_KINDS.get(active, active),
+            "selected": kind, "available": avail, "ambiguous": kind is None}
+
+
 @app.get("/api/device")
 def api_device():
     kind, avail = device_target()
@@ -2050,21 +2060,25 @@ def api_reconnect():
 
 @app.get("/api/state")
 def api_state():
+    # #139: the device block rides on every answer, connected or not, so the
+    # header can offer the choice while the chosen rig is still unplugged.
+    device = device_block()
     with _lock:
         try:
             snap = snapshot(get_fm9())
+            snap["device"] = device
             return snap
         except FM9NotFound:
             drop_fm9()
             # gig_mode rides along even unplugged, so the pill in the header
             # stays true while the rig is off.
-            return {"connected": False, "gig_mode": _gig_mode["on"]}
+            return {"connected": False, "gig_mode": _gig_mode["on"], "device": device}
         except CapabilityDeclined:
             raise
         except Exception as e:
             drop_fm9()
             return JSONResponse({"connected": False, "error": str(e),
-                                 "gig_mode": _gig_mode["on"]}, status_code=500)
+                                 "gig_mode": _gig_mode["on"], "device": device}, status_code=500)
 
 
 class DescribeBody(BaseModel):
