@@ -68,6 +68,19 @@ def isolated_env(tmp_path, monkeypatch):
     # The simulator is a real implementation, so nothing is lost by pinning
     # it here for every module whether the test asks or not.
     monkeypatch.setenv("TONECOMMAND_SIM", "1")
+    # Fifth time, same lesson, and this one downloads. /api/acquire routes a
+    # catalogued artist through fm9.gallery's verified fetch (#157), and a
+    # test that faked acquire._download only found "Periphery" in the real
+    # catalog and pulled the real zip from fractalaudio.com. The gallery's
+    # downloader refuses here unless a test replaces it, and its cache
+    # lands in tmp_path, never in the developer's ~/.tonecommand.
+    from fm9 import gallery
+
+    def _no_network(url):
+        raise AssertionError(f"a test reached the network for {url}; "
+                             "replace fm9.gallery._download with a fake")
+    monkeypatch.setattr(gallery, "_download", _no_network)
+    monkeypatch.setenv("TONECOMMAND_CACHE_DIR", str(tmp_path / "cache"))
     for name in ("PLANNER_BACKEND", "PLANNER_BASE_URL", "PLANNER_MODEL",
                  "PLANNER_API_KEY", "PLANNER_TIMEOUT", "PLANNER_MAX_TOKENS",
                  "GROK_CLI_MODEL", "ANTHROPIC_API_KEY",

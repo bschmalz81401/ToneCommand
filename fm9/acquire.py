@@ -113,6 +113,12 @@ def parse_query(query: str) -> tuple:
     return clean.strip(), target
 
 
+def words_of(query: str) -> list[str]:
+    """The search words of an ask: every token that is not a stopword."""
+    return [w for w in re.findall(r"[a-z0-9]+", query.lower())
+            if w not in _STOPWORDS]
+
+
 def find(query: str, entries: list[dict]) -> dict | None:
     """The best-matching gift for a plain-words ask, or None.
 
@@ -120,8 +126,7 @@ def find(query: str, entries: list[dict]) -> dict | None:
     name (so "periphery" finds Periphery and "steve vai" finds Steve Vai,
     but "periphery" never falls back to somebody else). Ties go newest.
     """
-    words = [w for w in re.findall(r"[a-z0-9]+", query.lower())
-             if w not in _STOPWORDS]
+    words = words_of(query)
     if not words:
         return None
     for e in entries:                      # already newest-first

@@ -27,8 +27,9 @@ from fm9.adapter import (CAPABILITY_PROTOCOLS, UNDECLARED, Capabilities,
 from fm9.device import FM9, FM9NotFound, get_cab_slots
 from fm9.registry import Registry
 from fm9 import (acquire, ai_settings, bundlefile, cabfile, describe, designs, diagnostics,
-                 editbuffer, health, planner, presetfile, recipes as recipebook, rigprofile,
-                 scratch_build, share, starter_template)
+                 editbuffer, gallery, gift_of_tone, health, planner, presetfile,
+                 recipes as recipebook, rigprofile, scratch_build, share,
+                 starter_template)
 # `slots` is a local variable in more than one function here, so the module
 # gets a name that cannot be shadowed by one.
 from fm9 import slots as slotops
@@ -3608,6 +3609,166 @@ def api_tone_dir_set(body: dict):
     return {"dir": d}
 
 
+# --- Gift of Tone gallery: device gate (#156) and verified fetch (#157) ---
+
+def _connected_for_gallery() -> tuple[str | None, str]:
+    """(device kind, firmware label) for the unit this process can reach;
+    (None, '') when there is none. Read-only, and a unit that does not
+    answer is 'no device' rather than an error: the gallery still browses."""
+    kind, _avail = device_target()
+    if kind is None:
+        return None, ""
+    try:
+        return kind, str(get_fm9().firmware_label() or "")
+    except CapabilityDeclined:
+        raise
+    except Exception:
+        return None, ""
+
+
+def _gallery_entry_view(e: dict, kind: str | None) -> dict:
+    return {"id": e.get("id"), "artists": e.get("artists"),
+            "year": e.get("year"), "number": e.get("number"),
+            "kind": e.get("kind"), "description": e.get("description"),
+            "devices": e.get("devices"), "bytes": e.get("bytes"),
+            "min_firmware": gallery.min_firmware(e, kind)}
+
+
+@app.get("/api/gift-of-tone")
+def api_gift_of_tone():
+    """The catalog as this unit can take it: entries with a version for the
+    connected device only (an Axe-Fx III-only pack is not shown on an FM9),
+    each with its minimum firmware for this device. No device: the whole
+    catalog, read-only, and one line saying installs need the unit."""
+    doc, source, why = gift_of_tone.fetch()
+    if doc is None:
+        return JSONResponse({"error": why}, status_code=502)
+    kind, fw = _connected_for_gallery()
+    shown = gallery.entries_for(doc["entries"], kind)
+    return {"device": kind, "firmware": fw or None, "source": source,
+            "entries": [_gallery_entry_view(e, kind) for e in shown],
+            "hidden": len(doc["entries"]) - len(shown),
+            "note": gallery.NO_DEVICE_LINE if kind is None else None}
+
+
+def _members_to_installables(members: list[dict]) -> tuple[list, list, list]:
+    """Parse catalog-listed zip members into the install cache, the same
+    shapes /api/acquire returns: (presets, cabs, skipped)."""
+    import hashlib
+    presets, cabs, skipped = [], [], []
+
+    def _preset(name, raw):
+        pf = presetfile.parse(raw)
+        digest = hashlib.sha1(raw).hexdigest()
+        _install_cache[digest] = raw
+        presets.append({"hash": digest, "name": pf.name, "file": name,
+                        "chunks": pf.chunks, "bytes": len(raw)})
+
+    def _cab(name, raw, bank=None, number=None, label=None):
+        cf = cabfile.parse(raw, name)
+        digest = hashlib.sha1(raw).hexdigest()
+        _install_cache[digest] = raw
+        cabs.append({"hash": digest, "label": label or cf.label,
+                     "file": name, "chunks": cf.chunks,
+                     "default_slot": cabfile.default_slot(name),
+                     "bank": bank, "number": number})
+
+    for m in members:
+        name, kind, raw = m["name"], m["kind"], m["raw"]
+        try:
+            if kind == "bundles":
+                bf = bundlefile.parse(raw)
+                _preset(bf.preset_name, bf.preset_raw)
+                for cb in bf.cabs:
+                    _cab(cb.file, cb.raw, cb.bank, cb.number, cb.name)
+            elif kind == "presets":
+                _preset(name, raw)
+            elif kind == "cabs":
+                _cab(name, raw)
+            elif kind == "blocks":
+                skipped.append(f"{name}: {gallery.BLOCKS_NOTE}")
+            # "other": readmes and extras, listed by the catalog, not installable
+        except bundlefile.BundleFileError as e:
+            skipped.append(f"{name}: {e}")
+        except presetfile.PresetFileError as e:
+            # a preset for another device in a multi-device zip is the
+            # normal case, and named as such by the parser
+            skipped.append(f"{name}: {e}")
+        except cabfile.CabFileError as e:
+            skipped.append(f"{name}: {e}")
+    return presets, cabs, skipped
+
+
+@app.post("/api/gift-of-tone/fetch")
+def api_gift_of_tone_fetch(body: dict):
+    """Fetch one catalog entry at click time, from fractalaudio.com only,
+    verified against the catalog's sha256 before it is opened, and hand
+    its catalog-listed files to the install cache. Nothing reaches the
+    unit here; installs stay behind /api/install and /api/install-cab."""
+    entry_id = str(body.get("id") or "").strip()
+    if not entry_id:
+        return JSONResponse({"error": "say which entry"}, status_code=400)
+    doc, _source, why = gift_of_tone.fetch()
+    if doc is None:
+        return JSONResponse({"error": why}, status_code=502)
+    entry = gallery.find_entry(doc["entries"], entry_id)
+    if entry is None:
+        return JSONResponse({"error": f"no Gift of Tone entry {entry_id!r}"},
+                            status_code=404)
+    kind, fw = _connected_for_gallery()
+    gate = gallery.firmware_gate(entry, kind, fw)
+    if gate:
+        return JSONResponse({"error": gate}, status_code=409)
+    try:
+        data, source = gallery.fetch_entry(entry)
+        members, unexpected = gallery.unpack(entry, data)
+    except gallery.GalleryError as e:
+        return JSONResponse({"error": str(e)}, status_code=502)
+    presets, cabs, skipped = _members_to_installables(members)
+    log.info("gift of tone %s (%s): %d preset(s), %d cab(s), %d skipped, "
+             "%d unexpected", entry_id, source, len(presets), len(cabs),
+             len(skipped), len(unexpected))
+    return {"id": entry_id, "artist": ", ".join(entry.get("artists") or []),
+            "url": entry.get("url"), "sha256": entry.get("sha256"),
+            "source": source, "verified": True,
+            "presets": presets, "cabs": cabs, "skipped": skipped,
+            "unexpected": unexpected,
+            "cab_slots_configured": bool(get_cab_slots())}
+
+
+def _acquire_from_catalog(search_q: str, target_editor=None):
+    """The J1 catalog first: an artist found there is fetched from the
+    source and verified against the catalog's sha256 (#157) and gated by
+    device and firmware (#156). None when the artist is not catalogued, so
+    the caller falls back to the page scrape. Errors on the catalogued
+    path are answered here, one line each, never silently retried."""
+    doc, _source, _why = gift_of_tone.fetch()
+    if doc is None:
+        return None
+    words = acquire.words_of(search_q)
+    entry = gallery.find_by_artist(doc["entries"], words)
+    if entry is None:
+        return None
+    kind, fw = _connected_for_gallery()
+    gate = gallery.firmware_gate(entry, kind, fw)
+    if gate:
+        return JSONResponse({"error": gate}, status_code=409)
+    try:
+        data, source = gallery.fetch_entry(entry)
+        members, unexpected = gallery.unpack(entry, data)
+    except gallery.GalleryError as e:
+        return JSONResponse({"error": str(e)}, status_code=502)
+    presets, cabs, skipped = _members_to_installables(members)
+    log.info("acquired %d preset(s), %d cab(s) from the catalog entry %s",
+             len(presets), len(cabs), entry.get("id"))
+    return {"artist": ", ".join(entry.get("artists") or []),
+            "url": entry.get("url"), "id": entry.get("id"),
+            "sha256": entry.get("sha256"), "source": source, "verified": True,
+            "presets": presets, "cabs": cabs, "skipped": skipped,
+            "unexpected": unexpected, "target_editor": target_editor,
+            "cab_slots_configured": bool(get_cab_slots())}
+
+
 @app.post("/api/acquire")
 def api_acquire(body: dict):
     """Turn "get me the Periphery tones from Gift of Tone" into parsed,
@@ -3634,6 +3795,9 @@ def api_acquire(body: dict):
         if local:
             presets, cabs, skipped = acquire.parse_local(local)
         else:
+            catalogued = _acquire_from_catalog(search_q, target_editor)
+            if catalogued is not None:
+                return catalogued
             entries = acquire.catalog()
             hit = acquire.find(search_q, entries)
             if hit is None:

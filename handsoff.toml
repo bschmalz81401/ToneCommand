@@ -33,6 +33,10 @@ reviewer = "default"
 # Each criterion's evidence should point at one of these having run, not a
 # free-text claim. Example: commands = ["pytest tests/ -q", "npm test"]
 commands = [
+  ".venv/bin/python -m pytest tests/test_gallery.py -q -k device",
+  ".venv/bin/python -m pytest tests/test_gallery.py -q -k 'firmware or no_device'",
+  ".venv/bin/python -m pytest tests/test_gallery.py -q -k 'fetch or cache'",
+  ".venv/bin/python -m pytest tests/test_gallery.py -q -k 'unpack or route or acquire'",
   ".venv/bin/python -m pytest tests/test_cab_bank2_capture.py -q",
   ".venv/bin/python -m pytest tests/test_cab_read_guard.py tests/test_cab_bank2_install.py -q",
   ".venv/bin/python -m pytest tests/test_nam_captures.py -q -k scanner",

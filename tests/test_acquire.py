@@ -90,6 +90,11 @@ def test_the_sentence_becomes_installable_presets(client, monkeypatch):
         return HTML.encode() if "gift-of-tone" in url else bundle
     monkeypatch.setattr(acquire, "_download", fake_download)
     monkeypatch.setattr(acquire, "search_local", lambda q: [])   # GoT path
+    # Periphery IS in the J1 catalog, so since #157 the verified path would
+    # win; this test is about the page-scrape fallback, so hide the catalog
+    from fm9 import gift_of_tone
+    monkeypatch.setattr(gift_of_tone, "fetch",
+                        lambda timeout=6.0: (None, "none", "offline"))
     d = client.post("/api/acquire", json={
         "query": "get me the periphery tones from gift of tone"}).json()
     assert d["artist"] == "Periphery"

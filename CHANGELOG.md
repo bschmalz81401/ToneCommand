@@ -4,6 +4,39 @@ Notable changes to ToneCommand. Dates are UTC.
 
 ## Unreleased
 
+### Added (Gift of Tone gallery: device gate and verified fetch, 2026-09-19: #156, #157)
+- `fm9/gallery.py` on top of the J1 catalog. Device gate (#156):
+  `entries_for` keeps the entries whose device matrix lists the connected
+  device (the adapter kind `fm9` is the catalog's "FM9"; "All devices"
+  counts), so an Axe-Fx III-only pack is not shown on an FM9;
+  `firmware_gate` compares the unit's own firmware label with the entry's
+  minimum for that device and answers one line when too old, when the
+  unit's label cannot be read, or when the pack has no version for the
+  device; with no device the catalog still browses and one line says
+  installs need the unit. Fetch (#157): `fetch_entry` downloads from the
+  catalog's fractalaudio.com URL only (any other host is refused), hashes
+  the bytes and compares with the catalogued sha256 before anything is
+  opened, caches a match under `TONECOMMAND_CACHE_DIR` or
+  `~/.tonecommand/cache/gift-of-tone/<sha256>.zip` (re-hashed on every
+  read), and answers a fetch failure or a hash mismatch with one line and
+  nothing installed; `unpack` matches zip members to the catalog's
+  contents by exact path and names anything else as unexpected, never
+  handing it on.
+- Routes: `GET /api/gift-of-tone` (device, firmware, the filtered entries
+  with their minimum firmware, how many were hidden, the no-device note)
+  and `POST /api/gift-of-tone/fetch {id}` (the gates, then fetch, verify,
+  unpack, and the catalog-listed presets, cabs and .fasBundle members into
+  the install cache in the `/api/acquire` shape, plus `sha256`, `source`
+  cached or fetched, `verified`, `unexpected`; `.blk` effect blocks are
+  reported as not installable yet). `/api/acquire` now takes the verified
+  catalog path when the artist is catalogued and falls back to the page
+  scrape otherwise. Installs still go through `/api/install` and
+  `/api/install-cab` behind their whitelists; nothing here touches the unit.
+- Tests never touch the network: `tests/conftest.py` replaces the
+  gallery's downloader with one that fails loudly and points the cache at
+  tmp_path (a test that faked only `acquire._download` had pulled a real
+  zip once the catalog path existed).
+
 ### Fixed (user-cab installs from bundles, 2026-09-19: #43)
 - Installing a Gift of Tone bundle whose map files its cabs under
   `Bank="2"` (the Steve Lukather pack) refused to write, so the preset

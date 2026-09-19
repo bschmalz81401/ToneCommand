@@ -126,7 +126,11 @@ below is a real request you can type.
   one-at-a-time. The slow, fragile part is gone.
 - A **health scan** after every build flags a dead or duplicated scene the
   moment it lands. **Undo** and **A/B** the FM9 itself does not have.
-- Install artist presets and cabs from Fractal's Gift of Tone.
+- Install artist presets and cabs from Fractal's Gift of Tone. The catalog
+  shows only what your unit can take and says in one line when a pack needs
+  newer firmware; the zip is fetched from fractalaudio.com by your own app
+  at click time, checked against the catalogued sha256 before it is opened,
+  and cached by that hash. Nothing of Fractal's is mirrored here.
 
 **Never sends behind your back**
 - Read-back verification on every write, and a signal-path check so a preset is
