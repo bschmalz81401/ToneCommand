@@ -24,11 +24,11 @@ from pydantic import BaseModel
 
 from fm9.adapter import (CAPABILITY_PROTOCOLS, UNDECLARED, Capabilities,
                          DeviceAdapter)
-from fm9.device import FM9, FM9NotFound, get_cab_slots
+from fm9.device import FM9, FM9NotFound, get_cab_slots, get_store_slots
 from fm9.registry import Registry
 from fm9 import (acquire, ai_settings, artist_pack, bundlefile, cabfile, describe, designs,
-                 diagnostics, editbuffer, gallery, gift_of_tone, health, nam_intake, planner,
-                 presetfile,
+                 diagnostics, editbuffer, gallery, gallery_install, gift_of_tone, health,
+                 nam_intake, planner, presetfile,
                  recipes as recipebook, rigprofile, scratch_build, share,
                  starter_template)
 # `slots` is a local variable in more than one function here, so the module
@@ -3841,6 +3841,114 @@ def _acquire_from_catalog(search_q: str, target_editor=None):
             "presets": presets, "cabs": cabs, "skipped": skipped,
             "unexpected": unexpected, "target_editor": target_editor,
             "cab_slots_configured": bool(get_cab_slots())}
+
+
+def _gallery_members(entry: dict, members: list[dict]) -> list[dict]:
+    """The catalog-listed files as the gallery installer wants them: presets
+    and cabs with their bundle-map destination (the 0-based slot, #43), FM9
+    presets only (a bundle for another device is named by the parser)."""
+    out, skipped = [], []
+    for m in members:
+        name, kind, raw = m["name"], m["kind"], m["raw"]
+        try:
+            if kind == "bundles":
+                bf = bundlefile.parse(raw)
+                out.append({"kind": "preset", "file": bf.preset_name,
+                            "name": bf.preset.name, "raw": bf.preset_raw,
+                            "wanted": None})
+                for cb in bf.cabs:
+                    if cb.bank != gallery_install.USER_BANK:
+                        skipped.append(f"{cb.file}: cab bank {cb.bank} is not "
+                                       "the FM9's user bank")
+                        continue
+                    out.append({"kind": "cab", "file": cb.file, "name": cb.name,
+                                "raw": cb.raw, "wanted": cb.number})
+            elif kind == "presets":
+                pf = presetfile.parse(raw)
+                out.append({"kind": "preset", "file": name, "name": pf.name,
+                            "raw": raw, "wanted": None})
+            elif kind == "cabs":
+                cf = cabfile.parse(raw, name)
+                out.append({"kind": "cab", "file": name, "name": cf.label,
+                            "raw": raw, "wanted": cabfile.default_slot(name)})
+            elif kind == "blocks":
+                out.append({"kind": "block", "file": name, "name": name,
+                            "raw": raw, "wanted": None})
+        except (bundlefile.BundleFileError, presetfile.PresetFileError,
+                cabfile.CabFileError) as e:
+            skipped.append(f"{name}: {e}")
+    return out, skipped
+
+
+@app.post("/api/gift-of-tone/install")
+def api_gift_of_tone_install(body: dict):
+    """One click, the whole pack (#155): the J3 gates, the J4 fetch and
+    verify, destinations chosen from what the unit reports and the two
+    whitelists, cabs then the preset, the Cab block repointed when a cab
+    moved (#164), one store, one line. Every write is an existing guarded
+    primitive; a refusal is one line before anything is written."""
+    entry_id = str(body.get("id") or "").strip()
+    if not entry_id:
+        return JSONResponse({"error": "say which entry"}, status_code=400)
+    doc, _source, why = gift_of_tone.fetch()
+    if doc is None:
+        return JSONResponse({"error": why}, status_code=502)
+    entry = gallery.find_entry(doc["entries"], entry_id)
+    if entry is None:
+        return JSONResponse({"error": f"no Gift of Tone entry {entry_id!r}"},
+                            status_code=404)
+    with _lock:
+        if _gig_mode["on"]:
+            return JSONResponse(
+                {"error": "GIG LOCK is on: refusing a flash write."},
+                status_code=423)
+        kind, fw = _connected_for_gallery()
+        gate = gallery.firmware_gate(entry, kind, fw)
+        if gate:
+            return JSONResponse({"error": gate}, status_code=409)
+        c = entry.get("contents") or {}
+        if c.get("blocks") and not (c.get("presets") or c.get("cabs") or c.get("bundles")):
+            # said before any download: no block install path exists yet
+            return JSONResponse(
+                {"error": f"{', '.join(entry.get('artists') or [])}'s pack is "
+                          "effect blocks only; blocks are not installable from "
+                          "here yet"}, status_code=409)
+        try:
+            data, source = gallery.fetch_entry(entry)
+            members, unexpected = gallery.unpack(entry, data)
+        except gallery.GalleryError as e:
+            return JSONResponse({"error": str(e)}, status_code=502)
+        files, skipped = _gallery_members(entry, members)
+        try:
+            fm9 = get_fm9()
+            pl = gallery_install.plan(
+                entry, files,
+                cab_name=fm9.read_user_cab_name,
+                store_name=lambda s: (lambda n: n.name if n else None)(fm9.slot_name(s)),
+                cab_whitelist=get_cab_slots(),
+                store_whitelist=get_store_slots())
+            out = gallery_install.execute(pl, fm9)
+        except gallery_install.GalleryInstallError as e:
+            return JSONResponse({"error": str(e)}, status_code=409)
+        except PermissionError as e:
+            return JSONResponse({"error": str(e)}, status_code=403)
+        except FM9NotFound:
+            drop_fm9()
+            return JSONResponse({"error": "FM9 not connected"}, status_code=503)
+        except CapabilityDeclined:
+            raise
+        except RuntimeError as e:
+            return JSONResponse({"error": str(e)}, status_code=500)
+    for c in out["cabs"]:
+        try:
+            from fm9 import user_cabs
+            user_cabs.relabel_installed(USER_CAB_BANK, c["slot"], c["name"])
+        except OSError:
+            pass
+    log.info("gallery install %s: %s", entry_id, out["line"])
+    out.update({"id": entry_id, "source": source, "skipped": skipped,
+                "unexpected": unexpected})
+    return out
 
 
 @app.post("/api/acquire")

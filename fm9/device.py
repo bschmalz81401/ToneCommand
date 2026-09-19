@@ -675,29 +675,14 @@ class FM9:
         time.sleep(1.5)
         return self.current_preset()
 
-    def install_preset(self, raw: bytes, slot: int, name: str | None = None):
-        """Send a validated preset file to a whitelisted slot.
-
-        The recipe is the official editor's own store path (Ghidra-decoded
-        upstream): the file's frames verbatim, header retargeted to `slot`.
-        When `name` is given, the embedded preset name is replaced first
-        and the footer refolded, so the slot ends up carrying the owner's
-        chosen name. The host-to-device direction is hardware-UNVERIFIED
-        territory, so the caller must verify by reading the slot's name
-        back; this method only transmits. Same whitelist, same refusals,
-        as store_preset: this writes flash.
+    def load_preset_buffer(self, raw: bytes, name: str | None = None):
+        """Dump a validated preset file into the EDIT BUFFER, rename it there
+        when `name` is given, and stop: nothing is stored. This is the first
+        half of install_preset, split out (#155/#164) so a caller can change
+        the loaded preset (repoint its Cab block) and then store exactly
+        once. Volatile only; the whitelist is checked at store time.
         """
         from fm9 import presetfile
-        allowed = get_store_slots()
-        if not allowed:
-            raise PermissionError(
-                "installing is disabled: no store slots configured. Set "
-                "TONECOMMAND_STORE_SLOTS (env or .env) with slots on YOUR "
-                "unit that are safe to overwrite")
-        if slot not in allowed:
-            raise PermissionError(
-                f"install to slot {p.slot_label(slot)} refused: configured "
-                f"store slots are {p.slot_set_label(allowed)}")
         pf = presetfile.parse(raw)          # re-validated at this boundary
         # FM9-Edit's own recipe, captured on the wire 2026-09-03: a sub 0x27
         # "prepare", then the preset dumped into the EDIT BUFFER (header
@@ -718,11 +703,37 @@ class FM9:
         # patching the file body: rewriting the name in the dump and
         # recomputing the footer produced a body the device rejected, so
         # the slot stored empty). The dump populated the buffer; rename it,
-        # then store.
+        # then the caller stores.
         if name and name.strip():
             self._send(p.build_rename_preset(name.strip()[:32]))
             time.sleep(0.3)
             pf.name = name.strip()[:32]     # so verification expects this
+        return pf
+
+    def install_preset(self, raw: bytes, slot: int, name: str | None = None):
+        """Send a validated preset file to a whitelisted slot.
+
+        The recipe is the official editor's own store path (Ghidra-decoded
+        upstream): the file's frames verbatim, header retargeted to `slot`.
+        When `name` is given, the embedded preset name is replaced first
+        and the footer refolded, so the slot ends up carrying the owner's
+        chosen name. The host-to-device direction is hardware-UNVERIFIED
+        territory, so the caller must verify by reading the slot's name
+        back; this method only transmits. Same whitelist, same refusals,
+        as store_preset: this writes flash. load_preset_buffer then one
+        store (sub 0x26).
+        """
+        allowed = get_store_slots()
+        if not allowed:
+            raise PermissionError(
+                "installing is disabled: no store slots configured. Set "
+                "TONECOMMAND_STORE_SLOTS (env or .env) with slots on YOUR "
+                "unit that are safe to overwrite")
+        if slot not in allowed:
+            raise PermissionError(
+                f"install to slot {p.slot_label(slot)} refused: configured "
+                f"store slots are {p.slot_set_label(allowed)}")
+        pf = self.load_preset_buffer(raw, name)
         self._send(p.build_store_preset(slot))   # fn 0x01 sub 0x26, allowed
         time.sleep(1.5)                     # let flash settle before reads
         return pf

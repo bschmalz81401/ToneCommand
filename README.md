@@ -134,6 +134,10 @@ below is a real request you can type.
   like Devin Townsend" checks the catalog first and offers the real pack; a
   name with two matches asks which; a name with no pack says so plainly and
   the build that follows is called an interpretation, never their preset.
+  The ARTISTS section in the Storage drawer installs a pack in one click:
+  cabs into free user-cab slots (moved, and the preset repointed, when the
+  pack's own slots are taken), the preset into a free store slot, and one
+  line saying where everything landed.
 
 **Never sends behind your back**
 - Read-back verification on every write, and a signal-path check so a preset is

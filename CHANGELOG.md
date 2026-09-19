@@ -4,6 +4,31 @@ Notable changes to ToneCommand. Dates are UTC.
 
 ## Unreleased
 
+### Added (the Artists gallery, one click installs a pack, 2026-09-19: #155 J2, #164)
+- `fm9/gallery_install.py`: `plan` decides where everything goes from what
+  the unit reports and the two whitelists before anything is written: a
+  cab goes to the bundle map's slot when that slot is in
+  `TONECOMMAND_CAB_SLOTS` and reads `<EMPTY>` (or already holds the cab by
+  name, then it is kept), else to the lowest whitelisted slot that reads
+  `<EMPTY>` (#164); the preset goes to the lowest whitelisted store slot
+  that reads `<EMPTY>`. Refusals are one line: no free store slot, no free
+  cab slot, effect blocks only, no FM9 preset. `execute` performs it
+  through the existing guarded primitives, in order: cabs
+  (`install_user_cab_slot`, name-verified), the preset into the edit
+  buffer (`FM9.load_preset_buffer`, the dump-plus-rename half split out
+  of `install_preset`, no store), the Cab block repointed there when a cab
+  moved (every `CABINET_TYPEn` on every channel whose bank is USER and
+  whose value is the old slot, read back per channel), then ONE
+  `store_preset` and a `select_preset` name read-back. It stops at the
+  first failure and says what landed.
+- `POST /api/gift-of-tone/install {id}`: GIG LOCK 423, the J3 gates 409,
+  effect-blocks-only 409 before any download, fetch and verify 502, the
+  plan's refusals 409, else `{ok, line, store_slot, cabs: [{name, slot,
+  editor, moved_from}], repointed, preset, read_back}`. The Storage
+  drawer has an ARTISTS section: a card per entry the unit can take with
+  one INSTALL button (effect-blocks-only entries say so; no device says
+  installs need the unit); the click shows the line.
+
 ### Added (bring your own captures, the intake half, 2026-09-19: #149; failure lines: #150)
 - `fm9/nam_intake.py`: one `.nam` file, several, or a folder (walked for
   `.nam`, anything else skipped by name) go through I1 and come back as

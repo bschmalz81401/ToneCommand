@@ -3290,6 +3290,11 @@
   #shareerrtitle { color: var(--cyan); letter-spacing: 0.05em; }
 
 .composer.dropping { outline: 2px dashed var(--cyan); outline-offset: 4px; }
+.artistcards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; margin-top: 8px; }
+.artistcard { border: 1px solid var(--line); padding: 8px 10px; display: flex; flex-direction: column; gap: 4px; }
+.artistcard .who { font-weight: 600; }
+.artistcard .what { opacity: .8; font-size: var(--fs-label); }
+.artistcard button { align-self: flex-start; }
 </style>
   <link rel="icon" type="image/png" href="/logo.png">
 </head>
@@ -3736,6 +3741,11 @@
                placeholder="rename the selected preset (32 characters)">
         <button class="small" id="renameslot" disabled>RENAME</button>
         <span class="hint" title="The FM9 keeps the name inside the preset, so renaming writes the slot back under the new name. The tone is untouched.">Renaming stores the preset. Tone untouched.</span>
+      </div>
+      <div class="installrow" id="artistsrow">
+        <div class="navtitle" style="margin-top:14px">ARTISTS</div>
+        <div class="hint" title="Fractal's Gift of Tone packs your unit can take. One click fetches the pack from fractalaudio.com, checks it against the catalog, puts its cabs in free user-cab slots (moving them and repointing the preset when the pack's own slots are taken), stores the preset in a free store slot, and tells you where everything landed. Every write is read back.">Official artist packs. One click, then the line says where it landed.</div>
+        <div id="artistcards" class="artistcards"></div>
       </div>
       <div class="installrow">
         <div class="navtitle" style="margin-top:14px">INSTALL A PRESET FILE</div>
@@ -8363,6 +8373,56 @@ async function runAcquire(said) {
 // cabs checked by default, editable destination slots, a live line saying
 // exactly what WRITE will do. The owner asked to select, see the plan, then
 // write, rather than approve a blunt dialog.
+// The Artists gallery (#155): cards from the device-filtered catalog; one
+// click runs the whole install and the line says where everything landed.
+async function renderArtists() {
+  const box = $('artistcards');
+  if (!box) return;
+  try {
+    const d = await (await fetch('/api/gift-of-tone')).json();
+    if (d.error) { box.innerHTML = `<div class="hint">${esc(d.error)}</div>`; return; }
+    const note = d.note ? `<div class="hint">${esc(d.note)}</div>` : '';
+    box.innerHTML = note + (d.entries || []).map(e => {
+      const blocksOnly = /effect blocks/i.test(e.kind || '');
+      const what = `${esc(e.year)} ${esc(e.description || e.kind || '')}`;
+      const action = blocksOnly
+        ? `<span class="hint">effect blocks: not installable from here yet</span>`
+        : (d.device
+            ? `<button class="small artistgo" data-id="${esc(e.id)}">INSTALL</button>`
+            : `<span class="hint">needs the unit</span>`);
+      return `<div class="artistcard" data-id="${esc(e.id)}">
+        <span class="who">${esc((e.artists || []).join(', '))}</span>
+        <span class="what">${what}${e.min_firmware ? ` (firmware ${esc(e.min_firmware)}+)` : ''}</span>
+        ${action}</div>`;
+    }).join('');
+    for (const b of box.querySelectorAll('button.artistgo')) {
+      b.onclick = () => runArtistInstall(b.dataset.id, b);
+    }
+  } catch (e) {
+    box.innerHTML = `<div class="hint">could not read the catalog: ${esc(e.message)}</div>`;
+  }
+}
+
+async function runArtistInstall(id, button) {
+  if (button) { button.disabled = true; button.textContent = 'INSTALLING...'; }
+  chatNote('Fetching the pack and installing it...');
+  try {
+    const r = await fetch('/api/gift-of-tone/install', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({id})});
+    const d = await r.json();
+    if (d.error) throw new Error(d.error);
+    chatNote(d.line);
+    if (d.store_slot != null) noteSlotName(d.store_slot, d.preset);
+    if (typeof refreshState === 'function') refreshState();
+  } catch (e) {
+    chatNote(`Could not install that pack: ${e.message}`);
+  } finally {
+    if (button) { button.disabled = false; button.textContent = 'INSTALL'; }
+  }
+  renderChat();
+}
+
 function renderAcquirePlan(d) {
   const box = $('installfound');
   box.hidden = false;
@@ -10945,6 +11005,7 @@ let drawerOpen = null;
 function openDrawer(name) {
   if (!(name in DRAWERS)) return;
   drawerOpen = name;
+  if (name === 'storage') renderArtists();
   $('drawer').hidden = false;
   $('drawer').dataset.draw = name;
   $('drawtitle').textContent = DRAWERS[name][0];
