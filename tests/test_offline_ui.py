@@ -199,7 +199,8 @@ def test_the_state_endpoint_turns_that_into_a_clean_disconnect(monkeypatch):
     d = TestClient(server.app).get("/api/state").json()
     # gig_mode rides along even unplugged, so the header pill stays true
     # while the rig is off.
-    assert d == {"connected": False, "gig_mode": False}
+    assert {k: v for k, v in d.items() if k != "device"} == {"connected": False, "gig_mode": False}
+    assert d["device"]["active"] == "fm9"  # #139: the device block rides along even unplugged
     assert dropped["n"] == 1
 
 
