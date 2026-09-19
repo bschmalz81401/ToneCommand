@@ -5938,7 +5938,12 @@ def _apply_actions_to_capture(cap: dict, actions: list) -> dict:
     return out
 
 
-def _advise_compare(a: str, b: str) -> tuple[dict | None, dict | None]:
+def _advise_pair(a: str, b: str) -> tuple[dict | None, dict | None]:
+    """Resolve both sources ONCE, under one lock, and diff them. Returns
+    ({a, b, diffs, differences, lines}, error). Every advisory caller goes
+    through here, so a scene source is stood in exactly once per question
+    (a second resolve would switch the live rig's scene again and could
+    read a different buffer than the first)."""
     with _lock:
         try:
             ca, la, ea = _resolve_source(a)
@@ -5949,8 +5954,25 @@ def _advise_compare(a: str, b: str) -> tuple[dict | None, dict | None]:
     if ea or eb:
         return None, {"error": ea or eb, "status": 404}
     diffs = advisory.compare(ca, cb, reg)
-    return {"a": la, "b": lb, "differences": [d.as_dict() for d in diffs],
+    return {"a": la, "b": lb, "diffs": diffs,
+            "differences": [d.as_dict() for d in diffs],
             "lines": advisory.narrate(diffs, la, lb)}, None
+
+
+def _advise_compare(a: str, b: str) -> tuple[dict | None, dict | None]:
+    out, err = _advise_pair(a, b)
+    if err:
+        return None, err
+    return {k: v for k, v in out.items() if k != "diffs"}, None
+
+
+def _advise_gap(a: str, b: str) -> tuple[dict | None, dict | None]:
+    out, err = _advise_pair(a, b)
+    if err:
+        return None, err
+    advice, prompt = advisory.gap(out["diffs"], reg)
+    return {"a": out["a"], "b": out["b"], "advice": [x.as_dict() for x in advice],
+            "build_prompt": prompt}, None
 
 
 @app.post("/api/advise/compare")
@@ -5964,15 +5986,10 @@ def api_advise_compare(body: dict):
 @app.post("/api/advise/gap")
 def api_advise_gap(body: dict):
     """How to take A toward B. Advice and one sentence; no actions."""
-    out, err = _advise_compare(str(body.get("a") or ""), str(body.get("b") or ""))
+    out, err = _advise_gap(str(body.get("a") or ""), str(body.get("b") or ""))
     if err:
         return JSONResponse({"error": err["error"]}, status_code=err["status"])
-    with _lock:
-        ca, _la, _ = _resolve_source(str(body.get("a") or ""))
-        cb, _lb, _ = _resolve_source(str(body.get("b") or ""))
-    advice, prompt = advisory.gap(advisory.compare(ca, cb, reg), reg)
-    return {"a": out["a"], "b": out["b"], "advice": [x.as_dict() for x in advice],
-            "build_prompt": prompt}
+    return out
 
 
 @app.post("/api/advise/diagnose")
@@ -6026,15 +6043,9 @@ def _advisory_route(messages: list[dict]) -> tuple[str, dict | None]:
             return advisory.findings_text("compare", out), {"comparison": out}
         if q["kind"] == "gap":
             a = q["a"] or "scene " + str((get_fm9().scene_name() or (1,))[0])
-            out, err = _advise_compare(a, q["b"])
+            payload, err = _advise_gap(a, q["b"])
             if err:
                 return "", None
-            with _lock:
-                ca, _, _ = _resolve_source(a)
-                cb, _, _ = _resolve_source(q["b"])
-            advice, prompt = advisory.gap(advisory.compare(ca, cb, reg), reg)
-            payload = {"a": out["a"], "b": out["b"], "advice": [x.as_dict() for x in advice],
-                       "build_prompt": prompt}
             return advisory.findings_text("gap", payload), {"gap": payload}
     except FM9NotFound:
         drop_fm9()

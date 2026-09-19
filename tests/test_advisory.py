@@ -166,6 +166,23 @@ def test_gap_gives_advice_with_from_to_and_a_build_prompt(rig):
     assert not any(hasattr(x, "kind") for x in advice), "advice items are not actions"
 
 
+def test_gap_resolves_each_source_once(rig, monkeypatch):
+    """A scene source stands in the scene to capture it; resolving it twice
+    per question would switch the live rig twice and could read two
+    different buffers. One pass, whatever the route."""
+    calls = []
+    real = server._resolve_source
+    monkeypatch.setattr(server, "_resolve_source", lambda n: (calls.append(n), real(n))[1])
+    client = TestClient(server.app)
+    scene2_amp(rig, "Gain", 6)
+    calls.clear()
+    assert client.post("/api/advise/gap", json={"a": "scene 1", "b": "scene 2"}).status_code == 200
+    assert calls == ["scene 1", "scene 2"]
+    calls.clear()
+    assert client.post("/api/advise/compare", json={"a": "scene 1", "b": "scene 2"}).status_code == 200
+    assert calls == ["scene 1", "scene 2"]
+
+
 def test_gap_route_has_no_actions_and_advisory_imports_no_executor(rig):
     client = TestClient(server.app)
     scene2_amp(rig, "Gain", 6)
