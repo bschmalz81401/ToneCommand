@@ -61,12 +61,13 @@ WHAT IT DOES NOT PRETEND
 from __future__ import annotations
 
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Callable
 
 from fm9.adapter import Capabilities, ReadPath, SceneSlotState, Topology
 from devices.headrush import topology as topo
 from devices.headrush.registry import NotMeasured, Registry, UnknownBlock
+from devices.headrush.tapers import TaperTable
 
 CHAIN = "/Evil/Engine/Patch/Chain"
 RIG = "/Evil/Engine/Patch/Rig"
@@ -138,7 +139,9 @@ class DerivedDisplay:
     text: str
     curve: str
     provenance: str
-    api_readable: bool = False
+    #: Not settable. `init=False` is the point: a caller cannot construct
+    #: one that claims the unit said this, and `replace()` cannot flip it.
+    api_readable: bool = field(init=False, default=False)
 
 
 class MethodRefused(PermissionError):
@@ -164,7 +167,7 @@ class HeadrushAdapter:
 
     def __init__(self, client, registry: Registry, *,
                  topologies: topo.TopologyTable | None = None,
-                 tapers: Any = None,
+                 tapers: TaperTable | None = None,
                  settle_s: float = 0.5,
                  sleep: Callable[[float], None] = time.sleep):
         self.client = client
@@ -456,6 +459,33 @@ class HeadrushAdapter:
         out["provenance"] = self.tapers.provenance
         return out
 
+    @staticmethod
+    def _must_be_continuous(spec: Any) -> tuple[float, float]:
+        """The published range, or the reason there is nothing to convert.
+
+        BOTH GUARDS ARE HERE RATHER THAN IN A TEST. No parameter this firmware
+        publishes carries both `options` and a display range, so the selector
+        case cannot arise today - which is exactly why it must be refused in
+        the code: a schema that grew one would otherwise have its ORDINAL run
+        through a 0..1 taper, silently, and the only thing standing in the way
+        would be a test asserting the schema had not changed.
+
+        Checked BEFORE the device is touched, so a spec that was never
+        convertible does not cost a round trip to find out.
+        """
+        if getattr(spec, "options", None) is not None:
+            raise NotMeasured(
+                f"{spec.block}.{spec.name} is a selector with "
+                f"{len(spec.options)} positions, not a continuous parameter. "
+                f"Its wire value is a position, not a point on a curve; use "
+                f"set_param_ordinal and Parameter.option to name one.")
+        lo, hi = spec.display_minimum, spec.display_maximum
+        if lo is None or hi is None:
+            raise NotMeasured(
+                f"{spec.block}.{spec.name}: the device publishes no display "
+                f"range, so there is nothing to convert between.")
+        return lo, hi
+
     def _converted(self, spec: Any, direction: str, value: float) -> float:
         """One conversion, with the parameter's published range and curve.
 
@@ -465,11 +495,7 @@ class HeadrushAdapter:
         the curve genuinely has none there. Turning either into a plausible
         number is the failure this whole module exists to avoid.
         """
-        lo, hi = spec.display_minimum, spec.display_maximum
-        if lo is None or hi is None:
-            raise NotMeasured(
-                f"{spec.block}.{spec.name}: the device publishes no display "
-                f"range, so there is nothing to convert between.")
+        lo, hi = self._must_be_continuous(spec)
         return getattr(self.tapers, direction)(
             value, minimum=lo, maximum=hi, algo=spec.taper_id)
 
@@ -497,6 +523,7 @@ class HeadrushAdapter:
                 f"{spec.block}.{spec.name}: the wire value cannot be shown "
                 "as a display value; see set_param_display. get_param_wire "
                 "reads it.")
+        self._must_be_continuous(spec)
         wire = self.get_param_wire(spec)
         if wire is None:
             raise NotMeasured(

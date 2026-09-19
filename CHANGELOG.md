@@ -27,7 +27,12 @@ Notable changes to ToneCommand. Dates are UTC.
   and scaling linearly anyway would silently mis-read every value of that
   parameter.
 
-### Verified on hardware (HeadRush display conversion)
+### Checked against hardware readings (HeadRush display conversion)
+- NO UNIT WAS TOUCHED BY THIS BRANCH. The readings are a Core's, recorded in
+  the #130 and #167 sessions (firmware 5.1.0.2a63755, a `##HRB` test preset);
+  what is new here is that the adapter is driven over them. Calling that
+  "verified on hardware" would claim a session that did not happen, so it
+  does not.
 - The six `hardware_check` rows in `config/headrush_tapers.json`, readings
   taken off a Core's screen, are now a parametrised test: the adapter
   reproduces all six as formatted text, `75 %` through `1.48 Hz`.
@@ -40,6 +45,29 @@ Notable changes to ToneCommand. Dates are UTC.
   first is evidence about this table rather than arithmetic any curve
   satisfies. This is stronger corroboration than a photographed screen,
   because a misread digit cannot produce it.
+
+### Changed (follow-up review, 2026-09-19)
+- THE SELECTOR GUARD MOVED OUT OF THE TEST AND INTO THE METHODS. The first
+  round answered "a selector cannot reach the continuous path" with a test
+  asserting no parameter carries both `options` and a display range. That is
+  a true statement about today's schema and the wrong place for the
+  invariant: a firmware that grew one would have had its ORDINAL run through
+  a 0..1 taper, with an assertion about the schema as the only thing in the
+  way. `_must_be_continuous` refuses a selector by name, in both methods.
+- The guards run BEFORE the device is read, so a spec that was never
+  convertible does not cost a round trip to find that out.
+- `DerivedDisplay.api_readable` is `field(init=False)`. It described the
+  invariant and did not hold it: a caller could construct one claiming the
+  unit said the number. Construction, `replace()` and assignment all refuse.
+- `tapers=` is typed `TaperTable | None` rather than `Any`, so the wrong
+  object fails at construction instead of inside a `getattr`.
+- The `_formatted` fix from the first round was unguarded, which is how it
+  got there. A test now pins a device format that cannot apply and asserts
+  the unit survives.
+- `NotConvertible` is asserted on a fabricated spec, and a second test says
+  why that is not a cheat: NO parameter this firmware publishes reaches a
+  non-finite value at either end of its own range, so there is no real one
+  to use. If that ever stops being true, the test fails and names it.
 
 ### Changed (review of the display conversion, 2026-09-19)
 - THE METHOD DOCSTRING CLAIMED MORE THAN THE CODE DOES. It said "nothing

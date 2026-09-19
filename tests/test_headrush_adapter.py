@@ -528,7 +528,14 @@ def test_a_wire_read_that_came_back_empty_is_not_converted(reg):
 def test_a_value_the_curve_cannot_express_is_refused_not_rounded(reg):
     """`NotConvertible` is named in the adapter as deliberately uncaught.
     `Volume` is log10(0) at wire 0, which the editor calls -Infinity and this
-    refuses rather than substituting the minimum."""
+    refuses rather than substituting the minimum.
+
+    THE SPEC IS FABRICATED, AND HAS TO BE. No parameter this firmware
+    publishes reaches a non-finite value at either end of its own range - the
+    test below asserts that, so this one is about the adapter PROPAGATING the
+    refusal rather than about a case a player can hit today. If the assertion
+    below ever fails, this one should be rewritten against the real
+    parameter."""
     _sim, a = _converting(reg)
     spec = reg.resolve("Amp", "Bass")
 
@@ -562,3 +569,77 @@ def test_a_selector_is_not_dragged_onto_the_continuous_path(reg):
 def _every_parameter(reg):
     for block in reg.blocks.values():
         yield from block.parameters.values()
+
+
+def test_no_real_parameter_can_reach_a_value_its_curve_cannot_express(reg):
+    """Why the test above has to fabricate a spec, asserted rather than
+    asserted-by-me. `Exponential` divides by zero when a range starts at or
+    below 0, and `Volume` is log10(0) at wire 0, but nothing in this dump is
+    published with a range that puts either edge there."""
+    table = hr_tapers.load()
+    reachable = []
+    for spec in _every_parameter(reg):
+        if spec.display_minimum is None or spec.options is not None:
+            continue
+        for wire in (0.0, 0.5, 1.0):
+            try:
+                table.to_display(wire, minimum=spec.display_minimum,
+                                 maximum=spec.display_maximum,
+                                 algo=spec.taper_id)
+            except hr_tapers.NotConvertible:
+                reachable.append(f"{spec.block}.{spec.name}@{wire}")
+                break
+            except hr_tapers.UnknownTaper:
+                break
+    assert not reachable, (
+        f"a published parameter now refuses at its own edge: {reachable[:5]}; "
+        f"test_a_value_the_curve_cannot_express_is_refused_not_rounded should "
+        f"use it instead of a fabricated spec")
+
+
+def test_a_format_string_that_will_not_apply_keeps_the_unit(reg):
+    """The no-format path appends `spec.unit`, so the fallback must too. A
+    device format that cannot take a float used to drop the `Hz` as well as
+    the digits, which reads as a bare number with no clue it is unitless by
+    accident."""
+    bass = reg.resolve("Amp", "Bass")
+    _sim, a = _converting(reg)
+
+    class BadFormat:
+        taper_id = bass.taper_id
+        block, name = "Amp", "Bass"
+        display_minimum, display_maximum = bass.display_minimum, bass.display_maximum
+        display_format = "%d%"          # a trailing %, which % cannot apply
+        unit = "Hz"
+
+    with pytest.raises(ValueError):     # the premise: this format really breaks
+        BadFormat.display_format % 12.5
+    assert a._formatted(BadFormat(), 12.5) == "12.5 Hz"
+
+
+def test_a_selector_never_reaches_the_device_to_be_refused(reg):
+    """The guards run BEFORE the read, so a spec that was never convertible
+    does not cost a round trip to find that out."""
+    sim, a = _converting(reg, )
+    spec = reg.resolve("Amp", "Type")
+    calls_before = len(sim.opener.calls) if hasattr(sim.opener, "calls") else None
+    with pytest.raises(NotMeasured):
+        a.get_param_display(spec)
+    if calls_before is not None:
+        assert len(sim.opener.calls) == calls_before, "it read the device anyway"
+
+
+def test_a_derived_display_cannot_be_built_claiming_the_unit_said_it():
+    """`api_readable=False` is the whole contract. It is init=False so no
+    caller can construct one that claims otherwise, and frozen so none can
+    assign over it."""
+    import dataclasses
+    got = DerivedDisplay(value=1.0, text="1 Hz", curve="Linear", provenance="x")
+    assert got.api_readable is False
+    with pytest.raises(TypeError):
+        DerivedDisplay(value=1.0, text="1 Hz", curve="Linear",
+                       provenance="x", api_readable=True)
+    with pytest.raises(ValueError):          # replace() refuses init=False
+        dataclasses.replace(got, api_readable=True)
+    with pytest.raises(dataclasses.FrozenInstanceError):
+        got.api_readable = True
