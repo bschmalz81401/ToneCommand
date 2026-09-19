@@ -142,14 +142,48 @@ Notable changes to ToneCommand. Dates are UTC.
   rig, and the restore running when `verify` raises. Two fail if the
   corresponding fix above is reverted.
 
+### Found on hardware (review of #136)
+- A RIG IS NOT LOADED WHEN `loadedName` SAYS IT IS. The name flips 185..332 ms
+  after `loadRig` while the chain is still the PREVIOUS rig's, and the chain
+  keeps being rebuilt for up to a second after that. A write issued in that
+  window races the tail of the load and loses: the unit installs the rig's own
+  stored value over it and the read-back reports a mismatch that is not the
+  writer's fault. This is what the "unexplained" topology transient was.
+  `Routing` itself is fast, read back in 17..38 ms over 14 writes, so a slow
+  write was never the explanation.
+- `wait_for_rig` waits for the name AND for the chain to be identical across
+  three consecutive samples. Quiescence is the signal; the name is not. Three
+  consecutive full runs pass, where the previous build failed two of five.
+- The same race applies to anything that loads a rig and then writes,
+  `select_preset` included. Reported on #134; the adapter is @monzta1's.
+
+### Changed (review of #136)
+- A REFUSAL MESSAGE REPORTED THE COUNT FROM BEFORE THE CALL. `expect_raise`
+  took `detail_ok` as a formatted string, which is evaluated before the call
+  it describes, so "refused before transport" printed the same opener count
+  whether or not anything went out. It takes a callable now. This is the same
+  uninformative-message class the topology check was just fixed for, and it
+  was reintroduced by an argument's evaluation order.
+- AN UNREADABLE UNIT COUNTED AS A CLEAN ONE. The restore row tested
+  `not dirty_after`, and a failed read returns `None`. Only an explicit false
+  reading counts now, and `discard_edits` raises when the rig does not come
+  back rather than returning quietly.
+- `wait_for_rig` sleeps on the error path. It used to `continue` with no
+  delay, turning a transport blip into a tight spin against a unit that is
+  already struggling.
+- `Ctrl-C` is no longer swallowed. `except BaseException` caught
+  `KeyboardInterrupt` and returned 1, reporting an interrupted run as an
+  ordinary failing one; it restores and re-raises.
+- The redactor is seeded with rig IDS as well as names, which AC7 also
+  promises are absent.
+- The "only transport" check claimed more than an assertion can show from
+  inside the run. It asserts the adapter holds the wrapped client and says so;
+  the single-call-site property is documented, not dressed up as a
+  measurement.
+
 ### Verified on hardware
 - #135's `select_preset` fix passes against the Core at 5.1.0.2a63755. The
-  full pass is 36 checks, 0 failed.
-- ONE UNEXPLAINED TRANSIENT, recorded rather than dismissed: a single
-  `topology restored` failure that could not be reproduced. The check's message
-  was hardcoded to print the wanted routing rather than the observed one, so
-  the transcript could not say what it read; that is fixed, and the event is
-  not claimed to be.
+  full pass is 36 checks, 0 failed, three runs in a row.
 
 ## 1.3.0 (2026-09-18)
 

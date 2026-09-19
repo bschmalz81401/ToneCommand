@@ -52,11 +52,11 @@ verifying against <host>, starting on a ##HRB preset
   [ok  ] AC4  ordinal 20 is in the refusal table
          the engine-killing ordinal is refused by data, checked without writing it
   [ok  ] AC4  non-allowlisted object-method refused before transport
-         MethodRefused: refused and the opener was not called (3 -> 3)
+         MethodRefused: refused; opener went 3 -> 3
   [ok  ] AC4  nothing reached the unit during that refusal
          opener call count unchanged (3 -> 3)
-  [ok  ] AC4  the counted opener is the adapter's only transport
-         adapter reaches the network only through this client, whose single outbound call site is the wrapped opener
+  [ok  ] AC4  the adapter is holding the wrapped client
+         the counter is in the path the adapter actually uses
   [ok  ] AC2  current state reads back
          rig is a ##HRB preset, routing 0, 10 slots occupied
   [ok  ] AC2  current preset is named, not numbered
@@ -68,7 +68,7 @@ verifying against <host>, starting on a ##HRB preset
   [ok  ] AC2  unit returned to its starting rig
          restored directly, by rig id (name not recorded, AC7)
   [ok  ] AC4  refused ModuleType blocks before transport
-         PermissionError: ordinal 254 refused and the opener was not called (23 -> 23); 20 is refused by the same table, asserted above without writing it
+         PermissionError: ordinal 254 refused; opener went 23 -> 23. 20 is refused by the same table, asserted above without writing it
   [ok  ] AC4  nothing reached the unit during that refusal
          opener call count unchanged (23 -> 23)
   [ok  ] AC2  topology selection is verified by read-back
@@ -89,8 +89,8 @@ verifying against <host>, starting on a ##HRB preset
          set_scene(second) -> ok=True, engaged=True, LastScene=6
   [ok  ] #33  SceneActive is a latch, not a pulse (OPEN)
          first scene's flag was True while it was active; after engaging the second, the second reads True and the first reads False -> a LATCH the unit maintains and clears on change, not a pulse
-  [ok  ] #33  scene restored
-         back on the scene this pass found engaged at entry
+  [n/a ] #33  scene restored
+         no scene was engaged when this pass started, so there is nothing to restore to; the final reload settles it
   [ok  ] #33  set_scene_slot writes both Effect and Mode
          a slot in scene 9 moved off -> on and read back on
   [ok  ] #33  scene slot restored
@@ -202,14 +202,14 @@ the second reads True and the first reads False
 This is measured across a **transition**, on purpose. Engaging one scene and
 reading its own flag back cannot answer the question: a flag that reads `True`
 immediately after its own write is equally consistent with a latch and with a
-pulse that has not been cleared yet. Two scenes are needed  -  one to set, one to
-displace it  -  and both halves are observed.
+pulse that has not been cleared yet. Two scenes are needed - one to set, one to
+displace it - and both halves are observed.
 
 So the adapter's current caution can be tightened if @monzta1 wants: `set_scene`
 reports `written` without requiring it, because the flag's persistence was
 unmeasured. It is measured now, on this firmware, and the flag tracks the active
-scene. `LastScene` remains the better success signal regardless  -  it is the
-effect the write is *for*  -  so this is an option, not a defect.
+scene. `LastScene` remains the better success signal regardless - it is the
+effect the write is *for* - so this is an option, not a defect.
 
 **Bound:** one rig, one firmware, switches 6–9 in scene mode, `n = 1` per
 transition. It is not established that the unit never pulses under some other
@@ -241,7 +241,7 @@ answering, and `place_block(slot, 0)` empties it again.
 ### What the #33 pass touched, and put back
 
 Everything ran on the loaded `##HRB` test preset, in increasing order of how
-much it perturbs the rig  -  scenes, then bypass, then chain edits  -  and each step
+much it perturbs the rig - scenes, then bypass, then chain edits - and each step
 restores what it changed. Two of these checks were rewritten after a first run
 passed them **vacuously**, which is worth recording because the passes looked
 fine:
@@ -314,7 +314,7 @@ answers it is that no storing method is reachable: `saveRig`, `saveRigAs`,
 `{("/Evil/API/Rigs", "loadRig")}` and nothing else. The run asserts that.
 
 The unit is returned to its starting rig by reloading it by id, which discards
-the run's writes without storing anything  -  the only restore route that does not
+the run's writes without storing anything - the only restore route that does not
 go through a storing method.
 
 ## AC7 is enforced at print time, and was not before
@@ -343,26 +343,70 @@ that has not been given the curve. Recorded so it is not mistaken for a finding
 that display values are underivable in general - finding 3 says they are
 underivable *from the device*, which is a different claim.
 
-## One unexplained transient
+## FINDING: a rig is not loaded when `loadedName` says it is
 
-On one run the `topology restored` check failed while its own detail line said
-"back to routing 0". The line was hardcoded to print the *wanted* routing rather
-than the observed one, so the transcript could not say what the unit actually
-read. Restoring routing could not be reproduced as a failure afterwards, in the
-run above or in isolation.
+This started as an unexplained transient: the `topology restored` check failed
+once, could not be reproduced, and was written up as unexplained rather than
+dismissed. It then failed again, and because the check's message had been
+changed to print the *observed* value rather than the wanted one, the second
+failure said what was actually happening:
 
-It is recorded rather than dismissed. The message now prints the observed value
-and the restoring write's own result, so a recurrence is diagnosable. What is
-**not** claimed is that it was fixed: an uninformative message was fixed, and
-the underlying event has no explanation.
+```
+[FAIL] AC2  topology selection is verified by read-back
+       routing moved 0 -> 0 and read back; adapter reports ok=False
+[FAIL] AC2  topology restored
+       wanted routing 0, unit reads 1; the restoring write reported ok=False
+       (/Evil/Engine/Patch/Chain Routing: wrote 0, unit reads 1 after 0.5 s)
+```
+
+The readings are inverted, not stale, which rules out a slow write. `Routing`
+was measured directly and is fast: **read back in 17..38 ms over 14 writes**,
+never anywhere near the adapter's 0.5 s settle.
+
+What is actually happening is that the topology write was landing **during a
+rig load that had already reported itself finished**. `loadedName` flips early:
+
+```
+trial 1: loadedName flipped at t+332 ms, and the chain was STILL THE PREVIOUS
+         RIG'S (9 modules). It became the new rig's (4 modules) at t+1392 ms.
+trial 2: loadedName flipped at t+195 ms, chain already stable.
+trial 3: loadedName flipped at t+185 ms, chain changed at t+1140 ms.
+```
+
+**The name flips 185..332 ms after `loadRig`, and the chain can keep being
+rebuilt for about a second after that.** A write issued in that window races
+the tail of the load and loses: the unit installs the rig's own stored value
+over it, and the read-back reports a mismatch that is not the writer's fault.
+
+That also explains why it was intermittent. It only bites when a write closely
+follows a rig load, which is this procedure's order, and only when that load
+happens to be one of the slow ones.
+
+### What this procedure does about it
+
+`wait_for_rig` now waits for two separate things, because the unit reports them
+separately: the name matching, and then the chain being **identical across
+three consecutive samples** 250 ms apart. Quiescence is the signal; the name is
+not. Three consecutive full runs pass with this in place, where the previous
+build failed two of five.
+
+### What it means beyond this procedure
+
+Any code that loads a rig and then writes has this race, including
+`select_preset`, which reads `PresetName` back and reports success on it.
+Reported on #134 for @monzta1 to decide; the adapter is his component and the
+right fix there may be different from the right fix here.
 
 ## What this run does not cover
 
-- **One unit, one firmware, one run.** `n = 1` per check. Nothing here is a rate.
-- **Prime and Flex Prime** (AC8)  -  untested, unclaimed.
-- **Ordinal 20 was refused, never executed.** AC4 wanted the refusal, and the
-  ordinal chosen for it is the one that killed the engine. Only 19, 4 and 0 were
-  actually written to a slot.
+- **One unit, one firmware.** `n = 1` per check unless a number is given.
+  The timing measurements state their own sample counts; nothing else here
+  is a rate.
+- **Prime and Flex Prime** (AC8) - untested, unclaimed.
+- **Ordinal 20 is asserted as data and never reaches `place_block` at all.**
+  The transport refusal is probed with ordinal **254**, which finding 1
+  measured as harmless. The ordinals actually written to a slot are 19, 4 and
+  0. Nothing here re-tests that 20 kills the engine, and nothing should.
 - **Chain edits used one empty slot** on one rig. `place_block` is not
   exercised across the ordinal space, and `reorder_block` is not exercised at
   all.

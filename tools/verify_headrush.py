@@ -81,6 +81,12 @@ from devices.headrush.registry import (  # noqa: E402
 TEST_PREFIX = "##HRB"
 RIGS = "/Evil/API/Rigs"
 
+# How still the chain has to be before a rig counts as loaded.
+# Three samples 250 ms apart covers the measured ~1 s rebuild tail
+# with margin, and costs about half a second on a quiet unit.
+QUIET_SAMPLES = 3
+QUIET_INTERVAL_S = 0.25
+
 # AC7. Filled in once the host and library are known, then applied to EVERY
 # printed line. Redacting at the call sites was the earlier design and it
 # leaked: an exception message carries the url, so the host reached the
@@ -89,8 +95,17 @@ RIGS = "/Evil/API/Rigs"
 _SECRETS: list[tuple[str, str]] = []
 
 
-def teach_redactor(host: str, rig_names: list[str]) -> None:
+def teach_redactor(host: str, rig_names: list[str],
+                   rig_ids: list[str] | None = None) -> None:
+    """Seed everything AC7 promises is absent from the transcript.
+
+    Names alone were not enough: the report also promises no rig id, and an
+    error body or payload can carry one (review of #136). Longest first, so a
+    name that contains another is masked whole.
+    """
     _SECRETS.clear()
+    for rid in sorted((r for r in (rig_ids or []) if r), key=len, reverse=True):
+        _SECRETS.append((str(rid), "<rig id>"))
     for name in sorted((n for n in rig_names if n), key=len, reverse=True):
         _SECRETS.append((name, f"<{TEST_PREFIX} name>"
                                if name.startswith(TEST_PREFIX) else "<rig>"))
@@ -105,23 +120,56 @@ def redact(text: str) -> str:
     return out
 
 
-def wait_for_rig(client: HeadrushClient, name: str, timeout_s: float = 5.0):
-    """Poll until the engine reports `name` loaded, or give up.
+def wait_for_rig(client: HeadrushClient, name: str, timeout_s: float = 8.0):
+    """Wait until `name` is loaded AND the engine has stopped rebuilding it.
 
-    A fixed sleep cannot do this honestly: on this unit the swap lands
-    159..679 ms after loadRig with no predictor (not the rig, not whether it
-    was just loaded), so any constant is either a flake at the tail or a wait
-    that pays the worst case every time. One GET costs about 10 ms.
+    Two separate waits, because the unit reports them separately.
+
+    `loadedName` flips early. Measured on a Core at 5.1.0.2a63755, it flips
+    185..332 ms after loadRig while the chain is STILL THE PREVIOUS RIG'S, and
+    the chain is replaced up to a second later:
+
+        trial 1: name flipped at t+332 ms, chain still 9 modules (the old rig)
+                 became 4 modules at t+1392 ms
+        trial 3: name flipped at t+185 ms, chain changed at t+1140 ms
+
+    So a write issued when the name says loaded races the tail of the load and
+    loses: the #126 topology check wrote Routing, read back the value the load
+    then installed, and reported a mismatch that was not the adapter's fault.
+
+    Quiescence is therefore the signal: the chain identical across consecutive
+    samples. Returns the loaded name, or None if either wait timed out.
     """
     deadline = time.monotonic() + timeout_s
+    loaded = None
     while time.monotonic() < deadline:
         try:
             now = str(client.get_property(RIGS, "loadedName") or "")
         except Exception:                           # noqa: BLE001
+            time.sleep(0.05)
             continue
         if now.strip() == name.strip():
-            return now
+            loaded = now
+            break
         time.sleep(0.05)
+    if loaded is None:
+        return None
+
+    stable = 0
+    previous = None
+    while time.monotonic() < deadline:
+        try:
+            chain = client.get_properties(CHAIN) or {}
+        except Exception:                           # noqa: BLE001
+            time.sleep(0.1)
+            continue
+        shape = (chain.get("Routing"),
+                 tuple(chain.get(f"ModuleType{n}") for n in range(1, 15)))
+        stable = stable + 1 if shape == previous else 0
+        previous = shape
+        if stable >= QUIET_SAMPLES:
+            return loaded
+        time.sleep(QUIET_INTERVAL_S)
     return None
 
 
@@ -158,15 +206,23 @@ class Report:
             return None
 
     def expect_raise(self, ac: str, name: str, want: type | tuple,
-                     fn, detail_ok: str, detail_no: str) -> None:
+                     fn, detail_ok, detail_no: str) -> None:
         """A refusal check. The exception type is REQUIRED to be the one the
         refusal is supposed to raise: treating any Exception as a pass greens
         the row on a transport error or a TypeError, which is the opposite of
-        what the criterion asks."""
+        what the criterion asks.
+
+        `detail_ok` is a CALLABLE, deliberately. Passing a formatted string
+        evaluates it before `fn` runs, so a message quoting an opener count
+        reports the count from before the call and reads the same whether or
+        not anything went out. That is the uninformative-message bug this
+        procedure fixed elsewhere, reintroduced by an argument's evaluation
+        order (review of #136)."""
         try:
             fn()
         except want as err:                         # the refusal, as designed
-            self.record(ac, name, True, f"{type(err).__name__}: {detail_ok}")
+            got = detail_ok() if callable(detail_ok) else detail_ok
+            self.record(ac, name, True, f"{type(err).__name__}: {got}")
         except Exception as err:                    # noqa: BLE001
             self.record(ac, name, False,
                         f"raised {type(err).__name__}, not "
@@ -229,8 +285,7 @@ def verify(adapter: HeadrushAdapter, client: HeadrushClient,
         "AC4", "non-allowlisted object-method refused before transport",
         MethodRefused,
         lambda: adapter.call_method(RIGS, "toneCommandNoSuchMethod", []),
-        detail_ok=(f"refused and the opener was not called "
-                   f"({before} -> {opener.calls})"),
+        detail_ok=lambda: (f"refused; opener went {before} -> {opener.calls}"),
         detail_no="a method outside the allowlist was NOT refused")
     report.record("AC4", "nothing reached the unit during that refusal",
                   opener.calls == before,
@@ -239,10 +294,14 @@ def verify(adapter: HeadrushAdapter, client: HeadrushClient,
     # The counter only answers AC4 if the adapter cannot reach the network
     # another way. It holds the wrapped client, and the client has one
     # outbound call site.
-    report.record("AC4", "the counted opener is the adapter's only transport",
+    # This proves the wrapping is in place, which is all an assertion can do
+    # from here. That the wrapped opener is the ONLY way out is a property of
+    # the code, not of this run: HeadrushAdapter performs no I/O of its own,
+    # and HeadrushClient has exactly one outbound call site, `self._opener`.
+    # Stated in the docstring rather than dressed up as a measurement.
+    report.record("AC4", "the adapter is holding the wrapped client",
                   adapter.client is client and client._opener is opener,
-                  "adapter reaches the network only through this client, whose "
-                  "single outbound call site is the wrapped opener")
+                  "the counter is in the path the adapter actually uses")
 
     # --- AC2: discovery and current state ---------------------------------
     status = adapter.status_dump()
@@ -309,9 +368,9 @@ def verify(adapter: HeadrushAdapter, client: HeadrushClient,
             "AC4", "refused ModuleType blocks before transport",
             PermissionError,
             lambda: adapter.place_block(spare, 254),
-            detail_ok=(f"ordinal 254 refused and the opener was not called "
-                       f"({before} -> {opener.calls}); 20 is refused by the "
-                       f"same table, asserted above without writing it"),
+            detail_ok=lambda: (f"ordinal 254 refused; opener went {before} -> "
+                               f"{opener.calls}. 20 is refused by the same "
+                               f"table, asserted above without writing it"),
             detail_no="a refused ordinal was NOT refused")
         report.record("AC4", "nothing reached the unit during that refusal",
                       opener.calls == before,
@@ -345,9 +404,10 @@ def verify(adapter: HeadrushAdapter, client: HeadrushClient,
         "AC5", "display read refuses rather than inventing a value",
         NotMeasured,
         lambda: adapter.get_param_display(bass),
-        detail_ok=(f"the wire-to-display curve is taper_id={bass.taper_id!r} "
-                   f"and the device does not say what that denotes, so it "
-                   f"refuses (finding 3)"),
+        detail_ok=lambda: (f"the wire-to-display curve is "
+                           f"taper_id={bass.taper_id!r} and the device does "
+                           f"not say what that denotes, so it refuses "
+                           f"(finding 3)"),
         detail_no="a display value was returned, which is not derivable")
 
     # --- AC2 + AC3: a representative verified write -----------------------
@@ -521,7 +581,7 @@ def verify_open_questions(adapter: HeadrushAdapter, client: HeadrushClient,
 
     # THE OTHER OPEN QUESTION: ordinal 4 is allowed on purpose. Finding 1 says
     # the device accepts it, then silently reverts it to 0 within ~0.4s. So the
-    # adapter's delayed read-back should report NOT PLACED  -  a false `ok` here
+    # adapter's delayed read-back should report NOT PLACED - a false `ok` here
     # is the failure mode the settle exists to prevent.
     def ordinal_4():
         out = adapter.place_block(free, 4)
@@ -548,13 +608,19 @@ def _addressable(adapter: HeadrushAdapter, slot: int) -> bool:
 def discard_edits(client: HeadrushClient) -> tuple[Any, Any]:
     """Reload the loaded rig by id, which drops the edit buffer without
     writing anything. The only restore route that does not go through a
-    storing method."""
+    storing method.
+
+    Raises if the rig did not come back. Returning quietly let the caller
+    green "edit buffer discarded" off a timeout (review of #136).
+    """
     before = client.get_property(RIGS, "dirty")
     lib = client.get_properties(RIGS)
     name = lib["loadedName"]
     rid = lib["AllRigIds"][lib["AllRigNames"].index(name)]
     client.call_method(RIGS, "loadRig", [rid, ""])
-    wait_for_rig(client, name)
+    if wait_for_rig(client, name) is None:
+        raise TimeoutError("the rig did not reload within the timeout, so the "
+                           "edit buffer was NOT discarded")
     return before, client.get_property(RIGS, "dirty")
 
 
@@ -581,7 +647,8 @@ def main(argv: list[str] | None = None) -> int:
 
     # AC7, before anything is printed: from here on no line can carry the host
     # or a rig name, including one that arrives inside an exception message.
-    teach_redactor(args.host, list(library.get("AllRigNames") or []))
+    teach_redactor(args.host, list(library.get("AllRigNames") or []),
+                   list(library.get("AllRigIds") or []))
 
     adapter = HeadrushAdapter(client, load_registry())
     report = Report()
@@ -592,11 +659,15 @@ def main(argv: list[str] | None = None) -> int:
     # `verify` was previously called bare: any exception it did not convert to
     # a FAILED row skipped the restore and left a dirty edit buffer, possibly
     # with chain edits in it.
-    crashed = None
+    crashed = interrupted = None
     try:
         verify(adapter, client, opener, report)
-    except BaseException as err:                    # noqa: BLE001
+    except Exception as err:                        # noqa: BLE001
         crashed = err
+    except (KeyboardInterrupt, SystemExit) as err:
+        # Still restore, then let it through. Swallowing these and returning 1
+        # turns Ctrl-C into an ordinary failing run (review of #136).
+        interrupted = err
     finally:
         # AC6 asks that nothing was stored, reset or flashed. `dirty` does not
         # answer that: it is true after any write and false after a reload.
@@ -609,8 +680,11 @@ def main(argv: list[str] | None = None) -> int:
                       f"store, delete, rename and create are unreachable")
         try:
             dirty_before, dirty_after = discard_edits(client)
+            # `not dirty_after` greened this row on None, which is what a
+            # failed read returns: an unreadable unit reported a clean one
+            # (review of #136). Only an explicit false reading counts.
             report.record("AC6", "edit buffer discarded at the end",
-                          not dirty_after,
+                          dirty_after is False or dirty_after == 0,
                           f"dirty was {dirty_before!r} after the run's writes "
                           f"and reads {dirty_after!r} now; the rig was "
                           f"reloaded by id, which discards them without "
@@ -626,6 +700,9 @@ def main(argv: list[str] | None = None) -> int:
         report.record("--", "the run did not finish", False,
                       f"{type(crashed).__name__}: {str(crashed)[:110]}; the "
                       f"restore above still ran")
+    if interrupted is not None:
+        print("\ninterrupted; the unit was restored before exiting")
+        raise interrupted
 
     print(f"\n{len(report.rows)} checks, {len(report.failed)} failed")
     return 1 if report.failed else 0

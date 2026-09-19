@@ -178,3 +178,154 @@ def test_a_failed_restore_is_reported_rather_than_swallowed(monkeypatch):
     monkeypatch.setattr(vh, "discard_edits", cannot)
     assert vh.main(["--host", "10.0.0.5"]) == 1
     vh._SECRETS.clear()
+
+
+# --- review of #136: the poll helper, which replaced the flaking sleeps -----
+
+class _RigClient:
+    """Answers loadedName from a scripted sequence; 'boom' raises.
+
+    Also answers get_properties for the chain, because a rig does not count as
+    loaded until the chain stops changing: the unit flips the name while the
+    previous rig's chain is still in place.
+    """
+    def __init__(self, sequence, chain_shapes=None):
+        self.sequence = list(sequence)
+        self.reads = 0
+        # default: already quiet
+        self.chain_shapes = list(chain_shapes or [{"Routing": 0}])
+        self.chain_reads = 0
+
+    def get_property(self, path, prop):
+        self.reads += 1
+        value = self.sequence[min(self.reads - 1, len(self.sequence) - 1)]
+        if value == "boom":
+            raise ConnectionError("transport blip")
+        return value
+
+    def get_properties(self, path):
+        self.chain_reads += 1
+        i = min(self.chain_reads - 1, len(self.chain_shapes) - 1)
+        return self.chain_shapes[i]
+
+
+def test_wait_for_rig_returns_once_the_name_matches_and_the_chain_is_quiet():
+    client = _RigClient(["Old Rig", "Old Rig", "##HRB Wanted"])
+    assert vh.wait_for_rig(client, "##HRB Wanted", timeout_s=5.0) == "##HRB Wanted"
+    assert client.reads == 3
+
+
+def test_wait_for_rig_keeps_waiting_while_the_chain_is_still_changing():
+    """The measured failure: the name flips while the chain is still the
+    previous rig's, so a write issued then races the tail of the load."""
+    moving = [{"Routing": 0, "ModuleType1": 9}] * 3 + \
+             [{"Routing": 0, "ModuleType1": 4}] * 6
+    client = _RigClient(["##HRB Wanted"], chain_shapes=moving)
+    assert vh.wait_for_rig(client, "##HRB Wanted", timeout_s=5.0) is not None
+    assert client.chain_reads > 3, "it stopped before the chain settled"
+
+
+def test_wait_for_rig_times_out_if_the_chain_never_settles():
+    never = [{"Routing": 0, "ModuleType1": n} for n in range(200)]
+    client = _RigClient(["##HRB Wanted"], chain_shapes=never)
+    assert vh.wait_for_rig(client, "##HRB Wanted", timeout_s=1.0) is None
+
+
+def test_wait_for_rig_tolerates_whitespace_the_unit_pads_with():
+    client = _RigClient(["  ##HRB Wanted "])
+    assert vh.wait_for_rig(client, "##HRB Wanted", timeout_s=5.0) is not None
+
+
+def test_wait_for_rig_gives_up_and_says_so():
+    client = _RigClient(["Never The Right One"])
+    assert vh.wait_for_rig(client, "##HRB Wanted", timeout_s=0.3) is None
+
+
+def test_wait_for_rig_backs_off_on_transport_errors(monkeypatch):
+    """A `continue` with no sleep spins as fast as the process can, hammering
+    a unit that is already struggling, for the whole timeout."""
+    slept = []
+    monkeypatch.setattr(vh.time, "sleep", lambda s: slept.append(s))
+    client = _RigClient(["boom"])
+    vh.wait_for_rig(client, "##HRB Wanted", timeout_s=0.2)
+    assert slept, "the error path polled without backing off"
+    assert client.reads <= len(slept) + 1
+
+
+# --- review of #136: a refusal message must reflect what happened -----------
+
+def test_expect_raise_builds_its_detail_after_the_call():
+    """A formatted string is evaluated before `fn` runs, so a message quoting
+    a counter reports the value from before the call and reads identically
+    whether or not anything happened."""
+    counter = {"n": 0}
+
+    def refuse():
+        counter["n"] += 1
+        raise PermissionError("no")
+
+    report = vh.Report()
+    report.expect_raise("AC4", "counts after", PermissionError, refuse,
+                        detail_ok=lambda: f"count is {counter['n']}",
+                        detail_no="not refused")
+    assert "count is 1" in report.rows[-1]["detail"], report.rows[-1]["detail"]
+
+
+# --- review of #136: AC7 promises no rig id either --------------------------
+
+def test_redactor_masks_rig_ids_too():
+    vh.teach_redactor("10.0.0.5", ["##HRB One"], ["3f9a-uuid-2b71"])
+    try:
+        assert vh.redact("loadRig 3f9a-uuid-2b71 failed") == "loadRig <rig id> failed"
+    finally:
+        vh._SECRETS.clear()
+
+
+# --- review of #136: an unreadable unit is not a clean one ------------------
+
+def test_a_failed_dirty_read_does_not_green_the_restore(monkeypatch):
+    client = _Client("##HRB Something")
+    monkeypatch.setattr(vh, "HeadrushClient", lambda *a, **k: client)
+    monkeypatch.setattr(vh, "HeadrushAdapter", lambda *a, **k: object())
+    monkeypatch.setattr(vh, "load_registry", lambda: object())
+    monkeypatch.setattr(vh, "verify", lambda *a, **k: None)
+    # a unit that cannot be read reports None, which is falsy
+    monkeypatch.setattr(vh, "discard_edits", lambda c: (True, None))
+    rc = vh.main(["--host", "10.0.0.5"])
+    vh._SECRETS.clear()
+    assert rc == 1, "an unreadable dirty flag was treated as discarded"
+
+
+def test_discard_edits_raises_when_the_rig_never_comes_back(monkeypatch):
+    monkeypatch.setattr(vh, "wait_for_rig", lambda *a, **k: None)
+
+    class C:
+        def get_property(self, path, prop): return False
+        def get_properties(self, path):
+            return {"loadedName": "##HRB X", "AllRigNames": ["##HRB X"],
+                    "AllRigIds": ["id"]}
+        def call_method(self, path, method, args): return True
+
+    with pytest.raises(TimeoutError):
+        vh.discard_edits(C())
+
+
+# --- review of #136: Ctrl-C is not an ordinary failing run ------------------
+
+def test_keyboard_interrupt_restores_then_propagates(monkeypatch):
+    client = _Client("##HRB Something")
+    monkeypatch.setattr(vh, "HeadrushClient", lambda *a, **k: client)
+    monkeypatch.setattr(vh, "HeadrushAdapter", lambda *a, **k: object())
+    monkeypatch.setattr(vh, "load_registry", lambda: object())
+    restored = []
+    monkeypatch.setattr(vh, "discard_edits",
+                        lambda c: restored.append(1) or (True, False))
+
+    def interrupt(*a, **k):
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(vh, "verify", interrupt)
+    with pytest.raises(KeyboardInterrupt):
+        vh.main(["--host", "10.0.0.5"])
+    vh._SECRETS.clear()
+    assert restored == [1], "Ctrl-C skipped the restore"
