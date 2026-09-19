@@ -592,3 +592,17 @@ a plan the player confirms commits a cab, and nothing is stored or loaded
 into a user slot before that. An IR that is not on the unit is previewed in
 the browser and, if wanted, loaded through Cab-Lab into the scratch slot
 (the highest TONECOMMAND_CAB_SLOTS entry) before it can be heard in the rig.
+
+## 22. Capture or model: the wording decides, never a setting (issue #145)
+A capture of a real amp (a NAM file) and a Fractal model of that amp are both
+valid amp sources. The player never chooses a mode; the request's wording
+decides. Words that ask for the real thing ("sound like the real amp", "the
+actual 5150", "a capture of", "captured") prefer a capture when a suitable one
+is on file AND the unit can play it. Words that ask for a starting point to
+shape ("give me a base tone", "something I can tweak", "a starting point")
+prefer the model. No suitable capture, or a unit with no NAM support, falls
+through to the model with one honest line saying so. The result line always
+names the source: "amp is a capture of a real <gear make model> by <who
+captured it>" or "amp is the Fractal <model name>". The plan never claims a
+capture was used when it was not. Until the FM9 has a NAM block, every build
+is the model, and the line says why when a capture was asked for.

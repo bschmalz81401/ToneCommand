@@ -859,7 +859,12 @@ def build_static(recipes: list[dict]) -> None:
         "/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: strict-origin-when-cross-origin\n"
         "/img/*\n  Cache-Control: public, max-age=86400\n"
         "/recipes/*.json\n  Access-Control-Allow-Origin: *\n  Cache-Control: public, max-age=300\n"
-        "/recipes/index.json\n  Access-Control-Allow-Origin: *\n  Cache-Control: public, max-age=300\n")
+        "/recipes/index.json\n  Access-Control-Allow-Origin: *\n  Cache-Control: public, max-age=300\n"
+        "/gift-of-tone.json\n  Access-Control-Allow-Origin: *\n  Cache-Control: public, max-age=300\n")
+    # #154: the Gift of Tone catalog, read site-first by the app (fm9/gift_of_tone.py)
+    catalog = ROOT / "catalog" / "gift_of_tone.json"
+    if catalog.exists():
+        shutil.copy(catalog, DIST / "gift-of-tone.json")
     (DIST / "_redirects").write_text(
         "/readme /  301\n/setup /install/ 301\n/changelog /docs/changelog/ 301\n"
         "/github https://github.com/monzta1/ToneCommand 302\n"

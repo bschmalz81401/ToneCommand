@@ -1186,6 +1186,20 @@ def cab_axes(candidate: dict, current: dict) -> tuple[dict, list[str]]:
     return deltas, words
 
 
+def plan_amp_source(result: dict, words: str) -> dict:
+    """#145 (rule 22): what the plan's amp source is and the honest line for
+    it. No NAM block exists on the FM9 yet (I4, #147), so capture support is
+    False and nothing selects a capture: every build is the model, and the
+    line says why when the wording asked for a capture. The model name is the
+    plan's own set_type on the Amp block when it has one."""
+    from fm9 import capture_intent
+    model_name = None
+    for a in (result.get("actions") or []):
+        if a.get("kind") == "set_type" and str(a.get("block") or "").lower().startswith("amp") and a.get("type_name"):
+            model_name = str(a["type_name"])
+    return capture_intent.amp_source(words, capture_support=False, used_capture=None, model_name=model_name)
+
+
 def scene_hints(snap, prompt: str, whole_rig: bool) -> tuple:
     """(role, tuning) for a plan (#138): the role read from the CURRENT scene's
     name (never on a whole-rig build, which targets every scene), the tuning
@@ -2679,6 +2693,7 @@ def _plan_for(body: PromptBody, on_count=None, cancel=None, on_status=None):
                     _off_role, _off_tuning = scene_hints(None, body.prompt, result["whole_rig"])
                     result["cab_selection"] = cab_listening_set(
                         result, _off_anchor, **{k2: v for k2, v in (("role", _off_role), ("tuning", _off_tuning)) if v})
+                    result["amp_source"] = plan_amp_source(result, body.prompt)
             finally:
                 _settings_lock.release()
         except planner.PlanCancelled:
@@ -2767,6 +2782,7 @@ def _plan_for(body: PromptBody, on_count=None, cancel=None, on_status=None):
             _role, _tuning = scene_hints(snap, body.prompt, result["whole_rig"])
             result["cab_selection"] = cab_listening_set(
                 result, anchor, **{k2: v for k2, v in (("role", _role), ("tuning", _tuning)) if v})
+            result["amp_source"] = plan_amp_source(result, body.prompt)
             log.info("plan: %.1fs for %d action(s) via %s",
                      _plan_s, len(result.get("actions") or []),
                      result.get("backend", "?"))

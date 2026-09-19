@@ -1,0 +1,2858 @@
+{
+ "source": "https://www.fractalaudio.com/gift-of-tone/",
+ "page_read": "2026-09-19",
+ "built": "2026-09-19",
+ "policy": "URLs and hashes only; fetched at click time from fractalaudio.com; nothing mirrored (kb/SITE.md)",
+ "counts": {
+  "2022": 27,
+  "2023": 6,
+  "2024": 1
+ },
+ "entries": [
+  {
+   "id": "got-2022-1",
+   "artists": [
+    "Leon Todd"
+   ],
+   "year": 2022,
+   "number": "1",
+   "kind": "preset plus cab bundle",
+   "description": "Preset + Cab Bundle (3 bundles)",
+   "devices": [
+    {
+     "device": "Axe-Fx III",
+     "min_firmware": "21"
+    },
+    {
+     "device": "FM9",
+     "min_firmware": "4.0"
+    },
+    {
+     "device": "FM3",
+     "min_firmware": "6.0"
+    }
+   ],
+   "url": "https://www.fractalaudio.com/downloads/misc/_gift22/FAS-gift22-01-Leon-Todd.zip",
+   "sha256": "a6c67a2dccfc829ef927e5a957b37b5a529ea524592d79e7c010a51dc3e99159",
+   "bytes": 180116,
+   "contents": {
+    "presets": [],
+    "cabs": [
+     "Leon Todd - Gift of Tone/Cabs/syx/LT MES OS EV Mix 1.syx",
+     "Leon Todd - Gift of Tone/Cabs/syx/LT TV Mix 7.syx",
+     "Leon Todd - Gift of Tone/Cabs/syx/LT TV69 Mix 3.syx"
+    ],
+    "bundles": [
+     {
+      "file": "Leon Todd - Gift of Tone/Preset Bundles/Brown (TV69).fasBundle",
+      "map": {
+       "version": "1",
+       "device": {
+        "deviceId": "16",
+        "major": "21",
+        "minor": "0"
+       },
+       "presets": [
+        {
+         "location": "21",
+         "name": "Brown (TV69)",
+         "file": "Brown (TV69).syx"
+        }
+       ],
+       "cabs": [
+        {
+         "bank": "3",
+         "number": "2",
+         "name": "LT TV69 Mix 3",
+         "file": "cabs/LT TV69 Mix 3.syx"
+        }
+       ]
+      },
+      "members": [
+       "Brown (TV69).syx",
+       "cabs/LT TV69 Mix 3.syx"
+      ]
+     },
+     {
+      "file": "Leon Todd - Gift of Tone/Preset Bundles/Filth (TV Mix).fasBundle",
+      "map": {
+       "version": "1",
+       "device": {
+        "deviceId": "16",
+        "major": "21",
+        "minor": "0"
+       },
+       "presets": [
+        {
+         "location": "22",
+         "name": "Filth (TV Mix)",
+         "file": "Filth (TV Mix).syx"
+        }
+       ],
+       "cabs": [
+        {
+         "bank": "3",
+         "number": "0",
+         "name": "LT TV Mix 7",
+         "file": "cabs/LT TV Mix 7.syx"
+        }
+       ]
+      },
+      "members": [
+       "Filth (TV Mix).syx",
+       "cabs/LT TV Mix 7.syx"
+      ]
+     },
+     {
+      "file": "Leon Todd - Gift of Tone/Preset Bundles/LT Clean Amps (EV).fasBundle",
+      "map": {
+       "version": "1",
+       "device": {
+        "deviceId": "16",
+        "major": "21",
+        "minor": "0"
+       },
+       "presets": [
+        {
+         "location": "20",
+         "name": "LT Clean Amps (EV)",
+         "file": "LT Clean Amps (EV).syx"
+        }
+       ],
+       "cabs": [
+        {
+         "bank": "3",
+         "number": "1",
+         "name": "LT MES OS EV Mix 1",
+         "file": "cabs/LT MES OS EV Mix 1.syx"
+        }
+       ]
+      },
+      "members": [
+       "LT Clean Amps (EV).syx",
+       "cabs/LT MES OS EV Mix 1.syx"
+      ]
+     }
+    ],
+    "blocks": [],
+    "other": [
+     "Leon Todd - Gift of Tone/Cabs/IR/LT MES OS EV Mix 1.ir",
+     "Leon Todd - Gift of Tone/Cabs/IR/LT TV Mix 7.ir",
+     "Leon Todd - Gift of Tone/Cabs/IR/LT TV69 Mix 3.ir"
+    ]
+   }
+  },
+  {
+   "id": "got-2022-2",
+   "artists": [
+    "Mark Day"
+   ],
+   "year": 2022,
+   "number": "2",
+   "kind": "preset",
+   "description": "Preset",
+   "devices": [
+    {
+     "device": "Axe-Fx III",
+     "min_firmware": "21"
+    },
+    {
+     "device": "FM9",
+     "min_firmware": "4.0"
+    },
+    {
+     "device": "FM3",
+     "min_firmware": "6.0"
+    }
+   ],
+   "url": "https://www.fractalaudio.com/downloads/misc/_gift22/FAS-gift22-02-Mark-Day.zip",
+   "sha256": "8e7d832dc0b9016fa95a220422b4908ce398f576fcbebb2b96388d5fae20a952",
+   "bytes": 15615,
+   "contents": {
+    "presets": [
+     "Mark Day Ice Cream Axe3.syx",
+     "Mark Day Ice Cream FM3.syx",
+     "Mark Day Ice Cream FM9.syx"
+    ],
+    "cabs": [],
+    "bundles": [],
+    "blocks": [],
+    "other": []
+   }
+  },
+  {
+   "id": "got-2022-3",
+   "artists": [
+    "Ryan 'Fluff' Bruce"
+   ],
+   "year": 2022,
+   "number": "3",
+   "kind": "preset",
+   "description": "Preset",
+   "devices": [
+    {
+     "device": "Axe-Fx III",
+     "min_firmware": "20.04"
+    },
+    {
+     "device": "FM9",
+     "min_firmware": "4.0"
+    },
+    {
+     "device": "FM3",
+     "min_firmware": "6.0"
+    }
+   ],
+   "url": "https://www.fractalaudio.com/downloads/misc/_gift22/FAS-gift22-03-Fluff.zip",
+   "sha256": "5bae12d8b3658b781d4a6d592c784050228288def02e14d7132c040d1a192940",
+   "bytes": 17781,
+   "contents": {
+    "presets": [
+     "Fluff Drggd UndR JVM FM3.syx",
+     "Fluff Drggd UndR JVM FM9.syx",
+     "Fluff Drggd UndR JVM III.syx"
+    ],
+    "cabs": [],
+    "bundles": [],
+    "blocks": [],
+    "other": [
+     "ReadMe Fluff Presets.txt"
+    ]
+   }
+  },
+  {
+   "id": "got-2022-4",
+   "artists": [
+    "Marco Fanton"
+   ],
+   "year": 2022,
+   "number": "4",
+   "kind": "preset",
+   "description": "Preset",
+   "devices": [
+    {
+     "device": "Axe-Fx III",
+     "min_firmware": "21"
+    },
+    {
+     "device": "FM9",
+     "min_firmware": "4.0"
+    },
+    {
+     "device": "FM3",
+     "min_firmware": "6.0"
+    }
+   ],
+   "url": "https://www.fractalaudio.com/downloads/misc/_gift22/FAS-gift22-04-Marco-Fanton.zip",
+   "sha256": "e9054df9635548c77a0b01ed74bf581605337310d9ec052e42b314672ec38ee9",
+   "bytes": 18406,
+   "contents": {
+    "presets": [
+     "Axe-Fx III - MF Gift of Tone.syx",
+     "FM3 - MF Gift of Tone.syx",
+     "FM9 - MF Gift of Tone.syx"
+    ],
+    "cabs": [],
+    "bundles": [],
+    "blocks": [],
+    "other": [
+     "ReadMe Marco Fanton.txt"
+    ]
+   }
+  },
+  {
+   "id": "got-2022-5",
+   "artists": [
+    "Chris Traynor"
+   ],
+   "year": 2022,
+   "number": "5",
+   "kind": "preset",
+   "description": "Preset",
+   "devices": [
+    {
+     "device": "Axe-Fx III",
+     "min_firmware": "21"
+    },
+    {
+     "device": "FM9",
+     "min_firmware": "4.0"
+    },
+    {
+     "device": "FM3",
+     "min_firmware": "6.0"
+    }
+   ],
+   "url": "https://www.fractalaudio.com/downloads/misc/_gift22/FAS-gift22-05-Chris-Traynor.zip",
+   "sha256": "bd7f2cd357df0aae95dc52580624af55a55679aa970dc03e6a04805c00f39c5c",
+   "bytes": 25516,
+   "contents": {
+    "presets": [
+     "CT3 MAIN FM3.syx",
+     "CT3 MAIN FM9.syx",
+     "CT3 MTMs FM3.syx",
+     "CT3 MTMs FM9.syx",
+     "CT3 RIG 2022.syx"
+    ],
+    "cabs": [],
+    "bundles": [],
+    "blocks": [],
+    "other": [
+     "ReadMe Chris Traynor.txt"
+    ]
+   }
+  },
+  {
+   "id": "got-2022-6",
+   "artists": [
+    "Mikko Logren"
+   ],
+   "year": 2022,
+   "number": "6",
+   "kind": "cab only",
+   "description": "Cab IR",
+   "devices": [
+    {
+     "device": "All devices",
+     "min_firmware": "as stated: All devices"
+    }
+   ],
+   "url": "https://www.fractalaudio.com/downloads/misc/_gift22/FAS-gift22-06-Mikko-Logren.zip",
+   "sha256": "a78c4b058b3cfbe4a5744bbc267768d87b378db7771d6ddbace47407e81c4726",
+   "bytes": 43729,
+   "contents": {
+    "presets": [],
+    "cabs": [
+     "ML Sound Lab Mikko's Cab 2022.syx"
+    ],
+    "bundles": [],
+    "blocks": [],
+    "other": [
+     "ML Sound Lab Mikko's Cab 2022.ir",
+     "ReadMe.txt"
+    ]
+   }
+  },
+  {
+   "id": "got-2022-7",
+   "artists": [
+    "Andy Wood"
+   ],
+   "year": 2022,
+   "number": "7",
+   "kind": "preset",
+   "description": "Preset",
+   "devices": [
+    {
+     "device": "Axe-Fx III",
+     "min_firmware": "11"
+    },
+    {
+     "device": "FM9",
+     "min_firmware": "4.0"
+    },
+    {
+     "device": "FM3",
+     "min_firmware": "3.02"
+    }
+   ],
+   "url": "https://www.fractalaudio.com/downloads/misc/_gift22/FAS-gift22-07-Andy-Wood.zip",
+   "sha256": "866a38e7db535f5aa68fd41195007d13c660c4e12180fc1eb4718ae2fe1077a8",
+   "bytes": 16160,
+   "contents": {
+    "presets": [
+     "Andy Wood Paisley Tele FM3.syx",
+     "Andy Wood Paisley Tele FM9.syx",
+     "Andy Wood Paisley Tele III.syx",
+     "Andy Wood Rascal Lead FM3 (+III+FM9).syx"
+    ],
+    "cabs": [],
+    "bundles": [],
+    "blocks": [],
+    "other": [
+     "ReadMe.txt"
+    ]
+   }
+  },
+  {
+   "id": "got-2022-8",
+   "artists": [
+    "Mark 'Moke' Perry"
+   ],
+   "year": 2022,
+   "number": "8",
+   "kind": "preset",
+   "description": "Preset",
+   "devices": [
+    {
+     "device": "Axe-Fx III",
+     "min_firmware": "21"
+    },
+    {
+     "device": "FM9",
+     "min_firmware": "4.0"
+    },
+    {
+     "device": "FM3",
+     "min_firmware": "6.0"
+    }
+   ],
+   "url": "https://www.fractalaudio.com/downloads/misc/_gift22/FAS-gift22-08-Mark-Moke-Perry.zip",
+   "sha256": "9d179e0fd73a218384cba79cb34c99fee2f57e6d5dcf0df0e889e94d924bfab2",
+   "bytes": 477282,
+   "contents": {
+    "presets": [
+     "Moke's Magical Moving Pitch Block 'Axe-Fx III' (21.01).syx",
+     "Moke's Magical Moving Pitch block 'FM3' (6.00 b6).syx",
+     "Moke's Magical Moving Pitch block 'FM9' (4.00).syx"
+    ],
+    "cabs": [],
+    "bundles": [],
+    "blocks": [],
+    "other": [
+     "README - 'Moke's Magical Moving Pitch Block' MiniManual.pdf"
+    ]
+   }
+  },
+  {
+   "id": "got-2022-9",
+   "artists": [
+    "AustinBuddy"
+   ],
+   "year": 2022,
+   "number": "9",
+   "kind": "preset plus cab bundle",
+   "description": "Preset + Cab Bundle (6 presets)",
+   "devices": [
+    {
+     "device": "Axe-Fx III",
+     "min_firmware": "21"
+    },
+    {
+     "device": "FM9",
+     "min_firmware": "4.0"
+    },
+    {
+     "device": "FM3",
+     "min_firmware": "6.0"
+    }
+   ],
+   "url": "https://www.fractalaudio.com/downloads/misc/_gift22/FAS-gift22-09-Austin-Buddy.zip",
+   "sha256": "0966e202b120c3c430705cf2f6acd23fa0ab25c3bb5ab5e55ff345821484e475",
+   "bytes": 119127,
+   "contents": {
+    "presets": [
+     "001_LotsaLiking LP Axe-Fx III -CX2.syx",
+     "001_LotsaLiking LP FM3-FM9 -CX2.syx",
+     "002_EVH Live Brit Brown -CX2.syx",
+     "003_STRAT Vaughan-a-Bees -CX2.syx",
+     "004_(LveGld) DualRecto Extras2 -CX2.syx",
+     "005_3RagingMachine 4BASS -CX2.syx"
+    ],
+    "cabs": [
+     "Bonus Cab IR/IR - Jimi Early #1 GM12M20s.syx"
+    ],
+    "bundles": [
+     {
+      "file": "000_Strat Jimi 1stAlbumTracks -CX2.fasBundle",
+      "map": {
+       "version": "1",
+       "device": {
+        "deviceId": "17",
+        "major": "70",
+        "minor": "0"
+       },
+       "presets": [
+        {
+         "location": "0",
+         "name": "*Strat Jimi 1stAlbumTracks -CX2",
+         "file": "Strat Jimi 1stAlbumTracks -CX2.syx"
+        }
+       ],
+       "cabs": [
+        {
+         "bank": "2",
+         "number": "29",
+         "name": "Jimi Early #1 GM12M20s",
+         "file": "cabs/Jimi Early 1 GM12M20s.syx"
+        }
+       ]
+      },
+      "members": [
+       "Strat Jimi 1stAlbumTracks -CX2.syx",
+       "cabs/Jimi Early 1 GM12M20s.syx",
+       "cabs/Jimi Early 1 GM12M20s.syx",
+       "cabs/Jimi Early 1 GM12M20s.syx",
+       "cabs/Jimi Early 1 GM12M20s.syx"
+      ]
+     }
+    ],
+    "blocks": [],
+    "other": [
+     "_Read Me AustinBuddy GiftOfTone.pdf"
+    ]
+   }
+  },
+  {
+   "id": "got-2022-10",
+   "artists": [
+    "Cooper Carter"
+   ],
+   "year": 2022,
+   "number": "10",
+   "kind": "preset",
+   "description": "Preset",
+   "devices": [
+    {
+     "device": "Axe-Fx III",
+     "min_firmware": "21"
+    },
+    {
+     "device": "FM9",
+     "min_firmware": "4.0"
+    },
+    {
+     "device": "FM3",
+     "min_firmware": "6.0"
+    }
+   ],
+   "url": "https://www.fractalaudio.com/downloads/misc/_gift22/FAS-gift22-10-Cooper-Carter.zip",
+   "sha256": "a6a64c74798f79386ce21489a199ee4df44683b68e037a3e0dbe8dbbb305d678",
+   "bytes": 13309,
+   "contents": {
+    "presets": [
+     "CC's Sound on Sound FM3 (1).syx",
+     "CC's Sound on Sound FM9 (1).syx",
+     "CC's Sound on Sound III (1).syx"
+    ],
+    "cabs": [],
+    "bundles": [],
+    "blocks": [],
+    "other": []
+   }
+  },
+  {
+   "id": "got-2022-11",
+   "artists": [
+    "Fremen"
+   ],
+   "year": 2022,
+   "number": "11",
+   "kind": "preset",
+   "description": "Preset (3 presets, 8 scenes each)",
+   "devices": [
+    {
+     "device": "Axe-Fx III",
+     "min_firmware": "21"
+    },
+    {
+     "device": "FM9",
+     "min_firmware": "4.0"
+    },
+    {
+     "device": "FM3",
+     "min_firmware": "6.0"
+    }
+   ],
+   "url": "https://www.fractalaudio.com/downloads/misc/_gift22/FAS-gift22-11-Fremen.zip",
+   "sha256": "d093f47ac8c4a94385039d4c5c57136c39ee91b472e36dd15be320038f5fd328",
+   "bytes": 197166,
+   "contents": {
+    "presets": [],
+    "cabs": [],
+    "bundles": [
+     {
+      "file": "Axe-Fx III/Dumble and Dumbler [Axe3].fasBundle",
+      "map": {
+       "version": "1",
+       "device": {
+        "deviceId": "16",
+        "major": "21",
+        "minor": "1"
+       },
+       "presets": [
+        {
+         "location": "335",
+         "name": "Dumble and Dumbler",
+         "file": "Dumble and Dumbler.syx"
+        }
+       ],
+       "cabs": [
+        {
+         "bank": "2",
+         "number": "46",
+         "name": "TDR Fusion 3",
+         "file": "cabs/TDR Fusion 3.syx"
+        },
+        {
+         "bank": "2",
+         "number": "59",
+         "name": "TDR Fusion 6",
+         "file": "cabs/TDR Fusion 6.syx"
+        }
+       ]
+      },
+      "members": [
+       "Dumble and Dumbler.syx",
+       "cabs/TDR Fusion 3.syx",
+       "cabs/TDR Fusion 6.syx"
+      ]
+     },
+     {
+      "file": "Axe-Fx III/FREMEN BE All in one [Axe3].fasBundle",
+      "map": {
+       "version": "1",
+       "device": {
+        "deviceId": "16",
+        "major": "21",
+        "minor": "0"
+       },
+       "presets": [
+        {
+         "location": "362",
+         "name": "FREMEN BE All in one [Axe3]",
+         "file": "FREMEN BE All in one [Axe3].syx"
+        }
+       ],
+       "cabs": [
+        {
+         "bank": "2",
+         "number": "7",
+         "name": "TDR Fender 2",
+         "file": "cabs/TDR Fender 2.syx"
+        },
+        {
+         "bank": "2",
+         "number": "9",
+         "name": "TDR AcSim Fender quack",
+         "file": "cabs/TDR AcSim Fender quack.syx"
+        }
+       ]
+      },
+      "members": [
+       "FREMEN BE All in one [Axe3].syx",
+       "cabs/TDR AcSim Fender quack.syx",
+       "cabs/TDR Fender 2.syx"
+      ]
+     },
+     {
+      "file": "Axe-Fx III/Shiver clean 1 [Axe3].fasBundle",
+      "map": {
+       "version": "1",
+       "device": {
+        "deviceId": "16",
+        "major": "21",
+        "minor": "1"
+       },
+       "presets": [
+        {
+         "location": "334",
+         "name": "Shiver clean 1",
+         "file": "Shiver clean 1.syx"
+        }
+       ],
+       "cabs": [
+        {
+         "bank": "2",
+         "number": "7",
+         "name": "TDR Fender 2",
+         "file": "cabs/TDR Fender 2.syx"
+        }
+       ]
+      },
+      "members": [
+       "Shiver clean 1.syx",
+       "cabs/TDR Fender 2.syx"
+      ]
+     },
+     {
+      "file": "FM3/Dumble and Dumbler [FM3].fasBundle",
+      "map": {
+       "version": "1",
+       "device": {
+        "deviceId": "17",
+        "major": "6",
+        "minor": "0"
+       },
+       "presets": [
+        {
+         "location": "308",
+         "name": "Dumble and Dumbler",
+         "file": "Dumble and Dumbler.syx"
+        }
+       ],
+       "cabs": [
+        {
+         "bank": "2",
+         "number": "46",
+         "name": "TDR Fusion 3",
+         "file": "cabs/TDR Fusion 3.syx"
+        },
+        {
+         "bank": "2",
+         "number": "59",
+         "name": "TDR Fusion 6",
+         "file": "cabs/TDR Fusion 6.syx"
+        }
+       ]
+      },
+      "members": [
+       "Dumble and Dumbler.syx",
+       "cabs/TDR Fusion 3.syx",
+       "cabs/TDR Fusion 6.syx"
+      ]
+     },
+     {
+      "file": "FM3/FREMEN BE All in one [FM3].fasBundle",
+      "map": {
+       "version": "1",
+       "device": {
+        "deviceId": "17",
+        "major": "6",
+        "minor": "0"
+       },
+       "presets": [
+        {
+         "location": "441",
+         "name": "FREMEN BE All in one [FM3]",
+         "file": "FREMEN BE All in one [FM3].syx"
+        }
+       ],
+       "cabs": [
+        {
+         "bank": "2",
+         "number": "7",
+         "name": "TDR Fender 2",
+         "file": "cabs/TDR Fender 2.syx"
+        },
+        {
+         "bank": "2",
+         "number": "9",
+         "name": "TDR AcSim Fender quack",
+         "file": "cabs/TDR AcSim Fender quack.syx"
+        }
+       ]
+      },
+      "members": [
+       "FREMEN BE All in one [FM3].syx",
+       "cabs/TDR AcSim Fender quack.syx",
+       "cabs/TDR Fender 2.syx"
+      ]
+     },
+     {
+      "file": "FM3/Shiver clean 1 [FM3].fasBundle",
+      "map": {
+       "version": "1",
+       "device": {
+        "deviceId": "17",
+        "major": "6",
+        "minor": "0"
+       },
+       "presets": [
+        {
+         "location": "226",
+         "name": "Shiver clean 1",
+         "file": "Shiver clean 1.syx"
+        }
+       ],
+       "cabs": [
+        {
+         "bank": "2",
+         "number": "7",
+         "name": "TDR Fender 2",
+         "file": "cabs/TDR Fender 2.syx"
+        }
+       ]
+      },
+      "members": [
+       "Shiver clean 1.syx",
+       "cabs/TDR Fender 2.syx"
+      ]
+     },
+     {
+      "file": "FM9/Dumble and Dumbler [FM9].fasBundle",
+      "map": {
+       "version": "1",
+       "device": {
+        "deviceId": "18",
+        "major": "4",
+        "minor": "0"
+       },
+       "presets": [
+        {
+         "location": "360",
+         "name": "Dumble and Dumbler",
+         "file": "Dumble and Dumbler.syx"
+        }
+       ],
+       "cabs": [
+        {
+         "bank": "2",
+         "number": "46",
+         "name": "TDR Fusion 3",
+         "file": "cabs/TDR Fusion 3.syx"
+        },
+        {
+         "bank": "2",
+         "number": "59",
+         "name": "TDR Fusion 6",
+         "file": "cabs/TDR Fusion 6.syx"
+        }
+       ]
+      },
+      "members": [
+       "Dumble and Dumbler.syx",
+       "cabs/TDR Fusion 3.syx",
+       "cabs/TDR Fusion 6.syx"
+      ]
+     },
+     {
+      "file": "FM9/FREMEN BE All in one [FM9].fasBundle",
+      "map": {
+       "version": "1",
+       "device": {
+        "deviceId": "18",
+        "major": "4",
+        "minor": "0"
+       },
+       "presets": [
+        {
+         "location": "358",
+         "name": "FREMEN BE All in one [FM9]",
+         "file": "FREMEN BE All in one [FM9].syx"
+        }
+       ],
+       "cabs": [
+        {
+         "bank": "2",
+         "number": "7",
+         "name": "TDR Fender 2",
+         "file": "cabs/TDR Fender 2.syx"
+        },
+        {
+         "bank": "2",
+         "number": "9",
+         "name": "TDR AcSim Fender quack",
+         "file": "cabs/TDR AcSim Fender quack.syx"
+        }
+       ]
+      },
+      "members": [
+       "FREMEN BE All in one [FM9].syx",
+       "cabs/TDR AcSim Fender quack.syx",
+       "cabs/TDR Fender 2.syx"
+      ]
+     },
+     {
+      "file": "FM9/Shiver clean 1 [FM9].fasBundle",
+      "map": {
+       "version": "1",
+       "device": {
+        "deviceId": "18",
+        "major": "4",
+        "minor": "0"
+       },
+       "presets": [
+        {
+         "location": "359",
+         "name": "Shiver clean 1",
+         "file": "Shiver clean 1.syx"
+        }
+       ],
+       "cabs": [
+        {
+         "bank": "2",
+         "number": "7",
+         "name": "TDR Fender 2",
+         "file": "cabs/TDR Fender 2.syx"
+        }
+       ]
+      },
+      "members": [
+       "Shiver clean 1.syx",
+       "cabs/TDR Fender 2.syx"
+      ]
+     }
+    ],
+    "blocks": [],
+    "other": [
+     "ReadMe Fremen.txt"
+    ]
+   }
+  },
+  {
+   "id": "got-2022-12",
+   "artists": [
+    "Justin York"
+   ],
+   "year": 2022,
+   "number": "12",
+   "kind": "preset plus cab bundle",
+   "description": "Preset + Cab Bundle",
+   "devices": [
+    {
+     "device": "Axe-Fx III",
+     "min_firmware": "21"
+    },
+    {
+     "device": "FM9",
+     "min_firmware": "4.0"
+    },
+    {
+     "device": "FM3",
+     "min_firmware": "6.0"
+    }
+   ],
+   "url": "https://www.fractalaudio.com/downloads/misc/_gift22/FAS-gift22-12-Justin-York.zip",
+   "sha256": "e12577b30a7053b36c7b226bcbbb422f56a40fb32bf4cdef910dfe918b3d2ee5",
+   "bytes": 105820,
+   "contents": {
+    "presets": [],
+    "cabs": [
+     "Cab/YA YORK 212 M25 57.syx"
+    ],
+    "bundles": [
+     {
+      "file": "York Audio - Gift of Tone FM3.fasBundle",
+      "map": {
+       "version": "1",
+       "device": {
+        "deviceId": "17",
+        "major": "6",
+        "minor": "0"
+       },
+       "presets": [
+        {
+         "location": "400",
+         "name": "York Audio - Gift of Tone FM3",
+         "file": "York Audio - Gift of Tone FM3.syx"
+        }
+       ],
+       "cabs": [
+        {
+         "bank": "2",
+         "number": "47",
+         "name": "YA YORK 212 M25 57",
+         "file": "cabs/YA YORK 212 M25 57.syx"
+        }
+       ]
+      },
+      "members": [
+       "York Audio - Gift of Tone FM3.syx",
+       "cabs/YA YORK 212 M25 57.syx"
+      ]
+     },
+     {
+      "file": "York Audio - Gift of Tone FM9.fasBundle",
+      "map": {
+       "version": "1",
+       "device": {
+        "deviceId": "18",
+        "major": "4",
+        "minor": "0"
+       },
+       "presets": [
+        {
+         "location": "434",
+         "name": "York Audio - Gift of Tone FM9",
+         "file": "York Audio - Gift of Tone FM9.syx"
+        }
+       ],
+       "cabs": [
+        {
+         "bank": "2",
+         "number": "48",
+         "name": "YA YORK 212 M25 57",
+         "file": "cabs/YA YORK 212 M25 57.syx"
+        }
+       ]
+      },
+      "members": [
+       "York Audio - Gift of Tone FM9.syx",
+       "cabs/YA YORK 212 M25 57.syx"
+      ]
+     },
+     {
+      "file": "York Audio - Gift of Tone.fasBundle",
+      "map": {
+       "version": "1",
+       "device": {
+        "deviceId": "16",
+        "major": "21",
+        "minor": "0"
+       },
+       "presets": [
+        {
+         "location": "254",
+         "name": "York Audio - Gift of Tone",
+         "file": "York Audio - Gift of Tone.syx"
+        }
+       ],
+       "cabs": [
+        {
+         "bank": "2",
+         "number": "16",
+         "name": "YA YORK 212 M25 57",
+         "file": "cabs/YA YORK 212 M25 57.syx"
+        }
+       ]
+      },
+      "members": [
+       "York Audio - Gift of Tone.syx",
+       "cabs/YA YORK 212 M25 57.syx"
+      ]
+     }
+    ],
+    "blocks": [],
+    "other": [
+     "Cab/YA YORK 212 M25 57.ir",
+     "York Audio Gift of Tone Notes.pdf"
+    ]
+   }
+  },
+  {
+   "id": "got-2022-13",
+   "artists": [
+    "Synyster Gates"
+   ],
+   "year": 2022,
+   "number": "13",
+   "kind": "preset plus cab bundle",
+   "description": "Cab IR + Preset Bundle",
+   "devices": [
+    {
+     "device": "Axe-Fx III",
+     "min_firmware": "21"
+    },
+    {
+     "device": "FM9",
+     "min_firmware": "4.0"
+    },
+    {
+     "device": "FM3",
+     "min_firmware": "6.0"
+    }
+   ],
+   "url": "https://www.fractalaudio.com/downloads/misc/_gift22/FAS-gift22-13-Synyster-Gates.zip",
+   "sha256": "cbac7b9512dc243f396c2c847833be060f945b3cecfe58c8c892cd835ece84d1",
+   "bytes": 55690,
+   "contents": {
+    "presets": [
+     "IR/4x12 Hellwin Mix A.syx"
+    ],
+    "cabs": [],
+    "bundles": [
+     {
+      "file": "Preset+Cab Bundles/Syn Rhythm FM3.fasBundle",
+      "map": {
+       "version": "1",
+       "device": {
+        "deviceId": "17",
+        "major": "6",
+        "minor": "0"
+       },
+       "presets": [
+        {
+         "location": "405",
+         "name": "Syn Rhythm FM3",
+         "file": "Syn Rhythm FM3.syx"
+        }
+       ],
+       "cabs": [
+        {
+         "bank": "2",
+         "number": "17",
+         "name": "4x12 Hellwin Mix A",
+         "file": "cabs/4x12 Hellwin Mix A.syx"
+        }
+       ]
+      },
+      "members": [
+       "Syn Rhythm FM3.syx",
+       "cabs/4x12 Hellwin Mix A.syx"
+      ]
+     },
+     {
+      "file": "Preset+Cab Bundles/Syn Rhythm FM9.fasBundle",
+      "map": {
+       "version": "1",
+       "device": {
+        "deviceId": "18",
+        "major": "4",
+        "minor": "0"
+       },
+       "presets": [
+        {
+         "location": "406",
+         "name": "Syn Rhythm FM9",
+         "file": "Syn Rhythm FM9.syx"
+        }
+       ],
+       "cabs": [
+        {
+         "bank": "2",
+         "number": "21",
+         "name": "4x12 Hellwin Mix A",
+         "file": "cabs/4x12 Hellwin Mix A.syx"
+        }
+       ]
+      },
+      "members": [
+       "Syn Rhythm FM9.syx",
+       "cabs/4x12 Hellwin Mix A.syx"
+      ]
+     },
+     {
+      "file": "Preset+Cab Bundles/Syn Rhythm III.fasBundle",
+      "map": {
+       "version": "1",
+       "device": {
+        "deviceId": "16",
+        "major": "21",
+        "minor": "1"
+       },
+       "presets": [
+        {
+         "location": "573",
+         "name": "Syn Rhythm",
+         "file": "Syn Rhythm.syx"
+        }
+       ],
+       "cabs": [
+        {
+         "bank": "2",
+         "number": "67",
+         "name": "4x12 Hellwin Mix A",
+         "file": "cabs/4x12 Hellwin Mix A.syx"
+        }
+       ]
+      },
+      "members": [
+       "Syn Rhythm.syx",
+       "cabs/4x12 Hellwin Mix A.syx"
+      ]
+     }
+    ],
+    "blocks": [],
+    "other": [
+     "ReadMe Synyster Gates.txt"
+    ]
+   }
+  },
+  {
+   "id": "got-2022-14",
+   "artists": [
+    "Devin Townsend"
+   ],
+   "year": 2022,
+   "number": "14",
+   "kind": "preset plus cab bundle",
+   "description": "Preset + Cab Bundle",
+   "devices": [
+    {
+     "device": "Axe-Fx III",
+     "min_firmware": "21"
+    },
+    {
+     "device": "FM9",
+     "min_firmware": "4.0"
+    },
+    {
+     "device": "FM3",
+     "min_firmware": "6.0"
+    }
+   ],
+   "url": "https://www.fractalaudio.com/downloads/misc/_gift22/FAS-gift22-14-Devin-Townsend.zip",
+   "sha256": "bd376d4bcc896a631521fbadecd351410046788fd6ded495d12365523a6a0532",
+   "bytes": 45085,
+   "contents": {
+    "presets": [],
+    "cabs": [],
+    "bundles": [
+     {
+      "file": "Devs Gift Of Tone FM3.fasBundle",
+      "map": {
+       "version": "1",
+       "device": {
+        "deviceId": "17",
+        "major": "6",
+        "minor": "0"
+       },
+       "presets": [
+        {
+         "location": "410",
+         "name": "Devs Gift Of Tone FM3",
+         "file": "Devs Gift Of Tone FM3.syx"
+        }
+       ],
+       "cabs": [
+        {
+         "bank": "2",
+         "number": "41",
+         "name": "Brit Black GB25 57+421 MPT",
+         "file": "cabs/Brit Black GB25 57+421 MPT.syx"
+        }
+       ]
+      },
+      "members": [
+       "Devs Gift Of Tone FM3.syx",
+       "cabs/Brit Black GB25 57+421 MPT.syx"
+      ]
+     },
+     {
+      "file": "Devs Gift Of Tone FM9.fasBundle",
+      "map": {
+       "version": "1",
+       "device": {
+        "deviceId": "18",
+        "major": "4",
+        "minor": "0"
+       },
+       "presets": [
+        {
+         "location": "411",
+         "name": "Devs Gift Of Tone FM9",
+         "file": "Devs Gift Of Tone FM9.syx"
+        }
+       ],
+       "cabs": [
+        {
+         "bank": "2",
+         "number": "42",
+         "name": "Brit Black GB25 57+421 MPT",
+         "file": "cabs/Brit Black GB25 57+421 MPT.syx"
+        }
+       ]
+      },
+      "members": [
+       "Devs Gift Of Tone FM9.syx",
+       "cabs/Brit Black GB25 57+421 MPT.syx"
+      ]
+     },
+     {
+      "file": "Devs Gift Of Tone.fasBundle",
+      "map": {
+       "version": "1",
+       "device": {
+        "deviceId": "16",
+        "major": "21",
+        "minor": "1"
+       },
+       "presets": [
+        {
+         "location": "519",
+         "name": "Devs Gift Of Tone",
+         "file": "Devs Gift Of Tone.syx"
+        }
+       ],
+       "cabs": [
+        {
+         "bank": "2",
+         "number": "40",
+         "name": "Brit Black GB25 57+421 MPT",
+         "file": "cabs/Brit Black GB25 57+421 MPT.syx"
+        }
+       ]
+      },
+      "members": [
+       "Devs Gift Of Tone.syx",
+       "cabs/Brit Black GB25 57+421 MPT.syx"
+      ]
+     }
+    ],
+    "blocks": [],
+    "other": [
+     "ReadMe.txt"
+    ]
+   }
+  },
+  {
+   "id": "got-2022-15",
+   "artists": [
+    "Phil Collen"
+   ],
+   "year": 2022,
+   "number": "15",
+   "kind": "preset plus cab bundle",
+   "description": "Preset + Cab Bundle (FM9/FM3)",
+   "devices": [
+    {
+     "device": "Axe-Fx III",
+     "min_firmware": "21"
+    },
+    {
+     "device": "FM9",
+     "min_firmware": "4.0"
+    },
+    {
+     "device": "FM3",
+     "min_firmware": "6.0"
+    }
+   ],
+   "url": "https://www.fractalaudio.com/downloads/misc/_gift22/FAS-gift22-15-Phil-Collen.zip",
+   "sha256": "5e353f30b5515b32dcbe0e8f82bc86b62cf1ee04d6104f6a73be85f2f6f643ee",
+   "bytes": 74667,
+   "contents": {
+    "presets": [
+     "Phil Collen III.syx"
+    ],
+    "cabs": [
+     "Cabs/PHIL-L.syx",
+     "Cabs/PHIL-R.syx"
+    ],
+    "bundles": [
+     {
+      "file": "Phil Collen FM3.fasBundle",
+      "map": {
+       "version": "1",
+       "device": {
+        "deviceId": "17",
+        "major": "6",
+        "minor": "0"
+       },
+       "presets": [
+        {
+         "location": "385",
+         "name": "Phil Collen FM3",
+         "file": "Phil Collen FM3.syx"
+        }
+       ],
+       "cabs": [
+        {
+         "bank": "2",
+         "number": "10",
+         "name": "PHIL-L",
+         "file": "cabs/PHIL-L.syx"
+        },
+        {
+         "bank": "2",
+         "number": "11",
+         "name": "PHIL-R",
+         "file": "cabs/PHIL-R.syx"
+        }
+       ]
+      },
+      "members": [
+       "Phil Collen FM3.syx",
+       "cabs/PHIL-L.syx",
+       "cabs/PHIL-R.syx"
+      ]
+     },
+     {
+      "file": "Phil Collen FM9.fasBundle",
+      "map": {
+       "version": "1",
+       "device": {
+        "deviceId": "18",
+        "major": "4",
+        "minor": "0"
+       },
+       "presets": [
+        {
+         "location": "404",
+         "name": "Phil Collen FM9",
+         "file": "Phil Collen FM9.syx"
+        }
+       ],
+       "cabs": [
+        {
+         "bank": "2",
+         "number": "10",
+         "name": "PHIL-L",
+         "file": "cabs/PHIL-L.syx"
+        },
+        {
+         "bank": "2",
+         "number": "11",
+         "name": "PHIL-R",
+         "file": "cabs/PHIL-R.syx"
+        }
+       ]
+      },
+      "members": [
+       "Phil Collen FM9.syx",
+       "cabs/PHIL-L.syx",
+       "cabs/PHIL-R.syx"
+      ]
+     }
+    ],
+    "blocks": [],
+    "other": [
+     "ReadMe.txt"
+    ]
+   }
+  },
+  {
+   "id": "got-2022-16",
+   "artists": [
+    "Steve Vai"
+   ],
+   "year": 2022,
+   "number": "16",
+   "kind": "effect blocks",
+   "description": "Effect Blocks",
+   "devices": [
+    {
+     "device": "Axe-Fx III",
+     "min_firmware": "21"
+    },
+    {
+     "device": "FM9",
+     "min_firmware": "4.0"
+    },
+    {
+     "device": "FM3",
+     "min_firmware": "6.0"
+    }
+   ],
+   "url": "https://www.fractalaudio.com/downloads/misc/_gift22/FAS-gift22-16-Steve-Vai.zip",
+   "sha256": "e8f7932ab293d093ae382b93bad33696cbf6273f8d5fce7ea9fc18e5393676b5",
+   "bytes": 12774,
+   "contents": {
+    "presets": [],
+    "cabs": [],
+    "bundles": [],
+    "blocks": [
+     "Gift of Tone - Steve Vai/Vai Chorus Light.blk",
+     "Gift of Tone - Steve Vai/Vai Chorus Vintage.blk",
+     "Gift of Tone - Steve Vai/Vai Chorus Wide.blk",
+     "Gift of Tone - Steve Vai/Vai Delay 21 Long.blk",
+     "Gift of Tone - Steve Vai/Vai Delay 23.blk",
+     "Gift of Tone - Steve Vai/Vai Delay 32.blk",
+     "Gift of Tone - Steve Vai/Vai Delay 34.blk",
+     "Gift of Tone - Steve Vai/Vai Flanger Ultra.blk",
+     "Gift of Tone - Steve Vai/Vai M-Delay.blk",
+     "Gift of Tone - Steve Vai/Vai Pitch Detune.blk",
+     "Gift of Tone - Steve Vai/Vai Pitch Wide 4ths.blk"
+    ],
+    "other": [
+     "Gift of Tone - Steve Vai/_Read Me Steve Vai's Gift of Tone.txt"
+    ]
+   }
+  },
+  {
+   "id": "got-2022-16p5",
+   "artists": [
+    "Phillip Bynoe",
+    "Dante Frisiello"
+   ],
+   "year": 2022,
+   "number": "16.5",
+   "kind": "preset",
+   "description": "Preset (8 scenes), Steve Vai touring band, one zip for both",
+   "devices": [
+    {
+     "device": "Axe-Fx III",
+     "min_firmware": "21"
+    },
+    {
+     "device": "FM9",
+     "min_firmware": "4.0"
+    },
+    {
+     "device": "FM3",
+     "min_firmware": "6.0"
+    }
+   ],
+   "url": "https://www.fractalaudio.com/downloads/misc/_gift22/FAS-gift22-16p5-Steve-Vai-Touring-Band.zip",
+   "sha256": "2aedca3484cddf01c02e99834b7bea245786c47664647e402a93b18459e7cb0e",
+   "bytes": 34585,
+   "contents": {
+    "presets": [
+     "Dante Frisiello (Guitar)/DANTE GIFT OF TONE AXE III.syx",
+     "Dante Frisiello (Guitar)/DANTE GIFT OF TONE FM3.syx",
+     "Dante Frisiello (Guitar)/DANTE GIFT OF TONE FM9.syx",
+     "Phillip Bynoe (Bass)/8 Mighty Bass Tones PB Axe III.syx",
+     "Phillip Bynoe (Bass)/8 Mighty Bass Tones PB FM3.syx",
+     "Phillip Bynoe (Bass)/8 Mighty Bass Tones PB FM9.syx"
+    ],
+    "cabs": [],
+    "bundles": [],
+    "blocks": [],
+    "other": [
+     "Dante Frisiello (Guitar)/Bonus - Footswitch Layout for FM3/Dante FM3 Layout.fclayout",
+     "_ReadMe.txt"
+    ]
+   }
+  },
+  {
+   "id": "got-2022-17",
+   "artists": [
+    "Frank Steffen Mueller"
+   ],
+   "year": 2022,
+   "number": "17",
+   "kind": "preset",
+   "description": "Preset (8 scenes)",
+   "devices": [
+    {
+     "device": "Axe-Fx III",
+     "min_firmware": "21"
+    },
+    {
+     "device": "FM9",
+     "min_firmware": "4.0"
+    },
+    {
+     "device": "FM3",
+     "min_firmware": "6.0"
+    }
+   ],
+   "url": "https://www.fractalaudio.com/downloads/misc/_gift22/FAS-gift22-17-Frank-Steffen-Mueller.zip",
+   "sha256": "c30ab010961f49bd9b5155d7b2ca1ddf75c6c9ad546c82c425948255bc773e3d",
+   "bytes": 46088,
+   "contents": {
+    "presets": [
+     "FSM Gift Of Tone Axe-Fx III.syx",
+     "FSM Gift Of Tone FM3 v1 (looper).syx",
+     "FSM Gift Of Tone FM3 v2 (wah).syx",
+     "FSM Gift Of Tone FM9.syx"
+    ],
+    "cabs": [],
+    "bundles": [],
+    "blocks": [],
+    "other": [
+     "_1 ReadMe.txt",
+     "_2 Manual.pdf"
+    ]
+   }
+  },
+  {
+   "id": "got-2022-18",
+   "artists": [
+    "Jason Richardson"
+   ],
+   "year": 2022,
+   "number": "18",
+   "kind": "preset",
+   "description": "Preset",
+   "devices": [
+    {
+     "device": "Axe-Fx III",
+     "min_firmware": "21"
+    },
+    {
+     "device": "FM9",
+     "min_firmware": "4.0"
+    },
+    {
+     "device": "FM3",
+     "min_firmware": "6.0"
+    }
+   ],
+   "url": "https://www.fractalaudio.com/downloads/misc/_gift22/FAS-gift22-18-Jason-Richardson.zip",
+   "sha256": "8d13e8840f40e3557ca7b010f0e637858c8129c047a0e8c4c833c8f79b9ad04a",
+   "bytes": 35300,
+   "contents": {
+    "presets": [
+     "Axe-Fx III Hos Down.syx",
+     "FM3 Hos Down Presets/Hos Down 1 Rhythm FM3.syx",
+     "FM3 Hos Down Presets/Hos Down 2 Cln FM3.syx",
+     "FM3 Hos Down Presets/Hos Down 3 Lead FM3.syx",
+     "FM3 Hos Down Presets/Hos Down 4 Dancin FM3.syx",
+     "FM3 Hos Down Presets/Hos Down 5 Jazz FM3.syx",
+     "FM9 Hos Down.syx"
+    ],
+    "cabs": [],
+    "bundles": [],
+    "blocks": [],
+    "other": [
+     "_ReadMe.txt"
+    ]
+   }
+  },
+  {
+   "id": "got-2022-19",
+   "artists": [
+    "Tom Hamilton",
+    "Brad Whitford"
+   ],
+   "year": 2022,
+   "number": "19",
+   "kind": "preset plus cab bundle",
+   "description": "Aerosmith: Tom Hamilton Preset + Cab Bundle (8 scenes), Brad Whitford Preset, one zip for both",
+   "devices": [
+    {
+     "device": "Axe-Fx III",
+     "min_firmware": "21"
+    },
+    {
+     "device": "FM9",
+     "min_firmware": "4.0"
+    },
+    {
+     "device": "FM3",
+     "min_firmware": "6.0"
+    }
+   ],
+   "url": "https://www.fractalaudio.com/downloads/misc/_gift22/FAS-gift22-19-Aerosmith-Hamilton-Whitford.zip",
+   "sha256": "028b28d74500c32242a7ba19fb006605e0faf98eb2e614dc2b5703c35e162fdb",
+   "bytes": 58866,
+   "contents": {
+    "presets": [
+     "Brad Whitford GoT FM3.syx",
+     "Brad Whitford GoT FM9.syx",
+     "Brad Whitford GoT III.syx"
+    ],
+    "cabs": [],
+    "bundles": [
+     {
+      "file": "Tom Hamilton GoT FM3.fasBundle",
+      "map": {
+       "version": "1",
+       "device": {
+        "deviceId": "17",
+        "major": "6",
+        "minor": "0"
+       },
+       "presets": [
+        {
+         "location": "388",
+         "name": "Tom Hamilton GoT FM3",
+         "file": "Tom Hamilton GoT FM3.syx"
+        }
+       ],
+       "cabs": [
+        {
+         "bank": "2",
+         "number": "9",
+         "name": "Secret Weapon 2 Bass Mix (AB)",
+         "file": "cabs/Secret Weapon 2 Bass Mix (AB).syx"
+        }
+       ]
+      },
+      "members": [
+       "Tom Hamilton GoT FM3.syx",
+       "cabs/Secret Weapon 2 Bass Mix (AB).syx"
+      ]
+     },
+     {
+      "file": "Tom Hamilton GoT FM9.fasBundle",
+      "map": {
+       "version": "1",
+       "device": {
+        "deviceId": "18",
+        "major": "4",
+        "minor": "0"
+       },
+       "presets": [
+        {
+         "location": "479",
+         "name": "Tom Hamilton GoT FM9",
+         "file": "Tom Hamilton GoT FM9.syx"
+        }
+       ],
+       "cabs": [
+        {
+         "bank": "2",
+         "number": "58",
+         "name": "Secret Weapon 2 Bass Mix (AB)",
+         "file": "cabs/Secret Weapon 2 Bass Mix (AB).syx"
+        }
+       ]
+      },
+      "members": [
+       "Tom Hamilton GoT FM9.syx",
+       "cabs/Secret Weapon 2 Bass Mix (AB).syx"
+      ]
+     },
+     {
+      "file": "Tom Hamilton GoT III.fasBundle",
+      "map": {
+       "version": "1",
+       "device": {
+        "deviceId": "16",
+        "major": "21",
+        "minor": "1"
+       },
+       "presets": [
+        {
+         "location": "605",
+         "name": "Tom Hamilton GoT",
+         "file": "Tom Hamilton GoT.syx"
+        }
+       ],
+       "cabs": [
+        {
+         "bank": "2",
+         "number": "58",
+         "name": "Secret Weapon 2 Bass Mix (AB)",
+         "file": "cabs/Secret Weapon 2 Bass Mix (AB).syx"
+        }
+       ]
+      },
+      "members": [
+       "Tom Hamilton GoT.syx",
+       "cabs/Secret Weapon 2 Bass Mix (AB).syx"
+      ]
+     }
+    ],
+    "blocks": [],
+    "other": [
+     "_ReadMe.txt"
+    ]
+   }
+  },
+  {
+   "id": "got-2022-20",
+   "artists": [
+    "Tosin Abasi",
+    "Javier Reyes"
+   ],
+   "year": 2022,
+   "number": "20",
+   "kind": "preset",
+   "description": "Animals as Leaders: Tosin Abasi Preset (3 scenes), Javier Reyes Preset (8 scenes), one zip for both",
+   "devices": [
+    {
+     "device": "Axe-Fx III",
+     "min_firmware": "21"
+    },
+    {
+     "device": "FM9",
+     "min_firmware": "4.0"
+    },
+    {
+     "device": "FM3",
+     "min_firmware": "6.0"
+    }
+   ],
+   "url": "https://www.fractalaudio.com/downloads/misc/_gift22/FAS-gift22-20-AAL.zip",
+   "sha256": "474cbde757686c0f3ab2801c10065fc07d5a2847fa48d018ab71f6a2c44ac003",
+   "bytes": 30494,
+   "contents": {
+    "presets": [
+     "Gift of Tosin FM3.syx",
+     "Gift of Tosin FM9.syx",
+     "Gift of Tosin III.syx",
+     "Javier Tethys Strat FM3.syx",
+     "Javier Tethys Strat FM9.syx",
+     "Javier Tethys Strat III.syx"
+    ],
+    "cabs": [],
+    "bundles": [],
+    "blocks": [],
+    "other": [
+     "_ReadMe.txt"
+    ]
+   }
+  },
+  {
+   "id": "got-2022-21",
+   "artists": [
+    "Guthrie Govan"
+   ],
+   "year": 2022,
+   "number": "21",
+   "kind": "preset",
+   "description": "Preset (4 scenes)",
+   "devices": [
+    {
+     "device": "Axe-Fx III",
+     "min_firmware": "21"
+    },
+    {
+     "device": "FM9",
+     "min_firmware": "4.0"
+    },
+    {
+     "device": "FM3",
+     "min_firmware": "6.0"
+    }
+   ],
+   "url": "https://www.fractalaudio.com/downloads/misc/_gift22/FAS-gift22-21-Guthrie-Govan.zip",
+   "sha256": "f701f3f597e623f1459b910cf8e011f2ad269bfa1ec9b0ddcac9b0a26a8092e0",
+   "bytes": 24241,
+   "contents": {
+    "presets": [
+     "ARISTOCLUB - GG FM3 A.syx",
+     "ARISTOCLUB - GG FM3 B CLEAN.syx",
+     "ARISTOCLUB - GG FM9.syx",
+     "ARISTOCLUB - GG III.syx"
+    ],
+    "cabs": [],
+    "bundles": [],
+    "blocks": [],
+    "other": [
+     "_ReadMe.txt"
+    ]
+   }
+  },
+  {
+   "id": "got-2022-22",
+   "artists": [
+    "John Petrucci"
+   ],
+   "year": 2022,
+   "number": "22",
+   "kind": "effect blocks",
+   "description": "Effect Blocks",
+   "devices": [
+    {
+     "device": "Axe-Fx III",
+     "min_firmware": "21"
+    },
+    {
+     "device": "FM9",
+     "min_firmware": "4.0"
+    },
+    {
+     "device": "FM3",
+     "min_firmware": "6.0"
+    }
+   ],
+   "url": "https://www.fractalaudio.com/downloads/misc/_gift22/FAS-gift22-22-John-Petrucci.zip",
+   "sha256": "75775e7d34ccd21e77d4cea5de6a6796eea8c522c29ad1e2970c8d05803276ee",
+   "bytes": 5123,
+   "contents": {
+    "presets": [],
+    "cabs": [],
+    "bundles": [],
+    "blocks": [
+     "JP Delay 1A Long.blk",
+     "JP Delay 1B Short.blk",
+     "JP Delay 2A Medium.blk",
+     "JP Delay 2B Astonishing.blk"
+    ],
+    "other": [
+     "ReadMe John Petrucci.txt"
+    ]
+   }
+  },
+  {
+   "id": "got-2022-23",
+   "artists": [
+    "Alex Lifeson"
+   ],
+   "year": 2022,
+   "number": "23",
+   "kind": "effect blocks",
+   "description": "Effect Blocks",
+   "devices": [
+    {
+     "device": "Axe-Fx III",
+     "min_firmware": "21"
+    },
+    {
+     "device": "FM9",
+     "min_firmware": "4.0"
+    },
+    {
+     "device": "FM3",
+     "min_firmware": "6.0"
+    }
+   ],
+   "url": "https://www.fractalaudio.com/downloads/misc/_gift22/FAS-gift22-23-Alex-Lifeson.zip",
+   "sha256": "b6bf05f1b33763eb1516f8c938f9ea4f5a61c68701b053fdf543c1efec35851f",
+   "bytes": 11837,
+   "contents": {
+    "presets": [],
+    "cabs": [],
+    "bundles": [],
+    "blocks": [
+     "AL Big Echo Got No Soul_20221222_105857.blk",
+     "AL Closer to the 5th_20221222_110154.blk",
+     "AL Delay of Syrinx_20221222_105451.blk",
+     "AL Distant Early Echoes_20221222_110543.blk",
+     "AL Modern Day Slapback_20221222_113247.blk",
+     "AL My Uncle Has a Chorus Place_20221222_104430.blk",
+     "AL The Sacred Reverb Alph_20221222_112207.blk",
+     "AL Universal Echo_20221222_113544.blk",
+     "AL Universal Room Parallel_20221222_115639.blk",
+     "AL Xanadelay_20221222_111915.blk",
+     "AL YYZ Mid Solo_20221222_114142.blk"
+    ],
+    "other": [
+     "ReadMe Alex Lifeson.txt"
+    ]
+   }
+  },
+  {
+   "id": "got-2022-24",
+   "artists": [
+    "Tim Pierce"
+   ],
+   "year": 2022,
+   "number": "24",
+   "kind": "preset",
+   "description": "Preset (7 scenes)",
+   "devices": [
+    {
+     "device": "Axe-Fx III",
+     "min_firmware": "21"
+    },
+    {
+     "device": "FM9",
+     "min_firmware": "4.0"
+    },
+    {
+     "device": "FM3",
+     "min_firmware": "6.0"
+    }
+   ],
+   "url": "https://www.fractalaudio.com/downloads/misc/_gift22/FAS-gift22-24-Tim-Pierce-v2.zip",
+   "sha256": "9510f2289dfef59ab95f4be0ede52cfc2ad32e14c52ccde7dcdb75c1eb1f5858",
+   "bytes": 30318,
+   "contents": {
+    "presets": [
+     "TP Live 2023 v2/TP Live 2023 FM3.syx",
+     "TP Live 2023 v2/TP Live 2023 FM3.syx",
+     "TP Live 2023 v2/TP Live 2023 FM9.syx",
+     "TP Live 2023 v2/TP Live 2023 FM9.syx",
+     "TP Live 2023 v2/TP Live 2023 III.syx",
+     "TP Live 2023 v2/TP Live 2023 III.syx"
+    ],
+    "cabs": [],
+    "bundles": [],
+    "blocks": [],
+    "other": [
+     "ReadMe Tim Pierce.txt"
+    ]
+   }
+  },
+  {
+   "id": "got-2022-25",
+   "artists": [
+    "Larry Mitchell"
+   ],
+   "year": 2022,
+   "number": "25",
+   "kind": "preset plus cab bundle",
+   "description": "Preset + Cab Bundle (8 scenes, includes backing track)",
+   "devices": [
+    {
+     "device": "Axe-Fx III",
+     "min_firmware": "21"
+    },
+    {
+     "device": "FM9",
+     "min_firmware": "4.0"
+    },
+    {
+     "device": "FM3",
+     "min_firmware": "6.0"
+    }
+   ],
+   "url": "https://www.fractalaudio.com/downloads/misc/_gift22/FAS-gift22-25-Larry-Mitchell.zip",
+   "sha256": "13de0bf844d98e184606501521016d85e11e3a1041878374b02b81a7b9c4663f",
+   "bytes": 17461066,
+   "contents": {
+    "presets": [],
+    "cabs": [],
+    "bundles": [
+     {
+      "file": "Preset+Cab_Bundles/Sideman FM3 LM..fasBundle",
+      "map": {
+       "version": "1",
+       "device": {
+        "deviceId": "17",
+        "major": "70",
+        "minor": "0"
+       },
+       "presets": [
+        {
+         "location": "500",
+         "name": "Sideman FM3 LM.",
+         "file": "Sideman FM3 LM..syx"
+        }
+       ],
+       "cabs": [
+        {
+         "bank": "2",
+         "number": "127",
+         "name": "YA MRSH 212 LM Mix 08",
+         "file": "cabs/YA MRSH 212 LM Mix 08.syx"
+        }
+       ]
+      },
+      "members": [
+       "Sideman FM3 LM..syx",
+       "cabs/YA MRSH 212 LM Mix 08.syx"
+      ]
+     },
+     {
+      "file": "Preset+Cab_Bundles/Sideman FM9 LM.fasBundle",
+      "map": {
+       "version": "1",
+       "device": {
+        "deviceId": "18",
+        "major": "4",
+        "minor": "0"
+       },
+       "presets": [
+        {
+         "location": "384",
+         "name": "Sideman FM9 LM",
+         "file": "Sideman FM9 LM.syx"
+        }
+       ],
+       "cabs": [
+        {
+         "bank": "2",
+         "number": "2",
+         "name": "YA MRSH 212 LM Mix 08",
+         "file": "cabs/YA MRSH 212 LM Mix 08.syx"
+        }
+       ]
+      },
+      "members": [
+       "Sideman FM9 LM.syx",
+       "cabs/YA MRSH 212 LM Mix 08.syx"
+      ]
+     },
+     {
+      "file": "Preset+Cab_Bundles/Sideman III LM.fasBundle",
+      "map": {
+       "version": "1",
+       "device": {
+        "deviceId": "16",
+        "major": "21",
+        "minor": "1"
+       },
+       "presets": [
+        {
+         "location": "52",
+         "name": "Sideman III LM",
+         "file": "Sideman III LM.syx"
+        }
+       ],
+       "cabs": [
+        {
+         "bank": "2",
+         "number": "95",
+         "name": "YA MRSH 212 LM Mix 08",
+         "file": "cabs/YA MRSH 212 LM Mix 08.syx"
+        }
+       ]
+      },
+      "members": [
+       "Sideman III LM.syx",
+       "cabs/YA MRSH 212 LM Mix 08.syx"
+      ]
+     }
+    ],
+    "blocks": [],
+    "other": [
+     "Backing Track - Larry Mitchell _Chasing Tone.mp3",
+     "_ReadMe Larry Mitchell.txt"
+    ]
+   }
+  },
+  {
+   "id": "got-2022-26",
+   "artists": [
+    "Dweezil Zappa"
+   ],
+   "year": 2022,
+   "number": "26",
+   "kind": "preset plus cab bundle",
+   "description": "Preset + Cab Bundle (the 2022 finale)",
+   "devices": [
+    {
+     "device": "Axe-Fx III",
+     "min_firmware": "21"
+    },
+    {
+     "device": "FM9",
+     "min_firmware": "4.0"
+    },
+    {
+     "device": "FM3",
+     "min_firmware": "6.0"
+    }
+   ],
+   "url": "https://www.fractalaudio.com/downloads/misc/_gift22/FAS-gift22-26-Dweezil-Zappa.zip",
+   "sha256": "901200bf1e5437324f0840d4a9d91a3b89ad171ad1ac90a89e3d55fd5b78eb94",
+   "bytes": 112023,
+   "contents": {
+    "presets": [],
+    "cabs": [],
+    "bundles": [
+     {
+      "file": "DWEEZIL ERUPTION (RWTD) FM3.fasBundle",
+      "map": {
+       "version": "1",
+       "device": {
+        "deviceId": "17",
+        "major": "6",
+        "minor": "0"
+       },
+       "presets": [
+        {
+         "location": "393",
+         "name": "DWEEZIL ERUPTION (RWTD) GoT FM3",
+         "file": "DWEEZIL ERUPTION (RWTD) GoT FM3.syx"
+        }
+       ],
+       "cabs": [
+        {
+         "bank": "2",
+         "number": "213",
+         "name": "<EMPTY>",
+         "file": "cabs/EMPTY.syx"
+        },
+        {
+         "bank": "2",
+         "number": "214",
+         "name": "<EMPTY>",
+         "file": "cabs/EMPTY-a5de7a8b.syx"
+        },
+        {
+         "bank": "2",
+         "number": "32",
+         "name": "ERUPTION CAB BRIGHT",
+         "file": "cabs/ERUPTION CAB BRIGHT.syx"
+        },
+        {
+         "bank": "2",
+         "number": "33",
+         "name": "ERUPTION ROOM BRIGHT R",
+         "file": "cabs/ERUPTION ROOM BRIGHT R.syx"
+        }
+       ]
+      },
+      "members": [
+       "DWEEZIL ERUPTION (RWTD) GoT FM3.syx",
+       "cabs/EMPTY-a5de7a8b.syx",
+       "cabs/EMPTY.syx",
+       "cabs/ERUPTION CAB BRIGHT.syx",
+       "cabs/ERUPTION ROOM BRIGHT R.syx"
+      ]
+     },
+     {
+      "file": "DWEEZIL ERUPTION (RWTD) FM9.fasBundle",
+      "map": {
+       "version": "1",
+       "device": {
+        "deviceId": "18",
+        "major": "4",
+        "minor": "0"
+       },
+       "presets": [
+        {
+         "location": "386",
+         "name": "DWEEZIL ERUPTION (RWTD) GoT FM9",
+         "file": "DWEEZIL ERUPTION (RWTD) GoT FM9.syx"
+        }
+       ],
+       "cabs": [
+        {
+         "bank": "2",
+         "number": "12",
+         "name": "ERUPTION CAB BRIGHT",
+         "file": "cabs/ERUPTION CAB BRIGHT.syx"
+        },
+        {
+         "bank": "2",
+         "number": "13",
+         "name": "ERUPTION ROOM BRIGHT R",
+         "file": "cabs/ERUPTION ROOM BRIGHT R.syx"
+        },
+        {
+         "bank": "2",
+         "number": "7",
+         "name": "ERUPTION DARK CAB",
+         "file": "cabs/ERUPTION DARK CAB.syx"
+        },
+        {
+         "bank": "2",
+         "number": "8",
+         "name": "ERUPTION ROOM CAB L",
+         "file": "cabs/ERUPTION ROOM CAB L.syx"
+        },
+        {
+         "bank": "2",
+         "number": "98",
+         "name": "<EMPTY>",
+         "file": "cabs/EMPTY.syx"
+        }
+       ]
+      },
+      "members": [
+       "DWEEZIL ERUPTION (RWTD) GoT FM9.syx",
+       "cabs/EMPTY.syx",
+       "cabs/ERUPTION CAB BRIGHT.syx",
+       "cabs/ERUPTION DARK CAB.syx",
+       "cabs/ERUPTION ROOM BRIGHT R.syx",
+       "cabs/ERUPTION ROOM CAB L.syx"
+      ]
+     },
+     {
+      "file": "DWEEZIL ERUPTION (RWTD) III.fasBundle",
+      "map": {
+       "version": "1",
+       "device": {
+        "deviceId": "16",
+        "major": "21",
+        "minor": "1"
+       },
+       "presets": [
+        {
+         "location": "0",
+         "name": "DWEEZIL ERUPTION (RWTD) GoT III",
+         "file": "DWEEZIL ERUPTION (RWTD) GoT III.syx"
+        }
+       ],
+       "cabs": [
+        {
+         "bank": "2",
+         "number": "102",
+         "name": "ERUPTION CAB BRIGHT",
+         "file": "cabs/ERUPTION CAB BRIGHT.syx"
+        },
+        {
+         "bank": "2",
+         "number": "96",
+         "name": "ERUPTION DARK CAB",
+         "file": "cabs/ERUPTION DARK CAB.syx"
+        },
+        {
+         "bank": "2",
+         "number": "97",
+         "name": "ERUPTION ROOM CAB L",
+         "file": "cabs/ERUPTION ROOM CAB L.syx"
+        },
+        {
+         "bank": "2",
+         "number": "98",
+         "name": "ERUPTION ROOM BRIGHT R",
+         "file": "cabs/ERUPTION ROOM BRIGHT R.syx"
+        }
+       ]
+      },
+      "members": [
+       "DWEEZIL ERUPTION (RWTD) GoT III.syx",
+       "cabs/ERUPTION CAB BRIGHT.syx",
+       "cabs/ERUPTION DARK CAB.syx",
+       "cabs/ERUPTION ROOM BRIGHT R.syx",
+       "cabs/ERUPTION ROOM CAB L.syx"
+      ]
+     }
+    ],
+    "blocks": [
+     "Eruption_Ending_Delay_Block.blk"
+    ],
+    "other": [
+     "_Read_Me.txt"
+    ]
+   }
+  },
+  {
+   "id": "got-2023-1",
+   "artists": [
+    "Aaron Marshall"
+   ],
+   "year": 2023,
+   "number": "1",
+   "kind": "preset",
+   "description": "Preset (8-scene)",
+   "devices": [
+    {
+     "device": "Axe-Fx III",
+     "min_firmware": "23"
+    },
+    {
+     "device": "FM9",
+     "min_firmware": "5.0"
+    },
+    {
+     "device": "FM3",
+     "min_firmware": "7.0"
+    }
+   ],
+   "url": "https://www.fractalaudio.com/downloads/misc/_gift23/FAS-gift23-01-Aaron-Marshall.zip",
+   "sha256": "1c04ab24d658a4a9c6d63f05aceb74b197c78dd90fb931196c73ac274d4e9ea1",
+   "bytes": 17544,
+   "contents": {
+    "presets": [
+     "g i f t  o f  t o n e AxeFx III.syx",
+     "g i f t  o f  t o n e FM3.syx",
+     "g i f t  o f  t o n e FM9.syx"
+    ],
+    "cabs": [],
+    "bundles": [],
+    "blocks": [],
+    "other": [
+     "_ReadMe.txt"
+    ]
+   }
+  },
+  {
+   "id": "got-2023-2",
+   "artists": [
+    "Greg Wells"
+   ],
+   "year": 2023,
+   "number": "2",
+   "kind": "preset plus cab bundle",
+   "description": "Preset + Cab IRs",
+   "devices": [
+    {
+     "device": "Axe-Fx III",
+     "min_firmware": "23"
+    },
+    {
+     "device": "FM9",
+     "min_firmware": "5.0"
+    },
+    {
+     "device": "FM3",
+     "min_firmware": "7.0"
+    }
+   ],
+   "url": "https://www.fractalaudio.com/downloads/misc/_gift23/FAS-gift23-02-Greg-Wells.zip",
+   "sha256": "2f1dc758f454f70fc27bc66610c8b4c0745e5da1d376ce0dd431810777b34a3e",
+   "bytes": 104758,
+   "contents": {
+    "presets": [],
+    "cabs": [
+     "Cab GW Blue Al 1.syx",
+     "Cab GW GB Rawk.syx"
+    ],
+    "bundles": [
+     {
+      "file": "GW Studio FM3.fasBundle",
+      "map": {
+       "version": "1",
+       "device": {
+        "deviceId": "17",
+        "major": "7",
+        "minor": "0"
+       },
+       "presets": [
+        {
+         "location": "385",
+         "name": "GW Studio FM3",
+         "file": "GW Studio FM3.syx"
+        }
+       ],
+       "cabs": [
+        {
+         "bank": "2",
+         "number": "70",
+         "name": "GW Blue Al 1",
+         "file": "cabs/GW Blue Al 1.syx"
+        },
+        {
+         "bank": "2",
+         "number": "71",
+         "name": "GW GB Rawk",
+         "file": "cabs/GW GB Rawk.syx"
+        },
+        {
+         "bank": "2",
+         "number": "72",
+         "name": "<EMPTY>",
+         "file": "cabs/EMPTY.syx"
+        }
+       ]
+      },
+      "members": [
+       "GW Studio FM3.syx",
+       "cabs/EMPTY.syx",
+       "cabs/GW Blue Al 1.syx",
+       "cabs/GW GB Rawk.syx"
+      ]
+     },
+     {
+      "file": "GW Studio FM9.fasBundle",
+      "map": {
+       "version": "1",
+       "device": {
+        "deviceId": "18",
+        "major": "5",
+        "minor": "1"
+       },
+       "presets": [
+        {
+         "location": "430",
+         "name": "GW Studio FM9",
+         "file": "GW Studio FM9.syx"
+        }
+       ],
+       "cabs": [
+        {
+         "bank": "2",
+         "number": "70",
+         "name": "GW Blue Al 1",
+         "file": "cabs/GW Blue Al 1.syx"
+        },
+        {
+         "bank": "2",
+         "number": "71",
+         "name": "GW GB Rawk",
+         "file": "cabs/GW GB Rawk.syx"
+        },
+        {
+         "bank": "2",
+         "number": "72",
+         "name": "<EMPTY>",
+         "file": "cabs/EMPTY.syx"
+        }
+       ]
+      },
+      "members": [
+       "GW Studio FM9.syx",
+       "cabs/EMPTY.syx",
+       "cabs/GW Blue Al 1.syx",
+       "cabs/GW GB Rawk.syx"
+      ]
+     },
+     {
+      "file": "GW Studio GOT III.fasBundle",
+      "map": {
+       "version": "1",
+       "device": {
+        "deviceId": "16",
+        "major": "23",
+        "minor": "5"
+       },
+       "presets": [
+        {
+         "location": "10",
+         "name": "GW Studio",
+         "file": "GW Studio.syx"
+        }
+       ],
+       "cabs": [
+        {
+         "bank": "2",
+         "number": "70",
+         "name": "GW Blue Al 1",
+         "file": "cabs/GW Blue Al 1.syx"
+        },
+        {
+         "bank": "2",
+         "number": "71",
+         "name": "GW GB Rawk",
+         "file": "cabs/GW GB Rawk.syx"
+        }
+       ]
+      },
+      "members": [
+       "GW Studio.syx",
+       "cabs/GW Blue Al 1.syx",
+       "cabs/GW GB Rawk.syx"
+      ]
+     }
+    ],
+    "blocks": [],
+    "other": [
+     "_ReadMe.txt"
+    ]
+   }
+  },
+  {
+   "id": "got-2023-3",
+   "artists": [
+    "Wes Hauch"
+   ],
+   "year": 2023,
+   "number": "3",
+   "kind": "preset plus cab bundle",
+   "description": "Preset + Cab Bundle",
+   "devices": [
+    {
+     "device": "Axe-Fx III",
+     "min_firmware": "23.05"
+    },
+    {
+     "device": "FM9",
+     "min_firmware": "5.0"
+    },
+    {
+     "device": "FM3",
+     "min_firmware": "7.0"
+    }
+   ],
+   "url": "https://www.fractalaudio.com/downloads/misc/_gift23/FAS-gift23-03-Wes-Hauch.zip",
+   "sha256": "33c91b9076aaf330e3ae32a7aa9159cfa4936c5bde033163eda4c4f63e4186a8",
+   "bytes": 63489,
+   "contents": {
+    "presets": [],
+    "cabs": [
+     "U1-Cab_Wes_Rhythm Match.syx"
+    ],
+    "bundles": [
+     {
+      "file": "WH-A440-III.fasBundle",
+      "map": {
+       "version": "1",
+       "device": {
+        "deviceId": "16",
+        "major": "23",
+        "minor": "5"
+       },
+       "presets": [
+        {
+         "location": "389",
+         "name": "WHA440",
+         "file": "WHA440.syx"
+        }
+       ],
+       "cabs": [
+        {
+         "bank": "2",
+         "number": "79",
+         "name": "Rhythm Match",
+         "file": "cabs/Rhythm Match.syx"
+        }
+       ]
+      },
+      "members": [
+       "WHA440.syx",
+       "cabs/Rhythm Match.syx"
+      ]
+     },
+     {
+      "file": "WHA440-FM3d.fasBundle",
+      "map": {
+       "version": "1",
+       "device": {
+        "deviceId": "17",
+        "major": "7",
+        "minor": "0"
+       },
+       "presets": [
+        {
+         "location": "384",
+         "name": "WHA440 FM3",
+         "file": "WHA440 FM3.syx"
+        }
+       ],
+       "cabs": [
+        {
+         "bank": "2",
+         "number": "0",
+         "name": "Rhythm Match",
+         "file": "cabs/Rhythm Match.syx"
+        }
+       ]
+      },
+      "members": [
+       "WHA440 FM3.syx",
+       "cabs/Rhythm Match.syx"
+      ]
+     },
+     {
+      "file": "WHA440-FM9.fasBundle",
+      "map": {
+       "version": "1",
+       "device": {
+        "deviceId": "18",
+        "major": "5",
+        "minor": "0"
+       },
+       "presets": [
+        {
+         "location": "384",
+         "name": "WHA440 FM9",
+         "file": "WHA440 FM9.syx"
+        }
+       ],
+       "cabs": [
+        {
+         "bank": "2",
+         "number": "0",
+         "name": "Rhythm Match",
+         "file": "cabs/Rhythm Match.syx"
+        }
+       ]
+      },
+      "members": [
+       "WHA440 FM9.syx",
+       "cabs/Rhythm Match.syx"
+      ]
+     }
+    ],
+    "blocks": [],
+    "other": [
+     "_ReadMe.txt"
+    ]
+   }
+  },
+  {
+   "id": "got-2023-4",
+   "artists": [
+    "Chris Baseford"
+   ],
+   "year": 2023,
+   "number": "4",
+   "kind": "preset",
+   "description": "Preset (8 scenes, multiple versions)",
+   "devices": [
+    {
+     "device": "Axe-Fx III",
+     "min_firmware": "23.05"
+    },
+    {
+     "device": "FM9",
+     "min_firmware": "5.0"
+    },
+    {
+     "device": "FM3",
+     "min_firmware": "7.0"
+    }
+   ],
+   "url": "https://www.fractalaudio.com/downloads/misc/_gift23/FAS-gift23-04-Chris_Baseford.zip",
+   "sha256": "f0dd9c47391d8e355d8166506eb61fcc977681be05bf20118a852ce497c2e875",
+   "bytes": 30041,
+   "contents": {
+    "presets": [
+     "Chris Baseford-GOT_FM3 Original.syx",
+     "Chris Baseford-GOT_FM3 Turbo.syx",
+     "Chris Baseford-GOT_FM9 Turbo.syx",
+     "Chris Baseford-GOT_FM9 original.syx",
+     "Chris Baseford-GOT_III.syx"
+    ],
+    "cabs": [],
+    "bundles": [],
+    "blocks": [],
+    "other": [
+     "_ReadMe.txt"
+    ]
+   }
+  },
+  {
+   "id": "got-2023-5",
+   "artists": [
+    "Justin Derrico"
+   ],
+   "year": 2023,
+   "number": "5",
+   "kind": "preset plus cab bundle",
+   "description": "Preset + Cab Bundle",
+   "devices": [
+    {
+     "device": "Axe-Fx III",
+     "min_firmware": "23.05"
+    },
+    {
+     "device": "FM9",
+     "min_firmware": "5.0"
+    },
+    {
+     "device": "FM3",
+     "min_firmware": "7.0"
+    }
+   ],
+   "url": "https://www.fractalaudio.com/downloads/misc/_gift23/FAS-gift23-05-Justin-Derrico.zip",
+   "sha256": "a6327f33253fbfe837919f352dd9c0f88c1327961a34d3b66db32bb6d29262e0",
+   "bytes": 78861,
+   "contents": {
+    "presets": [],
+    "cabs": [],
+    "bundles": [
+     {
+      "file": "JD GoT 2023 FM3.fasBundle",
+      "map": {
+       "version": "1",
+       "device": {
+        "deviceId": "17",
+        "major": "7",
+        "minor": "0"
+       },
+       "presets": [
+        {
+         "location": "384",
+         "name": "JD GoT 2023 FM3",
+         "file": "JD GoT 2023 FM3.syx"
+        }
+       ],
+       "cabs": [
+        {
+         "bank": "2",
+         "number": "0",
+         "name": "JD ISO 57",
+         "file": "cabs/JD ISO 57.syx"
+        },
+        {
+         "bank": "2",
+         "number": "1",
+         "name": "JD ISO 121",
+         "file": "cabs/JD ISO 121.syx"
+        },
+        {
+         "bank": "2",
+         "number": "36",
+         "name": "<EMPTY>",
+         "file": "cabs/EMPTY.syx"
+        }
+       ]
+      },
+      "members": [
+       "JD GoT 2023 FM3.syx",
+       "cabs/EMPTY.syx",
+       "cabs/JD ISO 121.syx",
+       "cabs/JD ISO 57.syx"
+      ]
+     },
+     {
+      "file": "JD GoT 2023 FM9.fasBundle",
+      "map": {
+       "version": "1",
+       "device": {
+        "deviceId": "16",
+        "major": "23",
+        "minor": "5"
+       },
+       "presets": [
+        {
+         "location": "410",
+         "name": "JD GoT 2023 FM9",
+         "file": "JD GoT 2023 FM9.syx"
+        }
+       ],
+       "cabs": [
+        {
+         "bank": "2",
+         "number": "43",
+         "name": "JD ISO 121",
+         "file": "cabs/JD ISO 121.syx"
+        },
+        {
+         "bank": "2",
+         "number": "44",
+         "name": "JD ISO 57",
+         "file": "cabs/JD ISO 57.syx"
+        }
+       ]
+      },
+      "members": [
+       "JD GoT 2023 FM9.syx",
+       "cabs/JD ISO 121.syx",
+       "cabs/JD ISO 57.syx"
+      ]
+     },
+     {
+      "file": "JD GoT 2023 III.fasBundle",
+      "map": {
+       "version": "1",
+       "device": {
+        "deviceId": "16",
+        "major": "23",
+        "minor": "5"
+       },
+       "presets": [
+        {
+         "location": "409",
+         "name": "JD GoT 2023 III",
+         "file": "JD GoT 2023 III.syx"
+        }
+       ],
+       "cabs": [
+        {
+         "bank": "2",
+         "number": "42",
+         "name": "JD ISO 57",
+         "file": "cabs/JD ISO 57.syx"
+        },
+        {
+         "bank": "2",
+         "number": "43",
+         "name": "JD ISO 121",
+         "file": "cabs/JD ISO 121.syx"
+        }
+       ]
+      },
+      "members": [
+       "JD GoT 2023 III.syx",
+       "cabs/JD ISO 121.syx",
+       "cabs/JD ISO 57.syx"
+      ]
+     }
+    ],
+    "blocks": [],
+    "other": [
+     "_ReadMe.txt"
+    ]
+   }
+  },
+  {
+   "id": "got-2023-6",
+   "artists": [
+    "Neal Schon"
+   ],
+   "year": 2023,
+   "number": "6",
+   "kind": "preset",
+   "description": "Preset (4 scenes), the 2023 finale",
+   "devices": [
+    {
+     "device": "Axe-Fx III",
+     "min_firmware": "23.05"
+    },
+    {
+     "device": "FM9",
+     "min_firmware": "5.0"
+    },
+    {
+     "device": "FM3",
+     "min_firmware": "7.0"
+    }
+   ],
+   "url": "https://www.fractalaudio.com/downloads/misc/_gift23/FAS-gift23-06-Neal-Schon.zip",
+   "sha256": "7faf3f503a5418c84d3452d4b7723d8a34666d99739117052d7502fbfb63afc9",
+   "bytes": 15620,
+   "contents": {
+    "presets": [
+     "NS GoT 2023 FM3.syx",
+     "NS GoT 2023 FM9.syx",
+     "NS GoT 2023 III.syx"
+    ],
+    "cabs": [],
+    "bundles": [],
+    "blocks": [],
+    "other": [
+     "_ReadMe.txt"
+    ]
+   }
+  },
+  {
+   "id": "got-2024-1",
+   "artists": [
+    "Periphery"
+   ],
+   "year": 2024,
+   "number": "1",
+   "kind": "preset",
+   "description": "Three presets featuring multiple scenes",
+   "devices": [
+    {
+     "device": "Axe-Fx III",
+     "min_firmware": "27.x"
+    },
+    {
+     "device": "FM9",
+     "min_firmware": "8"
+    },
+    {
+     "device": "FM3",
+     "min_firmware": "9"
+    }
+   ],
+   "url": "https://www.fractalaudio.com/downloads/misc/_gift24/FAS-gift24-01-Periphery.zip",
+   "sha256": "456d82dabee925fd4592f062e988eb612099a585228fa279fc43c2fc14ea0ca2",
+   "bytes": 40607,
+   "contents": {
+    "presets": [
+     "Axe-FX III/Periphery Jake GoT.syx",
+     "Axe-FX III/Periphery Mark GoT.syx",
+     "Axe-FX III/Periphery Misha GoT.syx",
+     "FM3/Periphery Jake GoTFM3.syx",
+     "FM3/Periphery Mark GoTFM3.syx",
+     "FM3/Periphery Misha GoTFM3.syx",
+     "FM9/Periphery Jake GoTFM9.syx",
+     "FM9/Periphery Mark GoTFM9.syx",
+     "FM9/Periphery Misha GoTFM9.syx"
+    ],
+    "cabs": [],
+    "bundles": [],
+    "blocks": [],
+    "other": [
+     "_ReadMe.txt"
+    ]
+   }
+  }
+ ]
+}

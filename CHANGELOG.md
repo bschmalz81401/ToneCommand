@@ -4,6 +4,31 @@ Notable changes to ToneCommand. Dates are UTC.
 
 ## Unreleased
 
+### Added (NAM captures and Fractal sources, 2026-09-19: #144, #145, #161, #154)
+- `fm9/nam.py` reads a `.nam` capture file (stdlib json only) into a
+  CaptureRecord: architecture and config summary, the metadata the file
+  carries, `needs_cab` from gear_type (amp, pedal, pedal_amp, preamp and a
+  missing gear_type need a cab; amp_cab, amp_pedal_cab, studio are full rig),
+  `scene_role` from tone_type (clean; overdrive, crunch, fuzz to rhythm;
+  hi_gain to lead). Anything absent is "not on file", never inferred;
+  malformed input is refused with one line.
+- Rule 22 in `config/tone_rules.md`: capture or model, the wording decides,
+  never a setting. `fm9/capture_intent.py` is the deterministic half (whole
+  phrase, word boundary, last phrase wins) and every plan now carries
+  `amp_source` with an honest line; until the FM9 has a NAM block every build
+  is the model and the line says so when a capture was asked for.
+- `catalog/gift_of_tone.json`: all 34 Gift of Tone entries with artists,
+  year, number, kind, Fractal's description, the device matrix as the page
+  states it, the zip URL with sha256 and size, and the contents (presets,
+  cabs, .blk effect blocks, every .fasBundle's bundle map with cab bank and
+  number). Built by `tools/gift_of_tone_catalog.py`; published by the site at
+  `/gift-of-tone.json`; read site-first by `fm9/gift_of_tone.py`. Nothing
+  mirrored.
+- The Fractal sources terms and fetch policy (kb/SITE.md): Axe-Change is never
+  fetched by the tool (its terms grant no download licence); Gift of Tone is
+  pinned URLs fetched at click time.
+
+
 ### Changed (verification procedure, review of #134: 2026-09-19)
 - A SAFETY CHECK MUST NOT BE THE THING IT CHECKS FOR.
   `tools/verify_headrush.py` probed AC4 by calling `deleteRig` and by writing
