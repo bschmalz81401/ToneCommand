@@ -178,24 +178,33 @@ def test_gap_route_has_no_actions_and_advisory_imports_no_executor(rig):
 
 
 def test_gap_build_this_goes_through_plan_with_validation_and_confirm(rig, monkeypatch):
+    """BUILD THIS is an ordinary plan request. The PLANNER is stubbed, not
+    _plan_for, so the request runs the real validate_action pass and lands
+    as a reviewed revision (plan_digest) that nothing applies."""
     client = TestClient(server.app)
     scene2_amp(rig, "Gain", 6)
     prompt = client.post("/api/advise/gap", json={"a": "scene 1", "b": "scene 2"}).json()["build_prompt"]
-    seen = {}
+    seen = []
 
-    def fake_plan(body, **kw):
-        seen["prompt"] = body.prompt
-        return {"summary": "x", "actions": [{"kind": "set_param", "block": "amp", "param": "DISTORT_DRIVE", "value": 6.0}],
-                "plan_digest": "d1"}
+    def fake_plan(text, device_state, reference):
+        seen.append(text)
+        if len(seen) == 1:
+            return {"summary": "x", "actions": [
+                {"kind": "set_param", "block": "amp", "param": "DISTORT_DRIVE", "value": 6.0},
+                {"kind": "set_param", "block": "amp", "param": "NO_SUCH_PARAM", "value": 1.0}]}
+        return {"summary": "repair", "actions": []}     # the repair round gives up
 
-    monkeypatch.setattr(server, "_plan_for", fake_plan)
+    monkeypatch.setattr(planner, "plan", fake_plan)
     r = client.post("/api/plan", json={"prompt": prompt})
-    assert r.status_code == 200 and seen["prompt"] == prompt
-    assert r.json()["plan_digest"] == "d1"
-    assert cap(rig) == cap(rig), "planning applied nothing"
-    assert server.reg.find_param("DISTORT", "Gain") is not None
-    # the sim's amp gain is still 0 on scene 1: nothing was sent
-    assert adv.value(server.reg, cap(rig), "DISTORT", adv.AMP["gain"]) == 0
+    assert r.status_code == 200, r.text
+    assert seen[0] == prompt, "the sentence went to the planner as typed"
+    assert len(seen) >= 2 and "refused by validation" in seen[1], \
+        "validate_action ran inside _plan_for and refused the bad action"
+    plan = r.json()
+    assert plan["plan_digest"], "a reviewed revision was minted"
+    bad = [a for a in plan["actions"] if a.get("param") == "NO_SUCH_PARAM"]
+    assert all(a.get("validation_errors") for a in bad), "a refused action stays marked, never silently accepted"
+    assert adv.value(server.reg, cap(rig), "DISTORT", adv.AMP["gain"]) == 0, "nothing was applied"
 
 
 # --- #70 diagnose ---------------------------------------------------------------------
