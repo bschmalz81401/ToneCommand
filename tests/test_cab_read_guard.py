@@ -45,14 +45,15 @@ def test_read_user_cab_addr_refuses_before_any_frame(sim):
 
 
 def test_install_user_cab_at_refuses_before_parse_whitelist_or_probe(sim, monkeypatch):
-    # Bank 2 is exactly the case #43 is about, and it is OUTSIDE the
-    # whitelist here: the guard still fires first, before the whitelist
-    # would have answered, and before any of _cab_addr_candidates is tried.
+    # Bank 1: the guard fires first, before the whitelist would have
+    # answered, and before any of _cab_addr_candidates is tried. (Bank 2
+    # never reaches the guard since the capture of 2026-09-19: see
+    # tests/test_cab_bank2_install.py.)
     probed = []
     monkeypatch.setattr(sim, "probe_cab_encoding",
                         lambda b, n: probed.append((b, n)))
     with pytest.raises(RuntimeError, match="fn 0x19"):
-        sim.install_user_cab_at(make_cab(), 2, 11, "U1-x.syx")
+        sim.install_user_cab_at(make_cab(), 1, 11, "U1-x.syx")
     with pytest.raises(RuntimeError, match="fn 0x19"):
         sim.install_user_cab_at(b"not even a cab file", 1, 1, "junk.syx")
     assert probed == [] and sim.sent == []
@@ -60,8 +61,8 @@ def test_install_user_cab_at_refuses_before_parse_whitelist_or_probe(sim, monkey
 
 def test_the_flag_opts_in_and_the_sim_still_round_trips(sim, monkeypatch):
     monkeypatch.setenv("TONECOMMAND_ALLOW_CAB_READ", "1")
-    cf, idx, tag = sim.install_user_cab_at(make_cab(), 1, 1, "U1-x.syx")
-    got = sim.read_user_cab_addr(idx, tag)
+    res = sim.install_user_cab_at(make_cab(), 1, 1, "U1-x.syx")
+    got = sim.read_user_cab_addr(res.idx, res.tag)
     assert got is not None and sim.sent, "with the flag the path is intact"
 
 
@@ -79,7 +80,11 @@ def test_install_cab_route_answers_409_with_the_supported_route(sim, monkeypatch
     assert sim.sent == []
 
 
-def test_candidate_addressing_is_unchanged():
-    """Bank 2+ addressing stays open on the issue: nothing here guesses."""
+def test_candidate_addressing_bank1_unchanged_bank2_captured_first():
+    """Bank 1 keeps its list; bank 2 leads with the captured encoding
+    (flat 522 under tag 0x10 for slot 11), then the tag-carries-bank
+    guess for a probe that only ever runs under the flag."""
+    assert list(fm9_device.FM9._cab_addr_candidates(1, 11)) == [
+        (10, 0x10), (10, 0x10)]
     assert list(fm9_device.FM9._cab_addr_candidates(2, 11)) == [
-        (10, 0x11), (512 + 10, 0x10)]
+        (512 + 10, 0x10), (10, 0x11)]

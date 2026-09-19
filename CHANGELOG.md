@@ -4,6 +4,32 @@ Notable changes to ToneCommand. Dates are UTC.
 
 ## Unreleased
 
+### Fixed (user cabs above Bank 1, 2026-09-19: #43)
+- Installing a bundle whose cabs are filed in User Cab Bank 2 (the Gift of
+  Tone Steve Lukather pack) refused to write, so the preset landed with an
+  empty Cab block and played silent. Cause, found by capturing FM9-Edit's
+  own write with MIDI Monitor: the flat index and tag were right all along,
+  but `cabfile.retarget` laid the head's two index bytes out the other way
+  round and without the 0x10 flag the editor sets (`0A 14 00 10` for
+  U1.0523, low septet first), and did not mask every fifth body byte to
+  0x0F as the editor does. `retarget` now builds the captured layout and
+  reproduces the ten captured frames byte for byte
+  (`tests/test_cab_bank2_capture.py`, fixture body-redacted in
+  `tests/fixtures/`). The editor has one flat list, U1.0001 to U1.1024, so
+  "Bank 2 slot 11" is flat 522.
+- `FM9.install_user_cab_at` branches on bank before anything else: Bank 2
+  and above never consult the fn 0x19 guard or probe (that read hangs
+  firmware 12.x), keep the `TONECOMMAND_CAB_SLOTS` flat-index whitelist,
+  send each frame only after the unit acks the previous one (fn 0x64
+  `<fn> 00`, as captured) and stop on a missing ack, and return a
+  `CabInstall` with `verified=False` and the one-line reason. Bank 1 is
+  unchanged behind the guard. `POST /api/install-cab` answers 200 with
+  `verified: false` and that note for bank 2 and above; bank 1 keeps its
+  409. The simulator acks cab frames and decodes the captured head.
+- Recorded, not used: after the write the editor reads the slot with fn
+  0x01 sub 0x4B, which the unit answered without hanging. A read-back
+  candidate for later.
+
 ### Added (capture-slot primitive, 2026-09-19: #162)
 - Cause: each device's capture path would have been its own special case,
   and Epic I's intake and build work had nothing to be written against until

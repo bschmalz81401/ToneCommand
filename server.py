@@ -3847,10 +3847,13 @@ def api_cab_shortlist(q: str = "", limit: int = 5):
 def api_install_cab(body: dict):
     """Send a previewed IR file to a whitelisted user-cab slot. FLASH.
 
-    Same discipline as preset installs, plus the two honest unknowns of
-    this direction (model-byte rewrite and slot addressing are
-    hardware-unverified): done is claimed only after the cab is read back
-    and its body matches what was sent, byte for byte.
+    Same discipline as preset installs. Bank 1: done is claimed only after
+    the cab is read back and its body matches what was sent, byte for
+    byte (and that read is off on firmware 12.x, so 409 under the guard).
+    Bank 2 and above (issue #43): the frames are the captured FM9-Edit
+    write, acked by the unit one by one, and the answer is 200 with
+    `verified: false` and the note saying how to check, because the
+    unit's own read is the unsafe part.
     """
     raw = _install_cache.get(str(body.get("hash") or ""))
     if raw is None:
@@ -3878,9 +3881,9 @@ def api_install_cab(body: dict):
                 status_code=423)
         try:
             fm9 = get_fm9()
-            cf, idx, tag = fm9.install_user_cab_at(raw, bank, number,
-                                                   filename)
-            got = fm9.read_user_cab_addr(idx, tag)
+            res = fm9.install_user_cab_at(raw, bank, number, filename)
+            cf, idx, tag = res.cf, res.idx, res.tag
+            got = None if bank >= 2 else fm9.read_user_cab_addr(idx, tag)
         except PermissionError as e:
             return JSONResponse({"error": str(e)}, status_code=403)
         except FM9NotFound:
@@ -3900,8 +3903,17 @@ def api_install_cab(body: dict):
             return JSONResponse({"error": str(e)}, status_code=500)
         except Exception as e:
             return JSONResponse({"error": str(e)}, status_code=500)
-    sent = [f[6:-2] for f in cabfile.retarget(cf, idx, tag=tag)[1:-1]]
-    ok = bool(got) and got[1] == sent
+    if bank >= 2:
+        ok, verified, detail = True, False, f"{where}: {res.note}"
+    else:
+        sent = [f[6:-2] for f in cabfile.retarget(cf, idx, tag=tag)[1:-1]]
+        ok = verified = bool(got) and got[1] == sent
+        detail = (f"{where} reads back byte-identical: verified"
+                  if ok else
+                  f"{where} did not read back matching what was "
+                  "sent. The IR write direction is not yet "
+                  "hardware-proven; treat as failed and check the "
+                  "unit's cab manager")
     if ok:
         log.info("installed IR %r to %s", cf.label, where)
         # Remember what this slot now holds. Nothing else can: USER cabs are
@@ -3921,13 +3933,8 @@ def api_install_cab(body: dict):
                 USER_CAB_BANK, (bank - 1) * 512 + (number - 1), cf.label)
         except OSError:
             pass                       # a name is a courtesy, never the point
-    return {"ok": ok, "installed": cf.label, "bank": bank, "number": number,
-            "detail": (f"{where} reads back byte-identical: verified"
-                       if ok else
-                       f"{where} did not read back matching what was "
-                       "sent. The IR write direction is not yet "
-                       "hardware-proven; treat as failed and check the "
-                       "unit's cab manager")}
+    return {"ok": ok, "verified": verified, "installed": cf.label,
+            "bank": bank, "number": number, "detail": detail}
 
 
 @app.post("/api/install/parse")

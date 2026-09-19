@@ -12,6 +12,7 @@ from dataclasses import dataclass
 
 import mido
 
+from . import cabfile
 from . import protocol as p
 from .adapter import Capabilities, GridPos, ReadPath, Topology
 from .registry import Registry, ParamSpec
@@ -213,6 +214,20 @@ def cab_read_guard() -> None:
     import os
     if os.environ.get(CAB_READ_FLAG, "").strip() != "1":
         raise RuntimeError(CAB_READ_REFUSED)
+
+
+@dataclass
+class CabInstall:
+    """What install_user_cab_at did. `verified` is True only after a
+    byte-for-byte read-back (bank 1 under the operator's flag); a bank 2+
+    install is acked frame by frame but not read back, and `note` says
+    why and how to check it."""
+    cf: object
+    idx: int
+    tag: int
+    verified: bool
+    note: str
+    acks: int = 0
 
 
 @dataclass
@@ -730,7 +745,6 @@ class FM9:
         had) and the slot addressing are UNVERIFIED on hardware until the
         first live install; callers verify via read_user_cab.
         """
-        from fm9 import cabfile
         allowed = get_cab_slots()
         if not allowed:
             raise PermissionError(
@@ -744,9 +758,7 @@ class FM9:
                 f"IR install to user cab {slot + 1} (index {slot}) refused: "
                 f"configured cab slots are "
                 f"{sorted(allowed)[0]}-{sorted(allowed)[-1]}")
-        cf, _idx, _tag = self.install_user_cab_at(raw, 1, slot + 1,
-                                                  filename)
-        return cf
+        return self.install_user_cab_at(raw, 1, slot + 1, filename).cf
 
     def read_user_cab_addr(self, idx: int, tag: int, timeout: float = 4.0):
         """Request the user cab at (idx, tag) back via fn 0x19.
@@ -783,15 +795,20 @@ class FM9:
             return None
         return (head or [], chunks)
 
-    #: How a (bank, number) shown by the editor might encode on the wire.
-    #: Candidate A: the head tag carries the bank (0x10 = bank 1). B: a
-    #: flat index across 512-slot banks under the captured 0x10 tag.
-    #: NEITHER is assumed: the device is read-probed and only an encoding
-    #: it answered for is ever used to write. See install_user_cab_at.
+    #: How a (bank, number) shown by the editor encodes on the wire.
+    #: Captured 2026-09-19 (issue #43, FM9-Edit writing "Bank 2 slot 11",
+    #: which the editor lists as U1.0523 in its one flat bank): the flat
+    #: index 522 under tag 0x10, candidate B, with the head byte layout
+    #: cabfile.head_index_bytes now reproduces. For bank >= 2 that is the
+    #: first candidate. Bank 1 keeps its list unchanged (A and B coincide
+    #: there) and stays under cab_read_guard.
     @staticmethod
     def _cab_addr_candidates(bank: int, number: int):
+        if bank >= 2:
+            yield ((bank - 1) * 512 + (number - 1), cabfile.DEFAULT_TAG)
         yield (number - 1, 0x10 + (bank - 1))
-        yield ((bank - 1) * 512 + (number - 1), 0x10)
+        if bank < 2:
+            yield ((bank - 1) * 512 + (number - 1), 0x10)
 
     def probe_cab_encoding(self, bank: int, number: int):
         """The (idx, tag) this device actually answers for (bank, number).
@@ -808,16 +825,45 @@ class FM9:
             f"number {number} under any known addressing; refusing to "
             "write blind")
 
-    def install_user_cab_at(self, raw: bytes, bank: int, number: int,
-                            filename: str = ""):
-        """Send a validated IR to user-cab (bank, number), as the editor
-        numbers them. Whitelisted flat as (bank-1)*512+(number-1); the
-        destination is read-probed first and the write uses only the
-        addressing the device itself answered for; verified by callers via
-        read_user_cab_addr comparing byte-for-byte.
-        """
-        cab_read_guard()          # before parse, whitelist or probe (#43)
-        from fm9 import cabfile
+    #: Why a bank 2+ install reports verified=False. One line, as the API
+    #: and the UI show it.
+    CAB_UNVERIFIED_NOTE = (
+        "sent and acknowledged frame by frame, not read back: the unit's "
+        "cab read (fn 0x19) is unsafe on firmware 12.x, so check the slot "
+        "in FM9-Edit's cab manager or audition the preset")
+
+    def _await_ack(self, fn: int, timeout: float = 1.0) -> bool:
+        """True once the unit answers fn 0x64 `<fn> 00` for the frame just
+        sent (captured: FM9-Edit gets one per cab frame, within 10 ms)."""
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            for msg in self.inp.iter_pending():
+                if msg.type != "sysex":
+                    continue
+                got = p.parse_multipurpose(list(msg.data))
+                if got is not None and got[0] == fn:
+                    return got[1] == 0
+            time.sleep(0.002)
+        return False
+
+    def _send_cab_frames(self, frames: list[list[int]]) -> int:
+        """Send a retargeted cab dump one frame at a time, each after the
+        previous one's ack. A missing or non-zero ack stops the send right
+        there, so the unit never receives a body for a head it refused."""
+        self._drain()
+        acked = 0
+        for i, frame in enumerate(frames):
+            self.cab_guard.check(frame[5])
+            self.outp.send(mido.Message("sysex", data=frame[1:-1]))
+            if not self._await_ack(frame[5]):
+                raise RuntimeError(
+                    f"the unit did not acknowledge cab frame {i + 1} of "
+                    f"{len(frames)} (fn 0x{frame[5]:02X}); stopped there, "
+                    f"{acked} frame(s) were accepted before it")
+            acked += 1
+        return acked
+
+    def _cab_whitelist_check(self, bank: int, number: int) -> int:
         if bank < 1 or number < 1:
             raise ValueError("bank and number are 1-based, as FM9-Edit "
                              "shows them")
@@ -834,6 +880,34 @@ class FM9:
                 f"IR install to user cab bank {bank} number {number} "
                 f"(flat index {flat}) refused: it is outside "
                 "TONECOMMAND_CAB_SLOTS")
+        return flat
+
+    def install_user_cab_at(self, raw: bytes, bank: int, number: int,
+                            filename: str = "") -> CabInstall:
+        """Send a validated IR to user-cab (bank, number), as the editor
+        numbers them. Whitelisted flat as (bank-1)*512+(number-1).
+
+        Bank >= 2 (issue #43): the captured encoding, no read of any kind
+        (the fn 0x19 read hangs firmware 12.x, so cab_read_guard is not
+        consulted and nothing is probed), every frame acked by the unit
+        before the next is sent, verified=False with the note saying so.
+
+        Bank 1: unchanged. The guard is the first statement, then the
+        destination is read-probed and the write uses only the addressing
+        the device itself answered for; callers verify by reading back.
+        """
+        if bank >= 2:
+            flat = self._cab_whitelist_check(bank, number)
+            cf = cabfile.parse(raw, filename)
+            idx, tag = next(self._cab_addr_candidates(bank, number))
+            assert idx == flat
+            frames = cabfile.retarget(cf, idx, tag=tag)
+            acks = self._send_cab_frames(frames)
+            time.sleep(0.2)          # the unit took ~120 ms to ack the tail
+            return CabInstall(cf, idx, tag, False, self.CAB_UNVERIFIED_NOTE,
+                              acks)
+        cab_read_guard()          # before parse, whitelist or probe (#43)
+        self._cab_whitelist_check(bank, number)
         cf = cabfile.parse(raw, filename)   # re-validated at this boundary
         idx, tag = self.probe_cab_encoding(bank, number)
         frames = cabfile.retarget(cf, idx, tag=tag)
@@ -843,7 +917,8 @@ class FM9:
             self.outp.send(mido.Message("sysex", data=frame[1:-1]))
             time.sleep(0.03)
         time.sleep(1.0)
-        return cf, idx, tag
+        return CabInstall(cf, idx, tag, False,
+                          "read back pending; the caller verifies")
 
     def set_tempo(self, bpm: int):
         """Set the global tempo. Fire and forget, and it says so.

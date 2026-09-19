@@ -1,0 +1,212 @@
+{
+ "source": "snoize MIDI Monitor, spy on output to FM9, 2026-09-19 16:18 local; FM9-Edit (Cabs: Standard & UltraRes) writing BT_3VH4Luke_1 to U1.0523 then Save; FM9 firmware 12.x",
+ "editor_slot": "U1.0523",
+ "flat_index": 522,
+ "bank_number_as_bundle_map": [
+  2,
+  11
+ ],
+ "head": "F0 00 01 74 12 7A 0A 14 00 10 63 F7",
+ "tail": "F0 00 01 74 12 7C 12 05 41 4F 03 71 F7",
+ "chunks": [
+  {
+   "len": 1290,
+   "prefix": "F0 00 01 74 12 7B 00 02",
+   "sha256": "9c505a2ffa2d3057e4ff2f0dceca07655068ab4f8e44d1212373992bd2cc7c97"
+  },
+  {
+   "len": 1290,
+   "prefix": "F0 00 01 74 12 7B 00 02",
+   "sha256": "a2b193c09b5e7dde68976f0df4107dd64543b4949294672f39ec1f3972f8f0d8"
+  },
+  {
+   "len": 1290,
+   "prefix": "F0 00 01 74 12 7B 00 02",
+   "sha256": "da14f028612b0971b1213c975b5c27f9a91c3ca366d67ae87f8335b90f88a8ec"
+  },
+  {
+   "len": 1290,
+   "prefix": "F0 00 01 74 12 7B 00 02",
+   "sha256": "fd89818c426372b2ac0c10ecdf8244b79d1b99374599c879f1bdf718d22a2ff8"
+  },
+  {
+   "len": 1290,
+   "prefix": "F0 00 01 74 12 7B 00 02",
+   "sha256": "172148ef56c2fc1eb8fbec4e3c59611bb24f2dbaa85a88b6866aca6415d76ca4"
+  },
+  {
+   "len": 1290,
+   "prefix": "F0 00 01 74 12 7B 00 02",
+   "sha256": "e459456da349caf20565c74a67b0d50f8769a1efcb309da8a9ac5f5e599e8243"
+  },
+  {
+   "len": 1290,
+   "prefix": "F0 00 01 74 12 7B 00 02",
+   "sha256": "eb6ebe0df6878bffc98af0f40330f3d6feca8e66af4501281af688374590fb75"
+  },
+  {
+   "len": 1290,
+   "prefix": "F0 00 01 74 12 7B 00 02",
+   "sha256": "2e9062224584cc651c6d2e8a60b25643257528aeaf65e4bfcf17f0cd59293ad3"
+  }
+ ],
+ "sequence": [
+  {
+   "t_ms": 0.0,
+   "dir": "To FM9",
+   "fn": "7A",
+   "len": 12,
+   "hex": "F0 00 01 74 12 7A 0A 14 00 10 63 F7"
+  },
+  {
+   "t_ms": 10.894,
+   "dir": "From FM9",
+   "fn": "64",
+   "len": 10,
+   "hex": "F0 00 01 74 12 64 7A 00 09 F7"
+  },
+  {
+   "t_ms": 11.806,
+   "dir": "To FM9",
+   "fn": "7B",
+   "len": 1290,
+   "hex": "F0 00 01 74 12 7B 00 02 42 28 7D 1A ..."
+  },
+  {
+   "t_ms": 19.411,
+   "dir": "From FM9",
+   "fn": "64",
+   "len": 10,
+   "hex": "F0 00 01 74 12 64 7B 00 08 F7"
+  },
+  {
+   "t_ms": 20.967,
+   "dir": "To FM9",
+   "fn": "7B",
+   "len": 1290,
+   "hex": "F0 00 01 74 12 7B 00 02 5B 12 5B 1A ..."
+  },
+  {
+   "t_ms": 28.533,
+   "dir": "From FM9",
+   "fn": "64",
+   "len": 10,
+   "hex": "F0 00 01 74 12 64 7B 00 08 F7"
+  },
+  {
+   "t_ms": 29.814,
+   "dir": "To FM9",
+   "fn": "7B",
+   "len": 1290,
+   "hex": "F0 00 01 74 12 7B 00 02 12 38 51 0E ..."
+  },
+  {
+   "t_ms": 37.418,
+   "dir": "From FM9",
+   "fn": "64",
+   "len": 10,
+   "hex": "F0 00 01 74 12 64 7B 00 08 F7"
+  },
+  {
+   "t_ms": 39.507,
+   "dir": "To FM9",
+   "fn": "7B",
+   "len": 1290,
+   "hex": "F0 00 01 74 12 7B 00 02 27 67 0B 28 ..."
+  },
+  {
+   "t_ms": 47.124,
+   "dir": "From FM9",
+   "fn": "64",
+   "len": 10,
+   "hex": "F0 00 01 74 12 64 7B 00 08 F7"
+  },
+  {
+   "t_ms": 49.136,
+   "dir": "To FM9",
+   "fn": "7B",
+   "len": 1290,
+   "hex": "F0 00 01 74 12 7B 00 02 55 0E 09 18 ..."
+  },
+  {
+   "t_ms": 56.978,
+   "dir": "From FM9",
+   "fn": "64",
+   "len": 10,
+   "hex": "F0 00 01 74 12 64 7B 00 08 F7"
+  },
+  {
+   "t_ms": 58.619,
+   "dir": "To FM9",
+   "fn": "7B",
+   "len": 1290,
+   "hex": "F0 00 01 74 12 7B 00 02 5D 57 6B 2E ..."
+  },
+  {
+   "t_ms": 66.23,
+   "dir": "From FM9",
+   "fn": "64",
+   "len": 10,
+   "hex": "F0 00 01 74 12 64 7B 00 08 F7"
+  },
+  {
+   "t_ms": 67.24,
+   "dir": "To FM9",
+   "fn": "7B",
+   "len": 1290,
+   "hex": "F0 00 01 74 12 7B 00 02 34 4B 25 21 ..."
+  },
+  {
+   "t_ms": 74.955,
+   "dir": "From FM9",
+   "fn": "64",
+   "len": 10,
+   "hex": "F0 00 01 74 12 64 7B 00 08 F7"
+  },
+  {
+   "t_ms": 76.973,
+   "dir": "To FM9",
+   "fn": "7B",
+   "len": 1290,
+   "hex": "F0 00 01 74 12 7B 00 02 5B 44 7E 61 ..."
+  },
+  {
+   "t_ms": 84.605,
+   "dir": "From FM9",
+   "fn": "64",
+   "len": 10,
+   "hex": "F0 00 01 74 12 64 7B 00 08 F7"
+  },
+  {
+   "t_ms": 86.743,
+   "dir": "To FM9",
+   "fn": "7C",
+   "len": 13,
+   "hex": "F0 00 01 74 12 7C 12 05 41 4F 03 71 F7"
+  },
+  {
+   "t_ms": 208.429,
+   "dir": "From FM9",
+   "fn": "64",
+   "len": 10,
+   "hex": "F0 00 01 74 12 64 7C 00 0F F7"
+  },
+  {
+   "t_ms": 211.466,
+   "dir": "To FM9",
+   "fn": "01",
+   "len": 23,
+   "hex": "F0 00 01 74 12 01 4B 00 00 00 00 00 0A 14 00 00 00 00 00 00 00 43 F7"
+  },
+  {
+   "t_ms": 212.071,
+   "dir": "From FM9",
+   "fn": "01",
+   "len": 60,
+   "hex": "F0 00 01 74 12 01 4B 00 00 00 00 00 01 00 00 00 00 00 00 20 00 21 15 0B 73 1A 59 10 34 26 1D 2D 36 2A 7C 62 00 00 00 00 30 00 00 00 00 00 00 00 00 20 00 00 00 49 40 00 00 00 5A F7"
+  }
+ ],
+ "source_file_sha256": "bb633a5a6d97f725836752f05e150608d3ba2d80f8e64b3ed5442e7106ea8564",
+ "source_file_head": "F0 00 01 74 12 7A 0C 10 00 10 61 F7",
+ "note": "the body chunks are a commercial IR and stay local (kb/captures/); tests compare by sha256 here and byte for byte when the local capture and source file exist"
+}

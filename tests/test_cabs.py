@@ -46,7 +46,9 @@ def test_retarget_rewrites_model_and_slot_with_valid_checksums():
     cf = cabfile.parse(make_cab(model=0x10), "U1-x.syx")
     frames = cabfile.retarget(cf, 4)
     assert all(f[4] == p.MODEL_FM9 for f in frames)
-    assert ((frames[0][6] << 7) | frames[0][7]) == 4
+    # the captured FM9-Edit head layout (#43): low septet, 0x10 | high
+    assert frames[0][6:8] == [0x04, 0x10]
+    assert cabfile.head_index(frames[0][6:-2]) == 4
     assert all(p.checksum(f[1:-2]) == f[-2] for f in frames)
 
 
@@ -163,7 +165,10 @@ def test_a_purchased_bundle_installs_preset_and_cabs_where_the_map_says(
     cab = client.post("/api/install-cab", json={
         "hash": d["cabs"][0]["hash"], "bank": 2, "number": 72,
         "filename": "cabs/BT_Cab_01.syx"}).json()
-    assert cab["ok"] is True and "byte-identical" in cab["detail"]
+    # bank 2: sent as FM9-Edit sends it and acked frame by frame, not read
+    # back (the unit's cab read is unsafe on fw 12.x): #43
+    assert cab["ok"] is True and cab["verified"] is False
+    assert "not read back" in cab["detail"]
 
 
 def test_a_bundle_for_another_device_is_refused():

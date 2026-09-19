@@ -258,17 +258,29 @@ class SimFM9Core:
         return [p.envelope(0x64, [0x79, 0x00, 0x0A])]
 
     # ---- user-cab (IR) install and read-back (0x19, 0x7A/0x7B/0x7C) ------
+    # The write head's index layout and the per-frame ack are the captured
+    # FM9-Edit behaviour (issue #43, 2026-09-19): head `lo, 0x10|hi, 00,
+    # tag`, and the unit answers fn 0x64 `<fn> 00` to every cab frame.
+    def _cab_ack(self, fn):
+        return [p.envelope(0x64, [fn, 0x00])]
+
     def _fn_7a(self, b):
-        self._cab_install = {"slot": ((b[0] & 0x7F) << 7) | (b[1] & 0x7F),
+        from . import cabfile
+        slot = cabfile.head_index(list(b))
+        if slot is None:                 # not the captured layout: no ack
+            self._cab_install = None
+            return []
+        self._cab_install = {"slot": slot,
                              "tag": b[3] if len(b) > 3 else 0x10,
                              "chunks": []}
-        return []
+        return self._cab_ack(0x7A)
 
     def _fn_7b(self, b):
         pending = getattr(self, "_cab_install", None)
-        if pending is not None:
-            pending["chunks"].append(list(b))
-        return []
+        if pending is None:
+            return []
+        pending["chunks"].append(list(b))
+        return self._cab_ack(0x7B)
 
     def _fn_7c(self, b):
         pending = getattr(self, "_cab_install", None)
@@ -279,10 +291,10 @@ class SimFM9Core:
             self.user_cabs = {}
         self.user_cabs[(pending["slot"], pending["tag"])] = pending["chunks"]
         self.undecoded.add(
-            "user-cab install (0x7A/0x7B/0x7C write direction, model-byte "
-            "rewrite, slot addressing) is not hardware-verified; verify by "
-            "reading the cab back on a real unit")
-        return []
+            "user-cab install: the frames match FM9-Edit's captured write "
+            "byte for byte (#43) but the unit's own read-back is unsafe on "
+            "firmware 12.x; verify in FM9-Edit's cab manager or by ear")
+        return self._cab_ack(0x7C)
 
     def _fn_19(self, b):
         # A cab read ALWAYS answers: an empty slot answers with an all-0x7F
