@@ -348,6 +348,14 @@ stored preset references is never overwritten or removed). The FM9 and the
 HeadRush declare that they play no captures today, in one line, and
 `conformance()` refuses any device that claims the gate without the methods.
 
+Bring your own captures: drop one `.nam` file, several, or a folder on the
+command bar and each comes back as one honest line; a set of captures of one
+amp maps to channels A to D, or to scenes when there are more than four, in
+gain order when the files say their tone type. Duplicates are recognised and
+skipped. When a capture cannot be used (none suitable, too heavy, a unit
+without NAM support, the gig lock, a read-back that does not match), the
+answer is one line saying what was done instead; nothing is retried blindly.
+
 ## Install
 
 **macOS, Windows and Linux are all supported.** Pick yours below. Drivers and

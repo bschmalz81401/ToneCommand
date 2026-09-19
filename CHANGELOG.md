@@ -4,6 +4,29 @@ Notable changes to ToneCommand. Dates are UTC.
 
 ## Unreleased
 
+### Added (bring your own captures, the intake half, 2026-09-19: #149; failure lines: #150)
+- `fm9/nam_intake.py`: one `.nam` file, several, or a folder (walked for
+  `.nam`, anything else skipped by name) go through I1 and come back as
+  one honest line each (what arrived, or the not-on-file version);
+  duplicates by sha256, within the drop or against the library the page
+  remembers, are reported once and never taken in twice; captures of one
+  amp (same gear make and model on file) form a set that maps to channels
+  A to D of one block when four or fewer and to scenes when more, in gain
+  order (clean, the crunch family, hi_gain) when every member carries a
+  tone_type and in file order otherwise; mixed amps stay separate, lone
+  ones are "added to your library, say the word and I'll build with it".
+  `POST /api/captures/intake {files: [{name, data}], known: [sha256]}`
+  answers the records, sets with their mapping, duplicates and the line;
+  the composer accepts dropped `.nam` files and shows the line. Nothing
+  reaches the unit: installing is I4's (#147).
+- `fm9/capture_failures.py`: the five failure paths in one line each that
+  says what was done instead: no suitable capture (the model), too heavy
+  (a lighter variant when offered, else the model; the verdict is I0's,
+  passed in), no NAM support on the unit (the model), gig gate (the
+  existing refusal word for word), read-back mismatch (stop, report,
+  never retry). `guarded_install` runs a plan in order and stops at the
+  first install the unit does not read back, so a build is never left
+  half-applied silently.
 ### Added (ToneX on the capture primitive, read-only, 2026-09-19: #163)
 - `devices/tonex/`: the pedal on K1's `CaptureSlots`. `frames.py` is the
   serial frame decoder moved out of `tools/tonex_decode.py` (which now

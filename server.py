@@ -27,7 +27,8 @@ from fm9.adapter import (CAPABILITY_PROTOCOLS, UNDECLARED, Capabilities,
 from fm9.device import FM9, FM9NotFound, get_cab_slots
 from fm9.registry import Registry
 from fm9 import (acquire, ai_settings, artist_pack, bundlefile, cabfile, describe, designs,
-                 diagnostics, editbuffer, gallery, gift_of_tone, health, planner, presetfile,
+                 diagnostics, editbuffer, gallery, gift_of_tone, health, nam_intake, planner,
+                 presetfile,
                  recipes as recipebook, rigprofile, scratch_build, share,
                  starter_template)
 # `slots` is a local variable in more than one function here, so the module
@@ -3742,6 +3743,34 @@ def api_artist_pack(body: dict):
     else:
         out["line"] = res.line
     return out
+
+
+@app.post("/api/captures/intake")
+def api_captures_intake(body: dict):
+    """Bring your own captures (#149, the intake half): dropped .nam files
+    read through I1, described in one line each, deduplicated by sha256,
+    grouped into sets of one amp and mapped to channels or scenes. Nothing
+    reaches the unit; installing is I4's (#147)."""
+    import base64
+    files = body.get("files") or []
+    if not isinstance(files, list) or not files:
+        return JSONResponse({"error": "drop one or more .nam files"},
+                            status_code=400)
+    inputs = []
+    for f in files:
+        try:
+            name = str((f or {}).get("name") or "capture.nam")
+            data = base64.b64decode(str((f or {}).get("data") or ""), validate=True)
+        except Exception:
+            return JSONResponse({"error": f"could not read the file data for "
+                                          f"{(f or {}).get('name', '?')}"},
+                                status_code=400)
+        inputs.append((name, data))
+    known = {str(h) for h in (body.get("known") or [])}
+    result = nam_intake.intake(inputs, known)
+    log.info("capture intake: %d file(s), %d set(s), %d duplicate(s)",
+             len(result.items), len(result.sets), len(result.duplicates))
+    return result.as_dict()
 
 
 @app.post("/api/gift-of-tone/fetch")

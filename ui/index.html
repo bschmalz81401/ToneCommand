@@ -3289,6 +3289,7 @@
   }
   #shareerrtitle { color: var(--cyan); letter-spacing: 0.05em; }
 
+.composer.dropping { outline: 2px dashed var(--cyan); outline-offset: 4px; }
 </style>
   <link rel="icon" type="image/png" href="/logo.png">
 </head>
@@ -3459,7 +3460,7 @@
                       placeholder="Describe the sound, or paste a link..."></textarea>
             <button id="engage">GENERATE PLAN</button>
           </div>
-          <div class="hint composerhint">Press Enter. Nothing changes on your amp until you say go.</div>
+          <div class="hint composerhint">Press Enter. Nothing changes on your amp until you say go. Drop .nam captures here.</div>
         </div>
         <!-- Source reading is reached through the same prompt. These controls
              retain the established implementation without exposing a second
@@ -8092,6 +8093,54 @@ function renderChat() {
 
 // The box grows with the sentence rather than scrolling it sideways. Reset
 // first, or it can only ever get taller.
+// Bring your own captures (#149): .nam files dropped on the composer go
+// through the intake and come back as one line. Nothing reaches the unit
+// here; installing them is I4's (#147).
+function namDropSetup() {
+  const zone = document.querySelector('.composer');
+  if (!zone) return;
+  const stop = e => { e.preventDefault(); e.stopPropagation(); };
+  ['dragenter', 'dragover'].forEach(ev => zone.addEventListener(ev, e => {
+    stop(e); zone.classList.add('dropping');
+  }));
+  ['dragleave', 'drop'].forEach(ev => zone.addEventListener(ev, e => {
+    stop(e); zone.classList.remove('dropping');
+  }));
+  zone.addEventListener('drop', e => runNamIntake(Array.from(e.dataTransfer.files || [])));
+}
+
+function namLibraryKnown() {
+  try { return JSON.parse(localStorage.getItem('namLibrary') || '[]'); }
+  catch (e) { return []; }
+}
+
+async function runNamIntake(files) {
+  const nams = files.filter(f => /\.nam$/i.test(f.name));
+  if (!nams.length) { chatNote('Drop .nam capture files; nothing else is taken in here.'); return; }
+  const payload = [];
+  for (const f of nams) {
+    const buf = new Uint8Array(await f.arrayBuffer());
+    let bin = ''; for (const b of buf) bin += String.fromCharCode(b);
+    payload.push({name: f.name, data: btoa(bin)});
+  }
+  chatNote(`Reading ${nams.length} capture${nams.length === 1 ? '' : 's'}...`);
+  try {
+    const r = await fetch('/api/captures/intake', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({files: payload, known: namLibraryKnown()})});
+    const d = await r.json();
+    if (d.error) throw new Error(d.error);
+    chatNote(d.line);
+    // remember what arrived so a re-drop is recognised as a duplicate
+    const known = new Set(namLibraryKnown());
+    for (const it of d.items) if (it.record) known.add(it.sha256);
+    try { localStorage.setItem('namLibrary', JSON.stringify(Array.from(known))); } catch (e) { /* fine */ }
+  } catch (e) {
+    chatNote(`Could not take those in: ${e.message}`);
+  }
+  renderChat();
+}
+
 function growPrompt() {
   const t = $('prompt');
   // Collapse to nothing first, then measure. `height: auto` does not fully
@@ -9726,6 +9775,7 @@ async function apply() {
 // something agreed to build, and not before. Two buttons in this row meant
 // choosing, before typing a word, whether your own request was clear enough,
 // which is not a thing anybody knows about their own request.
+namDropSetup();
 $('engage').onclick = submitRequest;
 $('prompt').addEventListener('input', growPrompt);
 $('prompt').addEventListener('keydown', e => {
