@@ -327,6 +327,42 @@ def test_chat_stream_uses_the_same_routing_and_context(rig, stub_model):
     assert '"advisory"' in r.text and '"diagnosis"' in r.text
 
 
+@pytest.mark.parametrize("text,kind", [
+    ("why does my rhythm sound muddy", "diagnose"),
+    ("why is my lead so thin?", "diagnose"),
+    ("hey, why does my scene 3 sound harsh", "diagnose"),
+    ("what's the difference between scene 1 and scene 2", "compare"),
+    ("difference between snapshot a and snapshot b?", "compare"),
+    ("how do scene 1 and scene 2 differ", "compare"),
+    ("scene 1 and design Night differ", "compare"),
+    ("how do I get scene 1 closer to scene 2", "gap"),
+    ("make scene 1 closer to scene 2", "gap"),
+    ("closer to scene 2", "gap"),
+])
+def test_chat_the_three_shapes_are_recognised(text, kind):
+    assert adv.parse_question(text)["kind"] == kind
+
+
+@pytest.mark.parametrize("text", [
+    "why does the rhythm sound muddy",          # 'the' is not the stated form
+    "why does my rhythm sound muddy today",     # trailing words: not the shape
+    "I wonder why does my rhythm sound muddy",  # not at the start
+    "what is the difference between them",      # one object
+    "differences are fine",
+    "scene 1 differs a lot",                    # no 'and'
+    "closer to",
+])
+def test_chat_shapes_outside_the_spec_are_not_routed(text):
+    assert adv.parse_question(text) is None
+
+
+def test_chat_a_gap_with_an_unresolvable_object_is_not_routed(rig, stub_model):
+    client = TestClient(server.app)
+    r = _chat(client, "is it closer to done?")
+    assert r.status_code == 200 and "advisory" not in r.json()
+    assert not stub_model["context"].startswith("ADVISORY FINDINGS")
+
+
 def test_chat_precedence_diagnose_before_compare_before_gap():
     assert adv.parse_question("why does my scene 1 sound thin")["kind"] == "diagnose"
     assert adv.parse_question("difference between scene 1 and scene 2")["kind"] == "compare"

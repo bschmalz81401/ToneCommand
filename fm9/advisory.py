@@ -481,12 +481,22 @@ def diagnose(cap: dict, symptom: str, reg) -> dict:
 
 _GREET = r"^\s*(?:(?:hi|hey|hello|ok|okay|so|please|tonecommand)[,:!\s]+)*"
 _OBJ = r"(.+?)"
-RE_DIAGNOSE = re.compile(_GREET + r"why\s+(?:does|is)\s+(?:my|the)\s+" + _OBJ
-                         + r"\s+(?:sound|so)\s+(?:so\s+)?([a-z]+)\s*[?.!]*\s*$", re.I)
-RE_COMPARE = re.compile(_GREET + r"(?:what(?:'s| is)\s+the\s+)?difference\s+between\s+" + _OBJ
-                        + r"\s+and\s+" + _OBJ + r"\s*[?.!]*\s*$", re.I)
-RE_GAP = re.compile(_GREET + r"(?:how\s+(?:do|can|would)\s+i\s+)?(?:get|make|bring|move)?\s*"
-                    + r"(?:" + _OBJ + r"\s+)?closer\s+to\s+" + _OBJ + r"\s*[?.!]*\s*$", re.I)
+_END = r"\s*[?.!]*\s*$"
+#: The three shapes, exactly as REQ-005 states them. Anchored at the start
+#: (after an optional greeting) and at the end, so a sentence that merely
+#: contains the words is not a question of this kind.
+#:  (3) why (does|is) my <scene> (sound|so) <symptom>
+RE_DIAGNOSE = re.compile(_GREET + r"why\s+(?:does|is)\s+my\s+" + _OBJ
+                         + r"\s+(?:sound|so)\s+([a-z]+)" + _END, re.I)
+#:  (1) [what's the] difference between <X> and <Y>
+#:      or [how do] <X> and <Y> differ
+RE_COMPARE = re.compile(_GREET + r"(?:what(?:'s| is)\s+the\s+)?difference\s+between\s+"
+                        + _OBJ + r"\s+and\s+" + _OBJ + _END, re.I)
+RE_DIFFER = re.compile(_GREET + r"(?:how\s+do\s+)?" + _OBJ + r"\s+and\s+" + _OBJ
+                       + r"\s+differ" + _END, re.I)
+#:  (2) [how do I get/make] <X> closer to <Y>, or closer to <Y>
+RE_GAP = re.compile(_GREET + r"(?:how\s+(?:do|can|would)\s+i\s+)?(?:(?:get|make|bring)\s+)?"
+                    + r"(?:" + _OBJ + r"\s+)?closer\s+to\s+" + _OBJ + _END, re.I)
 
 
 def parse_question(text: str) -> dict | None:
@@ -497,7 +507,7 @@ def parse_question(text: str) -> dict | None:
     m = RE_DIAGNOSE.match(t)
     if m and m.group(2).lower() in SYMPTOMS:
         return {"kind": "diagnose", "scene": m.group(1).strip(), "symptom": m.group(2).lower()}
-    m = RE_COMPARE.match(t)
+    m = RE_COMPARE.match(t) or RE_DIFFER.match(t)
     if m:
         return {"kind": "compare", "a": m.group(1).strip(), "b": m.group(2).strip()}
     m = RE_GAP.match(t)
