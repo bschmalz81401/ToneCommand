@@ -1,0 +1,430 @@
+<!-- Ported from shieldbearerusa.com/admin/metrics (same gate hash, same renderer) so one
+     passphrase and one JSON shape serve both sites. Served at /admin/metrics/ by build.py. -->
+<style>
+    :root {
+      color-scheme: dark;
+      --bg: #000000;
+      --panel: #0a0606;
+      --panel-2: #160a0a;
+      --line: #e74c3c;
+      --line-soft: rgba(231, 76, 60, 0.22);
+      --text: #f0c9c4;
+      --text-strong: #ffe9e5;
+      --muted: #c98a82;
+      --ok: #1cff57;
+      --font: "Courier New", Courier, monospace;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at top, rgba(231, 76, 60, 0.10), transparent 38%),
+        linear-gradient(180deg, #000 0%, #050202 100%);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 14px;
+    }
+    h1, h2, h3 { color: var(--text-strong); letter-spacing: .14em; font-weight: 700; }
+    a { color: var(--line); }
+
+    /* Passphrase gate */
+    #passGate {
+      position: fixed; inset: 0; z-index: 50;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      background: #000; text-align: center; padding: 24px;
+    }
+    #passGate h1 { font-size: 16px; margin-bottom: 18px; }
+    #passGate input {
+      background: #0a0606; border: 1px solid var(--line-soft); color: var(--text);
+      font: inherit; padding: 10px 14px; min-width: 260px; outline: none;
+    }
+    #passGate input:focus { border-color: var(--line); }
+    #passGate button {
+      margin-top: 12px; background: var(--line); border: 0; color: #000;
+      padding: 10px 22px; cursor: pointer; font: inherit; letter-spacing: .12em;
+    }
+    #passGate .err { color: var(--line); margin-top: 12px; font-size: 13px; min-height: 1em; }
+    .pass-locked > .wrap { display: none; }
+
+    .wrap { max-width: 720px; margin: 0 auto; padding: 28px 20px 60px; }
+    .header { border-bottom: 1px solid var(--line-soft); padding-bottom: 14px; margin-bottom: 24px; }
+    .header h1 { font-size: 20px; margin: 0; }
+    .header p { color: var(--muted); margin: 8px 0 0; font-size: 12px; letter-spacing: .08em; }
+
+    #metrics-status {
+      background: rgba(231, 76, 60, 0.08);
+      border-left: 2px solid var(--line);
+      padding: 12px 14px;
+      margin-bottom: 22px;
+      font-size: 13px;
+    }
+
+    .metrics-section { margin-bottom: 28px; }
+    .metrics-section h3 {
+      font-size: 12px;
+      letter-spacing: .22em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin: 0 0 12px;
+    }
+
+    .metrics-headline {
+      font-size: 14px;
+      color: var(--muted);
+      letter-spacing: .06em;
+      margin: 0;
+    }
+    .metrics-headline__n {
+      color: var(--text-strong);
+      font-size: 32px;
+      margin-right: .35em;
+    }
+    .metrics-headline__delta {
+      color: var(--line);
+      font-size: 13px;
+      letter-spacing: .12em;
+      margin-left: .5em;
+    }
+    .metrics-headline__cmp {
+      color: var(--muted);
+      font-size: 11px;
+      letter-spacing: .14em;
+      margin-left: .4em;
+    }
+
+    .metrics-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      border-top: 1px solid var(--line-soft);
+    }
+    .metrics-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--line-soft);
+      font-size: 13px;
+      gap: 1.5rem;
+    }
+    .metrics-row__label { color: var(--text-strong); }
+    .metrics-row__value { color: var(--muted); white-space: nowrap; }
+    .metrics-row__share { color: rgba(201,138,130,.7); font-size: 11px; margin-left: .3em; }
+    .metrics-row--empty { color: var(--muted); font-style: italic; }
+    .metrics-row--shipped {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 4px;
+    }
+    .metrics-row--shipped .metrics-row__date {
+      color: var(--line);
+      font-size: 11px;
+      letter-spacing: .14em;
+    }
+    .metrics-row--shipped .metrics-row__label {
+      color: var(--text);
+      font-weight: 400;
+      font-size: 13px;
+    }
+
+    .metrics-meta {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 26px;
+      letter-spacing: .04em;
+      line-height: 1.7;
+    }
+    .metrics-meta__period {
+      display: block;
+      letter-spacing: .2em;
+      text-transform: uppercase;
+      color: var(--text);
+      margin-bottom: .25rem;
+    }
+
+    @media (max-width: 700px) {
+      .wrap { padding: 20px 14px 48px; }
+    }
+  </style>
+</head>
+<body class="pass-locked">
+
+  <div id="passGate">
+    <h1>RESTRICTED // TONECOMMAND METRICS</h1>
+    <input id="passInput" type="password" autocomplete="off" placeholder="Passphrase" autofocus />
+    <button id="passSubmit" type="button">Enter</button>
+    <div id="passErr" class="err"></div>
+  </div>
+
+  <div class="wrap">
+    <div class="header">
+      <h1>TONECOMMAND METRICS</h1>
+      <p>Operator view of tonecommand.com. Live GA4 data (its own stream), refreshed daily at 04:10 ET. Aggregate only. Fed by the tonecommand-metrics-publisher Lambda into site/metrics.json.</p>
+    </div>
+
+    <div id="metrics-status" hidden></div>
+
+    <div class="metrics-section">
+      <h3>This period</h3>
+      <p class="metrics-headline" id="metrics-headline">
+        <span class="metrics-headline__n">--</span> sessions
+      </p>
+    </div>
+
+    <div class="metrics-section">
+      <h3>Where people came from</h3>
+      <ul class="metrics-list" id="metrics-channels">
+        <li class="metrics-row metrics-row--empty">Loading channel mix.</li>
+      </ul>
+    </div>
+
+    <div class="metrics-section">
+      <h3>Where in the world</h3>
+      <ul class="metrics-list" id="metrics-geography">
+        <li class="metrics-row metrics-row--empty">Loading geography.</li>
+      </ul>
+    </div>
+
+    <div class="metrics-section">
+      <h3>Top cities</h3>
+      <ul class="metrics-list" id="metrics-cities">
+        <li class="metrics-row metrics-row--empty">Loading cities.</li>
+      </ul>
+    </div>
+
+    <div class="metrics-section">
+      <h3>What people did</h3>
+      <ul class="metrics-list" id="metrics-events">
+        <li class="metrics-row metrics-row--empty">Loading event counts.</li>
+      </ul>
+    </div>
+
+    <div class="metrics-section">
+      <h3>What we shipped</h3>
+      <ul class="metrics-list" id="metrics-shipped">
+        <li class="metrics-row metrics-row--empty">Loading shipped log.</li>
+      </ul>
+    </div>
+
+    <div class="metrics-meta">
+      <span class="metrics-meta__period" id="metrics-period"></span>
+      <span id="metrics-generated"></span>
+      <br>
+      <span id="metrics-note"></span>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      // Same passphrase hash as /admin/quiz and /admin/logs, so one
+      // passphrase unlocks every internal tool.
+      var EXPECTED_HASH = "64354c5c7192a65cc78df77adbf77b4df37d6c60868cc83085f48f4f97e5848f";
+      var SESSION_KEY = "tc-metrics-admin-unlocked";
+
+      async function sha256Hex(str) {
+        var enc = new TextEncoder().encode(str);
+        var buf = await crypto.subtle.digest("SHA-256", enc);
+        return Array.from(new Uint8Array(buf))
+          .map(function (b) { return b.toString(16).padStart(2, "0"); }).join("");
+      }
+      function unlock() {
+        document.body.classList.remove("pass-locked");
+        var g = document.getElementById("passGate");
+        if (g) g.remove();
+        // On an already-unlocked reload this runs before the boot
+        // script below has defined __metricsBoot, so record intent and
+        // let that script boot itself once it is defined.
+        window.__metricsUnlocked = true;
+        if (window.__metricsBoot) window.__metricsBoot();
+      }
+      try {
+        if (sessionStorage.getItem(SESSION_KEY) === "1") { unlock(); return; }
+      } catch (e) {}
+      var input = document.getElementById("passInput");
+      var btn = document.getElementById("passSubmit");
+      var err = document.getElementById("passErr");
+      async function check() {
+        err.textContent = "";
+        var typed = input.value;
+        if (!typed) { err.textContent = "Empty."; return; }
+        var hash = await sha256Hex(typed);
+        if (hash === EXPECTED_HASH) {
+          try { sessionStorage.setItem(SESSION_KEY, "1"); } catch (e) {}
+          unlock();
+        } else {
+          err.textContent = "Wrong passphrase.";
+          input.value = ""; input.focus();
+        }
+      }
+      btn.addEventListener("click", check);
+      input.addEventListener("keydown", function (e) { if (e.key === "Enter") check(); });
+    })();
+  </script>
+
+  <script>
+    // Metrics fetcher. Inlined (rather than reusing /js/metrics-renderer.js)
+    // so the admin page is fully self-contained: one file, one passphrase,
+    // one fetch path. Behind the gate. Booted only after unlock so the
+    // numbers do not flash through Network tab before auth.
+    window.__metricsBoot = function () {
+      var src = "/admin/metrics.json";
+
+      function el(id) { return document.getElementById(id); }
+      function fmtNumber(n) { return n == null ? "--" : Number(n).toLocaleString(); }
+      function fmtDelta(pct) {
+        if (pct == null || isNaN(pct)) return "";
+        var sign = pct > 0 ? "+" : "";
+        return sign + Number(pct).toFixed(1) + "%";
+      }
+      function fmtDate(iso) {
+        if (!iso) return "";
+        var d = new Date(iso);
+        return isNaN(d.getTime()) ? iso : d.toISOString().slice(0, 10);
+      }
+      function fmtGeneratedAt(iso) {
+        if (!iso) return "";
+        var d = new Date(iso);
+        return isNaN(d.getTime()) ? iso : d.toUTCString().replace("GMT", "UTC");
+      }
+      function escapeText(s) {
+        return String(s == null ? "" : s)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;");
+      }
+      function setText(node, text) { if (node) node.textContent = text; }
+
+      function renderHeadline(headline) {
+        var node = el("metrics-headline");
+        if (!node) return;
+        if (!headline) { setText(node, "No headline data this period."); return; }
+        var sessions = fmtNumber(headline.sessions);
+        var delta = fmtDelta(headline.deltaPct);
+        var cmp = headline.comparison ? " " + String(headline.comparison) : "";
+        node.innerHTML =
+          '<span class="metrics-headline__n">' + sessions + '</span>' +
+          ' sessions' +
+          (delta ? ' <span class="metrics-headline__delta">' + delta + '</span>' + (cmp ? '<span class="metrics-headline__cmp">' + cmp + '</span>' : '') : '');
+      }
+      function renderChannels(channels) {
+        var node = el("metrics-channels");
+        if (!node) return;
+        if (!Array.isArray(channels) || !channels.length) {
+          node.innerHTML = '<li class="metrics-row metrics-row--empty">No channel data this period.</li>';
+          return;
+        }
+        node.innerHTML = channels.slice(0, 3).map(function (row) {
+          var name = String(row.name || "Unknown");
+          var sessions = fmtNumber(row.sessions);
+          var share = row.share != null ? Number(row.share).toFixed(1) + "%" : "";
+          return '<li class="metrics-row">' +
+            '<span class="metrics-row__label">' + escapeText(name) + '</span>' +
+            '<span class="metrics-row__value">' + sessions + (share ? ' <span class="metrics-row__share">(' + share + ')</span>' : '') + '</span>' +
+          '</li>';
+        }).join("");
+      }
+      function renderGeography(geography) {
+        var node = el("metrics-geography");
+        if (!node) return;
+        if (!Array.isArray(geography) || !geography.length) {
+          node.innerHTML = '<li class="metrics-row metrics-row--empty">No geography data this period.</li>';
+          return;
+        }
+        node.innerHTML = geography.slice(0, 6).map(function (row) {
+          var name = String(row.name || "Unknown");
+          var sessions = fmtNumber(row.sessions);
+          var share = row.share != null ? Number(row.share).toFixed(1) + "%" : "";
+          return '<li class="metrics-row">' +
+            '<span class="metrics-row__label">' + escapeText(name) + '</span>' +
+            '<span class="metrics-row__value">' + sessions + (share ? ' <span class="metrics-row__share">(' + share + ')</span>' : '') + '</span>' +
+          '</li>';
+        }).join("");
+      }
+      function renderCities(cities) {
+        var node = el("metrics-cities");
+        if (!node) return;
+        if (!Array.isArray(cities) || !cities.length) {
+          node.innerHTML = '<li class="metrics-row metrics-row--empty">No city data this period.</li>';
+          return;
+        }
+        node.innerHTML = cities.slice(0, 6).map(function (row) {
+          var name = String(row.name || "Unknown");
+          var sessions = fmtNumber(row.sessions);
+          var share = row.share != null ? Number(row.share).toFixed(1) + "%" : "";
+          return '<li class="metrics-row">' +
+            '<span class="metrics-row__label">' + escapeText(name) + '</span>' +
+            '<span class="metrics-row__value">' + sessions + (share ? ' <span class="metrics-row__share">(' + share + ')</span>' : '') + '</span>' +
+          '</li>';
+        }).join("");
+      }
+      function renderEvents(events) {
+        var node = el("metrics-events");
+        if (!node) return;
+        if (!Array.isArray(events) || !events.length) {
+          node.innerHTML = '<li class="metrics-row metrics-row--empty">No event data this period.</li>';
+          return;
+        }
+        node.innerHTML = events.slice(0, 5).map(function (row) {
+          var name = String(row.name || "unknown_event");
+          var count = fmtNumber(row.count);
+          return '<li class="metrics-row">' +
+            '<span class="metrics-row__label">' + escapeText(name) + '</span>' +
+            '<span class="metrics-row__value">' + count + '</span>' +
+          '</li>';
+        }).join("");
+      }
+      function renderShipped(shipped) {
+        var node = el("metrics-shipped");
+        if (!node) return;
+        if (!Array.isArray(shipped) || !shipped.length) {
+          node.innerHTML = '<li class="metrics-row metrics-row--empty">Nothing shipped this period.</li>';
+          return;
+        }
+        node.innerHTML = shipped.slice(0, 6).map(function (row) {
+          var d = fmtDate(row.date);
+          var label = String(row.label || "");
+          return '<li class="metrics-row metrics-row--shipped">' +
+            '<span class="metrics-row__date">' + escapeText(d) + '</span>' +
+            '<span class="metrics-row__label">' + escapeText(label) + '</span>' +
+          '</li>';
+        }).join("");
+      }
+      function renderMeta(data) {
+        setText(el("metrics-period"), data && data.period && data.period.label ? data.period.label : "");
+        setText(el("metrics-generated"), data && data.generatedAt ? "Refreshed " + fmtGeneratedAt(data.generatedAt) : "");
+        setText(el("metrics-note"), data && data.note ? String(data.note) : "");
+      }
+      function renderStatus(message) {
+        var node = el("metrics-status");
+        if (!node) return;
+        if (!message) { node.hidden = true; return; }
+        node.hidden = false;
+        node.textContent = message;
+      }
+
+      fetch(src, { cache: "no-store" })
+        .then(function (r) {
+          if (!r.ok) throw new Error("HTTP " + r.status);
+          return r.json();
+        })
+        .then(function (data) {
+          renderStatus("");
+          renderMeta(data);
+          renderHeadline(data && data.headline);
+          renderChannels(data && data.channels);
+          renderGeography(data && data.geography);
+          renderCities(data && data.cities);
+          renderEvents(data && data.events);
+          renderShipped(data && data.shipped);
+        })
+        .catch(function () {
+          renderStatus("Numbers are refreshing. Check back later.");
+        });
+    };
+
+    // If the session was already unlocked, the gate script called
+    // unlock() before this script defined __metricsBoot, so the boot
+    // was skipped. Run it now.
+    if (window.__metricsUnlocked) window.__metricsBoot();
+  </script>

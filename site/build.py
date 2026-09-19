@@ -867,7 +867,24 @@ def build_static(recipes: list[dict]) -> None:
         "/shop https://shop.shieldbearerusa.com 302\n"
         "/releases https://github.com/monzta1/ToneCommand/releases 302\n"
         "/issues https://github.com/monzta1/ToneCommand/issues 302\n")
-    (DIST / "robots.txt").write_text(f"User-agent: *\nAllow: /\nSitemap: {SITE_URL}/sitemap.xml\n")
+    (DIST / "robots.txt").write_text(f"User-agent: *\nAllow: /\nSitemap: {SITE_URL}/sitemap.xml\nDisallow: /admin/\n")
+    # /admin/metrics/: the operator view of the site's traffic, ported from
+    # shieldbearerusa.com/admin/metrics (same passphrase gate, same JSON shape,
+    # cities included). site/metrics.json is written daily by the
+    # tonecommand-metrics-publisher Lambda (GA4 Data API, hostname-scoped) and
+    # served at /admin/metrics.json; unlinked and noindex, like the original.
+    admin_dir = DIST / "admin"
+    admin_dir.mkdir(exist_ok=True)
+    metrics_json = SITE / "metrics.json"
+    (admin_dir / "metrics.json").write_text(metrics_json.read_text() if metrics_json.exists()
+                                            else '{"generatedAt": null, "note": "no refresh has landed yet"}\n')
+    (admin_dir / "metrics" / "index.html").parent.mkdir(exist_ok=True)
+    (admin_dir / "metrics" / "index.html").write_text(
+        "<!doctype html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n"
+        "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n"
+        "<meta name=\"robots\" content=\"noindex, nofollow\">\n"
+        "<title>ToneCommand metrics</title>\n<link rel=\"icon\" type=\"image/png\" href=\"/img/logo.png\">\n"
+        + (SITE / "metrics_admin.html").read_text() + "\n</body>\n</html>\n")
     urls = [href for href, _ in NAV] + [f"/docs/{s}/" for s, *_ in DOC_PAGES if s != "setup"]
     urls += [f"/recipes/{r.get('name', r['_file'].stem)}/" for r in recipes]
     (DIST / "sitemap.xml").write_text(
