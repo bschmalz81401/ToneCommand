@@ -4,6 +4,51 @@ Notable changes to ToneCommand. Dates are UTC.
 
 ## Unreleased
 
+### Added (HeadRush display conversion, 2026-09-19: #130)
+- `HeadrushAdapter` TAKES AN OPTIONAL CURVE TABLE. `tapers=` is opt-in and
+  defaults to None, so an adapter built the way every existing caller builds
+  one refuses display conversion exactly as before. With a table,
+  `get_param_display` and `set_param_display` work.
+- THE REGISTRY'S REFUSAL IS UNTOUCHED. It describes the API, which still
+  publishes an opaque `normalizeAlgo` and no formula, and `tapers.py` says the
+  refusal "is still correct about the API and is left alone". The adapter is
+  the right place for the other kind of knowledge, because it can carry the
+  provenance with every value.
+- `get_param_display` RETURNS A `DerivedDisplay`, NEVER A BARE FLOAT: value,
+  the unit's own formatting applied, the curve's name, where the maths came
+  from, and `api_readable=False` on every instance. `get_param_wire` returns a
+  plain float because the unit sent that float, and the asymmetry is the
+  point: a converted number must not be loggable or plannable as though the
+  device had reported it.
+- `set_param_display` CONVERTS AND THEN WRITES THROUGH THE SAME VERIFIED PATH,
+  so the read-back still compares wire values. Only the caller's units change.
+- `UnknownTaper` and `NotConvertible` are not caught. An id the table has never
+  seen means the firmware publishes a curve the table was not built against,
+  and scaling linearly anyway would silently mis-read every value of that
+  parameter.
+
+### Verified on hardware (HeadRush display conversion)
+- The six `hardware_check` rows in `config/headrush_tapers.json`, readings
+  taken off a Core's screen, are now a parametrised test: the adapter
+  reproduces all six as formatted text, `75 %` through `1.48 Hz`.
+- THE DEVICE'S OWN ARITHMETIC AGREES WITH THE TABLE. The unit converts a
+  written wire value to display, snaps the DISPLAY value to the published
+  grid, and converts back (#167). Reproducing the float it ends up holding
+  runs the curve forwards and backwards through that quantisation, and it
+  matches to the last bit on `Amp.TremSpeed`, whose curve is Squared. A
+  linear scale cannot produce those floats, which a second test asserts so the
+  first is evidence about this table rather than arithmetic any curve
+  satisfies. This is stronger corroboration than a photographed screen,
+  because a misread digit cannot produce it.
+
+### Known issues
+- `set_param_display` on a parameter the unit quantizes reports `ok=False` for
+  a write the unit honoured. That is #167 and not this conversion: the write
+  path compares the read-back with exact equality, and on `Amp.TremSpeed`
+  every wire value tested reports failure. The conversion is correct and the
+  displayed text is right; the flag is wrong. Fixing it belongs in
+  `_write_verified`.
+
 ### Added (the measurement ears, 2026-09-20: #101 G2, #102 G3, #103 G4)
 - `fm9/measure.py`, numpy only: a capture is measured only after
   `validity` passes (too short, digital silence, clipping at the endpoint,

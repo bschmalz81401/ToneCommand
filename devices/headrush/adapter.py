@@ -52,7 +52,7 @@ WHAT IT DOES NOT PRETEND
 from __future__ import annotations
 
 import time
-from typing import Any, Callable
+from typing import Any, NamedTuple, Callable
 
 from fm9.adapter import Capabilities, ReadPath, SceneSlotState, Topology
 from devices.headrush import topology as topo
@@ -102,6 +102,28 @@ class NotSupported(RuntimeError):
     """A contract method with no HeadRush meaning. Stated, not faked."""
 
 
+class DerivedDisplay(NamedTuple):
+    """A display value the DEVICE NEVER SAID, and where the maths came from.
+
+    `get_param_wire` returns a bare float because the unit sent that float.
+    This does not, on purpose. The number here is computed from a curve read
+    out of the vendor's editor, so handing back a bare float would let it be
+    logged, planned against or shown exactly as if the unit had reported it,
+    and `devices/headrush/tapers.py` exists to stop precisely that:
+
+        "nothing downstream can present a converted number as something the
+         unit said."
+
+    `api_readable` is False for every instance. It is a field rather than a
+    constant so a caller filtering on it does not have to know that.
+    """
+    value: float
+    text: str
+    curve: str
+    provenance: str
+    api_readable: bool = False
+
+
 class MethodRefused(PermissionError):
     """An object-method outside the allowlist. Raised before transport."""
 
@@ -125,6 +147,7 @@ class HeadrushAdapter:
 
     def __init__(self, client, registry: Registry, *,
                  topologies: topo.TopologyTable | None = None,
+                 tapers: Any = None,
                  settle_s: float = 0.5,
                  sleep: Callable[[float], None] = time.sleep):
         self.client = client
@@ -136,6 +159,15 @@ class HeadrushAdapter:
         #: already discarded. Injectable so the simulator tests do not wait.
         self.settle_s = settle_s
         self._sleep = sleep
+        #: #130's curve table, or None. OPT-IN, and the default is None so
+        #: that an adapter built the way every existing caller builds one
+        #: refuses display conversion exactly as before. The registry's own
+        #: refusal is untouched either way: it describes the API, which still
+        #: publishes an opaque id and no formula, and tapers.py says in as
+        #: many words that the refusal "is still correct about the API and is
+        #: left alone". What this adds is a caller that HAS the other kind of
+        #: knowledge and has to name where it came from.
+        self.tapers = tapers
         self._by_ordinal = {b.module_ordinal: b
                             for b in registry.selectable_blocks()}
         self.undecoded: set[str] = set()
@@ -371,15 +403,46 @@ class HeadrushAdapter:
         raise NotSupported("a HeadRush block has no channels")
 
     def set_param_display(self, spec: Any, display_value: float) -> Any:
-        """Refused for continuous parameters: the display-to-wire curve is
-        an opaque taper id the device never explains (finding 3). Use
-        set_param_wire with a 0..1 value, or set_param_ordinal for a
-        selector."""
-        raise NotMeasured(
-            f"{spec.block}.{spec.name}: the display value cannot be turned "
-            f"into the 0..1 wire value; the curve is taper_id="
-            f"{spec.taper_id!r} and the device does not say what that "
-            "denotes. Write the wire value with set_param_wire instead.")
+        """Write a value as the unit SHOWS it, when a curve table was given.
+
+        Without one this refuses, unchanged: the device publishes an opaque
+        taper id and no formula (finding 3). With one, the display value is
+        converted and then written through the same verified path as every
+        other write, so the read-back still compares WIRE values. Nothing
+        about the check weakens; only the caller's units change.
+        """
+        if self.tapers is None:
+            raise NotMeasured(
+                f"{spec.block}.{spec.name}: the display value cannot be "
+                f"turned into the 0..1 wire value; the curve is taper_id="
+                f"{spec.taper_id!r} and the device does not say what that "
+                "denotes. Write the wire value with set_param_wire instead, "
+                "or build the adapter with tapers=devices.headrush.tapers"
+                ".load() and accept that the curve comes from the vendor's "
+                "editor rather than from the unit.")
+        wire = self._converted(spec, "to_wire", float(display_value))
+        out = self.set_param_wire(spec, wire)
+        out["display_wanted"] = float(display_value)
+        out["curve"] = self.tapers.name(spec.taper_id)
+        out["provenance"] = self.tapers.provenance
+        return out
+
+    def _converted(self, spec: Any, direction: str, value: float) -> float:
+        """One conversion, with the parameter's published range and curve.
+
+        `UnknownTaper` and `NotConvertible` are deliberately NOT caught. An id
+        this table has never seen means the firmware is publishing a curve the
+        table was not built against, and a value with no finite image means
+        the curve genuinely has none there. Turning either into a plausible
+        number is the failure this whole module exists to avoid.
+        """
+        lo, hi = spec.display_minimum, spec.display_maximum
+        if lo is None or hi is None:
+            raise NotMeasured(
+                f"{spec.block}.{spec.name}: the device publishes no display "
+                f"range, so there is nothing to convert between.")
+        return getattr(self.tapers, direction)(
+            value, minimum=lo, maximum=hi, algo=spec.taper_id)
 
     def set_param_wire(self, spec: Any, normalised: float) -> dict:
         lo, hi = spec.wire_range or (None, None)
@@ -394,9 +457,41 @@ class HeadrushAdapter:
         return self._write_verified(block.path, spec.name, int(ordinal))
 
     def get_param_display(self, spec: Any) -> Any:
-        raise NotMeasured(
-            f"{spec.block}.{spec.name}: the wire value cannot be shown as a "
-            "display value; see set_param_display. get_param_wire reads it.")
+        """The number the unit would SHOW, when a curve table was given.
+
+        Returns a `DerivedDisplay`, never a bare float, because the unit did
+        not say this number. `get_param_wire` returns a float precisely
+        because the unit did say that one, and the asymmetry is the point.
+        """
+        if self.tapers is None:
+            raise NotMeasured(
+                f"{spec.block}.{spec.name}: the wire value cannot be shown "
+                "as a display value; see set_param_display. get_param_wire "
+                "reads it.")
+        wire = self.get_param_wire(spec)
+        if wire is None:
+            raise NotMeasured(
+                f"{spec.block}.{spec.name}: the unit returned no wire value, "
+                f"so there is nothing to convert.")
+        value = self._converted(spec, "to_display", float(wire))
+        return DerivedDisplay(
+            value=value,
+            text=self._formatted(spec, value),
+            curve=self.tapers.name(spec.taper_id),
+            provenance=self.tapers.provenance)
+
+    @staticmethod
+    def _formatted(spec: Any, value: float) -> str:
+        """The unit's own `format` applied, or a plain number when it
+        publishes none. The format string is the device's; the VALUE is not,
+        which is why this never travels without the rest of DerivedDisplay."""
+        fmt = spec.display_format
+        if not fmt:
+            return f"{value:g}{(' ' + spec.unit) if spec.unit else ''}"
+        try:
+            return fmt % value
+        except (TypeError, ValueError):
+            return f"{value:g}"
 
     def get_param_wire(self, spec: Any) -> Any:
         block = self.registry.block(spec.block)

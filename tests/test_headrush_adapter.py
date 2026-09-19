@@ -335,3 +335,165 @@ def test_evidence_capabilities_docstring_cites_the_findings():
         assert flag in doc, f"{flag} is declared without its reason"
     assert "Prime" not in hr.__doc__.split("WHAT IT REFUSES")[1], \
         "nothing below the evidence section claims Prime behaviour"
+
+
+# --- display conversion through #130's curve table ----------------------------
+#
+# The registry still refuses, and that refusal is still right: it describes the
+# API, which publishes an opaque `normalizeAlgo` and no formula. These cover the
+# other kind of knowledge, read out of the vendor's editor, which a caller has
+# to opt into and which can never be mistaken for something the unit said.
+
+import json as _json
+from devices.headrush import tapers as hr_tapers
+from devices.headrush.adapter import DerivedDisplay
+
+HARDWARE_CHECK = _json.loads(
+    (ROOT / "config" / "headrush_tapers.json").read_text())["hardware_check"]
+
+
+def _converting(reg):
+    sim = HeadrushSim()
+    client = HeadrushClient("sim.local", "127.0.0.1", opener=sim.opener)
+    return sim, hr.HeadrushAdapter(client, reg, tapers=hr_tapers.load(),
+                                   sleep=lambda s: None)
+
+
+@pytest.mark.parametrize("row", HARDWARE_CHECK,
+                         ids=[f"{r['property']}@{r['wire']}" for r in HARDWARE_CHECK])
+def test_display_matches_what_the_screen_showed(reg, row):
+    """The anchor. Six readings taken off a Core's screen, committed in
+    config/headrush_tapers.json with the wire value that produced each one.
+
+    These are the only rows in this file that a photograph can refute."""
+    sim, a = _converting(reg)
+    block, name = row["property"].split(".")
+    spec = reg.resolve(block, name)
+    sim.set_properties(reg.block(block).path, {name: row["wire"]})
+    assert a.get_param_display(spec).text.strip() == row["screen"].strip()
+
+
+def test_without_a_table_the_adapter_still_refuses(reg):
+    """Every existing caller builds one without tapers, and none of them
+    should start getting numbers because this feature landed."""
+    _sim, _op, a = make(reg)
+    spec = reg.resolve("Amp", "Bass")
+    assert a.tapers is None
+    with pytest.raises(NotMeasured):
+        a.get_param_display(spec)
+    with pytest.raises(NotMeasured):
+        a.set_param_display(spec, 75.0)
+
+
+def test_a_derived_value_never_arrives_as_a_bare_float(reg):
+    """get_param_wire returns a float because the unit sent that float. This
+    must not, or a converted number can be logged and planned against exactly
+    as if the device had reported it."""
+    sim, a = _converting(reg)
+    spec = reg.resolve("Amp", "TremSpeed")
+    sim.set_properties(reg.block("Amp").path, {"TremSpeed": 0.5})
+    got = a.get_param_display(spec)
+    assert isinstance(got, DerivedDisplay)
+    assert not isinstance(got, float)
+    assert got.api_readable is False
+    assert got.curve == "Squared"
+    assert got.provenance
+    # the wire read, by contrast, is a plain number
+    assert isinstance(a.get_param_wire(spec), float)
+
+
+def test_writing_a_display_value_still_verifies_the_wire_value(reg):
+    """Only the caller's units change. The read-back that makes a write
+    trustworthy still compares what actually went on the wire."""
+    sim, a = _converting(reg)
+    spec = reg.resolve("Amp", "TremSpeed")
+    out = a.set_param_display(spec, 5.1875)
+    assert out["ok"] is True
+    assert out["display_wanted"] == 5.1875
+    assert out["curve"] == "Squared"
+    assert sim.get_properties(reg.block("Amp").path)["TremSpeed"] == pytest.approx(0.5)
+    assert a.get_param_display(spec).text == "5.19 Hz"
+
+
+def test_a_curve_the_table_has_never_seen_is_not_quietly_linear(reg):
+    """The firmware publishing an unknown id means this table was built
+    against a different one. Scaling linearly anyway would silently mis-read
+    every value of that parameter."""
+    _sim, a = _converting(reg)
+    spec = reg.resolve("Amp", "Bass")
+
+    class Unknown:
+        taper_id = 9999
+        block, name = "Amp", "Bass"
+        display_minimum, display_maximum = spec.display_minimum, spec.display_maximum
+        display_format, unit = spec.display_format, spec.unit
+
+    with pytest.raises(hr_tapers.UnknownTaper):
+        a._converted(Unknown(), "to_display", 0.5)
+
+
+def test_a_parameter_with_no_display_range_refuses(reg):
+    _sim, a = _converting(reg)
+
+    class NoRange:
+        taper_id = 0
+        block, name = "Amp", "Bass"
+        display_minimum = display_maximum = None
+        display_format = unit = None
+
+    with pytest.raises(NotMeasured):
+        a._converted(NoRange(), "to_display", 0.5)
+
+
+# --- the device's own arithmetic agrees with the table ------------------------
+
+#: Measured on a Core at firmware 5.1.0.2a63755, 2026-09-19, on a ##HRB test
+#: preset. `Amp.TremSpeed`, published grid 0.01, display range 0.25..20.0 Hz,
+#: normalizeAlgo 5 (Squared). Each row is a wire value written and the float
+#: the unit was holding afterwards.
+TREMSPEED_ROUND_TRIP = [
+    (0.5,       0.5001265406608582),
+    (0.25,      0.24955657124519348),
+    (0.3333333, 0.33299562335014343),
+]
+
+
+@pytest.mark.parametrize("wrote,held", TREMSPEED_ROUND_TRIP)
+def test_the_vendor_curve_predicts_what_the_device_stored(reg, wrote, held):
+    """Corroboration from the device rather than from a photograph.
+
+    The unit converts a written wire value to display, snaps the DISPLAY value
+    to the published grid, and converts back (#167). Reproducing the float it
+    ends up holding therefore runs the curve forwards and backwards through the
+    device's own quantisation, and it matches to the last bit on a NON-LINEAR
+    curve, where a wrong formula could not survive.
+
+    The six `hardware_check` rows are a screen read by a human. This is the
+    device's own arithmetic agreeing with the table, which a misread digit
+    cannot produce.
+    """
+    table = hr_tapers.load()
+    spec = reg.resolve("Amp", "TremSpeed")
+    assert spec.taper_id == 5 and spec.published.get("grid") == pytest.approx(0.01)
+
+    display = table.to_display(wrote, minimum=spec.display_minimum,
+                               maximum=spec.display_maximum, algo=spec.taper_id)
+    snapped = round(display / 0.01) * 0.01
+    predicted = table.to_wire(snapped, minimum=spec.display_minimum,
+                              maximum=spec.display_maximum, algo=spec.taper_id)
+    assert predicted == pytest.approx(held, abs=1e-9)
+
+
+def test_that_prediction_needs_the_real_curve(reg):
+    """Guard on the guard: a linear scale cannot produce those floats, so the
+    test above is evidence about this table and not arithmetic that any curve
+    would satisfy."""
+    spec = reg.resolve("Amp", "TremSpeed")
+    lo, hi = spec.display_minimum, spec.display_maximum
+    for wrote, held in TREMSPEED_ROUND_TRIP:
+        linear_display = lo + wrote * (hi - lo)
+        snapped = round(linear_display / 0.01) * 0.01
+        linear_wire = (snapped - lo) / (hi - lo)
+        assert abs(linear_wire - held) > 1e-6, (
+            f"a linear scale reproduced {held!r}, so the round-trip test "
+            f"proves nothing about the curve")
