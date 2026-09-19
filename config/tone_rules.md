@@ -606,3 +606,16 @@ names the source: "amp is a capture of a real <gear make model> by <who
 captured it>" or "amp is the Fractal <model name>". The plan never claims a
 capture was used when it was not. Until the FM9 has a NAM block, every build
 is the model, and the line says why when a capture was asked for.
+
+## 23. An artist's name without their official pack is an interpretation (issue #158)
+When the player names an artist ("sound like Devin Townsend") and no official
+Gift of Tone pack for that artist was installed, the build is the planner's
+reading of that player's sound, made from what it knows of their rig, and it
+says so. The summary and the preset name say "in the style of <artist>" or
+"<artist>-style"; they never say "<artist>'s pack", "<artist>'s preset" or
+anything that presents the build as the artist's own file. The app shows the
+honest line first ("There is no official Gift of Tone pack for <name>; building
+a tone in that style from what I know, which is my interpretation, not their
+preset."); the plan must not contradict it. When the artist IS in the catalog,
+the app offers the real pack before any build, and the planner is not asked.
+

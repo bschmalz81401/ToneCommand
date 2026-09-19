@@ -4,6 +4,30 @@ Notable changes to ToneCommand. Dates are UTC.
 
 ## Unreleased
 
+### Added (artist names resolve to the catalog, 2026-09-19: #158)
+- `fm9/artist_pack.py`: "sound like Devin Townsend", "give me Devin's rig",
+  "install the Periphery pack", "Steve Vai tones" yield the name, which is
+  resolved against the Gift of Tone catalog deterministically: every word
+  of the phrase must be a whole word of an entry's artists (a full name, a
+  first name alone when one artist carries it, a surname, a band name); a
+  phrase that is an artist's full name beats entries that merely contain
+  its words; two or more candidates is one question naming them; none is
+  `absent` with the line "There is no official Gift of Tone pack for X;
+  building a tone in that style from what I know, which is my
+  interpretation, not their preset."
+- `POST /api/artist-pack {query}` answers resolved (the entry plus a
+  confirmation naming the pack and year), ambiguous (candidates and the
+  question) or absent (the line), over the entries this unit can take, and
+  fetches nothing. The command bar consults it before anything else for an
+  artist-shaped sentence: a resolved pack is shown as an offer with a
+  FETCH button and nothing is downloaded until the player clicks it (then
+  the verified fetch and the per-slot installs, each a click); ambiguous
+  asks in the chat; absent shows the line and sends the sentence on to
+  the planner.
+- Rule 23 in `config/tone_rules.md`: an artist name without their official
+  pack is the planner's interpretation; the summary and preset name say
+  "in the style of" and never "X's pack" or "X's preset".
+
 ### Added (Gift of Tone gallery: device gate and verified fetch, 2026-09-19: #156, #157)
 - `fm9/gallery.py` on top of the J1 catalog. Device gate (#156):
   `entries_for` keeps the entries whose device matrix lists the connected

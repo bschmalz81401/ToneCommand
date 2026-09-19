@@ -26,8 +26,8 @@ from fm9.adapter import (CAPABILITY_PROTOCOLS, UNDECLARED, Capabilities,
                          DeviceAdapter)
 from fm9.device import FM9, FM9NotFound, get_cab_slots
 from fm9.registry import Registry
-from fm9 import (acquire, ai_settings, bundlefile, cabfile, describe, designs, diagnostics,
-                 editbuffer, gallery, gift_of_tone, health, planner, presetfile,
+from fm9 import (acquire, ai_settings, artist_pack, bundlefile, cabfile, describe, designs,
+                 diagnostics, editbuffer, gallery, gift_of_tone, health, planner, presetfile,
                  recipes as recipebook, rigprofile, scratch_build, share,
                  starter_template)
 # `slots` is a local variable in more than one function here, so the module
@@ -3697,6 +3697,39 @@ def _members_to_installables(members: list[dict]) -> tuple[list, list, list]:
         except cabfile.CabFileError as e:
             skipped.append(f"{name}: {e}")
     return presets, cabs, skipped
+
+
+@app.post("/api/artist-pack")
+def api_artist_pack(body: dict):
+    """"Sound like Devin Townsend" against the catalog (#158). Deterministic,
+    fetches nothing: resolved names the pack for the player to confirm;
+    ambiguous asks one question naming the candidates; absent says plainly
+    that no official pack exists, so the planner's build that follows is an
+    interpretation and is shown as one."""
+    query = str(body.get("query") or "").strip()
+    phrase = artist_pack.artist_phrase(query)
+    if not phrase:
+        return JSONResponse({"error": "say whose sound: 'sound like <artist>'"},
+                            status_code=400)
+    doc, _source, why = gift_of_tone.fetch()
+    if doc is None:
+        return JSONResponse({"error": why}, status_code=502)
+    kind, _fw = _connected_for_gallery()
+    entries = gallery.entries_for(doc["entries"], kind)
+    res = artist_pack.resolve(phrase, entries)
+    out = {"status": res.status, "phrase": res.phrase}
+    if res.status == "resolved":
+        e = res.entry
+        out["entry"] = _gallery_entry_view(e, kind)
+        out["confirm"] = (f"Found the {', '.join(e.get('artists') or [])} "
+                          f"({e.get('year')}) pack on Gift of Tone: "
+                          f"{e.get('description') or e.get('kind')}. Fetch it?")
+    elif res.status == "ambiguous":
+        out["candidates"] = [_gallery_entry_view(e, kind) for e in res.candidates]
+        out["question"] = res.question
+    else:
+        out["line"] = res.line
+    return out
 
 
 @app.post("/api/gift-of-tone/fetch")

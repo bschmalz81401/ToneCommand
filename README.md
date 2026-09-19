@@ -130,7 +130,10 @@ below is a real request you can type.
   shows only what your unit can take and says in one line when a pack needs
   newer firmware; the zip is fetched from fractalaudio.com by your own app
   at click time, checked against the catalogued sha256 before it is opened,
-  and cached by that hash. Nothing of Fractal's is mirrored here.
+  and cached by that hash. Nothing of Fractal's is mirrored here. "Sound
+  like Devin Townsend" checks the catalog first and offers the real pack; a
+  name with two matches asks which; a name with no pack says so plainly and
+  the build that follows is called an interpretation, never their preset.
 
 **Never sends behind your back**
 - Read-back verification on every write, and a signal-path check so a preset is
