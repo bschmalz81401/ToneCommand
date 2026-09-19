@@ -46,6 +46,16 @@ Notable changes to ToneCommand. Dates are UTC.
   satisfies. This is stronger corroboration than a photographed screen,
   because a misread digit cannot produce it.
 
+### Fixed (second follow-up review, 2026-09-19)
+- A TEST THAT COULD NOT FAIL FOR THE THING IT WAS NAMED AFTER. The check that
+  the display methods refuse BEFORE touching the device built the plain
+  simulator opener (a stray `_converting(reg, )` passed no kwargs, so the
+  recording opener was never installed) and then skipped its call-count
+  assertion when there was nothing to count. Moving the guard back below the
+  read would have left it green. It now asserts an empty call list on the
+  recording opener unconditionally, on both the read and the write path, and
+  was confirmed to fail with the guard moved.
+
 ### Changed (follow-up review, 2026-09-19)
 - THE SELECTOR GUARD MOVED OUT OF THE TEST AND INTO THE METHODS. The first
   round answered "a selector cannot reach the continuous path" with a test
@@ -59,8 +69,12 @@ Notable changes to ToneCommand. Dates are UTC.
 - `DerivedDisplay.api_readable` is `field(init=False)`. It described the
   invariant and did not hold it: a caller could construct one claiming the
   unit said the number. Construction, `replace()` and assignment all refuse.
-- `tapers=` is typed `TaperTable | None` rather than `Any`, so the wrong
-  object fails at construction instead of inside a `getattr`.
+- `tapers=` IS CHECKED AT CONSTRUCTION, not merely annotated. The annotation
+  `TaperTable | None` was written up as though it were a runtime guard, which
+  it is not: `HeadrushAdapter(..., tapers=object())` still built and failed
+  later inside a `getattr`. It now raises `TypeError` immediately, because an
+  object that merely answers to `to_display` and `to_wire` would be
+  converting with a curve nobody can name the provenance of.
 - The `_formatted` fix from the first round was unguarded, which is how it
   got there. A test now pins a device format that cannot apply and asserts
   the unit survives.

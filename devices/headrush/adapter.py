@@ -187,6 +187,13 @@ class HeadrushAdapter:
         #: many words that the refusal "is still correct about the API and is
         #: left alone". What this adds is a caller that HAS the other kind of
         #: knowledge and has to name where it came from.
+        if tapers is not None and not isinstance(tapers, TaperTable):
+            raise TypeError(
+                f"tapers= takes a devices.headrush.tapers.TaperTable, not "
+                f"{type(tapers).__name__}. An object that merely answers to "
+                f"to_display and to_wire would be converting with a curve "
+                f"nobody can name the provenance of, which is the one thing "
+                f"DerivedDisplay exists to make impossible.")
         self.tapers = tapers
         self._by_ordinal = {b.module_ordinal: b
                             for b in registry.selectable_blocks()}

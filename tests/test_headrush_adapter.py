@@ -619,14 +619,28 @@ def test_a_format_string_that_will_not_apply_keeps_the_unit(reg):
 
 def test_a_selector_never_reaches_the_device_to_be_refused(reg):
     """The guards run BEFORE the read, so a spec that was never convertible
-    does not cost a round trip to find that out."""
-    sim, a = _converting(reg, )
+    does not cost a round trip to find that out.
+
+    The opener is asserted on UNCONDITIONALLY. The first version of this test
+    built the plain simulator opener and skipped the call count when it had
+    none to report, so moving the guard back below `get_param_wire` would
+    have left it green - a test that cannot fail for the thing it is named
+    after."""
+    sim = HeadrushSim()
+    opener = RecordingOpener(sim)
+    client = HeadrushClient("sim.local", "127.0.0.1", opener=opener)
+    a = hr.HeadrushAdapter(client, reg, tapers=hr_tapers.load(),
+                           sleep=lambda s: None)
     spec = reg.resolve("Amp", "Type")
-    calls_before = len(sim.opener.calls) if hasattr(sim.opener, "calls") else None
+
+    assert opener.calls == []
     with pytest.raises(NotMeasured):
         a.get_param_display(spec)
-    if calls_before is not None:
-        assert len(sim.opener.calls) == calls_before, "it read the device anyway"
+    assert opener.calls == [], "it read the device before refusing"
+
+    with pytest.raises(NotMeasured):
+        a.set_param_display(spec, 3.0)
+    assert opener.calls == [], "it wrote to the device before refusing"
 
 
 def test_a_derived_display_cannot_be_built_claiming_the_unit_said_it():
@@ -643,3 +657,23 @@ def test_a_derived_display_cannot_be_built_claiming_the_unit_said_it():
         dataclasses.replace(got, api_readable=True)
     with pytest.raises(dataclasses.FrozenInstanceError):
         got.api_readable = True
+
+
+def test_a_table_shaped_object_is_not_a_table(reg):
+    """`tapers=` is checked at construction, not at the first conversion.
+    Something that merely answers to to_display and to_wire would convert
+    with a curve nobody can name the provenance of, which is the one thing
+    DerivedDisplay exists to make impossible."""
+    sim = HeadrushSim()
+    client = HeadrushClient("sim.local", "127.0.0.1", opener=sim.opener)
+
+    class LooksRight:
+        provenance = "made up"
+        def name(self, algo): return "Linear"
+        def to_display(self, wire, **kw): return wire * 100
+        def to_wire(self, display, **kw): return display / 100
+
+    with pytest.raises(TypeError):
+        hr.HeadrushAdapter(client, reg, tapers=LooksRight())
+    # and the real one still builds
+    assert hr.HeadrushAdapter(client, reg, tapers=hr_tapers.load()).tapers
