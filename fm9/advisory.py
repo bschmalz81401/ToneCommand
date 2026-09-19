@@ -495,8 +495,11 @@ RE_COMPARE = re.compile(_GREET + r"(?:what(?:'s| is)\s+the\s+)?difference\s+betw
 RE_DIFFER = re.compile(_GREET + r"(?:how\s+do\s+)?" + _OBJ + r"\s+and\s+" + _OBJ
                        + r"\s+differ" + _END, re.I)
 #:  (2) [how do I get/make] <X> closer to <Y>, or closer to <Y>
-RE_GAP = re.compile(_GREET + r"(?:how\s+(?:do|can|would)\s+i\s+)?(?:(?:get|make|bring)\s+)?"
-                    + r"(?:" + _OBJ + r"\s+)?closer\s+to\s+" + _OBJ + _END, re.I)
+#: An object never starts with a verb: 'bring scene 1 closer to scene 2' is
+#: not one of the stated forms and must not slip through as X='bring scene 1'.
+_NOT_VERB = r"(?!(?:how|bring|move|push|pull|take|get|make|put|nudge)\b)"
+RE_GAP = re.compile(_GREET + r"(?:how\s+(?:do|can|would)\s+i\s+)?(?:(?:get|make)\s+)?"
+                    + r"(?:" + _NOT_VERB + _OBJ + r"\s+)?closer\s+to\s+" + _OBJ + _END, re.I)
 
 
 def parse_question(text: str) -> dict | None:

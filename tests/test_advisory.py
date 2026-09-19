@@ -360,6 +360,8 @@ def test_chat_the_three_shapes_are_recognised(text, kind):
     "differences are fine",
     "scene 1 differs a lot",                    # no 'and'
     "closer to",
+    "bring scene 1 closer to scene 2",          # not one of the stated forms
+    "how do I bring scene 1 closer to scene 2",
 ])
 def test_chat_shapes_outside_the_spec_are_not_routed(text):
     assert adv.parse_question(text) is None
