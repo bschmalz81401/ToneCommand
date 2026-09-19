@@ -8159,19 +8159,28 @@ function acquireIntent(said) {
 // the planner sees it (#158). The real pack is offered when it exists; when
 // it does not, the planner builds and the line says it is an interpretation.
 function artistIntent(said) {
+  if (pendingArtistQuestion) return true;       // answering "Which Mark: ..."
   if (/\bsounds?\s+like\b/i.test(said)) return true;
   if (/\b\w+(?:'s|s')\s+(?:rig|tones?|sound|presets?|pack)\b/i.test(said)) return true;
-  return /\b(?:install|get|load|grab|fetch|give\s+me)\s+(?:the\s+)?[\w' ]+?\s+(?:pack|bundle)\b/i.test(said);
+  if (/\b(?:install|get|load|grab|fetch|give\s+me)\s+(?:the\s+)?[\w' ]+?\s+(?:pack|bundle)\b/i.test(said)) return true;
+  // "Steve Vai tones": a Name before "tones"; "warm tones" is not a name
+  return /(?:^|\s)[A-Z][\w']*(?:\s+[A-Z][\w']*)*\s+(?:tones?|presets?)\b/.test(said);
 }
+
+// Set while an ambiguity question is open, so the next sentence ("Mark
+// Day") is read as the answer and resolved rather than sent to the planner.
+let pendingArtistQuestion = null;
 
 async function runArtistPack(said) {
   // Resolve first; fetch nothing until the player clicks. Returns true when
   // the sentence was answered here, false when it should go to the planner.
   try {
+    const query = pendingArtistQuestion ? `install the ${said} pack` : said;
     const r = await fetch('/api/artist-pack', {
       method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({query: said})});
+      body: JSON.stringify({query})});
     const d = await r.json();
+    pendingArtistQuestion = null;
     if (d.error) return false;
     if (d.status === 'resolved') {
       chatLog.push({role: 'user', content: said});
@@ -8184,6 +8193,7 @@ async function runArtistPack(said) {
     if (d.status === 'ambiguous') {
       chatLog.push({role: 'user', content: said});
       chatNote(esc(d.question));
+      pendingArtistQuestion = d.question;
       renderChat();
       return true;
     }
@@ -8534,6 +8544,10 @@ async function talk() {
   if (chatBusy) return;                 // one turn at a time
   const said = $('prompt').value.trim();
   if (!said) return;
+  // an artist's name goes to the catalog first (#158), on this path too
+  if (artistIntent(said) && await runArtistPack(said)) {
+    $('prompt').value = ''; growPrompt(); return;
+  }
   if (acquireIntent(said)) {
     $('prompt').value = '';
     growPrompt();

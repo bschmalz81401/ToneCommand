@@ -146,8 +146,17 @@ def test_route_offers_only_what_this_unit_can_take(client):
 def test_the_bar_resolves_before_the_planner_and_fetches_on_a_click_only():
     assert "function artistIntent(said)" in UI
     assert "async function runArtistPack(said)" in UI
-    # both entry points consult the resolver first
-    assert "if (artistIntent(said) && await runArtistPack(said))" in UI
+    # both entry points consult the resolver first: the build/modify path
+    # (submitRequest) and the chat path (talk)
+    assert UI.count("if (artistIntent(said) && await runArtistPack(said))") == 2
+    talk = UI[UI.index("async function talk()"):UI.index("async function talk()") + 600]
+    assert "runArtistPack(said)" in talk and talk.index("runArtistPack") < talk.index("acquireIntent")
+    # the four shapes, including "Steve Vai tones" (a Name before tones);
+    # "warm tones" is not a name and stays with the planner
+    assert "[A-Z][\\w']*(?:\\s+[A-Z][\\w']*)*\\s+(?:tones?|presets?)" in UI
+    # an answer to "Which Mark: ..." is resolved, not sent to the planner
+    assert "pendingArtistQuestion = d.question" in UI
+    assert "`install the ${said} pack`" in UI
     # a resolved pack is an OFFER with a button; fetching waits for the click
     assert "role: 'offer'" in UI and 'class="small offer"' in UI
     assert "b.onclick = () => runAcquire(b.dataset.said)" in UI
