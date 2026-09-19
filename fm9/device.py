@@ -188,23 +188,26 @@ def _parse_slots(raw: str) -> set[int]:
 
 #: Issue #43, measured 2026-09-05 on firmware 12.x: a single fn 0x19 user-cab
 #: read DISCONNECTED the FM9's MIDI and the unit needed a power cycle to come
-#: back. Ordinary reads immediately before it were fine. So the read that was
-#: meant to make a cab install safe (probe before write) is itself the hazard
-#: on this firmware, and every user-cab install path runs through it. The
-#: supported route today is a WAV at 48 kHz through Fractal's Cab-Lab 4 into a
-#: user slot, then set_cab from here. Until the Bank 2+ encoding is captured a
-#: different way, the read is off by default at the transport layer: it is
-#: refused before any frame is built, on both entry points, so no candidate
-#: address path can reach the wire without the operator turning it on.
+#: back. Ordinary reads immediately before it were fine. The read is off by
+#: default at the transport layer: refused before any frame is built. Since
+#: 2026-09-19 no install needs it: the write is FM9-Edit's own captured
+#: layout, acked per frame, and the slot's name is read back with fn 0x01
+#: sub 0x4B, the read the editor itself makes (read_user_cab_name).
 CAB_READ_FLAG = "TONECOMMAND_ALLOW_CAB_READ"
 CAB_READ_REFUSED = (
     "user-cab read (fn 0x19) is disabled: on firmware 12.x it disconnects the "
     "FM9's MIDI and the unit needs a power cycle to recover (issue #43). "
-    "To put an IR on the unit today: export it as a 48 kHz WAV, load it into "
-    "a user cab slot with Fractal's Cab-Lab 4 (free), then select that slot "
-    "from here. Set " + CAB_READ_FLAG + "=1 only to investigate on a unit "
-    "you are prepared to power cycle."
+    "Installs do not need it: a .syx cab goes in through /api/install-cab "
+    "and is verified by the unit's own name read; a WAV goes in through "
+    "Fractal's Cab-Lab 4 (free) at 48 kHz, then select the slot from here. "
+    "Set " + CAB_READ_FLAG + "=1 only to investigate on a unit you are "
+    "prepared to power cycle."
 )
+
+
+#: The Cab block's bank id for the player's own IRs (0 FACTORY 1, 1 FACTORY
+#: 2, 2 USER, 3 LEGACY, 4 SCRATCHPAD), the bank a Bundle-Map means by Bank=2.
+USER_CAB_BANK_ID = 2
 
 
 def cab_read_guard() -> None:
@@ -218,16 +221,24 @@ def cab_read_guard() -> None:
 
 @dataclass
 class CabInstall:
-    """What install_user_cab_at did. `verified` is True only after a
-    byte-for-byte read-back (bank 1 under the operator's flag); a bank 2+
-    install is acked frame by frame but not read back, and `note` says
-    why and how to check it."""
+    """What install_user_cab_slot did. `verified` is True only when the
+    unit's own per-slot name read (fn 0x01 sub 0x4B, the read FM9-Edit
+    makes after its writes) shows a cab in the slot afterwards and, when
+    the caller named the cab it expected (a bundle map does), that name.
+    `note` is the one-line account for the API and the UI."""
     cf: object
-    idx: int
-    tag: int
+    slot: int
     verified: bool
     note: str
+    name_before: str | None = None
+    name_after: str | None = None
     acks: int = 0
+    landed: bool = False      # the unit reports a cab in the slot afterwards
+
+    @property
+    def editor(self) -> str:
+        """As FM9-Edit lists it: one flat bank, 1-based."""
+        return f"U1.{self.slot + 1:04d}"
 
 
 @dataclass
@@ -758,7 +769,7 @@ class FM9:
                 f"IR install to user cab {slot + 1} (index {slot}) refused: "
                 f"configured cab slots are "
                 f"{sorted(allowed)[0]}-{sorted(allowed)[-1]}")
-        return self.install_user_cab_at(raw, 1, slot + 1, filename).cf
+        return self.install_user_cab_slot(raw, slot, filename).cf
 
     def read_user_cab_addr(self, idx: int, tag: int, timeout: float = 4.0):
         """Request the user cab at (idx, tag) back via fn 0x19.
@@ -795,42 +806,31 @@ class FM9:
             return None
         return (head or [], chunks)
 
-    #: How a (bank, number) shown by the editor encodes on the wire.
-    #: Captured 2026-09-19 (issue #43, FM9-Edit writing "Bank 2 slot 11",
-    #: which the editor lists as U1.0523 in its one flat bank): the flat
-    #: index 522 under tag 0x10, candidate B, with the head byte layout
-    #: cabfile.head_index_bytes now reproduces. For bank >= 2 that is the
-    #: first candidate. Bank 1 keeps its list unchanged (A and B coincide
-    #: there) and stays under cab_read_guard.
-    @staticmethod
-    def _cab_addr_candidates(bank: int, number: int):
-        if bank >= 2:
-            yield ((bank - 1) * 512 + (number - 1), cabfile.DEFAULT_TAG)
-        yield (number - 1, 0x10 + (bank - 1))
-        if bank < 2:
-            yield ((bank - 1) * 512 + (number - 1), 0x10)
+    #: Why an install that was acked but whose name did not read back as
+    #: expected is reported unverified. One line, as the API shows it.
+    CAB_NAME_MISMATCH = ("the unit accepted every frame but the slot's name "
+                         "reads back differently; check it in FM9-Edit's "
+                         "cab manager (refresh its list) or audition it")
 
-    def probe_cab_encoding(self, bank: int, number: int):
-        """The (idx, tag) this device actually answers for (bank, number).
+    def read_user_cab_name(self, slot: int, timeout: float = 1.5) -> str | None:
+        """The name the unit holds for flat user-cab `slot`, or None when
+        it did not answer. fn 0x01 sub 0x4B with the same two slot bytes
+        as the write head: captured from FM9-Edit right after its write
+        (issue #43, 2026-09-19), decoded to the cab's name, and read on
+        hardware for ten slots at once with no hang; an empty slot answers
+        `<EMPTY>`. Safe where fn 0x19 is not."""
+        if not 0 <= slot <= cabfile.MAX_SLOT:
+            raise ValueError(f"user cab slot {slot} is out of range")
+        req = p.envelope(0x01, [0x4B, 0, 0, 0, 0, 0,
+                                *cabfile.head_index_bytes(slot),
+                                0, 0, 0, 0, 0, 0, 0])
 
-        Read-only. Raises PermissionError-free RuntimeError when nothing
-        answers, so callers never fall through to a guessed write.
-        """
-        for idx, tag in self._cab_addr_candidates(bank, number):
-            got = self.read_user_cab_addr(idx, tag, timeout=2.0)
-            if got is not None:
-                return idx, tag
-        raise RuntimeError(
-            f"the device did not answer a read for user cab bank {bank} "
-            f"number {number} under any known addressing; refusing to "
-            "write blind")
-
-    #: Why a bank 2+ install reports verified=False. One line, as the API
-    #: and the UI show it.
-    CAB_UNVERIFIED_NOTE = (
-        "sent and acknowledged frame by frame, not read back: the unit's "
-        "cab read (fn 0x19) is unsafe on firmware 12.x, so check the slot "
-        "in FM9-Edit's cab manager or audition the preset")
+        def want(d):
+            if len(d) > 21 and d[4] == 0x01 and d[5] == 0x4B:
+                raw = p.unpack_chunked(list(d[6:-1])[14:], p.NAME_FIELD_LEN)
+                return raw.split(b"\x00")[0].decode("ascii", "replace")
+            return None
+        return self._request(req, want, timeout=timeout)
 
     def _await_ack(self, fn: int, timeout: float = 1.0) -> bool:
         """True once the unit answers fn 0x64 `<fn> 00` for the frame just
@@ -863,62 +863,77 @@ class FM9:
             acked += 1
         return acked
 
-    def _cab_whitelist_check(self, bank: int, number: int) -> int:
-        if bank < 1 or number < 1:
-            raise ValueError("bank and number are 1-based, as FM9-Edit "
-                             "shows them")
-        flat = (bank - 1) * 512 + (number - 1)
+    def _cab_whitelist_check(self, slot: int) -> None:
+        if not 0 <= slot <= cabfile.MAX_SLOT:
+            raise ValueError(f"user cab slot {slot} is out of range "
+                             f"(0 to {cabfile.MAX_SLOT}, FM9-Edit's U1.0001 "
+                             f"to U1.{cabfile.MAX_SLOT + 1})")
         allowed = get_cab_slots()
         if not allowed:
             raise PermissionError(
                 "IR installs are disabled: no user-cab slots configured. "
-                "Set TONECOMMAND_CAB_SLOTS (env or .env) with flat indices "
-                "(bank 1 = 0-511, bank 2 = 512-1023), choosing cabs on "
-                "YOUR unit that are safe to overwrite")
-        if flat not in allowed:
+                "Set TONECOMMAND_CAB_SLOTS (env or .env) with 0-based slots "
+                "(FM9-Edit's U1.0001 is 0), choosing cabs on YOUR unit that "
+                "are safe to overwrite")
+        if slot not in allowed:
+            holds = self.read_user_cab_name(slot)
+            held = (f"; it holds {holds!r} now" if holds
+                    and not p.is_empty_slot_name(holds) else
+                    "; it is empty now" if holds else "")
             raise PermissionError(
-                f"IR install to user cab bank {bank} number {number} "
-                f"(flat index {flat}) refused: it is outside "
-                "TONECOMMAND_CAB_SLOTS")
-        return flat
+                f"IR install to user cab slot {slot} (FM9-Edit U1."
+                f"{slot + 1:04d}) refused: it is outside "
+                f"TONECOMMAND_CAB_SLOTS{held}")
+
+    def install_user_cab_slot(self, raw: bytes, slot: int, filename: str = "",
+                              expect_name: str | None = None) -> CabInstall:
+        """Send a validated IR to flat user-cab `slot` (0-based; FM9-Edit's
+        U1.0001 is 0) and read the slot's name back.
+
+        The frames are FM9-Edit's own captured layout (issue #43); each is
+        sent only after the unit acked the previous one; nothing here
+        consults cab_read_guard or sends fn 0x19 (that read hangs firmware
+        12.x and stays behind read_user_cab_addr's guard). verified is
+        True when the name read back afterwards is a cab (not <EMPTY>) and,
+        when the caller expects one, that name.
+        """
+        self._cab_whitelist_check(slot)
+        cf = cabfile.parse(raw, filename)   # re-validated at this boundary
+        before = self.read_user_cab_name(slot)
+        frames = cabfile.retarget(cf, slot)
+        acks = self._send_cab_frames(frames)
+        time.sleep(0.2)          # the unit took ~120 ms to ack the tail
+        after = self.read_user_cab_name(slot)
+        landed = bool(after) and not p.is_empty_slot_name(after)
+        verified = landed and (expect_name is None or after == expect_name)
+        where = f"user cab slot {slot} (U1.{slot + 1:04d})"
+        if verified:
+            note = f"{where} now reads {after!r}: verified by the unit"
+        elif after is None:
+            note = (f"{where}: every frame acked but the unit did not answer "
+                    "the name read; check it in FM9-Edit's cab manager")
+        else:
+            note = (f"{where} reads {after!r}"
+                    + (f", expected {expect_name!r}" if expect_name else "")
+                    + f": {self.CAB_NAME_MISMATCH}")
+        return CabInstall(cf, slot, verified, note, before, after, acks,
+                          landed)
 
     def install_user_cab_at(self, raw: bytes, bank: int, number: int,
-                            filename: str = "") -> CabInstall:
-        """Send a validated IR to user-cab (bank, number), as the editor
-        numbers them. Whitelisted flat as (bank-1)*512+(number-1).
-
-        Bank >= 2 (issue #43): the captured encoding, no read of any kind
-        (the fn 0x19 read hangs firmware 12.x, so cab_read_guard is not
-        consulted and nothing is probed), every frame acked by the unit
-        before the next is sent, verified=False with the note saying so.
-
-        Bank 1: unchanged. The guard is the first statement, then the
-        destination is read-probed and the write uses only the addressing
-        the device itself answered for; callers verify by reading back.
-        """
-        if bank >= 2:
-            flat = self._cab_whitelist_check(bank, number)
-            cf = cabfile.parse(raw, filename)
-            idx, tag = next(self._cab_addr_candidates(bank, number))
-            assert idx == flat
-            frames = cabfile.retarget(cf, idx, tag=tag)
-            acks = self._send_cab_frames(frames)
-            time.sleep(0.2)          # the unit took ~120 ms to ack the tail
-            return CabInstall(cf, idx, tag, False, self.CAB_UNVERIFIED_NOTE,
-                              acks)
-        cab_read_guard()          # before parse, whitelist or probe (#43)
-        self._cab_whitelist_check(bank, number)
-        cf = cabfile.parse(raw, filename)   # re-validated at this boundary
-        idx, tag = self.probe_cab_encoding(bank, number)
-        frames = cabfile.retarget(cf, idx, tag=tag)
-        self._drain()
-        for frame in frames:
-            self.cab_guard.check(frame[5])
-            self.outp.send(mido.Message("sysex", data=frame[1:-1]))
-            time.sleep(0.03)
-        time.sleep(1.0)
-        return CabInstall(cf, idx, tag, False,
-                          "read back pending; the caller verifies")
+                            filename: str = "",
+                            expect_name: str | None = None) -> CabInstall:
+        """A Bundle-Map destination: `Bank` is the Cab block's bank id and
+        `Number` the 0-based slot in it. On the FM9 the only writable bank
+        is 2, USER, one flat list of 1024 (verified 2026-09-19: the preset's
+        CABINET_TYPE carries the same number, and a Number of 0 exists in
+        the Gift of Tone catalog). Anything else is refused by name."""
+        if int(bank) != USER_CAB_BANK_ID:
+            raise ValueError(
+                f"cab bank {bank} is not the FM9's user bank: a bundle map "
+                f"files user IRs under bank {USER_CAB_BANK_ID} (USER); "
+                "this cab cannot be installed here")
+        return self.install_user_cab_slot(raw, int(number), filename,
+                                          expect_name)
 
     def set_tempo(self, bpm: int):
         """Set the global tempo. Fire and forget, and it says so.

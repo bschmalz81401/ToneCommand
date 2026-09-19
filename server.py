@@ -3847,13 +3847,13 @@ def api_cab_shortlist(q: str = "", limit: int = 5):
 def api_install_cab(body: dict):
     """Send a previewed IR file to a whitelisted user-cab slot. FLASH.
 
-    Same discipline as preset installs. Bank 1: done is claimed only after
-    the cab is read back and its body matches what was sent, byte for
-    byte (and that read is off on firmware 12.x, so 409 under the guard).
-    Bank 2 and above (issue #43): the frames are the captured FM9-Edit
-    write, acked by the unit one by one, and the answer is 200 with
-    `verified: false` and the note saying how to check, because the
-    unit's own read is the unsafe part.
+    Same discipline as preset installs: done is claimed only after the
+    unit itself reports the slot holds a cab, by the per-slot name read
+    (fn 0x01 sub 0x4B) FM9-Edit makes after its own writes; the body read
+    (fn 0x19) is not used, it hangs firmware 12.x (issue #43). The
+    destination is either a flat `slot` (0-based, FM9-Edit's U1.0001 is
+    0) or a Bundle-Map `bank` and `number`, where bank must be the FM9's
+    USER bank (2) and number is that same 0-based slot.
     """
     raw = _install_cache.get(str(body.get("hash") or ""))
     if raw is None:
@@ -3861,19 +3861,20 @@ def api_install_cab(body: dict):
             {"error": "no parsed file is pending; fetch or choose it again"},
             status_code=409)
     filename = str(body.get("filename") or "")
+    expect = str(body.get("name") or "").strip() or None
     try:
-        bank = int(body.get("bank") or 1)
-        if body.get("number") is not None:
+        if body.get("slot") is not None:
+            bank, number = USER_CAB_BANK, int(body.get("slot"))
+        elif body.get("number") is not None:
+            bank = int(body.get("bank") if body.get("bank") is not None
+                       else USER_CAB_BANK)
             number = int(body.get("number"))
-        elif body.get("slot") is not None:
-            number = int(body.get("slot")) + 1     # legacy flat, bank 1
         else:
             raise ValueError
     except (TypeError, ValueError):
         return JSONResponse(
-            {"error": "say where: a bank and number, as the editor shows "
-                      "them"}, status_code=400)
-    where = f"user cab bank {bank} number {number}"
+            {"error": "say where: a slot, or the bundle map's bank and "
+                      "number"}, status_code=400)
     with _lock:
         if _gig_mode["on"]:
             return JSONResponse(
@@ -3881,9 +3882,7 @@ def api_install_cab(body: dict):
                 status_code=423)
         try:
             fm9 = get_fm9()
-            res = fm9.install_user_cab_at(raw, bank, number, filename)
-            cf, idx, tag = res.cf, res.idx, res.tag
-            got = None if bank >= 2 else fm9.read_user_cab_addr(idx, tag)
+            res = fm9.install_user_cab_at(raw, bank, number, filename, expect)
         except PermissionError as e:
             return JSONResponse({"error": str(e)}, status_code=403)
         except FM9NotFound:
@@ -3892,35 +3891,22 @@ def api_install_cab(body: dict):
                                 status_code=503)
         except cabfile.CabFileError as e:
             return JSONResponse({"error": str(e)}, status_code=422)
+        except ValueError as e:
+            return JSONResponse({"error": str(e)}, status_code=422)
         except CapabilityDeclined:
             raise
         except RuntimeError as e:
-            # The fn 0x19 read is refused at the transport layer on this
-            # firmware (issue #43): a conflict with the unit, not a fault in
-            # the request, so 409 and the message says what works instead.
-            if str(e).startswith("user-cab read (fn 0x19) is disabled"):
-                return JSONResponse({"error": str(e)}, status_code=409)
             return JSONResponse({"error": str(e)}, status_code=500)
         except Exception as e:
             return JSONResponse({"error": str(e)}, status_code=500)
-    if bank >= 2:
-        ok, verified, detail = True, False, f"{where}: {res.note}"
-    else:
-        sent = [f[6:-2] for f in cabfile.retarget(cf, idx, tag=tag)[1:-1]]
-        ok = verified = bool(got) and got[1] == sent
-        detail = (f"{where} reads back byte-identical: verified"
-                  if ok else
-                  f"{where} did not read back matching what was "
-                  "sent. The IR write direction is not yet "
-                  "hardware-proven; treat as failed and check the "
-                  "unit's cab manager")
-    if ok:
-        log.info("installed IR %r to %s", cf.label, where)
+    cf = res.cf
+    if res.landed:
+        log.info("installed IR %r to user cab %d (%s): %s", cf.label,
+                 res.slot, res.editor, res.note)
         # Remember what this slot now holds. Nothing else can: USER cabs are
         # absent from every catalogue, so without this the UI shows a bare
         # ordinal for an IR the player just deliberately installed. The
-        # selection side addresses user cabs as USER_CAB_BANK plus the flat
-        # index, which is what install_user_cab_at computes from bank/number.
+        # selection side addresses user cabs as USER_CAB_BANK plus the slot.
         try:
             from fm9 import user_cabs
             # relabel_installed, NOT set_name: this slot now holds different
@@ -3929,12 +3915,17 @@ def api_install_cab(body: dict):
             # through it here left the old source and digest in place, so the
             # slot went on anchoring measurements against a capture it no
             # longer contained.
-            user_cabs.relabel_installed(
-                USER_CAB_BANK, (bank - 1) * 512 + (number - 1), cf.label)
+            user_cabs.relabel_installed(USER_CAB_BANK, res.slot,
+                                        res.name_after or cf.label)
         except OSError:
             pass                       # a name is a courtesy, never the point
-    return {"ok": ok, "verified": verified, "installed": cf.label,
-            "bank": bank, "number": number, "detail": detail}
+    # ok: the unit reports a cab in the slot now. verified: and it is the
+    # name the caller expected (a bundle map's); the sim cannot know names.
+    return {"ok": res.landed, "verified": res.verified,
+            "installed": cf.label, "slot": res.slot, "editor": res.editor,
+            "bank": bank, "number": number,
+            "name_before": res.name_before, "name_after": res.name_after,
+            "detail": res.note}
 
 
 @app.post("/api/install/parse")

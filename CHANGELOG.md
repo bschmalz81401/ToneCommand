@@ -4,49 +4,49 @@ Notable changes to ToneCommand. Dates are UTC.
 
 ## Unreleased
 
-### Fixed (user cabs above Bank 1, 2026-09-19: #43)
-- Installing a bundle whose cabs are filed in User Cab Bank 2 (the Gift of
-  Tone Steve Lukather pack) refused to write, so the preset landed with an
-  empty Cab block and played silent. Cause, found by capturing FM9-Edit's
-  own write with MIDI Monitor: the flat index and tag were right all along,
-  but `cabfile.retarget` laid the head's two index bytes out the other way
-  round and without the 0x10 flag the editor sets (`0A 14 00 10` for
-  U1.0523, low septet first), and did not mask every fifth body byte to
-  0x0F as the editor does. `retarget` now builds the captured layout and
-  reproduces the ten captured frames byte for byte
-  (`tests/test_cab_bank2_capture.py`, fixture body-redacted in
-  `tests/fixtures/`). The editor has one flat list, U1.0001 to U1.1024, so
-  "Bank 2 slot 11" is flat 522.
-- `FM9.install_user_cab_at` branches on bank before anything else: Bank 2
-  and above never consult the fn 0x19 guard or probe (that read hangs
-  firmware 12.x), keep the `TONECOMMAND_CAB_SLOTS` flat-index whitelist,
-  send each frame only after the unit acks the previous one (fn 0x64
-  `<fn> 00`, as captured) and stop on a missing ack, and return a
-  `CabInstall` with `verified=False` and the one-line reason. Bank 1 is
-  unchanged behind the guard. `POST /api/install-cab` answers 200 with
-  `verified: false` and that note for bank 2 and above; bank 1 keeps its
-  409. The simulator acks cab frames and decodes the captured head.
-- Recorded, not used: after the write the editor reads the slot with fn
-  0x01 sub 0x4B, which the unit answered without hanging. A read-back
-  candidate for later.
-
-### Added (capture-slot primitive, 2026-09-19: #162)
-- Cause: each device's capture path would have been its own special case,
-  and Epic I's intake and build work had nothing to be written against until
-  the FM9 ships a NAM protocol. Fix: `fm9/adapter.py` gains
-  `Capabilities.plays_captures` and the `CaptureSlots` sub-Protocol
-  (`capture_capabilities`, `list_captures`, `install_capture`,
-  `remove_capture`) with `CaptureCapabilities`, `CaptureSlot` and
-  `CaptureInstall` records; `CAPABILITY_PROTOCOLS` and `conformance()`
-  enforce it. `fm9/captures.py` holds the simulator's in-memory
-  `CaptureStore` (whitelist `TONECOMMAND_NAM_SLOTS`, parsed like the cab
-  slots, default empty; refusal order: outside the whitelist, then a slot a
-  stored preset references; an occupied unreferenced slot is overwritten;
-  removal refuses a referenced slot) and `NoCaptures`, the one-line
-  no-support answer the real FM9 and the HeadRush give today. A preset
-  stored on the simulator with an integer `capture_slot` field references
-  that slot. Tests: `tests/test_capture_primitive.py`; the contract and gate
-  matrix tests pin the new gate (eight gates, twenty methods).
+### Fixed (user-cab installs from bundles, 2026-09-19: #43)
+- Installing a Gift of Tone bundle whose map files its cabs under
+  `Bank="2"` (the Steve Lukather pack) refused to write, so the preset
+  landed with its cab missing. Three things were wrong, all found on
+  hardware. The write layout: FM9-Edit's own write of a cab, captured with
+  MIDI Monitor, puts the slot's low septet first with a 0x10 flag in the
+  high byte (`0A 14 00 10` for U1.0523) and masks every fifth body byte to
+  0x0F; `cabfile.retarget` sent the index bytes the other way round and
+  now reproduces the ten captured frames byte for byte
+  (`tests/test_cab_bank2_capture.py`, body-redacted fixture in
+  `tests/fixtures/`). The address: the FM9 has one flat user-cab list
+  (U1.0001 to U1.1024, 0-based on the wire) and a Bundle-Map's Bank is the
+  Cab block's bank id (2 = USER), Number the slot itself, the same number
+  the file head and the preset's CABINET_TYPE carry; the `(bank-1)*512`
+  arithmetic is gone and any bank other than 2 is refused by name. The
+  proof: the body read (fn 0x19) hangs firmware 12.x and stays off, but
+  fn 0x01 sub 0x4B, which the editor sends after its own write, returns
+  a slot's name at once (`FM9.read_user_cab_name`; ten slots read on the
+  unit, `<EMPTY>` for empty ones), so an install is verified by the unit.
+- `FM9.install_user_cab_slot(raw, slot, expect_name)` is the one path:
+  whitelist by slot (`TONECOMMAND_CAB_SLOTS`, 0-1023; the refusal names
+  what the slot holds now), the captured frames sent one at a time after
+  the unit's fn 0x64 ack, stop on a missing ack, name read before and
+  after; `verified` is True when a cab is there and, if a name was
+  expected (a bundle map's), it matches. `install_user_cab_at(bank,
+  number)` is the Bundle-Map adapter onto it. No install consults the fn
+  0x19 guard any more; the guard stays on `read_user_cab_addr`.
+  `POST /api/install-cab` takes `slot` or the map's `bank`/`number` plus
+  the expected `name`, answers `ok` (a cab is there), `verified` (the
+  name matches), `slot`, `editor` (U1.nnnn), `name_before`, `name_after`;
+  403 outside the whitelist, 422 for a bank the FM9 cannot write. The
+  simulator acks cab frames, decodes the captured head and answers the
+  name read with a body-derived name.
+- Verified on the FM9 (firmware 12.x, 2026-09-19): ToneCommand wrote the
+  Lukather pack's two cabs to U1.0523 and U1.0524, the unit's name read
+  returned both names, and in an A/B in FM9-Edit's Cab block the
+  ToneCommand-written IR sounded the same as the editor's own import of
+  the same file. Known: FM9-Edit shows a cached cab list; use its refresh
+  button to see slots written by anything else.
+- Still open, filed separately: a pack's preset points at fixed slots
+  (the Lukather preset wants U1.0012 and U1.0013, which hold the player's
+  own cabs); moving a pack's cabs to free slots and repointing the preset
+  belongs with the pack gallery (#164, before #155).
 
 ### Added (NAM captures and Fractal sources, 2026-09-19: #144, #145, #161, #154)
 - `fm9/nam.py` reads a `.nam` capture file (stdlib json only) into a

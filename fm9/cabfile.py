@@ -23,7 +23,9 @@ Two facts of life this module owns honestly:
   `00` and the 0x10 tag; and in every body chunk it masked each fifth
   byte (the high-bits byte of a five-septet group) to `0x0F`. The unit
   acknowledged each frame with fn 0x64 `<fn> 00`. The editor lists ONE
-  flat bank, U1.0001 to U1.1024, so "Bank 2 slot 11" is flat index 522.
+  flat bank, U1.0001 to U1.1024, 0-based on the wire. A Bundle-Map's
+  `Bank="2" Number="11"` means the Cab block's USER bank (id 2) and slot
+  11, the number this head carries and the preset's CABINET_TYPE holds.
 
 The name embedded in the body is packed among IR data and is not decoded
 here; the filename is the human label and is presented as exactly that.

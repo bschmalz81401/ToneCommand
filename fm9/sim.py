@@ -407,8 +407,34 @@ class SimFM9Core:
         return frames
 
     # ---- editor protocol ----
+    @staticmethod
+    def cab_name_for(chunks) -> str:
+        """The name the simulator answers for an installed cab. A real unit
+        reads it out of the IR body, which is opaque to us (compressed or
+        encrypted, measured 2026-09-07), so the sim derives a stable name
+        from the body instead; tests expecting a match compute the same."""
+        import hashlib
+        h = hashlib.sha1(bytes(v & 0x7F for c in chunks for v in c))
+        return "IR-" + h.hexdigest()[:8].upper()
+
+    def _fn_01_4b(self, b):
+        """User-cab name by slot, the read FM9-Edit makes after a write
+        (captured 2026-09-19): the two slot bytes sit at b[7:9] in the head
+        layout; the answer packs the 32-byte name after 14 bytes."""
+        from . import cabfile
+        slot = cabfile.head_index(list(b[6:8]))
+        stored = getattr(self, "user_cabs", {}).get((slot, 0x10)) \
+            if slot is not None else None
+        name = self.cab_name_for(stored) if stored else p.EMPTY_SLOT_NAME
+        field = name.encode("ascii", "replace")[:p.NAME_FIELD_LEN]
+        field = field.ljust(p.NAME_FIELD_LEN, b"\x00")
+        return [p.envelope(0x01, [0x4B, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0,
+                                  *p.pack_chunked(field)])]
+
     def _fn_01(self, b):
         sub = (b[0], b[1])
+        if b[0] == 0x4B:
+            return self._fn_01_4b(b)
         if sub == (0x09, 0x00):
             return self._set_discrete(b)
         if sub == (0x52, 0x00):

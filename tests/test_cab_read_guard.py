@@ -44,29 +44,24 @@ def test_read_user_cab_addr_refuses_before_any_frame(sim):
     assert fm9_device.CAB_READ_FLAG in msg
 
 
-def test_install_user_cab_at_refuses_before_parse_whitelist_or_probe(sim, monkeypatch):
-    # Bank 1: the guard fires first, before the whitelist would have
-    # answered, and before any of _cab_addr_candidates is tried. (Bank 2
-    # never reaches the guard since the capture of 2026-09-19: see
-    # tests/test_cab_bank2_install.py.)
-    probed = []
-    monkeypatch.setattr(sim, "probe_cab_encoding",
-                        lambda b, n: probed.append((b, n)))
+def test_install_paths_do_not_reach_the_read(sim):
+    """Since the capture of 2026-09-19 no install consults the guard or
+    sends fn 0x19: see tests/test_cab_bank2_install.py. The guard is the
+    read path's, and the read path alone."""
+    sim.install_user_cab_slot(make_cab(), 1, "U2-x.syx")
+    assert 0x19 not in [m.data[4] for m in sim.sent]
     with pytest.raises(RuntimeError, match="fn 0x19"):
-        sim.install_user_cab_at(make_cab(), 1, 11, "U1-x.syx")
-    with pytest.raises(RuntimeError, match="fn 0x19"):
-        sim.install_user_cab_at(b"not even a cab file", 1, 1, "junk.syx")
-    assert probed == [] and sim.sent == []
+        sim.read_user_cab_addr(1, 0x10)
 
 
-def test_the_flag_opts_in_and_the_sim_still_round_trips(sim, monkeypatch):
+def test_the_flag_opts_in_and_the_read_still_answers(sim, monkeypatch):
     monkeypatch.setenv("TONECOMMAND_ALLOW_CAB_READ", "1")
-    res = sim.install_user_cab_at(make_cab(), 1, 1, "U1-x.syx")
-    got = sim.read_user_cab_addr(res.idx, res.tag)
-    assert got is not None and sim.sent, "with the flag the path is intact"
+    res = sim.install_user_cab_slot(make_cab(), 1, "U2-x.syx")
+    got = sim.read_user_cab_addr(res.slot, 0x10)
+    assert got is not None and sim.sent, "with the flag the read path is intact"
 
 
-def test_install_cab_route_answers_409_with_the_supported_route(sim, monkeypatch):
+def test_install_cab_route_no_longer_needs_the_flag(sim, monkeypatch):
     import hashlib
     monkeypatch.setattr(server, "_fm9", sim)
     monkeypatch.setattr(server, "_gig_mode", {"on": False})
@@ -74,17 +69,7 @@ def test_install_cab_route_answers_409_with_the_supported_route(sim, monkeypatch
     h = hashlib.sha1(raw).hexdigest()
     monkeypatch.setattr(server, "_install_cache", {h: raw})
     r = TestClient(server.app).post(
-        "/api/install-cab", json={"hash": h, "bank": 1, "number": 1})
-    assert r.status_code == 409, r.text
-    assert "Cab-Lab" in r.json()["error"] and "48 kHz" in r.json()["error"]
-    assert sim.sent == []
-
-
-def test_candidate_addressing_bank1_unchanged_bank2_captured_first():
-    """Bank 1 keeps its list; bank 2 leads with the captured encoding
-    (flat 522 under tag 0x10 for slot 11), then the tag-carries-bank
-    guess for a probe that only ever runs under the flag."""
-    assert list(fm9_device.FM9._cab_addr_candidates(1, 11)) == [
-        (10, 0x10), (10, 0x10)]
-    assert list(fm9_device.FM9._cab_addr_candidates(2, 11)) == [
-        (512 + 10, 0x10), (10, 0x11)]
+        "/api/install-cab", json={"hash": h, "slot": 1})
+    assert r.status_code == 200, r.text
+    assert r.json()["ok"] is True
+    assert 0x19 not in [m.data[4] for m in sim.sent]

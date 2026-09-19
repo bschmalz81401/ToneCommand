@@ -8339,7 +8339,7 @@ function renderAcquirePlan(d) {
         const cd = await (await fetch('/api/install-cab', {
           method: 'POST', headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({hash: cb.hash, bank: cb.bank, number: cb.number,
-                                filename: cb.file})})).json();
+                                filename: cb.file, name: cb.label})})).json();
         cd.ok ? cabOk++ : cabBad++;
       }
     }

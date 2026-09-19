@@ -86,14 +86,14 @@ def _stage(client, raw):
     return digest
 
 
-def test_install_ir_and_read_back_byte_identical(client):
+def test_install_ir_and_the_unit_names_the_slot(client):
     h = _stage(client, make_cab())
     out = client.post("/api/install-cab",
-                      json={"hash": h, "bank": 1, "number": 1,
+                      json={"hash": h, "slot": 0,
                             "filename": "U1-Cab_Test.syx"}).json()
     assert out["ok"] is True
-    assert out["bank"] == 1 and out["number"] == 1
-    assert "byte-identical" in out["detail"]
+    assert out["slot"] == 0 and out["editor"] == "U1.0001"
+    assert "verified by the unit" in out["detail"]
     assert any("user-cab install" in u
                for u in server._fm9.sim_core.undecoded)
 
@@ -142,7 +142,7 @@ def test_a_purchased_bundle_installs_preset_and_cabs_where_the_map_says(
     import io
     import zipfile
     from tests.test_install import make_file
-    monkeypatch.setenv("TONECOMMAND_CAB_SLOTS", "512-1023")   # bank 2
+    monkeypatch.setenv("TONECOMMAND_CAB_SLOTS", "64-127")     # slot 72 in it
     monkeypatch.setattr(server, "_preset_cache", {"slots": None})
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w") as z:
@@ -164,11 +164,15 @@ def test_a_purchased_bundle_installs_preset_and_cabs_where_the_map_says(
     assert out["ok"] is True and out["read_back"] == "BT Test"
     cab = client.post("/api/install-cab", json={
         "hash": d["cabs"][0]["hash"], "bank": 2, "number": 72,
-        "filename": "cabs/BT_Cab_01.syx"}).json()
-    # bank 2: sent as FM9-Edit sends it and acked frame by frame, not read
-    # back (the unit's cab read is unsafe on fw 12.x): #43
-    assert cab["ok"] is True and cab["verified"] is False
-    assert "not read back" in cab["detail"]
+        "filename": "cabs/BT_Cab_01.syx", "name": d["cabs"][0]["label"]}).json()
+    # Bank 2 is the USER bank, Number 72 is slot 72 (U1.0073): sent as
+    # FM9-Edit sends it, acked frame by frame, and the unit's name read
+    # says a cab is there (#43). The simulator cannot know the cab's name
+    # (it is inside the opaque body), so `verified` stays false here; on
+    # hardware the name matched the bundle map's.
+    assert cab["ok"] is True and cab["slot"] == 72
+    assert cab["editor"] == "U1.0073"
+    assert cab["verified"] is False and "expected 'BT_Cab_01'" in cab["detail"]
 
 
 def test_a_bundle_for_another_device_is_refused():
