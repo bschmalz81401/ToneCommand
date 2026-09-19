@@ -590,10 +590,32 @@ def build_home(readme: str, release: dict) -> None:
     safe_html, _ = render_md(sec.get("Safety", ""))
     out.append(section("07", "Safety", safe_html))
 
-    # 08 support: the README's own words, with the merch as direct links
+    # 08 next: NAM captures, the README's roadmap section, examples as chips
+    nxt_intro, nxt_groups = bold_groups(sec.get("Next: NAM captures", ""))
+    nxt_html, _ = render_md(nxt_intro)
+    nxt_chips = ""
+    for title, body in nxt_groups:
+        joined: list[str] = []
+        for ln in body.splitlines():
+            if ln.startswith("- "):
+                joined.append(ln[2:].strip())
+            elif ln.startswith("  ") and joined:
+                joined[-1] += " " + ln.strip()
+        lis = "".join(f"<li>{render_md(it)[0].replace('<p>', '').replace('</p>', '')}</li>" for it in joined)
+        nxt_chips += f'<div class="saygroup"><h3>{html.escape(title)}</h3><ul class="chips">{lis}</ul></div>'
+    # the closing paragraph (after the bold groups) is part of the last group's body in bold_groups;
+    # render it back under the chips
+    tail = ""
+    if nxt_groups:
+        last_body = nxt_groups[-1][1]
+        tail_md = "\n".join(ln for ln in last_body.splitlines() if not ln.startswith("- ") and not ln.startswith("  "))
+        tail, _ = render_md(tail_md.strip())
+    out.append(section("08", "Next: NAM captures", nxt_html + f'<div class="say">{nxt_chips}</div>' + tail, "next"))
+
+    # 09 support: the README's own words, with the merch as direct links
     support_html, _ = render_md(sec.get("Support", ""))
     merch = MERCH_HTML if MERCH_HTML else ""
-    out.append(section("08", "Support", support_html + f"""
+    out.append(section("09", "Support", support_html + f"""
 <div class="merchgrid">
   <a class="merchcard" href="{TEE_URL}" rel="noopener">{merch_card('tee')}<span class="merchname">ToneCommand emblem tee</span><span class="merchcta">See it in the shop</span></a>
   <a class="merchcard" href="{JERSEY_URL}" rel="noopener">{merch_card('jersey')}<span class="merchname">ToneCommand performance jersey</span><span class="merchcta">See it in the shop</span></a>
@@ -605,7 +627,7 @@ def build_home(readme: str, release: dict) -> None:
     install_short, _ = render_md(sec.get("Install", ""))
     out.append(f"""
 <section id="install" class="block reveal">
-  <p class="kicker">09 · INSTALL</p>
+  <p class="kicker">10 · INSTALL</p>
   <h2>Install</h2>
   {install_short}
   <p><a class="btn primary sweep" href="/install/">The full install guide</a></p>
