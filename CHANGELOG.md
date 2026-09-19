@@ -98,6 +98,59 @@ Notable changes to ToneCommand. Dates are UTC.
   measured: 741 to 743 lines.
 - The broad-except audit now covers 82 blocks (34 re-raise, 48 unreachable).
 
+## Unreleased
+
+### Changed (verification procedure, review of #134: 2026-09-19)
+- A SAFETY CHECK MUST NOT BE THE THING IT CHECKS FOR.
+  `tools/verify_headrush.py` probed AC4 by calling `deleteRig` and by writing
+  `ModuleType` ordinal 20, the ordinal that killed the engine, to a hardcoded
+  slot that is occupied on a real rig. Both were safe only if the interlock
+  worked, which is the thing under test. The probe is split: the dangerous
+  names and ordinal 20 are asserted as data with nothing called, and the
+  transport behaviour is checked with a method name no device implements and
+  with ordinal 254, which finding 1 measured as harmless, in a slot measured
+  empty on the loaded rig.
+- AC7 IS NOW TRUE. The report claimed print-time redaction while the host was
+  printed unredacted and edited out of the committed transcript afterwards.
+  `Report.record` runs every line through `redact()`, seeded before the first
+  line of output, so a host or rig name arriving inside an exception message
+  cannot reach the transcript either.
+- THE RESTORE RUNS EVEN WHEN A CHECK EXPLODES. `verify()` was called bare, so
+  any exception it did not convert to a FAILED row skipped the reload and left
+  the unit holding the run's writes, possibly chain edits. It is wrapped, the
+  reload is in a `finally`, and a restore that itself fails is reported as a
+  failed check naming what to do rather than passing silently.
+- REFUSAL CHECKS REQUIRE THE RIGHT EXCEPTION. Two checks treated any
+  `Exception` as a pass, so a transport error or a `TypeError` greened AC4 and
+  AC5. `Report.expect_raise` fails on an unexpected type and says which
+  arrived.
+- RIG READ-BACK POLLS INSTEAD OF SLEEPING. Measured over 16 loads, the swap
+  lands 159..679 ms after the call with no predictor: not the rig, and not
+  whether it was just loaded. A fixed settle either flakes at the tail or pays
+  the worst case every time, so `wait_for_rig` polls and returns as soon as the
+  engine has swapped.
+- The topology check requires a real transition rather than always writing
+  routing 1, the scene restore snapshots the scene engaged at entry rather than
+  assuming the first scene-mode switch, `dirty` is reported rather than
+  identity-checked against `False`, and detail strings use `.get` so a missing
+  key cannot raise inside a check.
+
+### Added
+- `tests/test_verify_headrush.py`: the procedure's own guards, which had none.
+  Covers print-time redaction, the typed refusal checks, the opener counter,
+  a failing check not ending the run, the `##HRB` interlock refusing a real
+  rig, and the restore running when `verify` raises. Two fail if the
+  corresponding fix above is reverted.
+
+### Verified on hardware
+- #135's `select_preset` fix passes against the Core at 5.1.0.2a63755. The
+  full pass is 36 checks, 0 failed.
+- ONE UNEXPLAINED TRANSIENT, recorded rather than dismissed: a single
+  `topology restored` failure that could not be reproduced. The check's message
+  was hardcoded to print the wanted routing rather than the observed one, so
+  the transcript could not say what it read; that is fixed, and the event is
+  not claimed to be.
+
 ## 1.3.0 (2026-09-18)
 
 ### Added (HeadRush lane, 2026-09-18: #123, #124, #125, #94)

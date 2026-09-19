@@ -11,7 +11,7 @@ It also carries the five-step pass @monzta1 asked for on #33 (2026-09-18),
 including the two questions he left open. Those rows are tagged **`#33`**
 rather than an `AC` so the ticket's criteria and his request stay separable.
 
-**Scrubbed per AC7.** No rig name, rig id, setlist or preset content appears —
+**Scrubbed per AC7.** No rig name, rig id, setlist or preset content appears  - 
 not in this document and not in the script's output, which redacts at the point
 of printing rather than being edited into shape afterwards. Counts are recorded
 because a count carries no library. The unit's `DeviceName` carries a per-unit
@@ -45,26 +45,36 @@ verifying against <host>, starting on a ##HRB preset
          adapter cites 5.1.0.2a63755, unit says 5.1.0.2a63755
   [ok  ] AC8  Prime and Flex Prime not claimed
          adapter lists them as unverified; nothing here tests them
-  [ok  ] AC4  non-allowlisted object-method refused
-         raised MethodRefused and the opener was not called (2 -> 2); deleteRig on /Evil/API/Rigs is not on this adapter's allowli...
+  [ok  ] AC4  no destructive method is on the allowlist
+         allowlist is ['loadRig']; none of ['deleteRig', 'factoryReset', 'makeNewRig', 'renameRig', 'saveRig', 'saveRigAs', 'updateFirmware'] appears
   [ok  ] AC4  allowlist is deny-by-default and small
          only [('/Evil/API/Rigs', 'loadRig')] may be invoked
+  [ok  ] AC4  ordinal 20 is in the refusal table
+         the engine-killing ordinal is refused by data, checked without writing it
+  [ok  ] AC4  non-allowlisted object-method refused before transport
+         MethodRefused: refused and the opener was not called (3 -> 3)
+  [ok  ] AC4  nothing reached the unit during that refusal
+         opener call count unchanged (3 -> 3)
+  [ok  ] AC4  the counted opener is the adapter's only transport
+         adapter reaches the network only through this client, whose single outbound call site is the wrapped opener
   [ok  ] AC2  current state reads back
          rig is a ##HRB preset, routing 0, 10 slots occupied
   [ok  ] AC2  current preset is named, not numbered
          current_preset() -> (None, <##HRB name>): a name, not a bank/patch number
   [ok  ] AC2  rig listing
-         119 rigs, 18 are ##HRB test presets (names not recorded, AC7)
-  [FAIL] AC2  rig selection through the adapter
-         raised HTTPError: HTTP Error 504: Gateway Timeout
+         120 rigs, 19 are ##HRB test presets (names not recorded, AC7)
+  [ok  ] AC2  rig selection through the adapter
+         adapter loaded the requested test preset and it read back after polling; adapter itself reported ok=True
   [ok  ] AC2  unit returned to its starting rig
          restored directly, by rig id (name not recorded, AC7)
-  [ok  ] AC4  ModuleType 20 refused before transport
-         PermissionError raised and the opener was not called; Neural Amp Modeler 2: writing it killed the engine on a Co...
+  [ok  ] AC4  refused ModuleType blocks before transport
+         PermissionError: ordinal 254 refused and the opener was not called (23 -> 23); 20 is refused by the same table, asserted above without writing it
+  [ok  ] AC4  nothing reached the unit during that refusal
+         opener call count unchanged (23 -> 23)
   [ok  ] AC2  topology selection is verified by read-back
-         select_topology(1) -> read back 1; adapter reports ok=True
+         routing moved 0 -> 1 and read back; adapter reports ok=True
   [ok  ] AC2  topology restored
-         back to routing 0
+         wanted routing 0, unit reads 0; the restoring write reported ok=True (/Evil/Engine/Patch/Chain Routing = 0, read back 0)
   [ok  ] AC2  representative parameter read
          Amp.Bass reads 0.41999998688697815 on the wire
   [ok  ] AC5  display read refuses rather than inventing a value
@@ -80,7 +90,7 @@ verifying against <host>, starting on a ##HRB preset
   [ok  ] #33  SceneActive is a latch, not a pulse (OPEN)
          first scene's flag was True while it was active; after engaging the second, the second reads True and the first reads False -> a LATCH the unit maintains and clears on change, not a pulse
   [ok  ] #33  scene restored
-         back on the scene this pass started from
+         back on the scene this pass found engaged at entry
   [ok  ] #33  set_scene_slot writes both Effect and Mode
          a slot in scene 9 moved off -> on and read back on
   [ok  ] #33  scene slot restored
@@ -100,64 +110,67 @@ verifying against <host>, starting on a ##HRB preset
   [ok  ] AC6  no storing method is on the allowlist
          allowlist is ['loadRig']; store, delete, rename and create are unreachable
   [ok  ] AC6  edit buffer discarded at the end
-         dirty was True after the run's writes; the rig was reloaded by id, which discards them without storing
+         dirty was True after the run's writes and reads False now; the rig was reloaded by id, which discards them without storing
 
-31 checks, 1 failed
+36 checks, 0 failed
 ```
 
 The host is a LAN address and is redacted; it is supplied with `--host`.
 
-## FAILURE: `select_preset()` loads a rig by name, and hardware wants the id
+## The `select_preset` defect, and its fix, verified
 
-This is the one failing check, and it is a real defect in merged code. It is
-recorded rather than worked around, per AC5.
-
-`HeadrushAdapter.select_preset()` passes the rig **name** as `loadRig`'s first
-argument. The unit answers `504 Gateway Timeout` and loads nothing. The same
-call with the rig **id** returns `True` and loads.
+The first run of this procedure failed one check. `HeadrushAdapter.select_preset()`
+passed the rig **name** as `loadRig`'s first argument; the unit answered
+`504 Gateway Timeout` and loaded nothing, where the rig **id** returned `True`
+and loaded:
 
 ```
-isolating the two loadRig argument forms, on ##HRB test presets only
-(rig names and ids not recorded, AC7)
-
-  loadRig(name  <- what select_preset sends   ) -> HTTPError: HTTP Error 504: Gateway Timeout   [5.0s]
+loadRig(name  <- what select_preset sent    ) -> HTTPError: HTTP Error 504: Gateway Timeout   [5.0s]
       unit now reports the requested rig: False
-  loadRig(rig id <- what hardware accepts     ) -> returned True   [0.1s]
+loadRig(rig id <- what hardware accepts     ) -> returned True                                [0.1s]
       unit now reports the requested rig: True
 ```
 
-Both forms are available from the same object: `/Evil/API/Rigs` publishes
-`AllRigNames` and `AllRigIds` as parallel lists, so a name-taking `select_preset`
-can resolve one to the other without a second round trip.
+Nothing caught it because `select_preset` had no test and
+`devices/headrush/sim.py` did not implement `loadRig`, so it reached `main` and
+1.3.0 having never been executed against anything.
 
-### Why nothing caught it
+Fixed in #135 (`90838ff`): the name is resolved to an id through the parallel
+lists, the id is sent, the read-back waits, and the simulator implements
+`loadRig` and reproduces the 504 for a name so the path is executed under test.
+**The run above is against that fix, and the check passes.**
 
-- **`select_preset` has no test.** Nothing in `tests/` exercises the
-  `HeadrushAdapter` method.
-- **`devices/headrush/sim.py` does not implement `loadRig`.** There was nothing
-  for a test to run against, so a test would have had to assert against a
-  fabricated response, which is how the wrong argument would have been enshrined
-  rather than caught.
+### How long a rig load actually takes
 
-The method therefore reached `main` and release 1.3.0 having never been
-executed against anything. That is the case for the hardware gate: CI was
-green, review was clean, and the method does not work on a device.
+`loadRig` returns before the engine swaps, so the read-back has to wait for
+something. Measured on this unit, over 16 loads:
 
-### A second issue in the same method, visible from the same evidence
+```
+poll cost (one GET PresetName): median 10 ms   <- the measurement's resolution
 
-`select_preset` reads `PresetName` back immediately. `loadRig` returns before
-the engine has swapped the rig — the probe above sleeps 2s before its read for
-exactly that reason, and the run's own restore path sleeps 1.5s. Even with the
-id fix, the `ok` this method returns would be racing the device. The adapter's
-parameter write path already has the right shape for this (`settle_s`, then
-read back); rig selection does not use it.
+loadRig returns at   t+144 .. 278 ms
+PresetName swaps at  t+159 .. 679 ms   (median 376 ms)
+```
 
-### Not fixed here
+A fixed settle of 0.5 s after the call reads at `t+644 .. 778 ms`. Over those
+16 loads the swap landed after that read **once**, with a worst margin of
+**-10 ms**: it passes by accident rather than by design.
 
-#126 is verification and says to run only its procedure. The adapter is #125,
-which is closed, and the fix is @monzta1's call — argument handling, settle, the
-test and the sim's `loadRig` are design decisions in his component, not this
-ticket's. Reported separately with this evidence.
+The slow tail is not predictable. It is not the rig and not a cold/warm effect
+- the same rig swapped at 173 ms and at 526 ms on different loads, and loading
+one twice in a row was no cheaper:
+
+```
+alternating A B A B A B ->  526, 163, 294, 397, 197, 170 ms
+same rig twice in a row ->  189, 178 ms
+```
+
+So a larger constant moves the flake rather than removing it, and makes the
+common case slower. This procedure therefore **polls** for the rig rather than
+sleeping (`wait_for_rig`), which returns as soon as the engine has swapped and
+turns an intermittent false negative into a real timeout when a load genuinely
+fails. Reported on #134 for the adapter to do the same if @monzta1 wants it;
+that is his component's call.
 
 ## The #33 pass, and the two open questions it closes
 
@@ -189,14 +202,14 @@ the second reads True and the first reads False
 This is measured across a **transition**, on purpose. Engaging one scene and
 reading its own flag back cannot answer the question: a flag that reads `True`
 immediately after its own write is equally consistent with a latch and with a
-pulse that has not been cleared yet. Two scenes are needed — one to set, one to
-displace it — and both halves are observed.
+pulse that has not been cleared yet. Two scenes are needed  -  one to set, one to
+displace it  -  and both halves are observed.
 
 So the adapter's current caution can be tightened if @monzta1 wants: `set_scene`
 reports `written` without requiring it, because the flag's persistence was
 unmeasured. It is measured now, on this firmware, and the flag tracks the active
-scene. `LastScene` remains the better success signal regardless — it is the
-effect the write is *for* — so this is an option, not a defect.
+scene. `LastScene` remains the better success signal regardless  -  it is the
+effect the write is *for*  -  so this is an option, not a defect.
 
 **Bound:** one rig, one firmware, switches 6–9 in scene mode, `n = 1` per
 transition. It is not established that the unit never pulses under some other
@@ -221,14 +234,14 @@ would have seen `4` and returned a false `ok`. The check asserts both that
 `ok is False` *and* that the slot really holds 0, so a refusal that lied in the
 other direction would also fail.
 
-The adjacent placements confirm the same path works when the ordinal is backed —
+The adjacent placements confirm the same path works when the ordinal is backed  - 
 `place_block(slot, 19)` reports the module in the slot **and** its object
 answering, and `place_block(slot, 0)` empties it again.
 
 ### What the #33 pass touched, and put back
 
 Everything ran on the loaded `##HRB` test preset, in increasing order of how
-much it perturbs the rig — scenes, then bypass, then chain edits — and each step
+much it perturbs the rig  -  scenes, then bypass, then chain edits  -  and each step
 restores what it changed. Two of these checks were rewritten after a first run
 passed them **vacuously**, which is worth recording because the passes looked
 fine:
@@ -248,11 +261,11 @@ would have caught a regression.
 | | criterion | what proved it |
 |---|---|---|
 | AC1 | model and firmware string | read from the unit, and asserted equal to the firmware the adapter's own `evidence()` claims to have been verified against |
-| AC2 | discovery, listing, selection, state, topology, scenes, reads | all pass **except rig selection**, above |
+| AC2 | discovery, listing, selection, state, topology, scenes, reads | all pass, rig selection included since #135 |
 | #33 | @monzta1's five-step pass and its two open questions | all five pass; both questions answered above |
 | AC3 | every tested write is followed by read-back | `Amp.Bass = 0.25` written and read back as `0.25`, then restored; `select_topology(1)` read back as `1`, then restored |
 | AC4 | non-allowlisted method refused **before transport** | see below |
-| AC5 | failures recorded, capability claims not weakened | the `select_preset` failure is recorded as a failure; `get_param_display` refuses rather than inventing a display value |
+| AC5 | failures recorded, capability claims not weakened | the `select_preset` failure was recorded as a failure rather than worked around, and is what produced #135; `get_param_display` refuses rather than inventing a display value |
 | AC6 | no store, reset, firmware or recovery | no storing method is on the allowlist at all; edit buffer discarded by reload |
 | AC7 | scrubbed report | redaction happens in the script, at the point of printing |
 | AC8 | Prime and Flex Prime unverified | asserted still listed as unverified; not tested |
@@ -264,12 +277,33 @@ reached the unit, which is what the criterion asks. So the client's opener is
 wrapped in a counter and the check asserts the count is **unchanged** across the
 refused call. A refusal that still opened a socket fails this check.
 
-Two refusals are checked this way, and both hold with the opener untouched:
+That counter is a complete answer only if every byte leaves through that one
+opener, so the run asserts the adapter is holding the wrapped client.
+`HeadrushAdapter` performs no I/O of its own and reaches the network only
+through its client, and `HeadrushClient` has exactly one outbound call site.
 
-- `deleteRig` — not on the allowlist (`2 -> 2` calls).
-- `ModuleType` ordinal **20** — the write that killed the engine on this
-  firmware (`HEADRUSH-HARDWARE-FINDINGS.md`, finding 1). The refusal is checked;
-  the crash is not reproduced.
+### A safety check must not be the thing it checks for
+
+The first version of this procedure probed AC4 by calling `deleteRig` and by
+writing `ModuleType` ordinal **20**, the ordinal that killed the engine. Both
+are safe only if the interlock works, which is the thing under test. A broken
+allowlist would have deleted a rig; a broken refusal table would have written
+the crash ordinal, to a hardcoded slot that is occupied on a real rig. The
+probe was the catastrophe it was checking for. Caught in review of #134.
+
+It is now split so a failure of the mechanism cannot execute the dangerous
+operation:
+
+| | checked how |
+|---|---|
+| `deleteRig`, `saveRig`, `factoryReset`, `updateFirmware` and friends are not reachable | **as data.** Asserted absent from the allowlist. Nothing is called. |
+| ordinal 20 is refused | **as data.** Asserted present in the refusal table. It is never written. |
+| a non-allowlisted method is refused before transport | with a method name **no device implements**. A broken allowlist gets a 404, not a deletion. |
+| a refused ordinal is blocked before transport | with ordinal **254**, which finding 1 measured as sticking without an object rather than crashing, written to a slot **measured empty on this rig** rather than a hardcoded one. |
+
+The transport claim still rests on the opener counter; only the operands
+changed, from ones that would be destructive if the guard failed to ones that
+would not.
 
 ### AC6: `dirty` is not the question
 
@@ -280,27 +314,52 @@ answers it is that no storing method is reachable: `saveRig`, `saveRigAs`,
 `{("/Evil/API/Rigs", "loadRig")}` and nothing else. The run asserts that.
 
 The unit is returned to its starting rig by reloading it by id, which discards
-the run's writes without storing anything — the only restore route that does not
+the run's writes without storing anything  -  the only restore route that does not
 go through a storing method.
+
+## AC7 is enforced at print time, and was not before
+
+The report claims the transcript is committed verbatim rather than edited into
+shape. In the first version that claim was **false**: redaction happened at the
+call sites, the host was printed unredacted, and the `<host>` in the committed
+transcript was put there afterwards by a `replace()`. Caught in review of #134.
+
+`Report.record` now runs every line through `redact()` before printing, seeded
+with the host and the unit's rig names before the first line of output. A host
+or rig name arriving inside an exception message cannot reach the transcript
+either, which was the concrete hole: an `HTTPError` carries the url.
 
 ## An observation that is not a defect
 
 `get_param_display` refuses for `Amp.Bass`, and the run records that as a pass,
 because the adapter does not carry the taper table. `Amp.Bass` publishes no
-`normalizeAlgo`, which #130 established means Linear — a conversion this repo
+`normalizeAlgo`, which #130 established means Linear - a conversion this repo
 can now actually perform, via `devices/headrush/tapers.py`. So the adapter
 currently refuses a conversion the repo has the data for.
 
 That is a deliberate follow-up (wiring #130's table into `to_display()`), not a
 fault in what was verified: refusing is the correct behaviour for a component
 that has not been given the curve. Recorded so it is not mistaken for a finding
-that display values are underivable in general — finding 3 says they are
+that display values are underivable in general - finding 3 says they are
 underivable *from the device*, which is a different claim.
+
+## One unexplained transient
+
+On one run the `topology restored` check failed while its own detail line said
+"back to routing 0". The line was hardcoded to print the *wanted* routing rather
+than the observed one, so the transcript could not say what the unit actually
+read. Restoring routing could not be reproduced as a failure afterwards, in the
+run above or in isolation.
+
+It is recorded rather than dismissed. The message now prints the observed value
+and the restoring write's own result, so a recurrence is diagnosable. What is
+**not** claimed is that it was fixed: an uninformative message was fixed, and
+the underlying event has no explanation.
 
 ## What this run does not cover
 
 - **One unit, one firmware, one run.** `n = 1` per check. Nothing here is a rate.
-- **Prime and Flex Prime** (AC8) — untested, unclaimed.
+- **Prime and Flex Prime** (AC8)  -  untested, unclaimed.
 - **Ordinal 20 was refused, never executed.** AC4 wanted the refusal, and the
   ordinal chosen for it is the one that killed the engine. Only 19, 4 and 0 were
   actually written to a slot.

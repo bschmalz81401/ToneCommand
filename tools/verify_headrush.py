@@ -17,10 +17,27 @@ WHAT IT WILL NOT DO
     presets @bschmalz81401 designates; everything else on the unit is a real
     rig. The run aborts rather than continues if the loaded rig is not one.
   - Store, reset, flash or recover anything (#126 AC6). `saveRig` is not on the
-    adapter's allowlist and is not called; `dirty` is asserted false at the end.
-  - Write ModuleType ordinal 20. It killed the engine on this firmware
-    (findings, finding 1) and the adapter refuses it; this checks the refusal
-    rather than the crash.
+    adapter's allowlist and is not called.
+  - Name a real destructive method, or write ModuleType ordinal 20, as part of
+    checking that they are refused. See below.
+
+A SAFETY CHECK MUST NOT BE THE THING IT CHECKS FOR (review of #134)
+
+The first version probed AC4 by calling `deleteRig` and by writing ordinal 20,
+the ordinal that killed the engine. Both are safe ONLY IF the interlock works,
+which is the thing under test: a broken allowlist would have deleted a rig, and
+a broken refusal table would have written the crash ordinal to a hardcoded slot
+that is occupied on a real rig. The probe is now split so a failure of the
+mechanism cannot execute the dangerous operation:
+
+  - the dangerous NAMES are checked as data, with no call at all: `deleteRig`
+    and friends are asserted absent from the allowlist, and 20 is asserted
+    present in the refusal table.
+  - the TRANSPORT behaviour is checked with operands that are harmless even if
+    every guard fails: a method name no device implements, and ordinal 254,
+    which finding 1 measured as sticking without an object rather than
+    crashing. It is written to a slot measured empty on this rig, never a
+    hardcoded one.
 
 WHAT "REFUSED BEFORE TRANSPORT" MEANS HERE (AC4)
 
@@ -28,6 +45,19 @@ Catching an exception proves the adapter raised. It does not prove nothing
 reached the unit, which is what the criterion asks. So the client's opener is
 wrapped in a counter, and the check asserts the count is UNCHANGED across the
 refused call. A refusal that still opened a socket would fail.
+
+That counter is only a complete answer if every byte leaves through that one
+opener. It does: `HeadrushAdapter` performs no I/O of its own and reaches the
+network only through its client, and `HeadrushClient` has exactly one outbound
+call site, `self._opener(...)`. The run asserts the adapter is holding the
+client that was wrapped.
+
+AC7 IS ENFORCED AT PRINT TIME
+
+`Report.record` runs every line through `redact()` before printing, so the
+host and rig names cannot reach the transcript even from an exception message
+or a detail string built elsewhere. The committed report is this output
+verbatim; nothing is edited into shape afterwards.
 """
 from __future__ import annotations
 
@@ -45,10 +75,54 @@ from devices.headrush.adapter import (  # noqa: E402
     HeadrushAdapter, MethodRefused, SceneSlotState)
 from devices.headrush.client import (  # noqa: E402
     HeadrushClient, describe_unreachable)
-from devices.headrush.registry import load as load_registry  # noqa: E402
+from devices.headrush.registry import (  # noqa: E402
+    NotMeasured, load as load_registry)
 
 TEST_PREFIX = "##HRB"
 RIGS = "/Evil/API/Rigs"
+
+# AC7. Filled in once the host and library are known, then applied to EVERY
+# printed line. Redacting at the call sites was the earlier design and it
+# leaked: an exception message carries the url, so the host reached the
+# transcript and was edited out by hand afterwards, while the report claimed
+# print-time redaction. Doing it here makes the claim true.
+_SECRETS: list[tuple[str, str]] = []
+
+
+def teach_redactor(host: str, rig_names: list[str]) -> None:
+    _SECRETS.clear()
+    for name in sorted((n for n in rig_names if n), key=len, reverse=True):
+        _SECRETS.append((name, f"<{TEST_PREFIX} name>"
+                               if name.startswith(TEST_PREFIX) else "<rig>"))
+    _SECRETS.append((host, "<host>"))
+
+
+def redact(text: str) -> str:
+    out = str(text)
+    for secret, mask in _SECRETS:
+        out = out.replace(secret, mask)
+        out = out.replace(secret.strip(), mask)
+    return out
+
+
+def wait_for_rig(client: HeadrushClient, name: str, timeout_s: float = 5.0):
+    """Poll until the engine reports `name` loaded, or give up.
+
+    A fixed sleep cannot do this honestly: on this unit the swap lands
+    159..679 ms after loadRig with no predictor (not the rig, not whether it
+    was just loaded), so any constant is either a flake at the tail or a wait
+    that pays the worst case every time. One GET costs about 10 ms.
+    """
+    deadline = time.monotonic() + timeout_s
+    while time.monotonic() < deadline:
+        try:
+            now = str(client.get_property(RIGS, "loadedName") or "")
+        except Exception:                           # noqa: BLE001
+            continue
+        if now.strip() == name.strip():
+            return now
+        time.sleep(0.05)
+    return None
 
 
 class Report:
@@ -58,9 +132,10 @@ class Report:
         self.rows: list[dict] = []
 
     def record(self, ac: str, name: str, ok: bool | None, detail: str) -> None:
+        detail = redact(detail)
         self.rows.append({"ac": ac, "name": name, "ok": ok, "detail": detail})
         mark = {True: "ok  ", False: "FAIL", None: "n/a "}[ok]
-        print(f"  [{mark}] {ac:<4} {name}")
+        print(f"  [{mark}] {ac:<4} {redact(name)}")
         if detail:
             print(f"         {detail}")
 
@@ -81,6 +156,23 @@ class Report:
             self.record(ac, name, False,
                         f"raised {type(err).__name__}: {str(err)[:120]}")
             return None
+
+    def expect_raise(self, ac: str, name: str, want: type | tuple,
+                     fn, detail_ok: str, detail_no: str) -> None:
+        """A refusal check. The exception type is REQUIRED to be the one the
+        refusal is supposed to raise: treating any Exception as a pass greens
+        the row on a transport error or a TypeError, which is the opposite of
+        what the criterion asks."""
+        try:
+            fn()
+        except want as err:                         # the refusal, as designed
+            self.record(ac, name, True, f"{type(err).__name__}: {detail_ok}")
+        except Exception as err:                    # noqa: BLE001
+            self.record(ac, name, False,
+                        f"raised {type(err).__name__}, not "
+                        f"{getattr(want, '__name__', want)}: {str(err)[:90]}")
+        else:
+            self.record(ac, name, False, detail_no)
 
 
 class CountingOpener:
@@ -111,20 +203,46 @@ def verify(adapter: HeadrushAdapter, client: HeadrushClient,
                   set(evidence["unverified_models"]) == {"Prime", "Flex Prime"},
                   "adapter lists them as unverified; nothing here tests them")
 
-    # --- AC4: a non-allowlisted method is refused BEFORE transport --------
-    before = opener.calls
-    try:
-        adapter.call_method(RIGS, "deleteRig", ["whatever"])
-        report.record("AC4", "non-allowlisted object-method refused", False,
-                      "deleteRig was NOT refused")
-    except MethodRefused as err:
-        report.record("AC4", "non-allowlisted object-method refused",
-                      opener.calls == before,
-                      f"raised MethodRefused and the opener was not called "
-                      f"({before} -> {opener.calls}); {str(err)[:60]}...")
+    # --- AC4: the dangerous NAMES, checked as data, with no call ----------
+    # Nothing here invokes anything. A broken allowlist cannot delete a rig by
+    # way of the test that checks the allowlist.
+    destructive = {"deleteRig", "saveRig", "saveRigAs", "makeNewRig",
+                   "renameRig", "factoryReset", "updateFirmware"}
+    on_list = {m for _, m in ALLOWED_METHODS}
+    report.record("AC4", "no destructive method is on the allowlist",
+                  not (on_list & destructive),
+                  f"allowlist is {sorted(on_list)}; none of "
+                  f"{sorted(destructive)} appears")
     report.record("AC4", "allowlist is deny-by-default and small",
                   ALLOWED_METHODS == frozenset({(RIGS, "loadRig")}),
                   f"only {sorted(ALLOWED_METHODS)} may be invoked")
+    report.record("AC4", "ordinal 20 is in the refusal table",
+                  20 in REFUSED_MODULE_ORDINALS,
+                  "the engine-killing ordinal is refused by data, checked "
+                  "without writing it")
+
+    # --- AC4: the transport behaviour, with a harmless operand ------------
+    # A method name no device implements. If the allowlist were broken this
+    # would 404, not destroy anything.
+    before = opener.calls
+    report.expect_raise(
+        "AC4", "non-allowlisted object-method refused before transport",
+        MethodRefused,
+        lambda: adapter.call_method(RIGS, "toneCommandNoSuchMethod", []),
+        detail_ok=(f"refused and the opener was not called "
+                   f"({before} -> {opener.calls})"),
+        detail_no="a method outside the allowlist was NOT refused")
+    report.record("AC4", "nothing reached the unit during that refusal",
+                  opener.calls == before,
+                  f"opener call count unchanged ({before} -> {opener.calls})")
+
+    # The counter only answers AC4 if the adapter cannot reach the network
+    # another way. It holds the wrapped client, and the client has one
+    # outbound call site.
+    report.record("AC4", "the counted opener is the adapter's only transport",
+                  adapter.client is client and client._opener is opener,
+                  "adapter reaches the network only through this client, whose "
+                  "single outbound call site is the wrapped opener")
 
     # --- AC2: discovery and current state ---------------------------------
     status = adapter.status_dump()
@@ -154,10 +272,15 @@ def verify(adapter: HeadrushAdapter, client: HeadrushClient,
                       "needs a second test preset to switch to; only one found")
     else:
         def select():
-            adapter.select_preset(target)
-            now = adapter.current_preset()[1]
-            return now.strip() == target.strip(), (
-                "adapter loaded the requested test preset and read it back")
+            out = adapter.select_preset(target)
+            # loadRig returns before the engine swaps. Measured on this unit,
+            # the swap lands 159..679 ms after the call, so a fixed wait is
+            # either a flake or slower than it needs to be; poll instead.
+            now = wait_for_rig(client, target)
+            ok = now is not None
+            return ok, (f"adapter loaded the requested test preset and it read "
+                        f"back after {'polling' if ok else 'a timeout'}; "
+                        f"adapter itself reported ok={out.get('ok')!r}")
         report.check("AC2", "rig selection through the adapter", select)
 
         # Whatever the adapter did, get the unit back where it started, by the
@@ -165,36 +288,51 @@ def verify(adapter: HeadrushAdapter, client: HeadrushClient,
         # does not leave the run unable to continue.
         ids = dict(zip(library["AllRigNames"], library["AllRigIds"]))
         client.call_method(RIGS, "loadRig", [ids[was], ""])
-        time.sleep(1.5)
         report.record("AC2", "unit returned to its starting rig",
-                      client.get_property(RIGS, "loadedName").strip() == was.strip(),
+                      wait_for_rig(client, was) is not None,
                       "restored directly, by rig id (name not recorded, AC7)")
 
-    # --- the ordinal that killed the engine, refused before transport -----
-    before = opener.calls
-    def refuse_20():
-        try:
-            adapter.place_block(3, 20)
-            return False, "ordinal 20 was NOT refused"
-        except Exception as err:                    # noqa: BLE001
-            reached = opener.calls - before
-            return reached == 0, (f"{type(err).__name__} raised and the opener "
-                                  f"was not called; {REFUSED_MODULE_ORDINALS[20][:58]}...")
-    report.check("AC4", "ModuleType 20 refused before transport", refuse_20)
+    # --- AC4: the refusal blocks before transport, using a safe ordinal ---
+    # 254 is also in the refusal table, and finding 1 measured it as sticking
+    # without an object rather than crashing. So if the refusal failed, the
+    # worst case is a harmless ordinal in a slot this run already measured
+    # EMPTY, not the crash ordinal in a hardcoded, occupied one.
+    chain_now = client.get_properties(CHAIN) or {}
+    spare = next((i for i in range(1, 15)
+                  if not int(chain_now.get(f"ModuleType{i}") or 0)), None)
+    if spare is None:
+        report.record("AC4", "ModuleType refusal blocks before transport", None,
+                      "needs an empty slot so a failed refusal stays harmless")
+    else:
+        before = opener.calls
+        report.expect_raise(
+            "AC4", "refused ModuleType blocks before transport",
+            PermissionError,
+            lambda: adapter.place_block(spare, 254),
+            detail_ok=(f"ordinal 254 refused and the opener was not called "
+                       f"({before} -> {opener.calls}); 20 is refused by the "
+                       f"same table, asserted above without writing it"),
+            detail_no="a refused ordinal was NOT refused")
+        report.record("AC4", "nothing reached the unit during that refusal",
+                      opener.calls == before,
+                      f"opener call count unchanged ({before} -> {opener.calls})")
 
     # --- AC2 + AC3: topology selection, with read-back --------------------
     started_at = adapter.current_topology()
+    other = 1 if started_at != 1 else 0          # always a real transition
     def topology():
-        out = adapter.select_topology(1)
+        out = adapter.select_topology(other)
         back = adapter.current_topology()
-        return bool(out.get("ok")) and back == 1, (
-            f"select_topology(1) -> read back {back}; adapter reports "
-            f"ok={out.get('ok')}")
+        return (bool(out.get("ok")) and back == other and back != started_at), (
+            f"routing moved {started_at} -> {back} and read back; adapter "
+            f"reports ok={out.get('ok')}")
     report.check("AC2", "topology selection is verified by read-back", topology)
-    adapter.select_topology(started_at)
-    report.record("AC2", "topology restored",
-                  adapter.current_topology() == started_at,
-                  f"back to routing {started_at}")
+    restore = adapter.select_topology(started_at)
+    back = adapter.current_topology()
+    report.record("AC2", "topology restored", back == started_at,
+                  f"wanted routing {started_at}, unit reads {back!r}; the "
+                  f"restoring write reported ok={restore.get('ok')!r} "
+                  f"({restore.get('detail', '')[:70]})")
 
     # --- AC2: representative parameter reads ------------------------------
     bass = adapter.registry.resolve("Amp", "Bass")
@@ -203,16 +341,14 @@ def verify(adapter: HeadrushAdapter, client: HeadrushClient,
         return wire is not None, f"Amp.Bass reads {wire!r} on the wire"
     report.check("AC2", "representative parameter read", reads)
 
-    def display_refused():
-        try:
-            adapter.get_param_display(bass)
-            return False, "a display value was returned, which is not derivable"
-        except Exception as err:                    # noqa: BLE001
-            return True, (f"{type(err).__name__}: the wire-to-display curve is "
-                          f"taper_id={bass.taper_id!r} and the device does not "
-                          f"say what that denotes, so it refuses (finding 3)")
-    report.check("AC5", "display read refuses rather than inventing a value",
-                 display_refused)
+    report.expect_raise(
+        "AC5", "display read refuses rather than inventing a value",
+        NotMeasured,
+        lambda: adapter.get_param_display(bass),
+        detail_ok=(f"the wire-to-display curve is taper_id={bass.taper_id!r} "
+                   f"and the device does not say what that denotes, so it "
+                   f"refuses (finding 3)"),
+        detail_no="a display value was returned, which is not derivable")
 
     # --- AC2 + AC3: a representative verified write -----------------------
     def verified_write():
@@ -248,6 +384,10 @@ def verify_open_questions(adapter: HeadrushAdapter, client: HeadrushClient,
     """
     fs = client.get_properties(FOOTSWITCH) or {}
     scene_mode = [n for n in range(1, 11) if fs.get(f"ModeNew{n}") == 2]
+    # Snapshot at entry. Restoring to scene_mode[0] was wrong: the run's own
+    # mid-pass reload clears LastScene, so "back on the scene this pass
+    # started from" was a claim the code did not implement.
+    scene_at_entry = adapter._current_scene()
 
     # --- #33 step 4: set_scene, and does SceneActive persist? -------------
     if len(scene_mode) < 2:
@@ -296,10 +436,16 @@ def verify_open_questions(adapter: HeadrushAdapter, client: HeadrushClient,
                 f"{'a LATCH the unit maintains and clears on change, not a pulse' if ok else 'NOT the latch model: see the values'}")
         report.check("#33", "SceneActive is a latch, not a pulse (OPEN)", latch)
 
-        adapter.set_scene(first)
-        report.record("#33", "scene restored",
-                      adapter._current_scene() == first,
-                      "back on the scene this pass started from")
+        if scene_at_entry is None:
+            report.record("#33", "scene restored", None,
+                          "no scene was engaged when this pass started, so "
+                          "there is nothing to restore to; the final reload "
+                          "settles it")
+        else:
+            adapter.set_scene(scene_at_entry)
+            report.record("#33", "scene restored",
+                          adapter._current_scene() == scene_at_entry,
+                          "back on the scene this pass found engaged at entry")
 
     # --- #33 step 5: set_scene_slot ---------------------------------------
     if scene_mode:
@@ -365,24 +511,24 @@ def verify_open_questions(adapter: HeadrushAdapter, client: HeadrushClient,
 
     def place_19():
         out = adapter.place_block(free, 19)
-        return bool(out.get("ok")), f"place_block(free slot, 19) -> {out['detail']}"
+        return bool(out.get("ok")), f"place_block(free slot, 19) -> {out.get('detail', '')}"
     report.check("#33", "place_block places a backed ordinal", place_19)
 
     def empty_it():
         out = adapter.place_block(free, 0)
-        return bool(out.get("ok")), f"place_block(free slot, 0) -> {out['detail']}"
+        return bool(out.get("ok")), f"place_block(free slot, 0) -> {out.get('detail', '')}"
     report.check("#33", "place_block empties the slot again", empty_it)
 
     # THE OTHER OPEN QUESTION: ordinal 4 is allowed on purpose. Finding 1 says
     # the device accepts it, then silently reverts it to 0 within ~0.4s. So the
-    # adapter's delayed read-back should report NOT PLACED — a false `ok` here
+    # adapter's delayed read-back should report NOT PLACED  -  a false `ok` here
     # is the failure mode the settle exists to prevent.
     def ordinal_4():
         out = adapter.place_block(free, 4)
         placed = int(client.get_property(CHAIN, f"ModuleType{free}") or 0)
         return out.get("ok") is False and placed == 0, (
             f"place_block(free slot, 4) -> ok={out.get('ok')}: "
-            f"{out['detail'][:90]}; slot now holds {placed}")
+            f"{out.get('detail', '')[:90]}; slot now holds {placed}")
     report.check("#33", "ordinal 4 is reported not placed, not falsely ok (OPEN)",
                  ordinal_4)
     adapter.place_block(free, 0)
@@ -399,6 +545,19 @@ def _addressable(adapter: HeadrushAdapter, slot: int) -> bool:
         return False
 
 
+def discard_edits(client: HeadrushClient) -> tuple[Any, Any]:
+    """Reload the loaded rig by id, which drops the edit buffer without
+    writing anything. The only restore route that does not go through a
+    storing method."""
+    before = client.get_property(RIGS, "dirty")
+    lib = client.get_properties(RIGS)
+    name = lib["loadedName"]
+    rid = lib["AllRigIds"][lib["AllRigNames"].index(name)]
+    client.call_method(RIGS, "loadRig", [rid, ""])
+    wait_for_rig(client, name)
+    return before, client.get_property(RIGS, "dirty")
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--host", required=True)
@@ -410,6 +569,7 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         loaded = client.get_property(RIGS, "loadedName")
+        library = client.get_properties(RIGS)
     except Exception as err:                       # noqa: BLE001
         print(describe_unreachable(err, args.host))
         return 2
@@ -419,34 +579,53 @@ def main(argv: list[str] | None = None) -> int:
               f"preset. Load one on the unit first.")
         return 2
 
+    # AC7, before anything is printed: from here on no line can carry the host
+    # or a rig name, including one that arrives inside an exception message.
+    teach_redactor(args.host, list(library.get("AllRigNames") or []))
+
     adapter = HeadrushAdapter(client, load_registry())
     report = Report()
-    print(f"verifying against {args.host}, starting on a {TEST_PREFIX} preset\n")
-    verify(adapter, client, opener, report)
+    print(redact(f"verifying against {args.host}, starting on a "
+                 f"{TEST_PREFIX} preset\n"))
 
-    # AC6 asks that nothing was stored, reset or flashed. `dirty` does not
-    # answer that: it means the edit buffer differs from what is on disk, which
-    # is true after any write and is discarded by a reload. What answers it is
-    # that no storing method is reachable at all.
-    report.record("AC6", "no storing method is on the allowlist",
-                  not any(m in {"saveRig", "saveRigAs", "deleteRig",
-                                "makeNewRig", "renameRig"}
-                          for _, m in ALLOWED_METHODS),
-                  f"allowlist is {sorted(m for _, m in ALLOWED_METHODS)}; "
-                  f"store, delete, rename and create are unreachable")
+    # Every device write below has to be undone even if a check explodes.
+    # `verify` was previously called bare: any exception it did not convert to
+    # a FAILED row skipped the restore and left a dirty edit buffer, possibly
+    # with chain edits in it.
+    crashed = None
+    try:
+        verify(adapter, client, opener, report)
+    except BaseException as err:                    # noqa: BLE001
+        crashed = err
+    finally:
+        # AC6 asks that nothing was stored, reset or flashed. `dirty` does not
+        # answer that: it is true after any write and false after a reload.
+        # What answers it is that no storing method is reachable at all.
+        report.record("AC6", "no storing method is on the allowlist",
+                      not any(m in {"saveRig", "saveRigAs", "deleteRig",
+                                    "makeNewRig", "renameRig"}
+                              for _, m in ALLOWED_METHODS),
+                      f"allowlist is {sorted(m for _, m in ALLOWED_METHODS)}; "
+                      f"store, delete, rename and create are unreachable")
+        try:
+            dirty_before, dirty_after = discard_edits(client)
+            report.record("AC6", "edit buffer discarded at the end",
+                          not dirty_after,
+                          f"dirty was {dirty_before!r} after the run's writes "
+                          f"and reads {dirty_after!r} now; the rig was "
+                          f"reloaded by id, which discards them without "
+                          f"storing")
+        except Exception as err:                    # noqa: BLE001
+            report.record("AC6", "edit buffer discarded at the end", False,
+                          f"THE RESTORE ITSELF FAILED ({type(err).__name__}): "
+                          f"the unit may be holding this run's edits. Reload "
+                          f"the rig on the unit; nothing was stored, so a "
+                          f"reload is sufficient.")
 
-    # Put the unit back. Reloading the rig by id discards the edit buffer
-    # without writing anything, which is the restore-when-done rule and the
-    # only route that does not involve a storing method.
-    dirty_before = client.get_property(RIGS, "dirty")
-    lib = client.get_properties(RIGS)
-    rid = lib["AllRigIds"][lib["AllRigNames"].index(lib["loadedName"])]
-    client.call_method(RIGS, "loadRig", [rid, ""])
-    time.sleep(1.5)
-    report.record("AC6", "edit buffer discarded at the end",
-                  client.get_property(RIGS, "dirty") is False,
-                  f"dirty was {dirty_before!r} after the run's writes; the rig "
-                  f"was reloaded by id, which discards them without storing")
+    if crashed is not None:
+        report.record("--", "the run did not finish", False,
+                      f"{type(crashed).__name__}: {str(crashed)[:110]}; the "
+                      f"restore above still ran")
 
     print(f"\n{len(report.rows)} checks, {len(report.failed)} failed")
     return 1 if report.failed else 0
