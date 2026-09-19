@@ -4,6 +4,24 @@ Notable changes to ToneCommand. Dates are UTC.
 
 ## Unreleased
 
+### Added (capture-slot primitive, 2026-09-19: #162)
+- Cause: each device's capture path would have been its own special case,
+  and Epic I's intake and build work had nothing to be written against until
+  the FM9 ships a NAM protocol. Fix: `fm9/adapter.py` gains
+  `Capabilities.plays_captures` and the `CaptureSlots` sub-Protocol
+  (`capture_capabilities`, `list_captures`, `install_capture`,
+  `remove_capture`) with `CaptureCapabilities`, `CaptureSlot` and
+  `CaptureInstall` records; `CAPABILITY_PROTOCOLS` and `conformance()`
+  enforce it. `fm9/captures.py` holds the simulator's in-memory
+  `CaptureStore` (whitelist `TONECOMMAND_NAM_SLOTS`, parsed like the cab
+  slots, default empty; refusal order: outside the whitelist, then a slot a
+  stored preset references; an occupied unreferenced slot is overwritten;
+  removal refuses a referenced slot) and `NoCaptures`, the one-line
+  no-support answer the real FM9 and the HeadRush give today. A preset
+  stored on the simulator with an integer `capture_slot` field references
+  that slot. Tests: `tests/test_capture_primitive.py`; the contract and gate
+  matrix tests pin the new gate (eight gates, twenty methods).
+
 ### Added (NAM captures and Fractal sources, 2026-09-19: #144, #145, #161, #154)
 - `fm9/nam.py` reads a `.nam` capture file (stdlib json only) into a
   CaptureRecord: architecture and config summary, the metadata the file

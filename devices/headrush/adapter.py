@@ -120,6 +120,7 @@ class HeadrushAdapter:
         installs_files=False,
         can_rename=False,
         composable_scene_slots=True,
+        plays_captures=False,   # #162: the Core plays no captures; declared, not implied
     )
 
     def __init__(self, client, registry: Registry, *,
@@ -143,6 +144,22 @@ class HeadrushAdapter:
 
     def capabilities(self) -> Capabilities:
         return self.CAPABILITIES
+
+    # #162: the no-support path, one line, never an error page.
+    def capture_capabilities(self):
+        from fm9.captures import NoCaptures
+        return NoCaptures().capture_capabilities()
+
+    def list_captures(self) -> list:
+        return []
+
+    def install_capture(self, record, raw: bytes, slot: int):
+        from fm9.captures import NoCaptures
+        return NoCaptures().install_capture(record, raw, slot)
+
+    def remove_capture(self, slot: int):
+        from fm9.captures import NoCaptures
+        return NoCaptures().remove_capture(slot)
 
     def evidence(self) -> dict:
         return dict(EVIDENCE)

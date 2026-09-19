@@ -327,6 +327,16 @@ The rules do not change for a capture: nothing is written to the unit blind,
 every write is read back, and the tone check runs on a capture the same way it
 runs on a model.
 
+The first piece of that plan is in: the adapter contract carries a capture-slot
+primitive (`fm9/adapter.py`, gate `plays_captures`, sub-Protocol
+`CaptureSlots`: capabilities, list, install, remove), so the intake, level and
+cab-pairing work is written once and each device only maps its own slots. The
+simulator implements it fully in memory (whitelist `TONECOMMAND_NAM_SLOTS`,
+same rule as user cabs and stores: empty means disabled; an occupied slot a
+stored preset references is never overwritten or removed). The FM9 and the
+HeadRush declare that they play no captures today, in one line, and
+`conformance()` refuses any device that claims the gate without the methods.
+
 ## Install
 
 **macOS, Windows and Linux are all supported.** Pick yours below. Drivers and

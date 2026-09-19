@@ -71,13 +71,14 @@ REACHABLE_GATES = {"topology>=SELECTED", "has_modifiers", "installs_files",
 
 
 def test_gate_matrix_is_derived_from_the_contract():
-    """Seven gates, sixteen methods, all read off CAPABILITY_PROTOCOLS. The
-    server's own table and the sentinel's must be the same derivation."""
+    """Eight gates, twenty methods (#162 added plays_captures with four), all
+    read off CAPABILITY_PROTOCOLS. The server's own table and the sentinel's
+    must be the same derivation."""
     assert GATE_LABELS == ["topology>=SELECTED", "topology==SELECTED",
                            "topology==CONSTRUCTED", "has_modifiers",
                            "installs_files", "can_rename",
-                           "composable_scene_slots"]
-    assert sum(len(v) for v in GATE_MATRIX.values()) == 16
+                           "composable_scene_slots", "plays_captures"]   # #162
+    assert sum(len(v) for v in GATE_MATRIX.values()) == 20
     assert set(GATED_METHODS) == set(server.GATED_METHODS)
     for name, label in GATED_METHODS.items():
         assert server.GATED_METHODS[name][0] == label

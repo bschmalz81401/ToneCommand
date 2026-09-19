@@ -277,10 +277,41 @@ class FM9:
         # capability and swallowing a NO_CHANGE write would be the exact
         # dishonesty Capabilities exists to prevent (#109, #33).
         composable_scene_slots=False,
+        # #162: no capture protocol on this firmware (Epic I, I0 waits on
+        # Fractal shipping the NAM block for the FM9). The sim overrides this
+        # with an in-memory store so Epic I can be built against the primitive.
+        plays_captures=False,
     )
 
     def capabilities(self) -> Capabilities:
-        return self.CAPABILITIES
+        caps = self.CAPABILITIES
+        if getattr(self, "capture_store", None) is not None:
+            from dataclasses import replace
+            return replace(caps, plays_captures=True)
+        return caps
+
+    # -- #162 capture-slot primitive -----------------------------------------
+    # Backed by `capture_store` when one is attached (the sim), else the
+    # honest no-captures answer. The real FM9 backend arrives with I4.
+
+    def _captures(self):
+        store = getattr(self, "capture_store", None)
+        if store is not None:
+            return store
+        from fm9.captures import NoCaptures
+        return NoCaptures()
+
+    def capture_capabilities(self):
+        return self._captures().capture_capabilities()
+
+    def list_captures(self) -> list:
+        return self._captures().list_captures()
+
+    def install_capture(self, record, raw: bytes, slot: int):
+        return self._captures().install_capture(record, raw, slot)
+
+    def remove_capture(self, slot: int):
+        return self._captures().remove_capture(slot)
 
     def __enter__(self):
         return self

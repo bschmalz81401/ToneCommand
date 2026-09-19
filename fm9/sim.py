@@ -430,6 +430,19 @@ class SimFM9Core:
             snap["number"] = slot
             self.st.presets[slot] = snap
             self.st.buffer = _copy_buffer(snap)
+            # #162: a stored preset that names a capture slot (integer field
+            # `capture_slot` on the buffer) references it; anything else, or
+            # a malformed value, references nothing.
+            store = getattr(self.st, "capture_store", None)
+            if store is not None:
+                store.unreference_preset(slot)
+                held = snap.get("capture_slot")
+                if isinstance(held, int) and not isinstance(held, bool):
+                    store.reference_capture(held, slot)
+                elif held is not None:
+                    # Ignored, and said so in the sim's diagnostic channel.
+                    self.undecoded.add(
+                        f"preset {slot}: capture_slot {held!r} is not an integer; no reference recorded")
             return []
         return []
 
@@ -702,4 +715,9 @@ def SimFM9(registry: Registry | None = None) -> FM9:
     outp = _SimOut(core, inp)
     dev = FM9(registry=core.st.reg, ports=(inp, outp))
     dev.sim_core = core   # exposed for test assertions
+    # #162: the sim plays captures through an in-memory store, so Epic I's
+    # intake and build work is testable before the FM9 has a NAM protocol.
+    from fm9.captures import CaptureStore
+    dev.capture_store = CaptureStore(slots=8, formats=(".nam",))
+    core.st.capture_store = dev.capture_store
     return dev

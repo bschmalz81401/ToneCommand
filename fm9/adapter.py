@@ -177,6 +177,10 @@ class Capabilities:
     installs_files: bool = False
     can_rename: bool = False
     composable_scene_slots: bool = False
+    #: #162: the device plays captures (NAM models, ToneX tone models) in
+    #: addressable slots. Gate for `CaptureSlots`. False until a device's
+    #: firmware and protocol actually do; the FM9 flips it with Epic I.
+    plays_captures: bool = False
 
     @property
     def can_verify(self) -> bool:
@@ -427,6 +431,53 @@ class Renaming(Protocol):
     def rename_scene(self, scene_1based: int, name: str) -> Any: ...
 
 
+class CaptureCapabilities(NamedTuple):
+    """#162: what a capture-playing device can take. `formats` are file
+    suffixes ('.nam', '.tmodel'), `slots` the addressable count, `whitelist`
+    the slots this tool may write (the owner's designation, never all)."""
+    formats: tuple = ()
+    slots: int = 0
+    whitelist: frozenset = frozenset()
+
+
+class CaptureSlot(NamedTuple):
+    """One slot as the device reports it. `record` is the I1 CaptureRecord
+    when the slot's contents are known to this tool, else None."""
+    slot: int
+    occupied: bool
+    name: str | None = None
+    record: Any = None
+
+
+class CaptureInstall(NamedTuple):
+    """The honest result of an install: `verified` is True only when the
+    slot was read back and matched byte for byte; `note` says why not."""
+    slot: int
+    verified: bool
+    note: str = ""
+
+
+NO_CAPTURES = "this device plays no captures"
+
+
+@runtime_checkable
+class CaptureSlots(Protocol):
+    """#162: captures as an adapter primitive. Gate: `plays_captures`.
+
+    Exactly four operations, so Epic I's intake, level and cab-pairing
+    work is written once and every adapter only maps its own slots.
+    Install refusal order: (1) slot outside the whitelist, (2) slot occupied
+    AND referenced by a stored preset (names the preset); an occupied,
+    unreferenced slot is overwritten, exactly as a whitelisted user cab is.
+    'Full' is not a refusal here; eviction is I4's concern. remove refuses
+    only a referenced slot; removing an empty slot is a no-op."""
+
+    def capture_capabilities(self) -> CaptureCapabilities: ...
+    def list_captures(self) -> list: ...
+    def install_capture(self, record: Any, raw: bytes, slot: int) -> CaptureInstall: ...
+    def remove_capture(self, slot: int) -> Any: ...
+
+
 @runtime_checkable
 class SceneSlots(Protocol):
     """Composable per-slot scene state. Gate: `composable_scene_slots`.
@@ -463,6 +514,7 @@ CAPABILITY_PROTOCOLS = (
     ("installs_files", lambda c: c.installs_files, FileInstall),
     ("can_rename", lambda c: c.can_rename, Renaming),
     ("composable_scene_slots", lambda c: c.composable_scene_slots, SceneSlots),
+    ("plays_captures", lambda c: c.plays_captures, CaptureSlots),
 )
 
 
