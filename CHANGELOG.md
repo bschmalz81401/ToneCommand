@@ -84,7 +84,8 @@ Notable changes to ToneCommand. Dates are UTC.
   returns `ok=False`. An immediate read-back would have seen `4` and lied.
 
 ### Known issues
-- `HeadrushAdapter.select_preset()` DOES NOT WORK AGAINST HARDWARE. It passes
+- (Fixed in this release by #135, see "Fixed (HeadRush adapter)" above; kept as
+  the #126 pass reported it.) `HeadrushAdapter.select_preset()` DOES NOT WORK AGAINST HARDWARE. It passes
   the rig name as `loadRig`'s first argument; the unit answers `504 Gateway
   Timeout` and loads nothing, where the rig id returns `True` and loads. The
   method has no test, and `devices/headrush/sim.py` does not implement
