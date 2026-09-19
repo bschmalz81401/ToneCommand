@@ -138,6 +138,8 @@ below is a real request you can type.
   cabs into free user-cab slots (moved, and the preset repointed, when the
   pack's own slots are taken), the preset into a free store slot, and one
   line saying where everything landed.
+  Paste an Axe-Change preset link and ToneCommand reads that one page, says
+  what it is, checks it is for your unit, and installs it the guarded way.
 
 **Never sends behind your back**
 - Read-back verification on every write, and a signal-path check so a preset is

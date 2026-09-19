@@ -39,6 +39,20 @@ Notable changes to ToneCommand. Dates are UTC.
   one INSTALL button (effect-blocks-only entries say so; no device says
   installs need the unit); the click shows the line.
 
+### Added (paste an Axe-Change link, 2026-09-19: #160 J7)
+- `fm9/axechange.py`: one detail link (detail.php?preset=<id> on
+  axechange.fractalaudio.com, nothing else accepted), that page's details
+  block read into name, author, product, firmware, setup, description and
+  the rest, shown as one line; a page without the block, or without a
+  Name and a Fractal Product, is "could not read that page" and nothing
+  else. The product is checked against the connected unit and the
+  firmware by major against the unit's label with J3's wording; the
+  preset is fetched from download.php on the same host, validated as a
+  preset file, cached by id, and handed to the guarded install
+  (`/api/install`: whitelist, load, read-back). No crawling, no search,
+  no catalog of Axe-Change. `POST /api/axechange {url}`; the command bar
+  sends a pasted link there and shows the install row.
+
 ### Added (bring your own captures, the intake half, 2026-09-19: #149; failure lines: #150)
 - `fm9/nam_intake.py`: one `.nam` file, several, or a folder (walked for
   `.nam`, anything else skipped by name) go through I1 and come back as

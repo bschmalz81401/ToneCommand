@@ -33,6 +33,8 @@ reviewer = "default"
 # Each criterion's evidence should point at one of these having run, not a
 # free-text claim. Example: commands = ["pytest tests/ -q", "npm test"]
 commands = [
+  ".venv/bin/python -m pytest tests/test_axechange.py -q -k 'parse or markup'",
+  "TONECOMMAND_SIM=1 .venv/bin/python -m pytest tests/test_axechange.py -q -k 'device or route or install'",
   "TONECOMMAND_SIM=1 .venv/bin/python -m pytest tests/test_gallery_install.py -q -k 'order or line or relocate'",
   "TONECOMMAND_SIM=1 .venv/bin/python -m pytest tests/test_gallery_install.py -q -k 'whitelist or refuse or blocks'",
   ".venv/bin/python -m pytest tests/test_gallery_install.py -q -k 'page or ui'",

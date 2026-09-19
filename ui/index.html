@@ -10900,6 +10900,15 @@ async function submitRequest() {
     return;
   }
   const route = requestRoute(said);
+  // an Axe-Change preset link (#160): one page, one preset, the install rows
+  if (/^https?:\/\/axechange\.fractalaudio\.com\/detail\.php\?preset=\d+/i.test(said)) {
+    chatLog.push({role: 'user', content: said});
+    $('prompt').value = '';
+    growPrompt();
+    renderChat();
+    runAxeChange(said);
+    return;
+  }
   if (route === 'source') {
     chatLog.push({role: 'user', content: said});
     $('prompt').value = '';
