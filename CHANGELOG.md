@@ -2,7 +2,7 @@
 
 Notable changes to ToneCommand. Dates are UTC.
 
-## Unreleased
+## 1.3.1 (2026-09-19)
 
 ### Added (device picker, 2026-09-19: #139, the follow-up #94 left)
 - With more than one device reachable, the header shows a DEVICE pill (amber
