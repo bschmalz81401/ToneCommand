@@ -1462,6 +1462,20 @@
   font-size: 12px; color: var(--cyan-dim); border-left: 2px solid var(--line);
   padding-left: 11px; line-height: 1.6;
 }
+/* Epic A: what the deterministic core measured, shown as its own card under
+   the reply so the numbers are visible whatever the prose said. Advice only:
+   the only button a card may carry is BUILD THIS on a gap card, which sends
+   a sentence to the planner exactly as a typed request would. */
+#chat .cadvice { margin: 6px 0 10px; padding: 9px 12px; border: 1px solid var(--line);
+  border-left: 2px solid var(--amber, #ffb454); border-radius: 6px; font-size: 12px; line-height: 1.6; }
+#chat .cadvice .cahead { font-weight: 600; letter-spacing: .04em; color: var(--amber, #ffb454); margin-bottom: 4px; }
+#chat .cadvice .casub { color: var(--muted); font-size: 11px; letter-spacing: .06em; margin: 6px 0 2px; }
+#chat .cadvice ul { margin: 0; padding-left: 16px; }
+#chat .cadvice li { margin: 2px 0; }
+#chat .cadvice li.likely::marker { color: var(--amber, #ffb454); }
+#chat .cadvice li.cleared { color: var(--muted); }
+#chat .cadvice .carule { color: var(--muted); font-size: 11px; }
+#chat .cadvice .cagap { margin-top: 8px; }
 
 /* The empty state: a question and six real requests, centred in the space the
    conversation will fill. It is most people's first sight of this panel, and
@@ -7780,6 +7794,43 @@ function plainDeviceError(msg) {
   return 'ToneCommand could not finish safely. Nothing else will be sent.';
 }
 
+// Epic A cards. Diagnosis: symptom, likely (value + rule), cleared, advice.
+// Comparison: the measured lines. Gap: the moves, and BUILD THIS, which is
+// an ordinary plan request for the sentence the server composed. No card
+// ever carries a send or apply control.
+function adviceCard(a) {
+  if (!a) return '';
+  if (a.diagnosis) {
+    const d = a.diagnosis;
+    const li = (c, cls) => `<li class="${cls}">${esc(c.wording)}${
+      cls === 'likely' ? ` <span class="carule">${esc(c.rule)}</span>` : ''}</li>`;
+    return `<div class="cadvice" data-advice="diagnose">
+      <div class="cahead">DIAGNOSIS &middot; ${esc(d.symptom)} &middot; ${esc(d.scene || '')}</div>
+      <div class="casub">LIKELY</div>
+      <ul>${(d.likely || []).map(c => li(c, 'likely')).join('') || '<li class="cleared">nothing in the measured checks; listen and say more</li>'}</ul>
+      <div class="casub">CHECKED, NOT THE CAUSE</div>
+      <ul>${(d.cleared || []).concat(d.not_readable || []).map(c => li(c, 'cleared')).join('') || '<li class="cleared">none</li>'}</ul>
+      ${(d.advice || []).length ? `<div class="casub">TRY</div><ul>${d.advice.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}
+    </div>`;
+  }
+  if (a.comparison) {
+    const c = a.comparison;
+    return `<div class="cadvice" data-advice="compare">
+      <div class="cahead">MEASURED &middot; ${esc(c.a)} vs ${esc(c.b)}</div>
+      <ul>${(c.lines || []).map(x => `<li>${esc(x)}</li>`).join('')}</ul>
+    </div>`;
+  }
+  if (a.gap) {
+    const g = a.gap;
+    return `<div class="cadvice" data-advice="gap">
+      <div class="cahead">TO GET ${esc(g.a)} CLOSER TO ${esc(g.b)}</div>
+      <ul>${(g.advice || []).map(x => `<li>${esc(x.block)} ${esc(String(x.instance))} ${esc(x.param)}: ${esc(String(x.frm))} &rarr; ${esc(String(x.to))}</li>`).join('') || '<li class="cleared">no measured difference</li>'}</ul>
+      ${g.build_prompt ? `<div class="cagap"><button class="cbuildthis" data-prompt="${esc(g.build_prompt)}" title="Sends this sentence to the planner. You still review and confirm before anything reaches the rig.">BUILD THIS</button></div>` : ''}
+    </div>`;
+  }
+  return '';
+}
+
 function renderChat() {
   const box = $('chat');
   // Measured BEFORE the rewrite, because after it scrollTop is meaningless.
@@ -7811,7 +7862,7 @@ function renderChat() {
             // being returned on every turn and thrown away, so "who am I
             // talking to" had no answer anywhere on the page.
             : 'TONECOMMAND'
-        }</span>${esc(m.content)}</div>`
+        }</span>${esc(m.content)}</div>${adviceCard(m.advisory)}`
   ).join('')
   // Where the reader is already looking. A spinner on a button at the far
   // side of the panel is not an answer to "did that send?" when your eyes are
@@ -7876,6 +7927,9 @@ function renderChat() {
   }
   if ($('cbuild')) $('cbuild').onclick = () =>
     engage(chatRequest, chatName, chatScenes);
+  for (const b of feed.querySelectorAll('.cbuildthis[data-prompt]')) {
+    b.onclick = () => engage(b.dataset.prompt, '', []);
+  }
   // Waiting is a thing you can leave. Without this, a wedged backend meant
   // reloading the page, which until recently also lost the conversation.
   if ($('cstop')) $('cstop').onclick = () => {
@@ -8377,7 +8431,8 @@ async function talk() {
         throw new Error(d);
       } else if (ev === 'done') {
         chatLog.push({role: 'assistant', content: d.reply,
-                      model: d.model || '', backend: d.backend || ''});
+                      model: d.model || '', backend: d.backend || '',
+                      advisory: d.advisory || null});
         chatReady = !!d.ready;
         chatRequest = d.request || '';
         chatName = d.name || '';
