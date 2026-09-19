@@ -866,7 +866,8 @@ def build_static(recipes: list[dict]) -> None:
         "/slack " + SLACK_URL + " 302\n"
         "/shop https://shop.shieldbearerusa.com 302\n"
         "/releases https://github.com/monzta1/ToneCommand/releases 302\n"
-        "/issues https://github.com/monzta1/ToneCommand/issues 302\n")
+        "/issues https://github.com/monzta1/ToneCommand/issues 302\n"
+        "/nam /#next-nam-captures 302\n")
     (DIST / "robots.txt").write_text(f"User-agent: *\nAllow: /\nSitemap: {SITE_URL}/sitemap.xml\nDisallow: /admin/\n")
     # /admin/metrics/: the operator view of the site's traffic, ported from
     # shieldbearerusa.com/admin/metrics (same passphrase gate, same JSON shape,
