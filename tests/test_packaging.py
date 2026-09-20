@@ -72,3 +72,62 @@ def test_docs_and_changelog_describe_unsigned_app():
     assert "not signed by an identified developer" in setup
     assert "## Unreleased" in changelog
     assert "ToneCommand.app" in changelog
+
+
+# --- what a plain `pip install .` must be able to import (2026-09-20, #175's CI smoke) ----------
+
+def _top_level_imports(paths):
+    import ast
+    names = set()
+    for p in paths:
+        tree = ast.parse(p.read_text())
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                for a in node.names:
+                    names.add(a.name.split(".")[0])
+            elif isinstance(node, ast.ImportFrom) and node.module and node.level == 0:
+                names.add(node.module.split(".")[0])
+    return names
+
+
+def test_every_repo_package_the_server_imports_is_packaged():
+    import tomllib
+    root = Path(__file__).resolve().parent.parent
+    cfg = tomllib.load(open(root / "pyproject.toml", "rb"))
+    packaged = set(cfg["tool"]["setuptools"]["packages"]) | set(cfg["tool"]["setuptools"].get("py-modules", []))
+    sources = [root / "server.py", *sorted((root / "fm9").glob("*.py")), *sorted((root / "devices").rglob("*.py"))]
+    local_dirs = {p.name for p in root.iterdir() if p.is_dir() and (p / "__init__.py").exists()}
+    needed = {n for n in _top_level_imports(sources) if n in local_dirs}
+    missing = sorted(needed - packaged)
+    assert not missing, f"imported by the app but not in [tool.setuptools] packages: {missing}"
+
+
+def test_every_module_level_third_party_import_is_a_core_dependency():
+    """A module the server imports unconditionally must not depend on an
+    optional extra: numpy sat in `audition` while measure.py imported it at
+    module level, and a plain install died on import."""
+    import tomllib, sys, ast
+    root = Path(__file__).resolve().parent.parent
+    cfg = tomllib.load(open(root / "pyproject.toml", "rb"))
+    core = {d.split(";")[0].split(">")[0].split("<")[0].split("[")[0].strip().lower().replace("-", "_")
+            for d in cfg["project"]["dependencies"]}
+    core |= {"rtmidi", "supriya_midi"}                       # python-rtmidi and supriya-midi import under these names
+    stdlib = set(sys.stdlib_module_names)
+    local_dirs = {p.name for p in root.iterdir() if p.is_dir()} | {"server"}
+    # only imports at module level (not inside a function) count
+    sources = [root / "server.py", *sorted((root / "fm9").glob("*.py"))]
+    offenders = []
+    for p in sources:
+        tree = ast.parse(p.read_text())
+        for node in tree.body:
+            names = []
+            if isinstance(node, ast.Import):
+                names = [a.name.split(".")[0] for a in node.names]
+            elif isinstance(node, ast.ImportFrom) and node.module and node.level == 0:
+                names = [node.module.split(".")[0]]
+            for n in names:
+                if n in stdlib or n in local_dirs or n.startswith("_"):
+                    continue
+                if n.lower().replace("-", "_") not in core:
+                    offenders.append(f"{p.relative_to(root)}: {n}")
+    assert not offenders, offenders
