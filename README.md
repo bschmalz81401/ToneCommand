@@ -389,10 +389,15 @@ driver, the same one FM9-Edit uses, before the FM9's MIDI ports appear):
 ```bat
 git clone https://github.com/monzta1/ToneCommand.git
 cd ToneCommand
-py -m venv .venv
+py -3.12 -m venv .venv
 .venv\Scripts\pip install -e .
 .venv\Scripts\tonecommand
 ```
+
+Python 3.11 or 3.12 on every platform: the MIDI library (python-rtmidi)
+ships prebuilt wheels for CPython 3.8 to 3.12 only, and on 3.13 or newer
+pip builds it from source, which needs a C++ toolchain. The package now
+says so in one line rather than a compiler trace.
 
 > **Never used a terminal before?** Follow
 > [the step-by-step Windows guide](docs/SETUP.md#windows) instead. It assumes

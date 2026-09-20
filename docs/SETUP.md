@@ -37,15 +37,22 @@ issue, either way.
 
 ### Step 1: install Python
 
-Get it from **https://www.python.org/downloads/windows/** and run the
-installer.
+Install **Python 3.12**, not the newest one. The big download button on
+python.org gives you the newest, which is too new: the MIDI library
+ToneCommand uses ships prebuilt parts for Python 3.12 and older only, and on
+a newer Python the install tries to compile it and stops with a wall of red
+text about compilers. Go to
+**https://www.python.org/downloads/windows/**, scroll to the list of
+releases, pick the latest **3.12.x** "Windows installer (64-bit)", and run
+it.
 
 > **On the first screen, tick the box that says "Add python.exe to PATH"**,
 > down at the bottom, before you click Install. This is the single most common
 > thing to get wrong, and skipping it is why "python is not recognised"
 > appears later. If you miss it, run the installer again and choose Modify.
 
-Any version 3.11 or newer works.
+3.11 works too. 3.13 and newer do not, and the install will say so in one
+line ("requires a different Python").
 
 ### Step 2: install the FM9 USB driver
 
@@ -83,7 +90,7 @@ Type or paste **one line at a time**, pressing Enter after each, and wait for
 it to finish before starting the next.
 
 ```powershell
-py -m venv .venv
+py -3.12 -m venv .venv
 ```
 
 *Makes a private space for ToneCommand's parts, so it cannot disturb anything
@@ -151,6 +158,15 @@ Check, in this order: the FM9 is switched on; the USB cable goes from the FM9
 to the computer and is a data cable rather than a charge-only one; Fractal's
 driver from Step 2 is installed; and FM9-Edit is **closed**, because only one
 program can hold the FM9's USB connection at a time.
+
+**"Preparing metadata (pyproject.toml) did not run successfully"**, with
+**python-rtmidi** and **"Unknown compiler(s)"** in the red text, or
+**"requires a different Python"**
+Your Python is newer than 3.12. The MIDI library has prebuilt parts for
+Python 3.12 and older only; on a newer one Windows tries to compile it and
+cannot. Install Python 3.12 from the releases list (Step 1), delete the
+`.venv` folder, open a new terminal and run Step 5 again with
+`py -3.12 -m venv .venv` as the first line. Nothing else changes.
 
 **"port 8909 is already in use"**
 ToneCommand is already running in another window. Use that one, or close it

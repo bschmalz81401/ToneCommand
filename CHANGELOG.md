@@ -4,6 +4,17 @@ Notable changes to ToneCommand. Dates are UTC.
 
 ## Unreleased
 
+### Fixed (install on Python 3.13 and newer failed with a compiler trace, 2026-09-20)
+- A Windows player on a fresh python.org Python hit "Preparing metadata
+  (pyproject.toml) did not run successfully ... python-rtmidi ... Unknown
+  compiler(s)": python-rtmidi 1.5.8 ships prebuilt wheels for CPython 3.8
+  to 3.12 only, on every platform, so on 3.13 or newer pip builds it from
+  source with meson and needs a C++ toolchain. `requires-python` is now
+  `>=3.11,<3.13`, so pip answers in one line naming the Python it wants;
+  the Windows guide installs 3.12 from the releases list (`py -3.12 -m venv`)
+  and lists the error under "If something goes wrong"; the README says the
+  same for every platform.
+
 ### Added (Gate 0 proven on the unit, and the capture method, 2026-09-20: #56, #100 G1)
 - `fm9/reamp.py`: the FM9 as a USB audio device through sounddevice (found
   by name, 48 kHz and 8 in / 8 out asserted), `replay_and_record` (mono DI
