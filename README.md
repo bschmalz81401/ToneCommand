@@ -147,6 +147,17 @@ below is a real request you can type.
   pack's amp, cab and drives, tagged with the artist and year, as facts
   read from the file, never as the artist's words.
 
+**Measures, with a named baseline**
+- The FM9 is a USB audio interface, so its output can be recorded and
+  measured instead of assumed. `tools/measure.py <capture.wav>` (or
+  `/api/measure`) answers band ratios over six regions, BS.1770 loudness,
+  stereo width and dynamics, after an acquisition check (silence, clipping,
+  dropout) that can make the whole measurement invalid. A number is
+  evidence next to the baseline it was measured against ("2.4 dB more bite
+  than your saved rhythm reference"), never a verdict on its own; the only
+  pass/fail rules are the relative scene-balance ones the rulebook states,
+  in `config/sound_policy.json`.
+
 **Never sends behind your back**
 - Read-back verification on every write, and a signal-path check so a preset is
   never silently dead.

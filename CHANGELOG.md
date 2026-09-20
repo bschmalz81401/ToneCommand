@@ -2,6 +2,46 @@
 
 Notable changes to ToneCommand. Dates are UTC.
 
+## Unreleased
+
+### Added (the measurement ears, 2026-09-20: #101 G2, #102 G3, #103 G4)
+- `fm9/measure.py`, numpy only: a capture is measured only after
+  `validity` passes (too short, digital silence, clipping at the endpoint,
+  a dropout of exact zeros with signal on both sides; lead-in zeros from
+  USB latency are not a dropout), on active windows only. Then the
+  spectrum as band ratios over the six descriptive regions of
+  docs/SOUND-CHECK-DESIGN.md 10.2 (each a dB offset from the whole, so
+  level cancels), a centroid as a secondary number, loudness per ITU-R
+  BS.1770-4 (K-weighting at 48 kHz, 400 ms blocks, absolute and relative
+  gates, integrated LUFS; a -23 dBFS 1 kHz tone reads -23.0, the EBU
+  conformance case) with a short-term distribution and no LRA on a short
+  clip, stereo (L/R correlation, mid/side, inter-channel level, mono
+  fold-down loss) and dynamics (crest, short-term spread). Every result
+  carries the design 3.5 checker contract: status, coverage, evidence,
+  missing facts. `compare` names its baseline in every line.
+- `config/sound_policy.json`, versioned: the ONLY source of enforced
+  numbers. Enforced are the balance rules the rulebook states (rhythm
+  scenes within 1 LU, leads 2 to 3 LU above, no scene more than 4 LU above
+  the rhythm median, cleans not below rhythm) and the definitional mono
+  check (correlation at or above 0.98 within 0.5 dB); style rules are
+  listed and never pass/fail; the acquisition numbers are declared there
+  too. Prose is never parsed. Absolute spectral floors are not enforced
+  (the #50 lesson).
+- `scene_balance` applies those rules against the rhythm scenes' median
+  and says when there is nothing to judge against; `fm9/sound_check.py`
+  `capture_scenes` records the test capture per scene and returns to the
+  origin scene whatever happens (simulator-proven; live proof next rig
+  session). `POST /api/measure` and `POST /api/measure/balance` read
+  captures under the captures folder only and write nothing;
+  `tools/measure.py` prints the same from the terminal.
+- Fixtures: this morning's captures from the unit (the test signal through
+  preset 138 and the noise floor).
+
+### Fixed
+- `capture.record` named files to the second, so scenes captured within
+  one second overwrote each other; the scene is in the name now and a name
+  is never reused.
+
 ## 1.4.1 (2026-09-20)
 
 ### Fixed (install on Python 3.13 and newer failed with a compiler trace, 2026-09-20)

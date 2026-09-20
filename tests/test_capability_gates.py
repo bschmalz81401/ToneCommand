@@ -302,6 +302,9 @@ def _table(sim) -> list[dict]:
         ("POST", "/api/captures/intake", {}, {"files": [{"name": "x.nam", "data": "!!"}]}, None),
         # #160: a link that is not an Axe-Change link is refused before any fetch.
         ("POST", "/api/axechange", {}, {"url": "not a link"}, None),
+        # #101 #102 #103: a path outside the captures folder is refused before any read.
+        ("POST", "/api/measure", {}, {"path": "/nowhere/x.wav"}, None),
+        ("POST", "/api/measure/balance", {}, {"captures": [{"scene": 1, "role": "rhythm", "path": "/nowhere/x.wav"}]}, None),
         ("POST", "/api/install-cab", {}, {"hash": JUNK_HASH, "bank": 1, "number": 1},
          "installs_files"),
         ("POST", "/api/install", {}, {"hash": JUNK_HASH, "slot": 138}, "installs_files"),

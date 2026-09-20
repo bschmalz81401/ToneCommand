@@ -1132,6 +1132,16 @@ Decision: global routing is controlled through the verified protocol,
 under the context manager and journal, with observed values only. The
 unit was returned to ANALOG/AES at the end of the session.
 
+**G2 to G4 result (2026-09-20, #101 #102 #103).** `fm9/measure.py` is the
+checker: validity first (the acquisition numbers declared in
+`config/sound_policy.json`), band ratios over the six regions of 10.2, BS.1770
+loudness (conformance tone within 0.1 LU), stereo and dynamics per 10.3 and
+10.4, the 3.5 contract on every result. Enforced rules are only the relative
+balance rules the rulebook states and the definitional mono check; style
+rules are listed, never enforced; band numbers always name a baseline. The
+per-scene capture loop (`fm9/sound_check.py`) is simulator-proven; its live
+proof is the next rig session's.
+
 ### Phase 1: read-only Sound Check
 
 - Optional audio dependency group.
