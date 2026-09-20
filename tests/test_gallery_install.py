@@ -73,11 +73,23 @@ def test_plan_keeps_a_cab_already_there_by_name():
     assert "(already there)" in gi.result_line(pl, "140 (wire 139)")
 
 
+def test_plan_takes_the_lowest_whitelisted_store_slot_when_none_is_empty():
+    pl = gi.plan(ENTRY, [_member("preset", "P")], cab_name=_names({}),
+                 store_name=_names({133: "VH Balance FM9AI", 139: "Worship Core FM9AI"}),
+                 cab_whitelist={512}, store_whitelist={133, 139})
+    assert pl.store_slot == 133 and pl.replaced == "VH Balance FM9AI"
+    assert "(replacing 'VH Balance FM9AI')" in gi.result_line(pl, "134 (wire 133)")
+    # an empty one wins when there is one
+    pl = gi.plan(ENTRY, [_member("preset", "P")], cab_name=_names({}),
+                 store_name=_names({133: "VH Balance FM9AI"}),
+                 cab_whitelist={512}, store_whitelist={133, 139})
+    assert pl.store_slot == 139 and pl.replaced is None
+
+
 def test_plan_refuses_in_one_line_before_any_write():
-    with pytest.raises(gi.GalleryInstallError, match="no free store slot"):
+    with pytest.raises(gi.GalleryInstallError, match="no store slots configured"):
         gi.plan(ENTRY, [_member("preset", "P")], cab_name=_names({}),
-                store_name=_names({139: "Taken"}), cab_whitelist={512},
-                store_whitelist={139})
+                store_name=_names({}), cab_whitelist={512}, store_whitelist=set())
     with pytest.raises(gi.GalleryInstallError, match="no free user-cab slot"):
         gi.plan(ENTRY, [_member("preset", "P"), _member("cab", "C", wanted=11)],
                 cab_name=_names({512: "full"}), store_name=_names({}),
@@ -280,10 +292,12 @@ def test_route_refuses_in_one_line(client, sim, monkeypatch):
     r = client.post("/api/gift-of-tone/install", json={"id": "got-blocks"})
     assert r.status_code == 409 and "effect blocks only" in r.json()["error"]
     assert sim.calls == []
-    monkeypatch.setenv("TONECOMMAND_STORE_SLOTS", "133")          # not free on the sim
+    monkeypatch.setenv("TONECOMMAND_STORE_SLOTS", "")             # nothing listed
+    monkeypatch.setattr(server, "get_store_slots", lambda: set())
     r = client.post("/api/gift-of-tone/install", json={"id": "got-luke"})
-    assert r.status_code == 409 and "no free store slot" in r.json()["error"]
+    assert r.status_code == 409 and "no store slots configured" in r.json()["error"]
     assert sim.calls == []
+    monkeypatch.setattr(server, "get_store_slots", lambda: {139, 140, 141})
     monkeypatch.setattr(server, "_gig_mode", {"on": True})
     r = client.post("/api/gift-of-tone/install", json={"id": "got-luke"})
     assert r.status_code == 423

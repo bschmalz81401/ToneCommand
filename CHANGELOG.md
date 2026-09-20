@@ -10,9 +10,11 @@ Notable changes to ToneCommand. Dates are UTC.
   cab goes to the bundle map's slot when that slot is in
   `TONECOMMAND_CAB_SLOTS` and reads `<EMPTY>` (or already holds the cab by
   name, then it is kept), else to the lowest whitelisted slot that reads
-  `<EMPTY>` (#164); the preset goes to the lowest whitelisted store slot
-  that reads `<EMPTY>`. Refusals are one line: no free store slot, no free
-  cab slot, effect blocks only, no FM9 preset. `execute` performs it
+  `<EMPTY>` (#164); the preset goes to an empty whitelisted store slot
+  when there is one, else to the lowest whitelisted slot (the whitelist is
+  the slots the owner marked safe to overwrite) and the line names the
+  preset it replaced. Refusals are one line: no store slots configured,
+  no free cab slot, effect blocks only, no FM9 preset. `execute` performs it
   through the existing guarded primitives, in order: cabs
   (`install_user_cab_slot`, name-verified), the preset into the edit
   buffer (`FM9.load_preset_buffer`, the dump-plus-rename half split out

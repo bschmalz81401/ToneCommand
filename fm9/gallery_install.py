@@ -53,6 +53,7 @@ class Plan:
     preset_name: str
     store_slot: int | None
     notes: list[str] = field(default_factory=list)
+    replaced: str | None = None      # the preset the store slot held, if any
 
     @property
     def moves(self) -> dict[int, int]:
@@ -133,24 +134,33 @@ def plan(entry: dict, members: list[dict], *, cab_name: Callable[[int], str | No
                              moved=wanted is not None and dest != wanted))
         taken.add(dest)
 
-    # the preset: the lowest free whitelisted store slot
+    # the preset: an empty whitelisted store slot when there is one, else
+    # the lowest whitelisted slot (the whitelist is, by definition, the
+    # slots the owner marked safe to overwrite) and the line says what it
+    # replaced
+    if not store_whitelist:
+        raise GalleryInstallError(
+            "no store slots configured (TONECOMMAND_STORE_SLOTS); nothing "
+            "installed")
+    replaced = None
     store = next((s for s in sorted(store_whitelist)
                   if (lambda n: bool(n) and p.is_empty_slot_name(n))(store_name(s))),
                  None)
     if store is None:
-        raise GalleryInstallError(
-            "no free store slot in TONECOMMAND_STORE_SLOTS; free one or widen "
-            "the list. Nothing installed")
+        store = sorted(store_whitelist)[0]
+        replaced = store_name(store) or None
     notes = []
     if len(presets) > 1:
         notes.append(f"{len(presets)} presets in the pack; installing "
                      f"{preset['name']!r} first")
     return Plan(str(entry.get("id")), artist, kind, steps, preset["raw"],
-                str(preset["name"]), store, notes)
+                str(preset["name"]), store, notes, replaced)
 
 
 def result_line(pl: Plan, store_label: str) -> str:
     head = f"{pl.artist}'s {pl.kind or 'pack'} is on slot {store_label}"
+    if pl.replaced:
+        head += f" (replacing {pl.replaced!r})"
     if not pl.cabs:
         return head + "."
     parts = []
@@ -240,4 +250,4 @@ def execute(pl: Plan, fm9: Any) -> dict:
     return {"ok": True, "line": result_line(pl, store_label),
             "store_slot": pl.store_slot, "store_label": store_label,
             "preset": pf.name, "read_back": read_back, "cabs": landed_cabs,
-            "repointed": changes, "notes": pl.notes}
+            "repointed": changes, "notes": pl.notes, "replaced": pl.replaced}
