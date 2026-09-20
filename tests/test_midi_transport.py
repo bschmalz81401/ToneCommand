@@ -58,6 +58,22 @@ def test_seam_the_device_layer_opens_ports_through_the_transport_only(monkeypatc
     assert 'if midi_transport.backend() == "mido"' in ssrc
 
 
+def test_port_names_go_through_the_backend_and_presence_uses_them(monkeypatch):
+    sm = FakeSupriya(names=("IAC Bus", "FM9 MIDI In"))
+    _imports(monkeypatch, {"supriya_midi"})
+    assert T.port_names({T.ENV: "supriya"}, supriya_module=sm) == ["IAC Bus", "FM9 MIDI In"]
+    assert sm.inp.opened is None                        # enumeration opens nothing
+    _imports(monkeypatch, set())
+    assert T.port_names({}) == []                       # no backend: absent, not an error
+    src = (ROOT / "server.py").read_text()
+    assert "midi_transport.port_names()" in src and "mido.get_input_names" not in src.split("def _fm9_port_present", 1)[1].split("\ndef ", 1)[0]
+    monkeypatch.setattr(T, "port_names", lambda env=None, supriya_module=None: ["FM9 MIDI In"])
+    monkeypatch.setattr(server, "_pump_coremidi", lambda: None)
+    assert server._fm9_port_present() is True
+    monkeypatch.setattr(T, "port_names", lambda env=None, supriya_module=None: [])
+    assert server._fm9_port_present() is False
+
+
 def test_sim_is_untouched_and_the_injected_ports_bypass_the_transport(monkeypatch):
     called = []
     monkeypatch.setattr(T, "open_ports", lambda hint, **k: called.append(hint) or (None, None))

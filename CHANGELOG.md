@@ -21,7 +21,9 @@ Notable changes to ToneCommand. Dates are UTC.
   `<3.13` ceiling until the supriya path has its hardware pass on the unit
   (#172 REQ-004); a 3.11 or 3.12 install gets the same packages and the
   same default backend as before. `server.rescan_midi` reloads mido's
-  backend only when mido is the backend.
+  backend only when mido is the backend, and the once-a-second presence
+  check (`_fm9_port_present`) enumerates through `midi_transport.port_names`
+  so a supriya install reports the unit the same way (review F1.1).
 
 ### Added (the measurement ears, 2026-09-20: #101 G2, #102 G3, #103 G4)
 - `fm9/measure.py`, numpy only: a capture is measured only after

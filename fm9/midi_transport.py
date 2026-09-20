@@ -70,6 +70,30 @@ def backend(env: dict | None = None) -> str:
                          "supriya-midi (any Python from 3.10), then start again")
 
 
+def port_names(env: dict | None = None, supriya_module: Any = None) -> list[str]:
+    """Input port names on the bus through the resolved backend, opening
+    nothing. An enumeration the watcher can ask every second; a backend
+    that cannot be resolved answers an empty list rather than raising, so
+    presence reads as absent, never as an error page."""
+    try:
+        b = backend(env)
+    except TransportError:
+        return []
+    if b == "mido":
+        return [str(n) for n in mido.get_input_names()]
+    sm = supriya_module or __import__("supriya_midi")
+    port = sm.MidiIn()
+    try:
+        return [str(n) for n in port.get_ports()]
+    finally:
+        close = getattr(port, "delete", None) or getattr(port, "close_port", None)
+        if close:
+            try:
+                close()
+            except Exception:
+                pass
+
+
 def open_ports(hint: str, env: dict | None = None, supriya_module: Any = None) -> tuple[Any, Any]:
     """(inp, outp) for the first input and output whose names contain
     `hint` (case-insensitive), through the resolved backend. Raises

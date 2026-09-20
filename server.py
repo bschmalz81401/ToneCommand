@@ -2050,8 +2050,8 @@ def _fm9_port_present() -> bool:
     """
     try:
         _pump_coremidi()
-        import mido
-        return any("fm9" in n.lower() for n in mido.get_input_names())
+        from fm9 import midi_transport            # #172: whichever backend is selected
+        return any("fm9" in n.lower() for n in midi_transport.port_names())
     except Exception:
         return False
 
