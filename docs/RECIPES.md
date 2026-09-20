@@ -85,6 +85,49 @@ creator track record) is **not** part of this: this pass only checks
 that a citation someone already chose is real. Presenting ranked,
 evidence-backed candidates is future work.
 
+## Using a capture, by reference (#153)
+
+A recipe whose amp IS a capture (rather than a model approximating one)
+carries the capture by reference, never the file:
+
+```json
+"capture": {
+  "source": "TONE3000",
+  "tone_id": 57410,
+  "model_id": 353891,
+  "url": "https://www.tone3000.com/tones/mesa-boogie-mark-v-57410",
+  "license": "t3k",
+  "sha256": "<sha256 of the .nam the sharer has>",
+  "stands_for": {"block": "amp", "type_name": "USA Lead+"}
+}
+```
+
+Those are the only keys. `sha256` is the file the sharer built with;
+`stands_for` names the amp model the recipe builds with when the capture
+is not available, so the recipe always builds. A recipe whose capture
+field carries file data (bytes, a `data:` URI, a long base64 run) is
+refused by `/api/recipes/save` before it is saved or queued: captures are
+other people's work under their licence, and redistribution never happens
+through ToneCommand.
+
+The recipient's ToneCommand resolves the capture when the recipe is used
+and says which of four things happened:
+
+- **available**: the sha256 is already in your capture library, or the
+  model was fetched from TONE3000 under YOUR OWN key (`TONE3000_SECRET_KEY`
+  in the environment or `.env`) and hashed to the recipe's sha256; the
+  bytes go through intake in memory, the same as a drop, and are not
+  written anywhere by the server;
+- **not yours**: no key, or TONE3000 answered 401 or 403 to your key, or
+  the tone is not public: the link is shown and nothing is fetched;
+- **missing**: 404, or TONE3000 has a different file under that id now;
+- **unreachable**: a timeout, a connection failure, a 5xx or an answer
+  this version cannot read.
+
+In every case but the first the recipe builds with `stands_for` and the
+line names the amp the capture stood for. Installing the capture onto a
+unit is I4's (#147); this is the recipe format and the recipient path.
+
 ## Replaying
 
     python tools/replay_recipe.py recipes/name.json            # dry-run: validate only

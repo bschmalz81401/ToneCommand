@@ -4,6 +4,33 @@ Notable changes to ToneCommand. Dates are UTC.
 
 ## Unreleased
 
+### Added (a recipe uses a capture by reference, 2026-09-20: #153 I10)
+- `fm9/recipe_capture.py`: a recipe may carry one `capture` field
+  (source TONE3000, tone id, model id, page url, licence, the sha256 of
+  the file the sharer had, and `stands_for`, the amp model it builds with
+  otherwise); `serialise` makes one from a .nam and its ids, `validate`
+  refuses in one line any other source, a bad id, an off-site url, a
+  malformed hash, a stand-in not on the amp roster, an extra key, or
+  anything that could be the file itself (bytes, a `data:` URI, a long
+  base64 run). `/api/recipes/save` refuses such a recipe (400) before it
+  is saved or queued.
+- `resolve` answers one of four for the recipient: `available` (the hash
+  is in the library, or the model record and then the file were fetched
+  from www.tone3000.com under the recipient's OWN `TONE3000_SECRET_KEY`
+  and hashed to the recipe's sha256; the bytes go through intake in
+  memory and are never written), `not_yours` (no key, 401, 403 or a
+  private tone: the link, nothing fetched), `missing` (404 or a different
+  file under that id now), `unreachable` (timeout, 5xx, a malformed
+  record, an off-site url). All but the first build with `stands_for` and
+  the line names the amp. Confirmed live against TONE3000's api/v1 on
+  2026-09-20: `/models/<id>` carries `model_url`, `/download` needs the
+  file name, both need the caller's key, and a tone has `is_public` and
+  `license` and no price field.
+- `/api/recipes/plan` takes `known` (the capture library's sha256 list,
+  as intake does) and answers `capture: {status, line, link, sha256,
+  stood_for}`; the recipes browser says a recipe uses a capture and logs
+  the line with the plan. docs/RECIPES.md documents the field.
+
 ### Added (the Artists gallery, one click installs a pack, 2026-09-19: #155 J2, #164)
 - `fm9/gallery_install.py`: `plan` decides where everything goes from what
   the unit reports and the two whitelists before anything is written: a
