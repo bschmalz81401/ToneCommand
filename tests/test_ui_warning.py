@@ -89,9 +89,34 @@ def test_every_element_the_script_reaches_for_still_exists():
 def test_no_id_is_declared_twice():
     """getElementById would silently pick the first, so a stray duplicate left
     behind by a move would half-work, which is worse than breaking."""
-    ids = re.findall(r'\bid="([^"]+)"', UI)
+    # NOT \b: it matches inside data-id="...", because "-" is a non-word
+    # character, so two data-id attributes on one card read as a duplicated
+    # DOM id. getElementById is what this is about, per the docstring, and it
+    # cannot see a data-* attribute at all.
+    ids = re.findall(r'(?<![-\w])id="([^"]+)"', UI)
     assert len(ids) == len(set(ids)), \
         [i for i in set(ids) if ids.count(i) > 1]
+
+
+def test_the_id_audit_ignores_data_attributes_but_still_sees_a_real_duplicate():
+    """The guard on the guard, because the audit above was wrong for a week
+    in a way that looked like a finding.
+
+    `\\bid="` matched inside `data-id="`, since "-" is a non-word character,
+    so one artist card carrying two data-id attributes was reported as a
+    duplicated DOM id. Fixing that must not cost the check its teeth: a
+    genuine duplicate is still a duplicate, and a duplicated data-* is still
+    not one, because getElementById cannot see a data-* attribute at all.
+    """
+    def dupes(text):
+        ids = re.findall(r'(?<![-\w])id="([^"]+)"', text)
+        return {i for i in set(ids) if ids.count(i) > 1}
+
+    assert not dupes(UI), "the page itself should be clean"
+    assert dupes(UI + '<div id="hwbar"></div>') == {"hwbar"}, \
+        "a real duplicate id stopped being caught"
+    assert not dupes(UI + '<b data-id="z"></b><b data-id="z"></b>'), \
+        "a duplicated data-* is not a duplicated DOM id"
 
 
 def test_there_is_one_settings_gear_and_it_is_a_drawn_icon():
