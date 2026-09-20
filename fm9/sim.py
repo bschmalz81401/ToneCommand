@@ -669,7 +669,11 @@ def _classify(d):
             return "read"
         return None
     if fn in (0x0A, 0x0B):
-        return "write" if len(body) >= 3 else "read"
+        # bank/channel: [eid14, value] sets, [eid14, 0x7F] queries. Counting
+        # the query as a write refreshed the settle snapshot on every
+        # get_channel, which hid an immediate read-back after a write
+        # whenever ~100 ms happened to pass first (#169, the repoint test).
+        return "write" if len(body) >= 3 and body[2] != 0x7F else "read"
     if fn == 0x0C:
         return "write" if (body and body[0] != 0x7F) else "read"
     if fn == p.FN_TEMPO_BPM:

@@ -12,6 +12,8 @@ Cab block repoint (parameter writes read back per channel), `store_preset`
 """
 from __future__ import annotations
 
+import time
+
 from dataclasses import dataclass, field
 from typing import Any, Callable
 
@@ -187,6 +189,26 @@ def result_line(pl: Plan, store_label: str) -> str:
     return head + "; " + "; ".join(parts) + "."
 
 
+#: The unit applies a write asynchronously; a read fired inside its settle
+#: window returns the pre-write value (#12). The same settle-and-retry the
+#: verified setters use (device.set_param_display), because a read-back that
+#: only passes when enough incidental time happens to go by is not a
+#: read-back: the repoint test passed here on parse time alone and failed
+#: on a faster machine every time (#169).
+READ_BACK_SETTLE = 0.15
+READ_BACK_TRIES = 4
+
+
+def _read_back(fm9: Any, spec: Any, channel: int, want: int) -> int | None:
+    got = None
+    for _ in range(READ_BACK_TRIES):
+        time.sleep(READ_BACK_SETTLE)
+        got = fm9.get_param_wire(spec, channel=channel)
+        if got == want:
+            return got
+    return got
+
+
 def repoint(fm9: Any, moves: dict[int, int]) -> list[dict]:
     """Rewrite the loaded preset's Cab block: every CABINET_TYPEn on every
     channel whose CABINET_BANKn is USER and whose value is an old slot is set
@@ -214,7 +236,7 @@ def repoint(fm9: Any, moves: dict[int, int]) -> list[dict]:
                         fm9.set_channel(CAB_EFFECT_ID, ch)
                     spec = reg.spec("CABINET", type_p, 1)
                     fm9.set_param_ordinal(spec, new)
-                    got = fm9.get_param_wire(spec, channel=ch)
+                    got = _read_back(fm9, spec, ch, new)
                     if got != new:
                         raise GalleryInstallError(
                             f"repointing the Cab block on channel {'ABCD'[ch]} "
@@ -231,7 +253,7 @@ def repoint(fm9: Any, moves: dict[int, int]) -> list[dict]:
                     fm9.set_channel(CAB_EFFECT_ID, ch)
                 mode = reg.spec("CABINET", MODE_PARAM, 1)
                 fm9.set_param_ordinal(mode, MODE_LEGACY)
-                got = fm9.get_param_wire(mode, channel=ch)
+                got = _read_back(fm9, mode, ch, MODE_LEGACY)
                 if got != MODE_LEGACY:
                     raise GalleryInstallError(
                         f"setting the Cab block to Legacy type on channel "
