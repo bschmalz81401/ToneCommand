@@ -2,7 +2,7 @@
 
 Notable changes to ToneCommand. Dates are UTC.
 
-## Unreleased
+## 1.4.1 (2026-09-20)
 
 ### Fixed (install on Python 3.13 and newer failed with a compiler trace, 2026-09-20)
 - A Windows player on a fresh python.org Python hit "Preparing metadata
