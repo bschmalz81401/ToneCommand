@@ -25,6 +25,157 @@ Notable changes to ToneCommand. Dates are UTC.
   check (`_fm9_port_present`) enumerates through `midi_transport.port_names`
   so a supriya install reports the unit the same way (review F1.1).
 
+### Added (HeadRush display conversion, 2026-09-19: #130)
+- `HeadrushAdapter` TAKES AN OPTIONAL CURVE TABLE. `tapers=` is opt-in and
+  defaults to None, so an adapter built the way every existing caller builds
+  one refuses display conversion exactly as before. With a table,
+  `get_param_display` and `set_param_display` work.
+- THE REGISTRY'S REFUSAL IS UNTOUCHED. It describes the API, which still
+  publishes an opaque `normalizeAlgo` and no formula, and `tapers.py` says the
+  refusal "is still correct about the API and is left alone". The adapter is
+  the right place for the other kind of knowledge, because it can carry the
+  provenance with every value.
+- `get_param_display` RETURNS A `DerivedDisplay`, NEVER A BARE FLOAT: value,
+  the unit's own formatting applied, the curve's name, where the maths came
+  from, and `api_readable=False` on every instance. `get_param_wire` returns a
+  plain float because the unit sent that float, and the asymmetry is the
+  point: a converted number must not be loggable or plannable as though the
+  device had reported it.
+- `set_param_display` CONVERTS AND THEN WRITES THROUGH THE SAME VERIFIED PATH,
+  so the read-back still compares wire values. Only the caller's units change.
+- `UnknownTaper` and `NotConvertible` are not caught. An id the table has never
+  seen means the firmware publishes a curve the table was not built against,
+  and scaling linearly anyway would silently mis-read every value of that
+  parameter.
+
+### Verified against a Core (HeadRush display conversion, 2026-09-20)
+- `tools/verify_headrush_display.py` RAN AGAINST A CORE at 5.1.0.2a63755 on a
+  `##HRB` preset: 8 passed, 0 failed. It is the first thing to construct
+  `HeadrushAdapter(..., tapers=tapers.load())` against firmware at all, which
+  every test here does only against the simulator. Transcript and findings in
+  `docs/HEADRUSH-DISPLAY-VERIFICATION-168.md`.
+- WHAT THE SCREEN ROWS ARE. The six readings came from the web editor the unit
+  serves, which the owner attests matches the device - not from the Core's
+  front panel. `tapers.py` was built from that editor's own bundle, so those
+  rows confirm a chain (we reproduce the editor, the editor matches the unit)
+  rather than reading the hardware independently. #130's `hardware_check` rows
+  say "taken off a Core's screen"; these are not those and do not claim to be.
+- #167 REPRODUCED LIVE THROUGH THIS PATH: `Amp.TremSpeed` at wire 0.25
+  reported `ok=False` while displaying the correct `1.48 Hz`. Every earlier
+  observation was through the raw wire API.
+- AND #167 IS NARROWER THAN IT WAS STATED. `set_param_display(5.19)` reported
+  `ok=True`, where this changelog predicted failure: 5.19 is already ON the
+  0.01 grid, so the unit had nothing to snap. The rule is not "a quantized
+  parameter always reports failure" but "a request between grid points does".
+- No wire value can restore such a parameter exactly - writing back the `0.5`
+  `Amp.TremSpeed` held yields `0.5001265406608582`, which displays the same.
+
+### Checked against hardware readings (HeadRush display conversion)
+- NO UNIT WAS TOUCHED BY THE TESTS. The readings are a Core's, recorded in
+  the #130 and #167 sessions (firmware 5.1.0.2a63755, a `##HRB` test preset);
+  what is new here is that the adapter is driven over them. Calling that
+  "verified on hardware" would claim a session that did not happen, so it
+  does not.
+- The six `hardware_check` rows in `config/headrush_tapers.json`, readings
+  taken off a Core's screen, are now a parametrised test: the adapter
+  reproduces all six as formatted text, `75 %` through `1.48 Hz`.
+- THE DEVICE'S OWN ARITHMETIC AGREES WITH THE TABLE. The unit converts a
+  written wire value to display, snaps the DISPLAY value to the published
+  grid, and converts back (#167). Reproducing the float it ends up holding
+  runs the curve forwards and backwards through that quantisation, and it
+  matches to the last bit on `Amp.TremSpeed`, whose curve is Squared. A
+  linear scale cannot produce those floats, which a second test asserts so the
+  first is evidence about this table rather than arithmetic any curve
+  satisfies. This is stronger corroboration than a photographed screen,
+  because a misread digit cannot produce it.
+
+### Changed (third follow-up review, 2026-09-20)
+- Two nits, both UNANIMOUS across the local reviewer's three samples, which
+  is the signal worth acting on from a model whose single-sample findings are
+  usually wrong. `_must_be_continuous`'s docstring said the only thing
+  standing in the way of a selector being converted "would be a test", while
+  the guard it documents is code; it now says what each half does, because
+  the guard is the behaviour and
+  `test_a_selector_is_not_dragged_onto_the_continuous_path` is the warning
+  that fires if the registry-wide fact ever stops being true.
+- `test_a_selector_never_reaches_the_device_to_be_refused` is now
+  `test_the_guards_refuse_before_any_call_reaches_the_device`: it is about
+  the guards running before the transport, not about selectors.
+
+### Fixed (second follow-up review, 2026-09-19)
+- A TEST THAT COULD NOT FAIL FOR THE THING IT WAS NAMED AFTER. The check that
+  the display methods refuse BEFORE touching the device built the plain
+  simulator opener (a stray `_converting(reg, )` passed no kwargs, so the
+  recording opener was never installed) and then skipped its call-count
+  assertion when there was nothing to count. Moving the guard back below the
+  read would have left it green. It now asserts an empty call list on the
+  recording opener unconditionally, on both the read and the write path, and
+  was confirmed to fail with the guard moved.
+
+### Changed (follow-up review, 2026-09-19)
+- THE SELECTOR GUARD MOVED OUT OF THE TEST AND INTO THE METHODS. The first
+  round answered "a selector cannot reach the continuous path" with a test
+  asserting no parameter carries both `options` and a display range. That is
+  a true statement about today's schema and the wrong place for the
+  invariant: a firmware that grew one would have had its ORDINAL run through
+  a 0..1 taper, with an assertion about the schema as the only thing in the
+  way. `_must_be_continuous` refuses a selector by name, in both methods.
+- The guards run BEFORE the device is read, so a spec that was never
+  convertible does not cost a round trip to find that out.
+- `DerivedDisplay.api_readable` is `field(init=False)`. It described the
+  invariant and did not hold it: a caller could construct one claiming the
+  unit said the number. Construction, `replace()` and assignment all refuse.
+- `tapers=` IS CHECKED AT CONSTRUCTION, not merely annotated. The annotation
+  `TaperTable | None` was written up as though it were a runtime guard, which
+  it is not: `HeadrushAdapter(..., tapers=object())` still built and failed
+  later inside a `getattr`. It now raises `TypeError` immediately, because an
+  object that merely answers to `to_display` and `to_wire` would be
+  converting with a curve nobody can name the provenance of.
+- The `_formatted` fix from the first round was unguarded, which is how it
+  got there. A test now pins a device format that cannot apply and asserts
+  the unit survives.
+- `NotConvertible` is asserted on a fabricated spec, and a second test says
+  why that is not a cheat: NO parameter this firmware publishes reaches a
+  non-finite value at either end of its own range, so there is no real one
+  to use. If that ever stops being true, the test fails and names it.
+
+### Changed (review of the display conversion, 2026-09-19)
+- THE METHOD DOCSTRING CLAIMED MORE THAN THE CODE DOES. It said "nothing
+  about the check weakens", which is true and beside the point: the check was
+  already wrong on a quantized parameter (#167), and this is the first API
+  that invites a caller to write in display units, so it is the first one
+  obliged to say so. `set_param_display` now states that `ok` is exact
+  equality against the read-back, that False does not mean the write failed
+  until #167 is fixed, and that `get_param_display` is how to see what the
+  unit actually holds.
+- The module's `WHAT IT DOES NOT PRETEND` contract still said both display
+  methods refuse. A caller who reads the adapter's contract rather than the
+  two methods would have been told the opposite of what the opt-in path does.
+- `DerivedDisplay` IS A FROZEN DATACLASS, NOT A NAMEDTUPLE. A NamedTuple is a
+  tuple, so `got[0]` and `value, *_ = got` handed back exactly the bare float
+  the type exists to withhold, and the test that guarded it (`not
+  isinstance(got, float)`) could never have failed. Indexing and unpacking now
+  raise, and the test asserts that instead.
+- `_formatted`'s fallback for a device format string that will not apply
+  dropped the unit, which the no-format path keeps.
+- The round-trip test asserted `approx(..., abs=1e-9)` while the changelog
+  claimed a match "to the last bit". It is exact, so it now asserts exact
+  equality.
+- Three cases the tests did not reach: a read that came back absent (refused,
+  because 0.0 is a real value on every one of these curves), `NotConvertible`
+  (named as deliberately uncaught and never asserted), and a selector, which
+  cannot be dragged onto the continuous path because no parameter in the
+  registry carries both `options` and a display range - asserted over the
+  whole registry, so it fails if one ever does.
+
+### Known issues
+- `set_param_display` on a parameter the unit quantizes reports `ok=False` for
+  a write the unit honoured. That is #167 and not this conversion: the write
+  path compares the read-back with exact equality, and on `Amp.TremSpeed`
+  every wire value tested reports failure. The conversion is correct and the
+  displayed text is right; the flag is wrong. Fixing it belongs in
+  `_write_verified`.
+
 ### Added (the measurement ears, 2026-09-20: #101 G2, #102 G3, #103 G4)
 - `fm9/measure.py`, numpy only: a capture is measured only after
   `validity` passes (too short, digital silence, clipping at the endpoint,
