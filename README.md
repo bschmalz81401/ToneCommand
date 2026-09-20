@@ -140,6 +140,12 @@ below is a real request you can type.
   line saying where everything landed.
   Paste an Axe-Change preset link and ToneCommand reads that one page, says
   what it is, checks it is for your unit, and installs it the guarded way.
+  An installed pack then works as a reference: "difference between scene 1
+  and Devin's" reads the pack's preset off the unit and comes back to your
+  own with your unsaved edits put back (and says so if a block placed
+  unsaved could not be), and the planner's reference lists each installed
+  pack's amp, cab and drives, tagged with the artist and year, as facts
+  read from the file, never as the artist's words.
 
 **Never sends behind your back**
 - Read-back verification on every write, and a signal-path check so a preset is

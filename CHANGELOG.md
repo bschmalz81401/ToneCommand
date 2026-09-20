@@ -31,6 +31,34 @@ Notable changes to ToneCommand. Dates are UTC.
   stood_for}`; the recipes browser says a recipe uses a capture and logs
   the line with the plan. docs/RECIPES.md documents the field.
 
+### Added (installed artist packs as a reference, 2026-09-20: #159 J6)
+- `fm9/installed_packs.py`: every gallery install (#155) is recorded
+  (`~/.tonecommand/installed_packs.json`, `TONECOMMAND_INSTALLED_PACKS` to
+  move it): entry id, artists, year, label, preset name, store slot, cab
+  slots, and EVIDENCE read from the pack's preset as it landed (the amp
+  model with gain, bass, mid, treble, master and presence; the cab; the
+  drives; delay and reverb presence), each record tagged artist, year and
+  `pack file`. `find` resolves an artist phrase with the Artists shelf's
+  rules (whole word, full name first, newest year, two artists is a
+  question); `artist_words` drops possessives and the pack/rig/tone words
+  ("Devin's" is Devin).
+- Compare (#68) takes an installed pack as a source: `pack:Devin
+  Townsend` or the bare name, tried after scenes, snapshots and designs.
+  The server snapshots the edit buffer, selects the pack's slot, refuses in
+  one line if the slot no longer holds the pack's preset, captures, selects
+  your preset back and restores the snapshot; parameter, bypass and channel
+  edits come back, and a block placed or removed unsaved is NAMED in the
+  label ("WAH 1 was placed unsaved and is gone; place it again") rather
+  than silently lost. Refused under GIG LOCK. The unresolved-source line
+  now names installed packs among the kinds it tried.
+- The planner's reference gains an INSTALLED ARTIST PACKS section, read
+  from the record at request time (the static reference stays cached),
+  with a heading that says these are block choices read from the file and
+  not the artist's words.
+- `/api/gift-of-tone/install` answers `installed_pack` (id, label, how
+  many evidence records); a record that cannot be written is said in the
+  line and never fails an install already on flash.
+
 ### Added (the Artists gallery, one click installs a pack, 2026-09-19: #155 J2, #164)
 - `fm9/gallery_install.py`: `plan` decides where everything goes from what
   the unit reports and the two whitelists before anything is written: a
