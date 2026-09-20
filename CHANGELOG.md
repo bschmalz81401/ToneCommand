@@ -27,8 +27,30 @@ Notable changes to ToneCommand. Dates are UTC.
   and scaling linearly anyway would silently mis-read every value of that
   parameter.
 
+### Verified against a Core (HeadRush display conversion, 2026-09-20)
+- `tools/verify_headrush_display.py` RAN AGAINST A CORE at 5.1.0.2a63755 on a
+  `##HRB` preset: 8 passed, 0 failed. It is the first thing to construct
+  `HeadrushAdapter(..., tapers=tapers.load())` against firmware at all, which
+  every test here does only against the simulator. Transcript and findings in
+  `docs/HEADRUSH-DISPLAY-VERIFICATION-168.md`.
+- WHAT THE SCREEN ROWS ARE. The six readings came from the web editor the unit
+  serves, which the owner attests matches the device - not from the Core's
+  front panel. `tapers.py` was built from that editor's own bundle, so those
+  rows confirm a chain (we reproduce the editor, the editor matches the unit)
+  rather than reading the hardware independently. #130's `hardware_check` rows
+  say "taken off a Core's screen"; these are not those and do not claim to be.
+- #167 REPRODUCED LIVE THROUGH THIS PATH: `Amp.TremSpeed` at wire 0.25
+  reported `ok=False` while displaying the correct `1.48 Hz`. Every earlier
+  observation was through the raw wire API.
+- AND #167 IS NARROWER THAN IT WAS STATED. `set_param_display(5.19)` reported
+  `ok=True`, where this changelog predicted failure: 5.19 is already ON the
+  0.01 grid, so the unit had nothing to snap. The rule is not "a quantized
+  parameter always reports failure" but "a request between grid points does".
+- No wire value can restore such a parameter exactly - writing back the `0.5`
+  `Amp.TremSpeed` held yields `0.5001265406608582`, which displays the same.
+
 ### Checked against hardware readings (HeadRush display conversion)
-- NO UNIT WAS TOUCHED BY THIS BRANCH. The readings are a Core's, recorded in
+- NO UNIT WAS TOUCHED BY THE TESTS. The readings are a Core's, recorded in
   the #130 and #167 sessions (firmware 5.1.0.2a63755, a `##HRB` test preset);
   what is new here is that the adapter is driven over them. Calling that
   "verified on hardware" would claim a session that did not happen, so it
