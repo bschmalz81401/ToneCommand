@@ -292,6 +292,11 @@ class HeadrushAdapter:
         prediction can report what the unit actually HOLDS, where a window
         leaves the caller believing the value it sent.
 
+        THE SIMULATOR USES THIS SAME ARITHMETIC, so a test asserting that a
+        write against `HeadrushSim` now reports success is self-consistency
+        and not evidence. The evidence is below: readings taken off a unit,
+        which neither this nor the simulator can have been fitted to.
+
         Verified against all eight write/read pairs #167 measured on a Core,
         across Linear and Squared curves and grids of 1.0, 0.1 and 0.01:
         every one is reproduced BIT-EXACTLY (`test_the_prediction_reproduces_
