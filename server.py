@@ -29,7 +29,7 @@ from fm9.registry import Registry
 from fm9 import (acquire, ai_settings, artist_pack, axechange, bundlefile, cabfile,
                  describe, designs, diagnostics, editbuffer, gallery, gallery_install,
                  gift_of_tone, health, nam_intake, planner, presetfile,
-                 recipes as recipebook, rigprofile, scratch_build, share,
+                 recipe_capture, recipes as recipebook, rigprofile, scratch_build, share,
                  starter_template)
 # `slots` is a local variable in more than one function here, so the module
 # gets a name that cannot be shadowed by one.
@@ -5702,6 +5702,36 @@ def api_recipes(refresh: bool = False):
 
 class RecipeBody(BaseModel):
     recipe: dict
+    #: #153: the recipient's capture library, sha256 strings, the same list
+    #: the intake route takes as `known`. Only read when the recipe carries
+    #: a capture.
+    known: list[str] = []
+
+
+def _amp_types() -> set[str]:
+    return {str(v) for v in (reg.amp_roster or {}).values()}
+
+
+def _recipe_capture(recipe: dict, known: list) -> dict | None:
+    """The capture a recipe uses, resolved for THIS recipient (#153): by
+    hash against the library, else fetched under the recipient's own
+    TONE3000 key, else built with the stand-in amp. The bytes, when they
+    arrive, go through intake in memory and are dropped here; nothing is
+    written by the server."""
+    if "capture" not in recipe:
+        return None
+    why = recipe_capture.validate(recipe, _amp_types())
+    if why:
+        return {"status": "invalid", "line": why, "link": None}
+    res = recipe_capture.resolve(recipe["capture"], {str(h) for h in known or []},
+                                 key=recipe_capture.key_from_env())
+    data = res.pop("bytes", None)
+    if data:
+        taken = nam_intake.intake([(f"tone3000-{recipe['capture']['model_id']}.nam", data)],
+                                  {str(h) for h in known or []})
+        res["intake"] = taken.as_dict()
+        res["line"] += "; " + taken.line
+    return res
 
 
 @app.post("/api/recipes/plan")
@@ -5739,12 +5769,16 @@ def api_recipe_plan(body: RecipeBody):
         raise
     except Exception:
         rig_fw = ""
-    return {"summary": body.recipe.get("title") or body.recipe.get("name"),
-            "actions": actions, "blocked": blocked,
-            "assumes": body.recipe.get("assumes"),
-            "firmware_note": recipebook.firmware_note(
-                body.recipe.get("tested_firmware"), rig_fw),
-            "ear_checklist": body.recipe.get("ear_checklist") or []}
+    out = {"summary": body.recipe.get("title") or body.recipe.get("name"),
+           "actions": actions, "blocked": blocked,
+           "assumes": body.recipe.get("assumes"),
+           "firmware_note": recipebook.firmware_note(
+               body.recipe.get("tested_firmware"), rig_fw),
+           "ear_checklist": body.recipe.get("ear_checklist") or []}
+    cap = _recipe_capture(body.recipe, body.known)
+    if cap is not None:
+        out["capture"] = cap
+    return out
 
 
 @app.get("/api/share/status")
@@ -5781,6 +5815,9 @@ def api_share_used(body: UseBody):
 @app.post("/api/recipes/save")
 def api_recipe_save(body: RecipeBody):
     """Keep a recipe of your own, and say how to pass it on."""
+    why = recipe_capture.validate(body.recipe, _amp_types())
+    if why:                                   # #153: never a file, never queued
+        return JSONResponse({"error": why}, status_code=400)
     try:
         path = recipebook.save_local(body.recipe)
     except OSError as e:
