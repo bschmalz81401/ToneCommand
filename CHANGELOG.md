@@ -4,6 +4,18 @@ Notable changes to ToneCommand. Dates are UTC.
 
 ## Unreleased
 
+### Verified against a Core (#167 fix, 2026-09-20)
+- THE SYMPTOM IS GONE ON THE UNIT. `Amp.TremSpeed` at wire 0.25 reported
+  `ok=False` on a Core three hours earlier and reports `ok=True` now, with
+  the displayed value unchanged at `1.48 Hz`. 8 passed, 0 failed.
+- `set_param_display(5.19)` still reports `ok=True`. That request lands ON
+  the grid, so the unit stores it exactly; a uniform tolerance window would
+  have stopped requiring that, and this run is the evidence the prediction
+  did not.
+- The restore warning from the previous run is also gone, and the reason is
+  the model: every value the device HOLDS is the image of a grid point, so
+  writing one back is a fixed point. Five parameters restored, no note.
+
 ### Fixed (the read-back is predicted, not tolerated, 2026-09-20: #167)
 - `_write_verified` called a write a failure whenever the unit quantized it.
   On `Amp.TremSpeed` that was every wire value tested, three for three: the
