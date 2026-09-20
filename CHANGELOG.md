@@ -2,7 +2,7 @@
 
 Notable changes to ToneCommand. Dates are UTC.
 
-## Unreleased
+## 1.5.0 (2026-09-20)
 
 ### Added (a MIDI transport seam with a second binding, 2026-09-20: #172)
 - `fm9/midi_transport.py` is the one place MIDI ports are opened.
