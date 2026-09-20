@@ -2,7 +2,7 @@
 
 Notable changes to ToneCommand. Dates are UTC.
 
-## Unreleased
+## 1.4.0 (2026-09-20)
 
 ### Added (a recipe uses a capture by reference, 2026-09-20: #153 I10)
 - `fm9/recipe_capture.py`: a recipe may carry one `capture` field
