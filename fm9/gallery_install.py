@@ -22,6 +22,13 @@ CAB_EFFECT_ID = 62       # Cab 1
 CAB_CHANNELS = 4
 BANK_PARAMS = (0, 1, 2, 3)      # CABINET_BANK1..4
 TYPE_PARAMS = (4, 5, 6, 7)      # CABINET_TYPE1..4
+#: The block's TYPE (FM9-Edit's Dyna-Cab / Legacy dropdown): CABINET_MODE,
+#: 0 = Legacy (the IR fields above are what plays), 1 = Dyna-Cab (they are
+#: ignored). Pinned 2026-09-19 on firmware 11.00 by a before/after read of
+#: the whole block around one FM9-Edit save; a pre-Dyna-Cab pack preset
+#: loads as Dyna-Cab, so a repointed IR is not heard until this is 0.
+MODE_PARAM = 31
+MODE_LEGACY, MODE_DYNACAB = 0, 1
 
 
 class GalleryInstallError(ValueError):
@@ -198,6 +205,7 @@ def repoint(fm9: Any, moves: dict[int, int]) -> list[dict]:
     try:
         for ch in range(CAB_CHANNELS):
             base = ch * stride
+            touched = False
             for bank_p, type_p in zip(BANK_PARAMS, TYPE_PARAMS):
                 bank, slot = values[base + bank_p], values[base + type_p]
                 if bank == USER_BANK and slot in moves:
@@ -214,6 +222,22 @@ def repoint(fm9: Any, moves: dict[int, int]) -> list[dict]:
                             "stored")
                     changed.append({"channel": "ABCD"[ch], "ir_slot": type_p - 3,
                                     "from": slot, "to": new})
+                    touched = True
+            # a channel that now points at a user IR must be in Legacy type,
+            # or the IR is never heard (a pre-Dyna-Cab pack loads as Dyna-Cab)
+            if touched and len(values) > base + MODE_PARAM and \
+                    values[base + MODE_PARAM] != MODE_LEGACY:
+                if fm9.get_channel(CAB_EFFECT_ID) != ch:
+                    fm9.set_channel(CAB_EFFECT_ID, ch)
+                mode = reg.spec("CABINET", MODE_PARAM, 1)
+                fm9.set_param_ordinal(mode, MODE_LEGACY)
+                got = fm9.get_param_wire(mode, channel=ch)
+                if got != MODE_LEGACY:
+                    raise GalleryInstallError(
+                        f"setting the Cab block to Legacy type on channel "
+                        f"{'ABCD'[ch]} read back {got}; the preset was not stored")
+                changed.append({"channel": "ABCD"[ch], "type": "legacy",
+                                "from": values[base + MODE_PARAM], "to": MODE_LEGACY})
     finally:
         if original_channel is not None and \
                 fm9.get_channel(CAB_EFFECT_ID) != original_channel:

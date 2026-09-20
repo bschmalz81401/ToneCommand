@@ -20,9 +20,17 @@ Notable changes to ToneCommand. Dates are UTC.
   buffer (`FM9.load_preset_buffer`, the dump-plus-rename half split out
   of `install_preset`, no store), the Cab block repointed there when a cab
   moved (every `CABINET_TYPEn` on every channel whose bank is USER and
-  whose value is the old slot, read back per channel), then ONE
+  whose value is the old slot, read back per channel; each such channel
+  also switched to Legacy type, `CABINET_MODE` = 0, because a
+  pre-Dyna-Cab pack preset loads as Dyna-Cab on firmware 11 and its user
+  IR is never heard otherwise; 0 = Legacy and 1 = Dyna-Cab were pinned by
+  a before/after read of the block around one FM9-Edit save), then ONE
   `store_preset` and a `select_preset` name read-back. It stops at the
   first failure and says what landed.
+- Learned on the unit, recorded in kb/PROTOCOL.md: FM9-Edit's Cabs
+  manager lists only cabs FM9-Edit itself wrote; slots written by Cab-Lab
+  or ToneCommand show `<EMPTY>` there even though the unit's own name
+  read returns the name and the IR plays. Do not use that list as a check.
 - `POST /api/gift-of-tone/install {id}`: GIG LOCK 423, the J3 gates 409,
   effect-blocks-only 409 before any download, fetch and verify 502, the
   plan's refusals 409, else `{ok, line, store_slot, cabs: [{name, slot,

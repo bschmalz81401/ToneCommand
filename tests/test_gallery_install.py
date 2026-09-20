@@ -144,13 +144,16 @@ def _pack(cab_slot_a=11, cab_slot_b=12):
     ]
 
 
-def _point_cab_block(sim, slot_ab, slot_cd):
-    """Make the loaded preset reference user cabs the way the pack does."""
+def _point_cab_block(sim, slot_ab, slot_cd, dynacab=True):
+    """Make the loaded preset reference user cabs the way the pack does,
+    loaded as Dyna-Cab type the way a pre-Dyna-Cab pack loads on fw 11."""
     reg = server.reg
     for ch, slot in ((0, slot_ab), (1, slot_ab), (2, slot_cd), (3, slot_cd)):
         sim.set_channel(62, ch)
         sim.set_param_ordinal(reg.spec("CABINET", 1, 1), gi.USER_BANK)
         sim.set_param_ordinal(reg.spec("CABINET", 5, 1), slot)
+        sim.set_param_ordinal(reg.spec("CABINET", gi.MODE_PARAM, 1),
+                              gi.MODE_DYNACAB if dynacab else gi.MODE_LEGACY)
     sim.set_channel(62, 0)
 
 
@@ -186,12 +189,17 @@ def test_execute_order_is_cabs_then_buffer_then_repoint_then_one_store(sim, monk
     assert out["line"] == ("Steve Lukather's preset plus cab bundle is on slot 140 (wire 139); "
                            "cab BT_Rivero in user cab U1.0513 (moved from U1.0012); "
                            "cab BT_3VH4 in user cab U1.0514 (moved from U1.0013).")
-    # repointed on every channel that referenced the moved slots
-    assert sorted((c["channel"], c["from"], c["to"]) for c in out["repointed"]) == \
+    # repointed on every channel that referenced the moved slots, and each
+    # of those channels switched from Dyna-Cab to Legacy type so the IR plays
+    slots = [c for c in out["repointed"] if "ir_slot" in c]
+    modes = [c for c in out["repointed"] if c.get("type") == "legacy"]
+    assert sorted((c["channel"], c["from"], c["to"]) for c in slots) == \
         [("A", 11, 512), ("B", 11, 512), ("C", 12, 513), ("D", 12, 513)]
+    assert sorted(c["channel"] for c in modes) == ["A", "B", "C", "D"]
     reg = server.reg
     for ch, want in ((0, 512), (1, 512), (2, 513), (3, 513)):
         assert sim.get_param_wire(reg.spec("CABINET", 5, 1), channel=ch) == want
+        assert sim.get_param_wire(reg.spec("CABINET", gi.MODE_PARAM, 1), channel=ch) == gi.MODE_LEGACY
 
 
 def test_execute_leaves_an_untouched_preset_alone(sim, monkeypatch):
