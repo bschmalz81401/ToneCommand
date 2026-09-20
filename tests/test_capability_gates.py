@@ -309,6 +309,9 @@ def _table(sim) -> list[dict]:
         ("POST", "/api/sound-check", {}, {"captures": [{"scene": 1, "role": "rhythm", "path": "/nowhere/x.wav"}]}, None),
         # #104: an invalid scene role is refused before the routing change or any capture.
         ("POST", "/api/sound-check/remeasure", {}, {"scenes": [{"scene": 1, "role": "verse"}]}, None),
+        # #105: the references folder is listed, never written; a path outside the two folders is refused.
+        ("GET", "/api/references", {}, None, None),
+        ("POST", "/api/tone-match", {}, {"build": "/nowhere/x.wav", "reference": "/nowhere/y.wav"}, None),
         ("POST", "/api/install-cab", {}, {"hash": JUNK_HASH, "bank": 1, "number": 1},
          "installs_files"),
         ("POST", "/api/install", {}, {"hash": JUNK_HASH, "slot": 138}, "installs_files"),

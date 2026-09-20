@@ -1151,6 +1151,13 @@ remains; a scene the trim cannot move (the amp is the bottleneck, rulebook
 caveat) is reported after one round, not chased. Simulator-proven with a fake
 recorder that follows the trims; the live loop is the next rig session's.
 
+**G6 result (2026-09-20, #105).** `fm9/tone_match.py` matches a build's
+capture to a reference clip by spectrum: band deltas named against the
+reference, and for each band with a real gap one amp knob and a direction
+from a declared table, as a first step through the plan path. No
+dB-to-knob calibration is claimed; the loop measures. Epic G is complete at
+the measurement level; every live loop is the next rig session's proof.
+
 ### Phase 1: read-only Sound Check
 
 - Optional audio dependency group.

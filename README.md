@@ -160,7 +160,9 @@ below is a real request you can type.
   each scene through the USB path, measures it, and proposes the exact
   `OUTPUT_SCENEn` move for anything the rules catch; the proposal goes
   through the same Confirm as every plan, then the next SOUND CHECK verifies
-  it, three rounds at most, and says what is left.
+  it, three rounds at most, and says what is left. MATCH REFERENCE compares
+  the capture to a clip of your own (a song, a record) and proposes the amp
+  knob and direction for each band that differs, one step at a time.
 
 **Never sends behind your back**
 - Read-back verification on every write, and a signal-path check so a preset is

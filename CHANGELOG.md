@@ -4,6 +4,27 @@ Notable changes to ToneCommand. Dates are UTC.
 
 ## Unreleased
 
+### Added (reference tone-match by measurement, 2026-09-20: #105 G6)
+- `fm9/tone_match.py`: both spectra measured the G2 way (the reference at
+  any rate; its loudness is not a target), the build's band deltas named
+  against the reference ("4.6 dB less body than the reference"), and for
+  each band with a gap of at least 1.5 dB one amp knob and a DIRECTION
+  from the `reference_match` table in `config/sound_policy.json` (the FM9
+  amp block's own controls: body to bass, presence to presence, bite to
+  treble, air to high cut, rumble to low cut, low control to depth), as a
+  first step of 1.0 on a knob or 20 Hz on a cut, clamped to the range. The
+  magnitude is never computed: no dB-to-knob calibration has been
+  measured and none is invented; the re-measure loop (G5) verifies the
+  move. Proven with a reference made by EQ-ing the unit's own capture: the
+  proposed directions reverse the EQ.
+- `GET /api/references` lists the references folder
+  (`TONECOMMAND_REFERENCES`, default `~/.tonecommand/references`);
+  `POST /api/tone-match {build, reference}` answers the match and a
+  proposal in the health scan's fix shape (the knob's current value plus
+  the step) for showPlan, so Confirm is the only way on to the unit;
+  MATCH REFERENCE sits beside SOUND CHECK; `tools/measure.py <build>
+  --reference <wav>` prints the same. Both routes read only.
+
 ### Added (catch and propose a fix, human-confirmed, 2026-09-20: #104 G5)
 - `fm9/sound_check.py` `propose(balance, levels)`: each measurable balance
   finding (G3's intent_target rules, with a baseline) becomes ONE move in
