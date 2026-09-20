@@ -51,8 +51,12 @@ it.
 > thing to get wrong, and skipping it is why "python is not recognised"
 > appears later. If you miss it, run the installer again and choose Modify.
 
-3.11 works too. 3.13 and newer do not, and the install will say so in one
-line ("requires a different Python").
+3.11 works too. 3.13 and newer do not yet, and the install will say so in
+one line ("requires a different Python"). The reason is the MIDI library
+(python-rtmidi, no prebuilt parts past 3.12); a second library that has
+them (supriya-midi) is wired in behind `TONECOMMAND_MIDI_BACKEND=supriya`
+and the ceiling lifts once it has had its hardware pass on the unit
+(issue #172). Until then, 3.12.
 
 ### Step 2: install the FM9 USB driver
 

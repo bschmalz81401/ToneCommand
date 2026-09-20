@@ -407,8 +407,11 @@ py -3.12 -m venv .venv
 
 Python 3.11 or 3.12 on every platform: the MIDI library (python-rtmidi)
 ships prebuilt wheels for CPython 3.8 to 3.12 only, and on 3.13 or newer
-pip builds it from source, which needs a C++ toolchain. The package now
-says so in one line rather than a compiler trace.
+pip builds it from source, which needs a C++ toolchain. The package says
+so in one line rather than a compiler trace. The way out is in place
+(`fm9/midi_transport.py` picks the binding; `TONECOMMAND_MIDI_BACKEND=supriya`
+selects supriya-midi, which has wheels to 3.14) and the ceiling lifts after
+its hardware pass on the unit, issue #172.
 
 > **Never used a terminal before?** Follow
 > [the step-by-step Windows guide](docs/SETUP.md#windows) instead. It assumes

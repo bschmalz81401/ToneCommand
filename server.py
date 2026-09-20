@@ -560,8 +560,10 @@ def rescan_midi() -> None:
     """
     _pump_coremidi()
     try:
-        import mido
-        mido.set_backend("mido.backends.rtmidi", load=True)
+        from fm9 import midi_transport
+        if midi_transport.backend() == "mido":          # #172: only mido has a backend to reload
+            import mido
+            mido.set_backend("mido.backends.rtmidi", load=True)
     except Exception:
         # A backend that will not reload is no worse than before: the next
         # open still tries, it just may not see a newly arrived port.
