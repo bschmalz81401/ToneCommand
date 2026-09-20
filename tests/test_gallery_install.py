@@ -335,7 +335,10 @@ def test_page_has_the_gallery_and_the_wiring():
     assert 'id="artistsrow"' in UI and 'id="artistcards"' in UI
     assert "async function renderArtists()" in UI
     assert "fetch('/api/gift-of-tone')" in UI
-    assert "button.artistgo" in UI and "runArtistInstall(b.dataset.id, b)" in UI
+    # The INSTALL button is found by its data-id hook, not an `artistgo`
+    # class: a class with no stylesheet rule is what test_ui_warning's class
+    # audit exists to catch, and the id was already on the attribute.
+    assert 'button[data-id]' in UI and "runArtistInstall(b.dataset.id, b)" in UI
     assert "fetch('/api/gift-of-tone/install'" in UI
     assert "chatNote(d.line);" in UI
     assert "if (name === 'storage') renderArtists();" in UI
