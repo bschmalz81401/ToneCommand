@@ -144,5 +144,55 @@
    "not_applicable"
   ],
   "_read_me": "design 3.5: every result carries status, coverage, evidence and missing_facts; empty findings are never a pass on their own"
+ },
+ "reference_match": {
+  "_read_me": [
+   "G6 (#105): a reference clip is matched by spectrum. For each band whose gap is at least",
+   "min_delta_db, the amp knob below is proposed in the DIRECTION that closes the gap, by one",
+   "step, through the plan path. The table is the FM9 amp block's own control names; the step",
+   "is a first move to be re-measured (G5), never a claimed dB-to-knob calibration. None of",
+   "these numbers is an enforced rule."
+  ],
+  "min_delta_db": 1.5,
+  "step": 1.0,
+  "hz_step": 20,
+  "knobs": {
+   "rumble": {
+    "param": "DISTORT_HPFREQ",
+    "pid": 16,
+    "up_when": "build_high",
+    "label": "low cut"
+   },
+   "low_control": {
+    "param": "DISTORT_DEPTH",
+    "pid": 26,
+    "up_when": "build_low",
+    "label": "depth"
+   },
+   "body": {
+    "param": "DISTORT_BASS",
+    "pid": 12,
+    "up_when": "build_low",
+    "label": "bass"
+   },
+   "presence": {
+    "param": "DISTORT_PRESENCE",
+    "pid": 30,
+    "up_when": "build_low",
+    "label": "presence"
+   },
+   "bite": {
+    "param": "DISTORT_TREBLE",
+    "pid": 14,
+    "up_when": "build_low",
+    "label": "treble"
+   },
+   "air": {
+    "param": "DISTORT_LPFREQ",
+    "pid": 17,
+    "up_when": "build_low",
+    "label": "high cut"
+   }
+  }
  }
 }

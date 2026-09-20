@@ -6131,6 +6131,8 @@ $('hout').addEventListener('click', e => {
   const sc = e.target.closest('#soundcheck');
   if (sc) runSoundCheck(JSON.parse(sc.dataset.scenes || '[]'));
   if (e.target.closest('#scpropose')) proposeSoundCheck();
+  if (e.target.closest('#matchref')) runMatchReference();
+  if (e.target.closest('#mrpropose')) proposeMatch();
 });
 function renderHealth(d) {
   lastFindings = d.findings || [];
@@ -6180,6 +6182,7 @@ function renderHealth(d) {
      <button class="small" id="soundcheck" data-scenes="${
        esc(JSON.stringify((d.scenes || []).filter(s => s.alive).map(s => ({scene: s.number,
          role: sceneRole(s.name)}))))}">SOUND CHECK</button>
+     <button class="small" id="matchref">MATCH REFERENCE</button>
      <span id="scout"></span></div>`;
 }
 
@@ -6224,6 +6227,43 @@ async function runSoundCheck(scenes) {
     out.textContent = ' ' + e.message;
     log(`sound check: ${e.message}`, 'err');
   }
+}
+// G6 (#105): pick a reference clip from the references folder, match the
+// latest sound-check capture of the current scene against it, and propose
+// the amp moves through the same plan path.
+let lastMatch = null;
+async function runMatchReference() {
+  const out = $('scout');
+  if (!out) return;
+  try {
+    const refs = await (await fetch('/api/references')).json();
+    if (!refs.references.length) throw new Error(`no reference clips: drop a .wav into ${refs.dir}`);
+    const names = refs.references.map((r, i) => `${i + 1}. ${r.name}`).join('\n');
+    const pick = prompt(`Which reference?\n${names}`, '1');
+    const ref = refs.references[Number(pick) - 1];
+    if (!ref) return;
+    const cap = (lastSoundCheck && lastSoundCheck.captured && lastSoundCheck.captured.captures[0]) || null;
+    if (!cap) throw new Error('run SOUND CHECK first so there is a capture to match');
+    out.textContent = ' matching...';
+    const d = await (await fetch('/api/tone-match', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({build: cap.path, reference: ref.path, reference_label: ref.name})})).json();
+    if (d.error) throw new Error(d.error);
+    lastMatch = d;
+    out.innerHTML = ' ' + esc(d.proposal.summary) + '<br>' + d.match.lines.map(esc).join('<br>') +
+      (d.proposal.actions.length ? ' <button class="small" id="mrpropose">PROPOSE</button>' : '');
+  } catch (e) {
+    out.textContent = ' ' + e.message;
+    log(`match reference: ${e.message}`, 'err');
+  }
+}
+function proposeMatch() {
+  const d = lastMatch;
+  if (!d || !(d.proposal.actions || []).length) return;
+  showPlan({summary: d.proposal.summary, actions: d.proposal.actions,
+            device: lastState.preset ? {preset: lastState.preset} : null});
+  closeDrawer(); if (currentPlan) setStage('plan');
+  log(`"${d.proposal.summary}" proposed. Review, confirm, send; then SOUND CHECK and MATCH REFERENCE again to verify.`, 'ok');
 }
 function proposeSoundCheck() {
   const d = lastSoundCheck;

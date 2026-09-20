@@ -30,7 +30,7 @@ from fm9 import (acquire, ai_settings, artist_pack, axechange, bundlefile, cabfi
                  describe, designs, diagnostics, editbuffer, gallery, gallery_install,
                  gift_of_tone, health, installed_packs, measure, nam_intake, planner, presetfile,
                  recipe_capture, recipes as recipebook, rigprofile, scratch_build, share,
-                 sound_check, starter_template)
+                 sound_check, starter_template, tone_match)
 # `slots` is a local variable in more than one function here, so the module
 # gets a name that cannot be shadowed by one.
 from fm9 import slots as slotops
@@ -4001,6 +4001,75 @@ def _sound_check_recorder():
             signal = np.zeros(int(seconds * reamp.RATE), dtype=np.float32)
         return reamp.replay_and_record(signal, out_channel, (1, 2), seconds=seconds)
     return recorder
+
+
+def _references_dir() -> Path:
+    return (Path(_os.environ.get("TONECOMMAND_REFERENCES", "").strip() or
+             Path.home() / ".tonecommand" / "references")).resolve()
+
+
+def _reference_path(raw: str) -> Path | None:
+    """A wav under the references folder, read only."""
+    root = _references_dir()
+    try:
+        p = Path(str(raw)).expanduser().resolve()
+    except (OSError, RuntimeError):
+        return None
+    if p.suffix.lower() != ".wav" or root not in p.parents or not p.is_file():
+        return None
+    return p
+
+
+@app.get("/api/references")
+def api_references():
+    """The reference clips on hand: wavs under the references folder."""
+    root = _references_dir()
+    out = []
+    if root.is_dir():
+        for p in sorted(root.glob("*.wav")):
+            out.append({"name": p.name, "path": str(p), "bytes": p.stat().st_size})
+    return {"dir": str(root), "references": out}
+
+
+def _amp_knobs(fm9) -> dict[str, float]:
+    """The amp block's EQ knobs from the buffer, by parameter name."""
+    cap = editbuffer.capture(fm9, reg)
+    out = {}
+    for knob in tone_match.table()["knobs"].values():
+        v = advisory.value(reg, cap, tone_match.BLOCK, int(knob["pid"]))
+        if v is not None:
+            out[knob["param"]] = float(v)
+    return out
+
+
+@app.post("/api/tone-match")
+def api_tone_match(body: dict):
+    """G6 (#105): the build's capture against a reference clip: band deltas
+    naming the reference, and one amp knob plus a direction per band with
+    a real gap, as a first step in the health scan's fix shape. The page
+    hands the actions to showPlan; nothing is sent here."""
+    if _gig_mode["on"]:
+        return JSONResponse({"error": "GIG LOCK is on: not while you are playing"}, status_code=423)
+    build = _capture_path(str(body.get("build") or ""))
+    if build is None:
+        return JSONResponse({"error": "say which build capture: a .wav under the captures folder"},
+                            status_code=400)
+    ref = _reference_path(str(body.get("reference") or ""))
+    if ref is None:
+        return JSONResponse({"error": f"say which reference: a .wav under {_references_dir()}"},
+                            status_code=400)
+    label = str(body.get("reference_label") or ref.stem)
+    try:
+        mt = tone_match.match(build, ref, label)
+    except (tone_match.ToneMatchError, measure.MeasureError) as e:
+        return JSONResponse({"error": str(e)}, status_code=409)
+    with _lock:
+        try:
+            knobs = _amp_knobs(get_fm9())
+        except FM9NotFound:
+            drop_fm9()
+            return JSONResponse({"error": "FM9 not connected"}, status_code=503)
+    return {"match": mt, "proposal": tone_match.proposal(mt, knobs, reg)}
 
 
 @app.post("/api/gift-of-tone/fetch")
