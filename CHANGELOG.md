@@ -2,7 +2,7 @@
 
 Notable changes to ToneCommand. Dates are UTC.
 
-## Unreleased
+## 1.5.1 (2026-09-20)
 
 ### Added (reference tone-match by measurement, 2026-09-20: #105 G6)
 - `fm9/tone_match.py`: both spectra measured the G2 way (the reference at
