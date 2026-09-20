@@ -46,6 +46,19 @@ Notable changes to ToneCommand. Dates are UTC.
   satisfies. This is stronger corroboration than a photographed screen,
   because a misread digit cannot produce it.
 
+### Changed (third follow-up review, 2026-09-20)
+- Two nits, both UNANIMOUS across the local reviewer's three samples, which
+  is the signal worth acting on from a model whose single-sample findings are
+  usually wrong. `_must_be_continuous`'s docstring said the only thing
+  standing in the way of a selector being converted "would be a test", while
+  the guard it documents is code; it now says what each half does, because
+  the guard is the behaviour and
+  `test_a_selector_is_not_dragged_onto_the_continuous_path` is the warning
+  that fires if the registry-wide fact ever stops being true.
+- `test_a_selector_never_reaches_the_device_to_be_refused` is now
+  `test_the_guards_refuse_before_any_call_reaches_the_device`: it is about
+  the guards running before the transport, not about selectors.
+
 ### Fixed (second follow-up review, 2026-09-19)
 - A TEST THAT COULD NOT FAIL FOR THE THING IT WAS NAMED AFTER. The check that
   the display methods refuse BEFORE touching the device built the plain

@@ -470,12 +470,19 @@ class HeadrushAdapter:
     def _must_be_continuous(spec: Any) -> tuple[float, float]:
         """The published range, or the reason there is nothing to convert.
 
-        BOTH GUARDS ARE HERE RATHER THAN IN A TEST. No parameter this firmware
-        publishes carries both `options` and a display range, so the selector
-        case cannot arise today - which is exactly why it must be refused in
-        the code: a schema that grew one would otherwise have its ORDINAL run
-        through a 0..1 taper, silently, and the only thing standing in the way
-        would be a test asserting the schema had not changed.
+        BOTH GUARDS ARE HERE RATHER THAN ONLY IN A TEST. No parameter this
+        firmware publishes carries both `options` and a display range, so the
+        selector case cannot arise today - which is exactly why it is refused
+        here, in code: a schema that grew one would otherwise have its ORDINAL
+        run through a 0..1 taper, silently.
+
+        There IS also a test, and it checks the other thing. This method
+        refuses a selector whatever the schema says;
+        `test_a_selector_is_not_dragged_onto_the_continuous_path` asserts the
+        registry-wide property across every parameter, so if a future firmware
+        publishes a selector WITH a display range the suite says so by name
+        instead of the fact quietly ceasing to be true. Neither substitutes
+        for the other: the guard is the behaviour, the test is the warning.
 
         Checked BEFORE the device is touched, so a spec that was never
         convertible does not cost a round trip to find out.

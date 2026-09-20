@@ -617,7 +617,7 @@ def test_a_format_string_that_will_not_apply_keeps_the_unit(reg):
     assert a._formatted(BadFormat(), 12.5) == "12.5 Hz"
 
 
-def test_a_selector_never_reaches_the_device_to_be_refused(reg):
+def test_the_guards_refuse_before_any_call_reaches_the_device(reg):
     """The guards run BEFORE the read, so a spec that was never convertible
     does not cost a round trip to find that out.
 
