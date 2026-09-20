@@ -33,6 +33,9 @@ reviewer = "default"
 # Each criterion's evidence should point at one of these having run, not a
 # free-text claim. Example: commands = ["pytest tests/ -q", "npm test"]
 commands = [
+  ".venv/bin/python -m pytest tests/test_reamp.py -q -k 'device or channel or replay'",
+  "TONECOMMAND_SIM=1 .venv/bin/python -m pytest tests/test_reamp.py -q -k 'routing or restore or journal'",
+  ".venv/bin/python -m pytest tests/test_reamp.py -q -k 'capture or method'",
   "TONECOMMAND_SIM=1 .venv/bin/python -m pytest tests/test_installed_packs.py -q -k 'record or find or listing'",
   "TONECOMMAND_SIM=1 .venv/bin/python -m pytest tests/test_installed_packs.py -q -k 'compare or source'",
   "TONECOMMAND_SIM=1 .venv/bin/python -m pytest tests/test_installed_packs.py -q -k 'evidence or reference'",
