@@ -4,6 +4,53 @@ Notable changes to ToneCommand. Dates are UTC.
 
 ## Unreleased
 
+### Fixed (the read-back is predicted, not tolerated, 2026-09-20: #167)
+- `_write_verified` called a write a failure whenever the unit quantized it.
+  On `Amp.TremSpeed` that was every wire value tested, three for three: the
+  device converts a written wire value to display, snaps the DISPLAY value to
+  the published grid, converts back and keeps float32, so a write it HONOURED
+  read back as a different float.
+- IT NOW PREDICTS WHAT THE UNIT WILL HOLD AND STILL COMPARES EXACTLY.
+  `_expected_read_back` runs the write forward through the unit's own
+  arithmetic; `_write_verified` gains an `expect=` and nothing else changes.
+  There is no tolerance anywhere, so a value the unit discarded still fails.
+  The result carries `held` when the two differ, because a caller that plans
+  against what it wrote would be planning against a number the device never
+  had.
+- THE ANCHOR IS THE EIGHT WRITE/READ PAIRS #167 MEASURED ON A CORE, across
+  Linear and Squared and grids of 1.0, 0.1 and 0.01. The prediction reproduces
+  all eight BIT-EXACTLY. A test comparing the adapter against the simulator
+  would only be self-consistency, because both now use the same vendor table.
+- THE PUBLISHED GRID IS A FLOAT32 AND COST TWO WRONG VERSIONS OF THIS FIX.
+  A grid the vendor wrote as 0.01 arrives as 0.009999999776482582; snapping
+  with that literal puts `Amp.TremSpeed` at 0.33299559354782104 where the unit
+  holds ...62335014343. `tapers.snap_to_grid` recovers the decimal at
+  float32's ~7 significant digits, and lives there rather than in the adapter
+  because the simulator needs the same arithmetic.
+- A prediction that cannot be made - no table, no grid, an unknown curve -
+  falls back to comparing what was sent, which is the behaviour that shipped.
+  The display methods refuse in that situation because a converted number
+  would be a fiction; a write must not, because the unit would have accepted
+  it.
+- NOT because a tolerance is unsafe. That argument does not survive the
+  device: the unit can only hold a grid point, so a half-grid window admits
+  exactly one value. The reasons that do hold: a uniform window would stop
+  requiring an ON-GRID write to read back exactly when the unit returns those
+  exactly; a window needs the curve anyway to map the grid into wire space;
+  and a prediction can report what the unit holds. A mutation replacing the
+  exact comparison with a window still passes this suite, and no test here can
+  tell them apart without simulating a device that violates its own
+  quantization.
+
+### Fixed (the simulator did not quantize, so no test could see #167)
+- `HeadrushSim` stored every write verbatim. The device does not, which is why
+  the suite was green while a real Core reported `ok=False` for writes it had
+  honoured: the double was modelling a device that does not exist.
+- It now converts, snaps and converts back on the way in, and reproduces all
+  eight values a Core held in #167 bit-exactly. One existing test changed:
+  `test_writing_a_display_value_still_verifies_the_wire_value` asserted the
+  sim held `approx(0.5)`, which was asserting the double's fiction.
+
 ### Added (HeadRush display conversion, 2026-09-19: #130)
 - `HeadrushAdapter` TAKES AN OPTIONAL CURVE TABLE. `tapers=` is opt-in and
   defaults to None, so an adapter built the way every existing caller builds

@@ -3,6 +3,7 @@ simulator through the real client. No hardware; every claim about the unit
 comes from docs/HEADRUSH-HARDWARE-FINDINGS.md and is cited in the adapter.
 """
 import json
+import struct
 import sys
 from pathlib import Path
 
@@ -415,7 +416,14 @@ def test_writing_a_display_value_still_verifies_the_wire_value(reg):
     assert out["ok"] is True
     assert out["display_wanted"] == 5.1875
     assert out["curve"] == "Squared"
-    assert sim.get_properties(reg.block("Amp").path)["TremSpeed"] == pytest.approx(0.5)
+    # The unit does NOT hold the 0.5 that went on the wire: it snaps 5.1875 to
+    # the published 0.01 grid, converts back, and keeps 0.5001265... This
+    # assertion used to say `approx(0.5)` and passed only because the
+    # simulator stored writes verbatim - it was asserting the double's
+    # fiction, not the device (#167).
+    assert sim.get_properties(reg.block("Amp").path)["TremSpeed"] == \
+        0.5001265406608582
+    assert out["held"] == 0.5001265406608582
     assert a.get_param_display(spec).text == "5.19 Hz"
 
 
@@ -677,3 +685,142 @@ def test_a_table_shaped_object_is_not_a_table(reg):
         hr.HeadrushAdapter(client, reg, tapers=LooksRight())
     # and the real one still builds
     assert hr.HeadrushAdapter(client, reg, tapers=hr_tapers.load()).tapers
+
+
+# --- #167: the read-back is predicted, not tolerated -------------------------
+#
+# The unit converts a written wire value to display, snaps the DISPLAY value to
+# the published grid, converts back and stores float32, so a write it honoured
+# read back as a different float and `_write_verified` called it a failure.
+#
+# The fix predicts what the unit will hold and keeps comparing EXACTLY. A
+# tolerance window would have been the obvious shape and is the wrong one: it
+# would also accept a value the unit discarded, which is the whole job of the
+# read-back (finding 1).
+
+#: Every write/read pair #167 measured on a Core at 5.1.0.2a63755, across two
+#: curves and three grids. THIS is the evidence. A test that only compared the
+#: adapter against HeadrushSim would prove self-consistency, because the sim
+#: quantizes with the same vendor table the adapter predicts with.
+MEASURED_ON_THE_UNIT = [
+    ("TremSpeed", 0.5,       0.5001265406608582),
+    ("TremSpeed", 0.25,      0.24955657124519348),
+    ("TremSpeed", 0.3333333, 0.33299562335014343),
+    ("Bass",      0.5,       0.5),
+    ("Bass",      0.25,      0.25),
+    ("Bass",      0.3333333, 0.33000001311302185),
+    ("PostGain",  0.5,       0.5),
+    ("PostGain",  0.3333333, 0.3333333432674408),
+]
+
+
+@pytest.mark.parametrize("name,wrote,held", MEASURED_ON_THE_UNIT,
+                         ids=[f"{n}@{w}" for n, w, _ in MEASURED_ON_THE_UNIT])
+def test_the_prediction_reproduces_every_pair_measured_on_the_unit(
+        reg, name, wrote, held):
+    """The anchor: bit-exact, not approximate, on all eight."""
+    _sim, a = _converting(reg)
+    assert a._expected_read_back(reg.resolve("Amp", name), wrote) == held
+
+
+def test_a_quantized_write_the_unit_honoured_is_reported_as_success(reg):
+    """The bug. On Amp.TremSpeed every wire value tested reported failure,
+    three for three, for writes the device had accepted."""
+    _sim, a = _converting(reg)
+    spec = reg.resolve("Amp", "TremSpeed")
+    out = a.set_param_wire(spec, 0.25)
+    assert out["ok"] is True
+    assert out["wanted"] == 0.25
+    assert out["held"] == 0.24955657124519348
+    assert "quantized" in out["detail"]
+
+
+def test_an_on_grid_write_is_still_required_to_read_back_exactly(reg):
+    """#168's hardware run found the rule is narrower than #167 states: a
+    request that lands ON the grid is stored exactly, so it must still be
+    checked exactly. Accepting a window here would hide a dropped write on
+    the one class of value where an exact check is achievable."""
+    _sim, a = _converting(reg)
+    spec = reg.resolve("Amp", "TremSpeed")
+    on_grid = a._expected_read_back(spec, 0.5)          # the 5.19 Hz fixed point
+    assert a._expected_read_back(spec, on_grid) == on_grid, \
+        "the prediction must be a fixed point, or an honoured write still fails"
+    out = a.set_param_wire(spec, on_grid)
+    assert out["ok"] is True and "held" not in out
+
+
+def test_a_write_the_unit_discarded_still_fails(reg):
+    """The guarantee that must not be lost. Finding 1: ordinal 4 reads back
+    correctly at t+0.04 s and is gone by t+0.39 s, and a tolerance wide enough
+    to accept the grid would have accepted that too."""
+    sim = HeadrushSim()
+    spec = reg.resolve("Amp", "TremSpeed")
+    opener = RecordingOpener(sim, revert={(reg.block("Amp").path,
+                                           "TremSpeed"): 0.9})
+    client = HeadrushClient("sim.local", "127.0.0.1", opener=opener)
+    a = hr.HeadrushAdapter(client, reg, tapers=hr_tapers.load(),
+                           sleep=lambda s: None)
+    out = a.set_param_wire(spec, 0.25)
+    assert out["ok"] is False, "a discarded write was accepted"
+    assert "unit reads" in out["detail"]
+
+
+def test_without_a_table_the_write_check_is_exactly_what_it_was(reg):
+    """No table, no prediction, and no change for any existing caller."""
+    _sim, _op, a = make(reg)
+    spec = reg.resolve("Amp", "Bass")
+    assert a.tapers is None
+    assert a._expected_read_back(spec, 0.25) is None
+    out = a.set_param_wire(spec, 0.25)
+    assert out["ok"] is True and "held" not in out
+
+
+def test_a_prediction_that_cannot_be_made_does_not_break_the_write(reg):
+    """An unknown curve means the table was built against other firmware. The
+    display methods refuse outright, because a converted number would be a
+    fiction. A WRITE must not: it falls back to comparing what it sent, which
+    is the behaviour that shipped, rather than raising on a value the unit
+    would have accepted."""
+    _sim, a = _converting(reg)
+    bass = reg.resolve("Amp", "Bass")
+
+    class UnknownCurve:
+        taper_id = 9999
+        block, name = "Amp", "Bass"
+        display_minimum, display_maximum = bass.display_minimum, bass.display_maximum
+        display_format, unit = bass.display_format, bass.unit
+        published = {"grid": 1.0}
+        wire_range = bass.wire_range
+
+    assert a._expected_read_back(UnknownCurve(), 0.25) is None
+    out = a.set_param_wire(UnknownCurve(), 0.25)
+    assert out["ok"] is True
+
+
+def test_the_grid_is_a_float32_and_must_not_be_used_literally(reg):
+    """The trap that cost two wrong versions of this fix. A grid the vendor
+    wrote as 0.01 arrives as 0.009999999776482582; snapping with that literal
+    puts Amp.TremSpeed at 0.33299559354782104 where the unit holds
+    ...62335014343, and nothing about it looks wrong."""
+    spec = reg.resolve("Amp", "TremSpeed")
+    published = spec.published["grid"]
+    assert published != 0.01, "the published grid is exact; this test is moot"
+
+    display = 2.4444440055555776                   # to_display(0.3333333)
+    naive = round(display / published) * published
+    assert hr_tapers.snap_to_grid(display, published) == 2.44
+    assert naive != 2.44, "snapping with the literal float32 grid is harmless"
+
+
+def test_to_wire_returns_float32_which_this_prediction_relies_on():
+    """The prediction does not round to float32 itself, because the table
+    already does. If that ever stops being true the predictions drift by an
+    ULP and every read-back check starts failing again, so it is pinned here
+    rather than assumed by a comment."""
+    table = hr_tapers.load()
+    for display, lo, hi, algo in ((33.0, 0.0, 100.0, None),
+                                  (2.44, 0.25, 20.0, 5),
+                                  (-4.0, -12.0, 12.0, None)):
+        wire = table.to_wire(display, minimum=lo, maximum=hi, algo=algo)
+        assert struct.unpack("f", struct.pack("f", wire))[0] == wire, \
+            f"to_wire({display}) returned a float64: {wire!r}"

@@ -67,7 +67,7 @@ from typing import Any, Callable
 from fm9.adapter import Capabilities, ReadPath, SceneSlotState, Topology
 from devices.headrush import topology as topo
 from devices.headrush.registry import NotMeasured, Registry, UnknownBlock
-from devices.headrush.tapers import TaperTable
+from devices.headrush.tapers import TaperTable, snap_to_grid
 
 CHAIN = "/Evil/Engine/Patch/Chain"
 RIG = "/Evil/Engine/Patch/Rig"
@@ -233,21 +233,94 @@ class HeadrushAdapter:
 
     # --- the one write path -----------------------------------------------
 
-    def _write_verified(self, path: str, name: str, value: Any) -> dict:
+    def _write_verified(self, path: str, name: str, value: Any,
+                        expect: Any = None) -> dict:
         """Write one property and read it back after the settle. The ONLY way
         this adapter writes a property, so read-back cannot be skipped by
         accident. Returns {ok, wanted, read} and never claims success on a
-        mismatch."""
+        mismatch.
+
+        `expect` is what the unit will HOLD, when that differs from what was
+        sent and can be computed. It is not a tolerance: the comparison stays
+        exact, so a value the unit discarded still fails (finding 1, where
+        ordinal 4 reads back correctly at t+0.04 s and is gone by t+0.39 s).
+        Only the thing being compared against changes. `None` means "the same
+        value that was written", which is every caller but `set_param_wire`.
+        """
+        want_back = value if expect is None else expect
         self.client.set_property(path, name, value)
         self._sleep(self.settle_s)
         read = self.client.get_property(path, name)
-        ok = read == value
-        return {"ok": ok, "path": path, "name": name, "wanted": value,
-                "read": read,
-                "detail": (f"{path} {name} = {value!r}, read back {read!r}"
-                           if ok else
-                           f"{path} {name}: wrote {value!r}, unit reads "
-                           f"{read!r} after {self.settle_s:g} s")}
+        ok = read == want_back
+        snapped = expect is not None and expect != value
+        out = {"ok": ok, "path": path, "name": name, "wanted": value,
+               "read": read,
+               "detail": (f"{path} {name} = {value!r}, read back {read!r}"
+                          if ok else
+                          f"{path} {name}: wrote {value!r}, unit reads "
+                          f"{read!r} after {self.settle_s:g} s"
+                          + (f" (expected {want_back!r}, which is what the "
+                             f"unit's own grid makes of that write)"
+                             if snapped else ""))}
+        if snapped:
+            # Reported rather than hidden: the caller asked for one value and
+            # the unit is holding another ON PURPOSE, and a caller that plans
+            # against what it wrote would be planning against a number the
+            # device never had.
+            out["held"] = expect
+            if ok:
+                out["detail"] += (f"; the unit quantized it to {expect!r}, "
+                                  f"which is the write being honoured")
+        return out
+
+    def _expected_read_back(self, spec: Any, wire: float) -> float | None:
+        """What the unit will hold after being sent `wire`, or None.
+
+        The unit does not store what you send. It converts the wire value to
+        display, snaps the DISPLAY value to the published grid, converts back,
+        and stores the result as float32 (#167). Every step is reproducible,
+        so this predicts the stored value rather than allowing a window
+        around it.
+
+        NOT because a window is unsafe - that argument does not survive
+        contact with the device. The unit can only ever hold a grid point, so
+        a half-grid window admits exactly one value anyway. The reasons are
+        narrower and hold up: a window applied uniformly would stop requiring
+        an ON-GRID write to read back exactly, when the unit returns those
+        exactly and an exact check is achievable; a window needs the curve to
+        map the grid into wire space, so prediction costs nothing more; and a
+        prediction can report what the unit actually HOLDS, where a window
+        leaves the caller believing the value it sent.
+
+        Verified against all eight write/read pairs #167 measured on a Core,
+        across Linear and Squared curves and grids of 1.0, 0.1 and 0.01:
+        every one is reproduced BIT-EXACTLY (`test_the_prediction_reproduces_
+        every_pair_measured_on_the_unit`).
+
+        Returns None when the prediction cannot be made - no curve table, no
+        published range or grid, a curve this table has never seen, or a value
+        with no finite image. The caller then compares against what it wrote,
+        which is exactly today's behaviour: a prediction that cannot be made
+        must not weaken the check, and must not turn a write into an error.
+        """
+        if self.tapers is None:
+            return None
+        grid = (getattr(spec, "published", None) or {}).get("grid")
+        if not grid or spec.display_minimum is None or spec.display_maximum is None:
+            return None
+        try:
+            display = self._converted(spec, "to_display", wire)
+            snapped = snap_to_grid(display, grid)
+            # NOT rounded to float32 here: `TaperTable.to_wire` already
+            # returns one (`tapers.py`, `_f32` on the way out), which is what
+            # makes `Amp.PostGain` at 0.3333333 predict the 0.3333333432674408
+            # the unit held with nothing snapped. A second rounding here was
+            # in the first version of this, looked like it was carrying that
+            # case, and was dead. `test_to_wire_returns_float32_which_this_
+            # prediction_relies_on` fails if that ever stops being true.
+            return self._converted(spec, "to_wire", snapped)
+        except Exception:                                  # noqa: BLE001
+            return None
 
     # --- allowlisted methods ----------------------------------------------
 
@@ -519,7 +592,9 @@ class HeadrushAdapter:
             raise ValueError(f"{spec.block}.{spec.name} takes {lo}..{hi} on "
                              f"the wire, not {normalised!r}")
         block = self.registry.block(spec.block)
-        return self._write_verified(block.path, spec.name, float(normalised))
+        wire = float(normalised)
+        return self._write_verified(block.path, spec.name, wire,
+                                    expect=self._expected_read_back(spec, wire))
 
     def set_param_ordinal(self, spec: Any, ordinal: int) -> dict:
         block = self.registry.block(spec.block)

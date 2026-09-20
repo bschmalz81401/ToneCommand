@@ -151,6 +151,24 @@ CURVES = {
 }
 
 
+def snap_to_grid(display: float, grid: float) -> float:
+    """The display value the unit settles on, given its published grid.
+
+    THE PUBLISHED GRID IS A FLOAT32 AND MUST NOT BE USED LITERALLY. A grid the
+    vendor wrote as 0.01 arrives as 0.009999999776482582, and snapping with
+    that value lands just beside the mark the unit uses: it put a prediction
+    for `Amp.TremSpeed` at 0.33299559354782104 where the Core holds
+    0.33299562335014343. Recovering the decimal at float32's ~7 significant
+    digits is what makes all eight pairs measured in #167 reproduce exactly.
+
+    Lives here rather than in the adapter because the simulator needs the same
+    arithmetic, and two copies of a calculation that was got wrong twice is
+    two places for it to be got wrong again.
+    """
+    quantum = float(f"{grid:.7g}")
+    return round(display / quantum) * quantum
+
+
 @dataclass(frozen=True)
 class TaperTable:
     """The eleven, plus where they came from. Provenance is not optional."""
