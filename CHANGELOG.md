@@ -16,10 +16,14 @@ Notable changes to ToneCommand. Dates are UTC.
   73, effect id 1) read through bulk_read; `temporary` applies a change
   under a journal and restores it in `finally` with a settled, retried
   read-back (#169's rule), keeping the journal if a restore fails;
-  `restore_outstanding` at start puts a dead process's change back. No
-  global is ever written to an ordinal the unit was not observed holding;
-  the observed table is `config/reamp_observed.json` (Input 1 Source
-  0 = ANALOG, 1 = DIGITAL; Digital Input Source 1 = AES, 2 = USB).
+  `restore_outstanding` puts a dead process's change back, and the server
+  calls it the first time it holds the unit (`_restore_routing_journal`
+  inside `get_fm9`, before any other work; a failure is logged and the
+  journal kept). No global is ever written to an ordinal the unit was not
+  observed holding, a journal's 'before' included; the observed table is
+  `config/reamp_observed.json` (Input 1 Source 0 = ANALOG, 1 = DIGITAL;
+  Digital Input Source 1 = AES, 2 = USB), loaded at import
+  (`load_pinned`, `TONECOMMAND_REAMP_OBSERVED` moves it).
 - `fm9/capture.py`: the three capture methods (`test`: 1 kHz at -18 dBFS
   then a 20 Hz to 20 kHz log sweep, 4 s; `playing`: 6 s, prompted;
   `silence`: 4 s), `record` writing a 48 kHz stereo WAV plus a sidecar

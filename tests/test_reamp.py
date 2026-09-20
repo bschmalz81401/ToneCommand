@@ -151,6 +151,40 @@ def sim(monkeypatch, tmp_path):
     return dev
 
 
+def test_pinned_table_loads_at_import_and_is_what_the_spike_recorded(monkeypatch):
+    routing.OBSERVED.clear()
+    assert routing.load_pinned() == 4
+    assert routing.OBSERVED == {72: {0: "ANALOG", 1: "DIGITAL"}, 73: {1: "AES", 2: "USB"}}
+    routing.OBSERVED.clear()
+    monkeypatch.setenv("TONECOMMAND_REAMP_OBSERVED", "/nonexistent/observed.json")
+    assert routing.load_pinned() == 0 and routing.OBSERVED == {}
+
+
+def test_restart_restore_refuses_an_unobserved_before_and_keeps_the_journal(sim):
+    before = _ordinals(sim)
+    routing._write_journal([{"param": routing.IN1_SOURCE, "before": 7, "after": 1}])
+    with pytest.raises(routing.RoutingError, match="never observed holding; not written"):
+        routing.restore_outstanding(sim)
+    assert routing.journal_path().exists()                   # kept for a start that knows
+    assert _ordinals(sim) == before                          # nothing written
+
+
+def test_server_restores_an_outstanding_journal_the_first_time_it_holds_the_unit(sim, monkeypatch):
+    before = _ordinals(sim)
+    new1 = before[routing.IN1_SOURCE] + 1
+    routing.observe(routing.IN1_SOURCE, new1, "Digital")
+    routing.observe(routing.IN1_SOURCE, before[routing.IN1_SOURCE], "Analog")
+    routing._write_journal([{"param": routing.IN1_SOURCE, "before": before[routing.IN1_SOURCE], "after": new1}])
+    routing._write(sim, routing.IN1_SOURCE, new1)             # a dead process left it here
+    monkeypatch.setattr(server, "_fm9", None)
+    monkeypatch.setenv("TONECOMMAND_SIM", "1")
+    monkeypatch.setattr(server, "SimFM9", lambda reg: sim, raising=False)
+    import fm9.sim as simmod
+    monkeypatch.setattr(simmod, "SimFM9", lambda reg: sim)
+    server.get_fm9()
+    assert _ordinals(sim) == before and not routing.journal_path().exists()
+
+
 def _ordinals(fm9):
     r = routing.read_routing(fm9)
     return {k: v["ordinal"] for k, v in r.items()}
@@ -195,6 +229,7 @@ def test_routing_journal_restores_on_restart(sim):
     before = _ordinals(sim)
     new1 = before[routing.IN1_SOURCE] + 1
     routing.observe(routing.IN1_SOURCE, new1, "Digital")
+    routing.observe(routing.IN1_SOURCE, before[routing.IN1_SOURCE], "Analog")   # the 'before' too
     # the process dies mid-change: write the journal, apply, never restore
     routing._write_journal([{"param": routing.IN1_SOURCE,
                              "before": before[routing.IN1_SOURCE], "after": new1}])

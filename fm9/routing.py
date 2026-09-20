@@ -29,6 +29,12 @@ PARAM_NAMES = {IN1_SOURCE: "Input 1 Source", DIGITAL_SOURCE: "Digital Input Sour
 #: Empty until the spike records them; an empty set refuses every write.
 OBSERVED: dict[int, dict[int, str]] = {}
 
+#: The observed table the Gate 0 spike pinned (2026-09-20, fw 11): Input 1
+#: Source 0 = ANALOG, 1 = DIGITAL; Digital Input Source 1 = AES, 2 = USB.
+#: Loaded at import so a fresh process (a restart restoring a journal) knows
+#: what the unit has been seen to hold; TONECOMMAND_REAMP_OBSERVED moves it.
+PINNED_FILE = Path(__file__).resolve().parent.parent / "config" / "reamp_observed.json"
+
 
 class RoutingError(RuntimeError):
     """One line, written for the person at the rig."""
@@ -72,6 +78,22 @@ def load_observed(table: dict) -> None:
     for pid, vals in table.items():
         for o, d in vals.items():
             observe(int(pid), int(o), d)
+
+
+def load_pinned() -> int:
+    """Load the pinned table from PINNED_FILE (or the env override) into
+    OBSERVED. Returns how many values are observed afterwards; a missing or
+    unreadable file loads nothing, and nothing is then writable."""
+    override = os.environ.get("TONECOMMAND_REAMP_OBSERVED", "").strip()
+    path = Path(override) if override else PINNED_FILE
+    try:
+        load_observed(json.loads(path.read_text()))
+    except (OSError, ValueError, TypeError, AttributeError):
+        pass
+    return sum(len(v) for v in OBSERVED.values())
+
+
+load_pinned()
 
 
 #: The unit applies a write asynchronously (KNOWN_QUIRKS, settle window):
@@ -158,11 +180,20 @@ def restore_outstanding(fm9: Any) -> dict | None:
         raise RoutingError(f"routing journal unreadable at {path}: {e}")
     restored, problems = [], []
     for e in doc.get("entries", []):
+        pid, before = int(e["param"]), int(e["before"])
+        name = PARAM_NAMES.get(pid, str(pid))
+        # The same invariant as temporary(): a 'before' the unit was never
+        # observed holding is not written, even from a journal, and the
+        # journal is kept so the next start with the table loaded can.
+        if pid not in PARAM_NAMES or before not in OBSERVED.get(pid, {}):
+            problems.append(f"{name}: journal says {before}, which this unit was "
+                            "never observed holding; not written")
+            continue
         try:
-            _write(fm9, int(e["param"]), int(e["before"]))
-            restored.append({"param": int(e["param"]), "ordinal": int(e["before"])})
+            _write(fm9, pid, before)
+            restored.append({"param": pid, "ordinal": before})
         except Exception as exc:
-            problems.append(f"{PARAM_NAMES.get(int(e['param']), e['param'])}: {exc}")
+            problems.append(f"{name}: {exc}")
     if problems:
         raise RoutingError("routing journal restore incomplete: " + "; ".join(problems))
     _clear_journal()

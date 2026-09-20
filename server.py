@@ -518,7 +518,26 @@ def get_fm9() -> DeviceAdapter:
                 _last_rescan["at"] = now
                 rescan_midi()
             _fm9 = FM9(FM9_REGISTRY)
+        _restore_routing_journal(_fm9)
     return GatedDevice(_fm9)
+
+
+def _restore_routing_journal(fm9) -> None:
+    """Issue #56: the first time this process holds the unit, put back any
+    global routing a previous process changed and did not restore (its
+    journal is outstanding). Before other work, once; a failure is logged
+    and the journal kept, never a failed connect."""
+    from fm9 import routing
+    try:
+        out = routing.restore_outstanding(fm9)
+    except routing.RoutingError as e:
+        log.warning("routing journal: %s", e)
+        return
+    except Exception as e:                    # noqa: BLE001  the unit going away mid-restore
+        log.warning("routing journal: could not restore: %s", e)
+        return
+    if out:
+        log.warning("routing journal restored from a previous process: %s", out)
 
 
 def rescan_midi() -> None:
