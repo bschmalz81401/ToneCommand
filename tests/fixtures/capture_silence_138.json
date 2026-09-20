@@ -1,0 +1,25 @@
+{
+ "kind": "silence",
+ "what": "silence, for the noise floor",
+ "seconds": 4.0,
+ "rate": 48000,
+ "channels": [
+  1,
+  2
+ ],
+ "frames": 192000,
+ "peak_dbfs": -32.212011734748195,
+ "rms_dbfs": -55.967652819512466,
+ "out_channel": null,
+ "preset": [
+  138,
+  "BT Steve Lukather 01"
+ ],
+ "scene": 1,
+ "routing": {
+  "Input 1 Source": 1,
+  "Digital Input Source": 2
+ },
+ "recorded_at": "20260920-080423",
+ "wav": "silence-20260920-080423.wav"
+}

@@ -1,0 +1,148 @@
+{
+ "version": 1,
+ "source": "config/tone_rules.md lines 145 to 170 (the only numeric balance rules), docs/SOUND-CHECK-DESIGN.md 3.4 (rule classes), 10.2 (band regions), 10.3 (no LRA on short clips), 10.4 (stereo measures); config/tone_targets.json records why absolute floors were refuted (#50)",
+ "_read_me": [
+  "This file is the ONLY source of enforced numbers for the measurement ears (#101 #102 #103).",
+  "Prose in tone_rules.md is never parsed. A rule with enforced=false is listed so the",
+  "reference is complete and is never turned into pass/fail; it is a style recommendation.",
+  "Bands are descriptive regions: evidence with a named baseline, not universal pass bands."
+ ],
+ "bands": {
+  "rumble": [
+   20,
+   60
+  ],
+  "low_control": [
+   60,
+   120
+  ],
+  "body": [
+   180,
+   500
+  ],
+  "presence": [
+   1500,
+   4000
+  ],
+  "bite": [
+   6000,
+   10000
+  ],
+  "air": [
+   10000,
+   20000
+  ]
+ },
+ "rules": [
+  {
+   "id": "rhythm_within_1lu",
+   "cls": "intent_target",
+   "enforced": true,
+   "number": 1.0,
+   "unit": "LU",
+   "statement": "rhythm scenes within about 1 LU of each other"
+  },
+  {
+   "id": "lead_2_to_3lu_above_rhythm",
+   "cls": "intent_target",
+   "enforced": true,
+   "number": 2.0,
+   "number_max": 3.0,
+   "unit": "LU",
+   "statement": "leads 2 to 3 LU above the rhythm scenes"
+  },
+  {
+   "id": "cap_4lu_above_rhythm",
+   "cls": "intent_target",
+   "enforced": true,
+   "number": 4.0,
+   "unit": "LU",
+   "statement": "HARD CAP: no scene more than about 4 LU louder than the preset's rhythm scenes"
+  },
+  {
+   "id": "clean_not_below_rhythm",
+   "cls": "intent_target",
+   "enforced": true,
+   "number": 0.0,
+   "unit": "LU",
+   "statement": "cleans matched so they sit in the same mix: not below the rhythm scenes"
+  },
+  {
+   "id": "mono_like",
+   "cls": "acquisition",
+   "enforced": true,
+   "number": 0.98,
+   "number_level_db": 0.5,
+   "unit": "ratio",
+   "statement": "a capture is indistinguishable from mono when L/R correlation is at or above 0.98 and the channels are within 0.5 dB; definitional, not a taste threshold"
+  },
+  {
+   "id": "asked_wide_measured_mono",
+   "cls": "intent_target",
+   "enforced": true,
+   "number": null,
+   "unit": null,
+   "statement": "when the request asked for wide, big or stereo, a mono_like capture is a finding naming the correlation"
+  },
+  {
+   "id": "fizz_above_8k",
+   "cls": "style",
+   "enforced": false,
+   "number": null,
+   "unit": null,
+   "statement": "bright but not brittle: roll off harsh fizz above about 8 to 10 kHz; energy there is not inherently fizz (design 3.4)"
+  },
+  {
+   "id": "keep_low_mid_body",
+   "cls": "style",
+   "enforced": false,
+   "number": null,
+   "unit": null,
+   "statement": "keep low-mid body (about 200 to 500 Hz); do not over-scoop"
+  },
+  {
+   "id": "control_low_end",
+   "cls": "style",
+   "enforced": false,
+   "number": null,
+   "unit": null,
+   "statement": "high-pass around 80 to 100 Hz on high-gain rhythm tightens"
+  },
+  {
+   "id": "presence_for_cut",
+   "cls": "style",
+   "enforced": false,
+   "number": null,
+   "unit": null,
+   "statement": "preserve high-mid presence (about 1 to 4 kHz) so the rhythm cuts"
+  },
+  {
+   "id": "clean_headroom",
+   "cls": "style",
+   "enforced": false,
+   "number": null,
+   "unit": null,
+   "statement": "a clean keeps headroom; crest factor is reported, never judged on one reading (design 10.3)"
+  }
+ ],
+ "acquisition": {
+  "_read_me": "The acquisition numbers, declared here so a validity verdict is reproducible: they define what a capture IS, not how a tone should sound.",
+  "min_seconds": 1.0,
+  "silence_dbfs": -80.0,
+  "clip_dbfs": -0.1,
+  "dropout_ms": 50,
+  "active_window_ms": 100,
+  "active_below_peak_db": 40.0,
+  "_active": "a 100 ms window is active when its RMS is within 40 dB of the loudest window's; measurement runs on active windows only; a capture with no active window is digital silence and invalid"
+ },
+ "checker": {
+  "statuses": [
+   "verified",
+   "concern",
+   "unknown",
+   "invalid",
+   "not_applicable"
+  ],
+  "_read_me": "design 3.5: every result carries status, coverage, evidence and missing_facts; empty findings are never a pass on their own"
+ }
+}

@@ -28,7 +28,7 @@ from fm9.device import FM9, FM9NotFound, get_cab_slots, get_store_slots
 from fm9.registry import Registry
 from fm9 import (acquire, ai_settings, artist_pack, axechange, bundlefile, cabfile,
                  describe, designs, diagnostics, editbuffer, gallery, gallery_install,
-                 gift_of_tone, health, installed_packs, nam_intake, planner, presetfile,
+                 gift_of_tone, health, installed_packs, measure, nam_intake, planner, presetfile,
                  recipe_capture, recipes as recipebook, rigprofile, scratch_build, share,
                  starter_template)
 # `slots` is a local variable in more than one function here, so the module
@@ -3794,6 +3794,77 @@ def api_captures_intake(body: dict):
     log.info("capture intake: %d file(s), %d set(s), %d duplicate(s)",
              len(result.items), len(result.sets), len(result.duplicates))
     return result.as_dict()
+
+
+def _capture_path(raw: str) -> Path | None:
+    """A wav under the captures folder (or a sidecar next to one), read
+    only. Anything outside that folder is refused: the route measures
+    what the unit's own captures produced, nothing else on the disk."""
+    root = (Path(_os.environ.get("TONECOMMAND_CAPTURES", "").strip() or
+             Path.home() / ".tonecommand" / "captures")).resolve()
+    try:
+        p = Path(str(raw)).expanduser().resolve()
+    except (OSError, RuntimeError):
+        return None
+    if p.suffix.lower() == ".json":
+        p = p.with_suffix(".wav")
+    if p.suffix.lower() != ".wav" or root not in p.parents or not p.is_file():
+        return None
+    return p
+
+
+@app.post("/api/measure")
+def api_measure(body: dict):
+    """The measurement ears on one capture (#101 #102 #103): validity
+    first, then bands, loudness, stereo, dynamics and the findings the
+    policy file enforces, each with its class and baseline. Reads the
+    file; writes nothing; touches no device."""
+    p = _capture_path(str(body.get("path") or ""))
+    if p is None:
+        return JSONResponse({"error": "say which capture: a .wav under the captures folder"},
+                            status_code=400)
+    try:
+        m = measure.measure(p, request=str(body.get("request") or "") or None)
+    except measure.MeasureError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+    out = m.as_dict()
+    if body.get("baseline"):
+        b = _capture_path(str(body["baseline"]))
+        if b is None:
+            return JSONResponse({"error": "the baseline must be a .wav under the captures folder"},
+                                status_code=400)
+        try:
+            out["compare"] = measure.compare(m, measure.measure(b), body.get("baseline_label") or b.stem)
+        except measure.MeasureError as e:
+            out["compare"] = {"error": str(e)}
+    return out
+
+
+@app.post("/api/measure/balance")
+def api_measure_balance(body: dict):
+    """Scene balance across captures (#102): each {scene, role, path} is
+    measured for integrated loudness and the relative rules the rulebook
+    states are applied against the rhythm scenes' median."""
+    items = body.get("captures") or []
+    if not isinstance(items, list) or not items:
+        return JSONResponse({"error": "say which captures: [{scene, role, path}]"}, status_code=400)
+    rows = []
+    for it in items:
+        p = _capture_path(str((it or {}).get("path") or ""))
+        if p is None:
+            return JSONResponse({"error": f"scene {(it or {}).get('scene')}: the path must be a .wav "
+                                          "under the captures folder"}, status_code=400)
+        role = str((it or {}).get("role") or "other")
+        if role not in measure.ROLES:
+            return JSONResponse({"error": f"scene {(it or {}).get('scene')}: role {role!r} is not one of "
+                                          f"{', '.join(measure.ROLES)}"}, status_code=400)
+        m = measure.measure(p)
+        rows.append({"scene": int((it or {}).get("scene") or 0), "role": role,
+                     "lufs": (m.loudness or {}).get("integrated_lufs") if m.valid else None,
+                     "valid": m.valid, "invalid_reason": m.invalid_reason})
+    out = measure.scene_balance(rows)
+    out["captures"] = rows
+    return out
 
 
 @app.post("/api/gift-of-tone/fetch")

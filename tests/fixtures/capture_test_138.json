@@ -1,0 +1,25 @@
+{
+ "kind": "test",
+ "what": "1 kHz tone at -18 dBFS then a 20 Hz to 20 kHz log sweep",
+ "seconds": 4.0,
+ "rate": 48000,
+ "channels": [
+  1,
+  2
+ ],
+ "frames": 192000,
+ "peak_dbfs": -15.357619039736605,
+ "rms_dbfs": -27.76345751898073,
+ "out_channel": 5,
+ "preset": [
+  138,
+  "BT Steve Lukather 01"
+ ],
+ "scene": 1,
+ "routing": {
+  "Input 1 Source": 1,
+  "Digital Input Source": 2
+ },
+ "recorded_at": "20260920-080418",
+ "wav": "test-20260920-080418.wav"
+}

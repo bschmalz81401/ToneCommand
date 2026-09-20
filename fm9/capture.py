@@ -95,7 +95,14 @@ def record(kind: str, directory: Path, *, recorder, preset: Any = None,
     directory = Path(directory)
     directory.mkdir(parents=True, exist_ok=True)
     stamp = time.strftime("%Y%m%d-%H%M%S")
-    wav = directory / f"{kind}-{stamp}.wav"
+    # the scene in the name, and never overwrite: a per-scene loop (#102)
+    # records several captures within one second
+    base = f"{kind}-{stamp}" + (f"-s{int(scene)}" if scene not in (None, "") else "")
+    wav = directory / f"{base}.wav"
+    n = 2
+    while wav.exists() or wav.with_suffix(".json").exists():
+        wav = directory / f"{base}-{n}.wav"
+        n += 1
     rec = recorder(m["signal"], m["seconds"], out_channel)
     rec = np.asarray(rec, dtype=np.float32)
     if rec.ndim != 2 or rec.shape[1] != 2:
@@ -107,6 +114,6 @@ def record(kind: str, directory: Path, *, recorder, preset: Any = None,
             "out_channel": out_channel if kind == "test" else None,
             "preset": preset, "scene": scene, "routing": routing,
             "recorded_at": stamp, "wav": wav.name}
-    (directory / f"{kind}-{stamp}.json").write_text(json.dumps(side, indent=1))
+    wav.with_suffix(".json").write_text(json.dumps(side, indent=1))
     side["path"] = str(wav)
     return side
