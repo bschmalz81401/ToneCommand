@@ -436,3 +436,84 @@ Nothing was stored, reset, or flashed. Every write went to the edit buffer of
 `##HRB ToneCommandTesting`, a rig created for this work, and the two crashes
 confirmed the point by discarding everything: the unit came back with the rig as
 it is on disk, empty.
+
+---
+
+## Finding 5: a continuous parameter does not hold the value you wrote
+
+Measured 2026-09-19 and 2026-09-20 on the same Core at `5.1.0.2a63755`, on a
+`##HRB` preset. Filed as #167, fixed in #173. This section is the device fact;
+the adapter's handling of it is in `devices/headrush/adapter.py` and the run
+transcripts are in `HEADRUSH-DISPLAY-VERIFICATION-168.md`.
+
+**The unit converts a written wire value to display, snaps the DISPLAY value
+to the parameter's published `x-options.grid`, converts back through the same
+curve, and stores the result as float32.**
+
+So a read-back differs from the write whenever the display value it produced
+was not already on the grid. Read-back verification by exact equality against
+what was sent therefore reports failure for writes the device honoured — on
+`Amp.TremSpeed`, every wire value tested.
+
+    stored = to_wire( snap_to_grid( to_display(wire) ) )     # float32 out
+
+Eight write/read pairs, two curves, three grids:
+
+| property | curve | grid | wrote | unit held |
+| --- | --- | --- | --- | --- |
+| `Amp.TremSpeed` | Squared | 0.01 | `0.5` | `0.5001265406608582` |
+| `Amp.TremSpeed` | Squared | 0.01 | `0.25` | `0.24955657124519348` |
+| `Amp.TremSpeed` | Squared | 0.01 | `0.3333333` | `0.33299562335014343` |
+| `Amp.Bass` | Linear | 1.0 | `0.5` | `0.5` |
+| `Amp.Bass` | Linear | 1.0 | `0.25` | `0.25` |
+| `Amp.Bass` | Linear | 1.0 | `0.3333333` | `0.33000001311302185` |
+| `Amp.PostGain` | Linear | 0.1 | `0.5` | `0.5` |
+| `Amp.PostGain` | Linear | 0.1 | `0.3333333` | `0.3333333432674408` |
+
+The formula reproduces all eight bit-exactly. `test_the_prediction_reproduces_
+every_pair_measured_on_the_unit` asserts it.
+
+### 5a. The published grid is itself a float32
+
+A grid the vendor wrote as `0.01` arrives as `0.009999999776482582`. Snapping
+with that literal lands beside the mark the unit uses:
+
+    grid used literally   -> Amp.TremSpeed predicted 0.33299559354782104
+    unit actually holds                              0.33299562335014343
+
+`tapers.snap_to_grid` recovers the decimal at float32's ~7 significant digits.
+Two versions of the #173 fix got this wrong in two different ways and neither
+looked wrong; only the pairs above caught it.
+
+### 5b. A write fails iff the display value it produces is off the grid
+
+#167's body said "every write on a quantized parameter reports failure". That
+is broader than the device. `set_param_display(5.19)` on `Amp.TremSpeed`
+reported `ok=True` on hardware, because `5.19` is already on the 0.01 grid and
+the unit had nothing to snap. An on-grid write is stored exactly, so it can and
+should still be verified exactly.
+
+### 5c. Every value the device holds is a fixed point
+
+Writing back a value the unit is already holding reads back identical: it is by
+construction the image of a grid point. The corollary was measured — restoring
+`Amp.TremSpeed` to the `0.5` it held wrote `0.5001265406608582`, and **no wire
+value returns it to `0.5`**. Read-modify-restore code must treat "same
+displayed value" as success rather than bit equality.
+
+### 5d. A simulator that stores writes verbatim cannot see any of this
+
+`HeadrushSim` did, which is why the whole suite was green while a real Core
+reported failure for honoured writes: the double was modelling a device that
+does not quantize. It now performs the same convert-snap-convert and reproduces
+all eight values above. **Agreement between the simulator and the adapter is
+therefore self-consistency, not evidence** — both use the same vendor table.
+The evidence is the hardware pairs.
+
+### Provenance
+
+The `ok` flags, read-back floats and restore behaviour above are the device's
+own HTTP responses. Displayed values quoted in the run transcripts were read
+from the vendor web editor, which the owner attests matches the device — and
+which is not independent evidence about the curves, because
+`devices/headrush/tapers.py` was extracted from that editor's own bundle.
