@@ -149,6 +149,24 @@ def _default_for(meta: dict) -> Any:
     return None
 
 
+_TABLE = None
+
+
+def _taper_table():
+    """The vendor curve table, loaded once. Deferred rather than imported at
+    module scope so the simulator still constructs if the table is absent."""
+    global _TABLE
+    if _TABLE is None:
+        from devices.headrush import tapers
+        _TABLE = tapers.load()
+    return _TABLE
+
+
+def _snap(display, grid):
+    from devices.headrush.tapers import snap_to_grid
+    return snap_to_grid(display, grid)
+
+
 class HeadrushSim:
     """An in-process HeadRush, shaped by the committed schema.
 
@@ -224,7 +242,48 @@ class HeadrushSim:
             if name not in meta:
                 raise SimError(400, f"{path} has no property {name!r}")
             self._check(path, name, meta[name], value)
-            self._values[path][name] = value
+            self._values[path][name] = self._as_the_unit_would_store(
+                meta[name], value)
+
+    def _as_the_unit_would_store(self, meta: dict, value: Any) -> Any:
+        """What the DEVICE ends up holding, which is not what was sent.
+
+        The unit converts a written wire value to display, snaps the DISPLAY
+        value to the published grid, converts back, and keeps the result as
+        float32 (#167). This simulator stored the value verbatim, which is
+        why every test passed while the adapter reported `ok=False` for
+        writes a real Core had honoured: the double was modelling a device
+        that does not quantize, and no test could see the bug.
+
+        The curve comes from the vendor's editor, the same source as
+        `devices/headrush/tapers.py`, so a test asserting that the adapter's
+        prediction matches this is only self-consistency. The evidence that
+        either matches the hardware is the eight write/read pairs #167
+        measured on a Core, which are asserted directly against the
+        prediction and never against this.
+
+        Anything not convertible is stored verbatim, as before.
+        """
+        opts = meta.get("x-options") or {}
+        grid = opts.get("grid")
+        lo, hi = meta.get("minimum"), meta.get("maximum")
+        if (meta.get("type") != "number" or not grid
+                or lo is None or hi is None or isinstance(value, bool)):
+            return value
+        try:
+            table = _taper_table()
+            algo = opts.get("normalizeAlgo")
+            display = table.to_display(float(value), minimum=lo, maximum=hi,
+                                       algo=algo)
+            snapped = _snap(display, grid)
+            # to_wire already returns float32 (tapers.py `_f32`), which is
+            # the half of #167 that has nothing to do with the grid.
+            return table.to_wire(snapped, minimum=lo, maximum=hi, algo=algo)
+        except Exception:                               # noqa: BLE001
+            # A curve this table has never seen, or a value with no finite
+            # image. Storing it verbatim is what this did before, and a
+            # simulator that raised here would fail writes the unit accepts.
+            return value
 
     def _check(self, path: str, name: str, meta: dict, value: Any) -> None:
         kind = meta.get("type")
