@@ -28,7 +28,7 @@ from fm9.device import FM9, FM9NotFound, get_cab_slots, get_store_slots
 from fm9.registry import Registry
 from fm9 import (acquire, ai_settings, artist_pack, axechange, bundlefile, cabfile,
                  describe, designs, diagnostics, editbuffer, gallery, gallery_install,
-                 gift_of_tone, health, nam_intake, planner, presetfile,
+                 gift_of_tone, health, installed_packs, nam_intake, planner, presetfile,
                  recipe_capture, recipes as recipebook, rigprofile, scratch_build, share,
                  starter_template)
 # `slots` is a local variable in more than one function here, so the module
@@ -2549,6 +2549,10 @@ def _plan_counting(prompt: str, context: str, on_count=None, cancel=None):
     # scoped to THIS request only, rather than inlining it into the static
     # PARAM_REFERENCE every request pays for.
     ref = PARAM_REFERENCE + cab_retrieval_context(prompt)
+    # Issue #159: installed artist packs are evidence for the planner, read
+    # from the record at request time so the static reference stays cached
+    # and a pack installed a minute ago is already in it.
+    ref += "\n".join(installed_packs.reference_lines())
     # Issue #98: an internally opposed request ("tight but really warm and
     # dark") gets named and leaned on deterministically, rather than left
     # for the model to silently resolve one way with no explanation.
@@ -3939,6 +3943,19 @@ def api_gift_of_tone_install(body: dict):
             raise
         except RuntimeError as e:
             return JSONResponse({"error": str(e)}, status_code=500)
+        # Issue #159: the buffer now holds the stored preset (execute ends on
+        # select_preset of the slot); read it once for the evidence record.
+        # A record that cannot be written is said in the line, never a
+        # failed install: the flash write above already happened.
+        try:
+            cap = editbuffer.capture(fm9, reg)
+            pack = installed_packs.record(
+                entry, out, installed_packs.evidence(reg, cap, entry))
+            out["installed_pack"] = {"id": pack["id"], "label": pack["label"],
+                                     "evidence": len(pack["evidence"])}
+        except (installed_packs.InstalledPacksError, OSError, RuntimeError) as e:
+            out["installed_pack"] = None
+            out["line"] += f" (not recorded as a reference: {e})"
     for c in out["cabs"]:
         try:
             from fm9 import user_cabs
@@ -6413,7 +6430,18 @@ def _resolve_source(name: str) -> tuple[dict | None, str, str | None]:
                 target = n
                 break
     if target is None:
-        return None, key, f"{key!r} is not a scene, a snapshot slot or a saved design"
+        # Issue #159: an installed artist pack, "pack:Devin Townsend" or a
+        # bare phrase ("Devin's"). Tried last, so a scene NAME that happens
+        # to be a word is still a scene.
+        phrase = key.split(":", 1)[1].strip() if low.startswith("pack:") else key
+        res = _installed_pack_for(phrase)
+        if res is not None and res.status == "resolved":
+            return _capture_installed_pack(fm9, res.entry)
+        if res is not None and res.status == "ambiguous":
+            return None, key, res.question
+        installed = ", ".join(r.get("label") or r.get("id") for r in installed_packs.listing()[:6])
+        return None, key, (f"{key!r} is not a scene, a snapshot slot, a saved design or an "
+                           "installed artist pack" + (f" (installed: {installed})" if installed else ""))
     current = fm9.scene_name()
     origin = current[0] if current else None
     try:
@@ -6425,6 +6453,80 @@ def _resolve_source(name: str) -> tuple[dict | None, str, str | None]:
             fm9.set_scene(origin)
     label = f"scene {target}" + (f" ({cap.get('scene_name')})" if cap.get("scene_name") else "")
     return cap, label, None
+
+
+def _installed_pack_for(phrase: str):
+    """The installed pack an artist phrase names, or None when the phrase
+    is not one ("scene 3" and "snapshot a" never reach the record). The
+    phrase is stripped of ask-words the way artist_pack does ("Devin's",
+    "sound like Devin") so compare reads like the Artists shelf."""
+    words = installed_packs.artist_words(phrase)
+    if not words:
+        return None
+    res = installed_packs.find(words)
+    if res.status == "absent" and not installed_packs.listing():
+        return None
+    return res
+
+
+def _capture_installed_pack(fm9, pack: dict) -> tuple[dict | None, str, str | None]:
+    """Read an installed pack's preset off the unit for compare (#159):
+    snapshot the edit buffer, select the pack's slot, check the slot still
+    holds the pack's preset by name, capture, then come back to the origin
+    preset and put the snapshot back with editbuffer.restore. Selecting a
+    preset discards the buffer, the same rule as everywhere; the restore
+    brings parameter, bypass and channel edits back and NAMES anything it
+    could not (a block added unsaved is not something restore can place).
+    Refused under GIG LOCK, since it is a preset select on a live rig."""
+    if _gig_mode["on"]:
+        return None, pack.get("label", "pack"), (
+            "GIG LOCK is on: reading an installed pack selects its preset, "
+            "not while you are playing")
+    origin = fm9.current_preset()
+    origin_num = origin[0] if origin else None
+    snap = editbuffer.capture(fm9, reg)
+    slot = int(pack["slot"])
+    label = f"{pack.get('label')} pack"
+    not_restored: list[str] = []
+    try:
+        loaded = fm9.select_preset(slot)
+        name = loaded[1] if loaded else None
+        want = str(pack.get("preset_name") or "").strip()
+        if not name or name.strip() != want:
+            return None, label, (
+                f"slot {proto.slot_label(slot)} holds {name!r} now, not the "
+                f"{pack.get('label')} pack's {want!r}; install the pack again")
+        cap = editbuffer.capture(fm9, reg)
+    finally:
+        if origin_num is not None:
+            fm9.select_preset(origin_num)
+            not_restored = _restore_after_select(fm9, snap)
+    if not_restored:
+        label += " (your buffer: not restored: " + "; ".join(not_restored) + ")"
+    return cap, label, None
+
+
+def _restore_after_select(fm9, snap: dict) -> list[str]:
+    """Put the snapshot back after a preset select and NAME what could
+    not come back. editbuffer.restore writes parameter, bypass and channel
+    differences and skips a block it cannot find; topology it does not
+    touch. So the chain is compared afterwards: a block that was in the
+    buffer unsaved and is not now was placed unsaved and is gone (place it
+    again); a block now that was not in the snapshot is one the stored
+    preset has and the buffer had removed unsaved."""
+    try:
+        res = editbuffer.restore(fm9, reg, snap)
+        out = list(res.failed)
+    except ValueError as e:                      # a different preset came back
+        return [str(e)]
+    after = editbuffer.capture(fm9, reg)
+    was = {(b["family"], b["instance"]) for b in snap.get("blocks") or []}
+    now = {(b["family"], b["instance"]) for b in after.get("blocks") or []}
+    for fam, inst in sorted(was - now):
+        out.append(f"{fam} {inst} was placed unsaved and is gone; place it again")
+    for fam, inst in sorted(now - was):
+        out.append(f"{fam} {inst} was removed unsaved and is back")
+    return out
 
 
 def _apply_actions_to_capture(cap: dict, actions: list) -> dict:
