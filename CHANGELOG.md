@@ -4,6 +4,26 @@ Notable changes to ToneCommand. Dates are UTC.
 
 ## Unreleased
 
+### Fixed (the bundled app's CI build died on import, 2026-09-20: #175 follow-up)
+- `numpy` was an optional extra (`audition`) while `fm9/reamp.py`,
+  `capture.py`, `measure.py`, `sound_check.py` and `tone_match.py` import
+  it at module level and `server.py` imports them unconditionally. The
+  bundle workflow installs with `pip install .` and no extra, so the app it
+  froze had no numpy and died on the runner's smoke test; every developer
+  venv here had the extra, which is why nothing noticed locally. numpy is
+  a core dependency now; the `audition` extra stays, empty.
+- `server.py` and `fm9/health.py` import from `tools/`, which was not a
+  packaged package; it is now (with an `__init__.py`), so a wheel carries
+  the two modules the app needs. `tests/test_packaging.py` checks that every
+  repo package the server imports is packaged and that every module-level
+  third-party import is a core dependency; both fail without the fixes.
+- Known, not fixed here: a non-editable `pip install .` still cannot run
+  the server from outside the repo, because `config/`, `ui/` and
+  `recipes/` are repo-root data the wheel does not carry. The supported
+  paths remain the editable install the docs describe and the bundled app
+  (which collects them). Packaging the data directories is filed
+  separately.
+
 ### Added
 - A self-contained unsigned macOS `ToneCommand.app` bundle with Python inside,
   a simulator smoke test, and a tag/manual GitHub Actions packaging workflow.
