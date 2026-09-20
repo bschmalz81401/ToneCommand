@@ -36,7 +36,8 @@ RESULT = {"preset": "BT Devin 01", "store_slot": 134,
 def _ev(artist="Devin Townsend", year=2022, **over):
     rec = {"tag": {"artist": artist, "year": year, "source": ip.SOURCE},
            "kind": "amp", "name": "FAS Modern", "engaged": True,
-           "settings": {"gain": 7.5, "bass": 5.0}}
+           "settings": {"gain": 7.5, "bass": 5.0, "mid": 5.0, "treble": 6.0,
+                        "master": 4.0, "presence": None}}
     rec.update(over)
     return rec
 
@@ -157,6 +158,18 @@ def test_compare_source_refuses_gig_lock_a_stale_slot_and_an_unknown_name(client
     assert r.status_code == 404 and "installed artist pack" in r.json()["error"]
 
 
+def test_compare_source_refuses_before_any_select_when_the_unit_names_no_preset(client, sim, monkeypatch):
+    _install(client)
+    sim.select_preset(3)
+    server._snaps["a"] = editbuffer.capture(sim, server.reg)
+    monkeypatch.setattr(sim, "current_preset", lambda: None)
+    n = sim.calls.count("select_preset")
+    r = client.post("/api/advise/compare", json={"a": "snapshot:a", "b": "Lukather"})
+    assert r.status_code == 404
+    assert "nowhere to come back to" in r.json()["error"] and "refusing to select" in r.json()["error"]
+    assert sim.calls.count("select_preset") == n                  # nothing selected
+
+
 def test_compare_source_names_a_block_placed_unsaved_that_did_not_come_back(client, sim):
     _install(client)
     sim.select_preset(3)
@@ -185,8 +198,12 @@ def test_evidence_from_the_pack_fixture_is_tagged_and_the_planner_accepts_it(cli
         assert ip.validate_evidence(e) is None
         assert e["tag"] == {"artist": "Steve Lukather", "year": 2025, "source": "pack file"}
     amp = next(e for e in ev if e["kind"] == "amp")
-    assert set(amp["settings"]) <= set(ip.AMP_KNOBS) and amp["settings"]
+    assert set(amp["settings"]) == set(ip.AMP_KNOBS)               # all six, always
     assert all(isinstance(v, float) for v in amp["settings"].values())
+    cab = next(e for e in ev if e["kind"] == "cab")
+    assert set(cab["settings"]) == {"bank", "type"} and isinstance(cab["settings"]["type"], int)
+    for e in ev:
+        assert isinstance(e["engaged"], bool) and set(e["settings"]) == ip.SETTINGS_KEYS[e["kind"]]
     blob = json.dumps(ev)
     assert "says" not in blob and '"' + "quote" not in blob
 
@@ -196,7 +213,12 @@ def test_validate_evidence_refuses_a_record_missing_its_tag():
     assert ip.validate_evidence({**_ev(), "tag": None}) == "evidence has no tag"
     assert ip.validate_evidence(_ev(year=1999)) == "evidence tag has no year"
     assert ip.validate_evidence(_ev(kind="interview")).startswith("evidence kind")
-    assert ip.validate_evidence(_ev(settings={"gain": "hot"})) == "evidence settings must be numbers"
+    assert ip.validate_evidence(_ev(settings={**_ev()["settings"], "gain": "hot"})) == "evidence settings must be numbers or null"
+    assert ip.validate_evidence(_ev(settings={"gain": 7.5})).startswith("evidence settings for amp must be exactly: bass, gain")
+    assert ip.validate_evidence(_ev(kind="cab", settings={"bank": 2, "type": 515})) is None
+    assert ip.validate_evidence(_ev(kind="cab", settings={})).startswith("evidence settings for cab")
+    assert ip.validate_evidence(_ev(kind="drive", settings={"gain": 1})).endswith("must be exactly: nothing")
+    assert ip.validate_evidence(_ev(engaged="yes")) == "evidence has no engaged flag"
     assert ip.validate_evidence("amp") == "evidence is not a record"
 
 

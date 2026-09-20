@@ -38,7 +38,9 @@ Notable changes to ToneCommand. Dates are UTC.
   slots, and EVIDENCE read from the pack's preset as it landed (the amp
   model with gain, bass, mid, treble, master and presence; the cab; the
   drives; delay and reverb presence), each record tagged artist, year and
-  `pack file`. `find` resolves an artist phrase with the Artists shelf's
+  `pack file`, with a closed settings shape per kind (an amp record always
+  carries all six knobs, null when unreadable; a cab record its bank and
+  type ordinals; the rest nothing) that `validate_evidence` enforces. `find` resolves an artist phrase with the Artists shelf's
   rules (whole word, full name first, newest year, two artists is a
   question); `artist_words` drops possessives and the pack/rig/tone words
   ("Devin's" is Devin).
@@ -49,7 +51,9 @@ Notable changes to ToneCommand. Dates are UTC.
   your preset back and restores the snapshot; parameter, bypass and channel
   edits come back, and a block placed or removed unsaved is NAMED in the
   label ("WAH 1 was placed unsaved and is gone; place it again") rather
-  than silently lost. Refused under GIG LOCK. The unresolved-source line
+  than silently lost. Refused under GIG LOCK, and refused before any
+  select when the unit does not say which preset is loaded (nowhere to
+  come back to). The unresolved-source line
   now names installed packs among the kinds it tried.
 - The planner's reference gains an INSTALLED ARTIST PACKS section, read
   from the record at request time (the static reference stays cached),

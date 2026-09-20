@@ -6484,9 +6484,15 @@ def _capture_installed_pack(fm9, pack: dict) -> tuple[dict | None, str, str | No
             "not while you are playing")
     origin = fm9.current_preset()
     origin_num = origin[0] if origin else None
+    label = f"{pack.get('label')} pack"
+    if origin_num is None:
+        # Nothing to come back to: refuse BEFORE any select, so the buffer
+        # is never left on the pack's slot.
+        return None, label, ("the unit did not say which preset is loaded, so there "
+                             "is nowhere to come back to; refusing to select the "
+                             f"{pack.get('label')} pack's slot")
     snap = editbuffer.capture(fm9, reg)
     slot = int(pack["slot"])
-    label = f"{pack.get('label')} pack"
     not_restored: list[str] = []
     try:
         loaded = fm9.select_preset(slot)
@@ -6498,9 +6504,8 @@ def _capture_installed_pack(fm9, pack: dict) -> tuple[dict | None, str, str | No
                 f"{pack.get('label')} pack's {want!r}; install the pack again")
         cap = editbuffer.capture(fm9, reg)
     finally:
-        if origin_num is not None:
-            fm9.select_preset(origin_num)
-            not_restored = _restore_after_select(fm9, snap)
+        fm9.select_preset(origin_num)
+        not_restored = _restore_after_select(fm9, snap)
     if not_restored:
         label += " (your buffer: not restored: " + "; ".join(not_restored) + ")"
     return cap, label, None

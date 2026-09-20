@@ -37,6 +37,12 @@ _ID = re.compile(r"^[a-z0-9-]{1,64}$")
 
 #: The amp knobs an evidence record carries, by advisory's DISTORT pids.
 AMP_KNOBS = ("gain", "bass", "mid", "treble", "master", "presence")
+#: The closed settings keys per kind. An amp record always carries all
+#: six knobs (a knob the capture could not read is null, never absent); a
+#: cab record carries the bank and type ordinals the name was read from;
+#: the rest carry nothing but name and engagement.
+SETTINGS_KEYS = {"amp": frozenset(AMP_KNOBS), "cab": frozenset({"bank", "type"}),
+                 "drive": frozenset(), "delay": frozenset(), "reverb": frozenset()}
 
 
 class InstalledPacksError(ValueError):
@@ -94,16 +100,18 @@ def evidence(reg, capture: dict, record: dict) -> list[dict]:
         fam = b.get("family")
         if fam == "DISTORT":
             name = advisory.type_name(reg, b)
-            settings = {}
-            for knob in AMP_KNOBS:
-                v = advisory.value(reg, capture, "DISTORT", advisory.AMP[knob], b.get("instance", 1))
-                if v is not None:
-                    settings[knob] = v
+            settings = {knob: advisory.value(reg, capture, "DISTORT", advisory.AMP[knob],
+                                             b.get("instance", 1))
+                        for knob in AMP_KNOBS}
             out.append({"tag": dict(tag), "kind": "amp", "name": name or "amp",
                         "engaged": not b.get("bypassed"), "settings": settings})
         elif fam == "CABINET":
+            bank = advisory._wire(b, advisory.CAB_BANK_PID)
+            kind = advisory._wire(b, advisory.CAB_TYPE_PID)
             out.append({"tag": dict(tag), "kind": "cab", "name": advisory.type_name(reg, b) or "cab",
-                        "engaged": not b.get("bypassed"), "settings": {}})
+                        "engaged": not b.get("bypassed"),
+                        "settings": {"bank": None if bank is None else int(bank),
+                                     "type": None if kind is None else int(kind)}})
         elif fam == "FUZZ":
             out.append({"tag": dict(tag), "kind": "drive", "name": advisory.type_name(reg, b) or "drive",
                         "engaged": not b.get("bypassed"), "settings": {}})
@@ -135,10 +143,15 @@ def validate_evidence(rec: Any) -> str | None:
         return f"evidence kind {rec.get('kind')!r} is not one of {', '.join(KINDS)}"
     if not str(rec.get("name") or "").strip():
         return "evidence has no name"
+    if not isinstance(rec.get("engaged"), bool):
+        return "evidence has no engaged flag"
     settings = rec.get("settings")
-    if not isinstance(settings, dict) or any(
-            not isinstance(v, (int, float)) or isinstance(v, bool) for v in settings.values()):
-        return "evidence settings must be numbers"
+    if not isinstance(settings, dict) or set(settings) != SETTINGS_KEYS[rec["kind"]]:
+        want = ", ".join(sorted(SETTINGS_KEYS[rec["kind"]])) or "nothing"
+        return f"evidence settings for {rec['kind']} must be exactly: {want}"
+    if any(isinstance(v, bool) or not isinstance(v, (int, float, type(None)))
+           for v in settings.values()):
+        return "evidence settings must be numbers or null"
     return None
 
 
@@ -227,7 +240,8 @@ def reference_lines() -> list[str]:
             if validate_evidence(e):
                 continue
             if e["kind"] == "amp":
-                knobs = ", ".join(f"{k} {v:g}" for k, v in (e.get("settings") or {}).items())
+                knobs = ", ".join(f"{k} {v:g}" for k, v in (e.get("settings") or {}).items()
+                                  if v is not None)
                 bits.append(f"amp {e['name']}" + (f" ({knobs})" if knobs else ""))
             elif e["kind"] == "cab":
                 bits.append(f"cab {e['name']}")
