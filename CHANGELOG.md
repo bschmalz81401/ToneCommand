@@ -2,6 +2,23 @@
 
 Notable changes to ToneCommand. Dates are UTC.
 
+## Unreleased
+
+### Fixed (the repoint read-back raced the settle window, 2026-09-20: #169)
+- `gallery_install.repoint` wrote a Cab block value and read it back at
+  once, inside the unit's settle window (#12). It passed here and on CI
+  only because parsing a 2,043-frame CABINET bulk read takes about 100 ms
+  on those machines and because the simulator counted the channel query
+  inside `get_param_wire` as a write, refreshing its snapshot; on a faster
+  machine it read the old value every time (reported by @bschmalz81401 on
+  #169 and #168). `repoint` now settles and retries like the verified
+  setters (`_read_back`, 4 x 0.15 s), the simulator's classifier no longer
+  counts a bank or channel QUERY as a write, and a new test widens the
+  settle window to 0.4 s so an unsettled read-back fails on any host.
+  `tests/test_sim.py::test_bypass_is_per_scene` had the same shape (a
+  bypass query read at once after the write) and now settles, as
+  KNOWN_QUIRKS rule 1 has said since August; rule 3 there records this one.
+
 ## 1.4.0 (2026-09-20)
 
 ### Added (a recipe uses a capture by reference, 2026-09-20: #153 I10)

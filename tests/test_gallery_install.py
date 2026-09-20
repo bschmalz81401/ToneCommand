@@ -202,6 +202,32 @@ def test_execute_order_is_cabs_then_buffer_then_repoint_then_one_store(sim, monk
         assert sim.get_param_wire(reg.spec("CABINET", gi.MODE_PARAM, 1), channel=ch) == gi.MODE_LEGACY
 
 
+def test_repoint_reads_back_after_the_settle_window_not_inside_it(sim, monkeypatch):
+    """#169: the repoint read-back passed here only because parsing a
+    CABINET bulk read (2,043 frames) took longer than the sim's 80 ms
+    settle window, and failed on a faster machine every time. With the
+    window widened past any host's parse time, an unsettled read-back
+    returns the OLD value deterministically; the settle-and-retry reads
+    the new one."""
+    import fm9.sim as simmod
+    import time
+    monkeypatch.setattr(simmod, "SETTLE", 0.4)
+    _point_cab_block(sim, 11, 12)
+    time.sleep(0.45)                                        # the pointing has settled
+    # the defect, reproduced on purpose: write, then read inside the window
+    spec = server.reg.spec("CABINET", 5, 1)
+    sim.set_param_ordinal(spec, 512)
+    assert sim.get_param_wire(spec, channel=0) == 11        # what the unit answers too soon
+    assert gi._read_back(sim, spec, 0, 512) == 512          # what the product reads
+    # and the whole repoint, under the wide window, lands on every channel
+    sim.set_param_ordinal(spec, 11)
+    time.sleep(0.45)
+    changed = gi.repoint(sim, {11: 512, 12: 513})
+    assert sorted((c["channel"], c["to"]) for c in changed if "ir_slot" in c) == \
+        [("A", 512), ("B", 512), ("C", 513), ("D", 513)]
+    assert gi.READ_BACK_SETTLE * gi.READ_BACK_TRIES > 0.4
+
+
 def test_execute_leaves_an_untouched_preset_alone(sim, monkeypatch):
     pl = gi.plan(ENTRY, _pack(cab_slot_a=600, cab_slot_b=601),
                  cab_name=sim.read_user_cab_name,

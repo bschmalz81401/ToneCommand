@@ -37,12 +37,19 @@ def test_scene_select_roundtrip(fm9):
 
 
 def test_bypass_is_per_scene(fm9):
+    """Settled between write and read (KNOWN_QUIRKS, settle window rule 1):
+    until #169 this read back at once and passed only because the sim
+    counted the bypass QUERY as a write and refreshed its snapshot."""
+    import time
     fm9.set_scene(1)
     fm9.set_bypass(70, True)
+    time.sleep(0.15)
     assert fm9.get_bypass(70) is True
     fm9.set_scene(2)
+    time.sleep(0.15)
     assert fm9.get_bypass(70) is False       # scene 2 unaffected
     fm9.set_scene(1)
+    time.sleep(0.15)
     assert fm9.get_bypass(70) is True
 
 
