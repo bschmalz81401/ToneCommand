@@ -473,6 +473,13 @@ Eight write/read pairs, two curves, three grids:
 The formula reproduces all eight bit-exactly. `test_the_prediction_reproduces_
 every_pair_measured_on_the_unit` asserts it.
 
+**This is not special to those three.** Every continuous parameter the unit
+publishes carries an `x-options.grid` — 3,911 of them, against exactly one
+that does not (`StorageInfo.UsedSpace`, which is a readout rather than a
+control). The three above were chosen because they span two curves and three
+grid sizes, not because they are the affected ones. Selectors are unaffected:
+they carry `options` and no display range, so there is nothing to snap.
+
 ### 5a. The published grid is itself a float32
 
 A grid the vendor wrote as `0.01` arrives as `0.009999999776482582`. Snapping
@@ -498,8 +505,17 @@ should still be verified exactly.
 Writing back a value the unit is already holding reads back identical: it is by
 construction the image of a grid point. The corollary was measured — restoring
 `Amp.TremSpeed` to the `0.5` it held wrote `0.5001265406608582`, and **no wire
-value returns it to `0.5`**. Read-modify-restore code must treat "same
-displayed value" as success rather than bit equality.
+value returns the stored float to `0.5`**.
+
+To be exact about that claim, since it is a strong one: `0.5` corresponds to
+`5.1875 Hz`, which is not on the 0.01 Hz grid, so the unit cannot represent it
+at all. Any write that lands on the same *displayed* value stores
+`0.5001265406608582`, and a write landing anywhere else stores a different
+grid point. The parameter can be returned to the same reading, never to the
+same float.
+
+Read-modify-restore code must therefore treat "same displayed value" as
+success rather than bit equality.
 
 ### 5d. A simulator that stores writes verbatim cannot see any of this
 
