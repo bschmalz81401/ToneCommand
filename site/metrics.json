@@ -1,52 +1,103 @@
 {
-  "generatedAt": "2026-09-19T13:43:25.138Z",
+  "generatedAt": "2026-09-20T08:10:30.172Z",
   "period": {
     "label": "September 2026 so far",
     "start": "2026-09-01",
     "end": "2026-09-30"
   },
   "headline": {
-    "sessions": 2,
+    "sessions": 32,
     "deltaPct": null,
     "comparison": "vs August 2026"
   },
   "channels": [
     {
       "name": "Unassigned",
-      "sessions": 2,
-      "share": 66.7
+      "sessions": 14,
+      "share": 32.6
     },
     {
       "name": "Direct",
-      "sessions": 1,
-      "share": 33.3
+      "sessions": 13,
+      "share": 30.2
+    },
+    {
+      "name": "Cross-network",
+      "sessions": 9,
+      "share": 20.9
     }
   ],
   "geography": [
     {
       "name": "United States",
-      "sessions": 1,
-      "share": 50
+      "sessions": 10,
+      "share": 31.3
     },
     {
-      "name": "Vietnam",
-      "sessions": 1,
-      "share": 50
+      "name": "Argentina",
+      "sessions": 2,
+      "share": 6.3
+    },
+    {
+      "name": "France",
+      "sessions": 2,
+      "share": 6.3
+    },
+    {
+      "name": "Italy",
+      "sessions": 2,
+      "share": 6.3
+    },
+    {
+      "name": "Sweden",
+      "sessions": 2,
+      "share": 6.3
+    },
+    {
+      "name": "Taiwan",
+      "sessions": 2,
+      "share": 6.3
     }
   ],
   "cities": [
     {
       "name": "Unknown, Virginia",
-      "sessions": 1,
-      "share": 50
+      "sessions": 6,
+      "share": 18.8
     },
     {
-      "name": "Da Nang, Da Nang",
-      "sessions": 1,
-      "share": 50
+      "name": "Unknown",
+      "sessions": 2,
+      "share": 6.3
+    },
+    {
+      "name": "Bahia Blanca, Buenos Aires Province",
+      "sessions": 2,
+      "share": 6.3
+    },
+    {
+      "name": "Lille, Hauts-de-France",
+      "sessions": 2,
+      "share": 6.3
+    },
+    {
+      "name": "Milan, Lombardy",
+      "sessions": 2,
+      "share": 6.3
+    },
+    {
+      "name": "Stockholm, Stockholm County",
+      "sessions": 2,
+      "share": 6.3
     }
   ],
-  "events": [],
+  "events": [
+    {
+      "name": "file_download",
+      "count": 1,
+      "engagedShare": null
+    }
+  ],
   "shipped": [],
   "source": "ga4-data-api",
   "note": "Numbers are aggregates only. Refreshed daily at 04:00 ET."
