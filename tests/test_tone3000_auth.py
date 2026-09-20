@@ -170,6 +170,16 @@ def test_route_callback_verifies_state_exchanges_and_redirects(client, monkeypat
     assert r.json() == {"signed_in": False} and not tokens_path.exists()
     # a callback with no pending login
     assert client.get("/api/tone3000/callback?code=c&state=x").status_code == 400
+    # atomic: two threads consuming the same pending login, exactly one gets it
+    import threading
+    client.get("/api/tone3000/login")
+    got = []
+    def take():
+        got.append(bool(server._t3k_consume_pending()))
+    ts = [threading.Thread(target=take) for _ in range(8)]
+    for th in ts: th.start()
+    for th in ts: th.join()
+    assert got.count(True) == 1 and server._t3k_pending == {}
     # single use: a mismatch consumes the pending login, so a replay with the right state is refused
     client.get("/api/tone3000/login"); state = server._t3k_pending["state"]
     assert client.get("/api/tone3000/callback?code=c&state=nope").status_code == 400

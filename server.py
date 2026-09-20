@@ -6107,14 +6107,17 @@ TONE3000_REDIRECT = "http://127.0.0.1:8909/api/tone3000/callback"
 TONE3000_LOGIN_TTL_S = 600.0
 _t3k_pending: dict = {}
 _t3k_last_tone: dict = {"tone_id": None, "at": None}
+_t3k_lock = threading.Lock()
 
 
 def _t3k_consume_pending() -> dict:
-    """The pending login, taken exactly once: whatever the callback brings
-    (a code, an error, a wrong state), the state and verifier are gone
-    afterwards, so nothing can be replayed. Expired means gone too."""
-    pending = dict(_t3k_pending)
-    _t3k_pending.clear()
+    """The pending login, taken exactly once under a lock: whatever the
+    callback brings (a code, an error, a wrong state), the state and
+    verifier are gone afterwards, so two callbacks cannot both hold the
+    verifier and nothing can be replayed. Expired means gone too."""
+    with _t3k_lock:
+        pending = dict(_t3k_pending)
+        _t3k_pending.clear()
     if pending and time.time() - float(pending.get("started_at") or 0) > TONE3000_LOGIN_TTL_S:
         return {}
     return pending
@@ -6140,9 +6143,10 @@ def api_tone3000_login(prompt: str | None = None, tone_id: int | None = None):
                                           prompt=prompt, tone_id=tone_id)
     except tone3000_auth.AuthError as e:
         return JSONResponse({"error": str(e)}, status_code=400)
-    _t3k_pending.clear()
-    _t3k_pending.update({"state": state, "verifier": verifier, "prompt": prompt,
-                         "tone_id": tone_id, "started_at": time.time()})
+    with _t3k_lock:
+        _t3k_pending.clear()
+        _t3k_pending.update({"state": state, "verifier": verifier, "prompt": prompt,
+                             "tone_id": tone_id, "started_at": time.time()})
     return {"url": url, "redirect_uri": TONE3000_REDIRECT}
 
 
