@@ -157,8 +157,11 @@ def test_the_bar_resolves_before_the_planner_and_fetches_on_a_click_only():
     # an answer to "Which Mark: ..." is resolved, not sent to the planner
     assert "pendingArtistQuestion = d.question" in UI
     assert "`install the ${said} pack`" in UI
-    # a resolved pack is an OFFER with a button; fetching waits for the click
-    assert "role: 'offer'" in UI and 'class="small offer"' in UI
+    # a resolved pack is an OFFER with a button; fetching waits for the click.
+    # The button is found by its data-said hook rather than an `offer` class:
+    # a class the stylesheet has no rule for is what test_ui_warning's class
+    # audit exists to catch, and the action was already on the attribute.
+    assert "role: 'offer'" in UI and 'data-said="${esc(m.action)}"' in UI
     assert "b.onclick = () => runAcquire(b.dataset.said)" in UI
     # the absent line is shown, then the sentence continues to the planner
     assert "chatNote(esc(d.line));        // shown first; the planner builds next" in UI

@@ -7985,7 +7985,7 @@ function renderChat() {
     m.role === 'note'
       ? `<div class="cnote">${esc(m.content)}</div>`
       : m.role === 'offer'
-      ? `<div class="cnote">${esc(m.content)} <button class="small offer" data-said="${esc(m.action)}">${esc(m.label)}</button></div>`
+      ? `<div class="cnote">${esc(m.content)} <button class="small" data-said="${esc(m.action)}">${esc(m.label)}</button></div>`
       : `<div class="cmsg ${m.role}"><span class="cwho">${
           m.role === 'user' ? 'YOU'
             // Which model actually answered, on the reply it produced. It was
@@ -8041,7 +8041,7 @@ function renderChat() {
         ? '<button id="ccopy" title="Copy the whole conversation as text to paste for troubleshooting">COPY</button>' : ''
     }<button id="cclear" title="Delete this conversation and start a new one">CLEAR</button></div>`;
   // an offered pack (#158): the button is the player's go-ahead to fetch
-  feed.querySelectorAll('button.offer').forEach(b => { b.onclick = () => runAcquire(b.dataset.said); });
+  feed.querySelectorAll('button[data-said]').forEach(b => { b.onclick = () => runAcquire(b.dataset.said); });
   // Follow the newest message only when already at the bottom. Yanking
   // somebody back down while they are reading something further up is worse
   // than making them scroll.
@@ -8388,14 +8388,14 @@ async function renderArtists() {
       const action = blocksOnly
         ? `<span class="hint">effect blocks: not installable from here yet</span>`
         : (d.device
-            ? `<button class="small artistgo" data-id="${esc(e.id)}">INSTALL</button>`
+            ? `<button class="small" data-id="${esc(e.id)}">INSTALL</button>`
             : `<span class="hint">needs the unit</span>`);
       return `<div class="artistcard" data-id="${esc(e.id)}">
         <span class="who">${esc((e.artists || []).join(', '))}</span>
         <span class="what">${what}${e.min_firmware ? ` (firmware ${esc(e.min_firmware)}+)` : ''}</span>
         ${action}</div>`;
     }).join('');
-    for (const b of box.querySelectorAll('button.artistgo')) {
+    for (const b of box.querySelectorAll('button[data-id]')) {
       b.onclick = () => runArtistInstall(b.dataset.id, b);
     }
   } catch (e) {
