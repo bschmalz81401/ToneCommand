@@ -2,28 +2,7 @@
 
 Notable changes to ToneCommand. Dates are UTC.
 
-## 1.5.0 (2026-09-20)
-
-### Added (a MIDI transport seam with a second binding, 2026-09-20: #172)
-- `fm9/midi_transport.py` is the one place MIDI ports are opened.
-  `TONECOMMAND_MIDI_BACKEND` picks the binding: `auto` (default: mido over
-  python-rtmidi when it imports, else supriya-midi), `mido`, or `supriya`;
-  an unavailable backend is refused in one line naming what to install.
-  Both hand the device layer the port shape the simulator already uses
-  (`iter_pending()`, `send(mido.Message)`, `close()`); mido stays as the
-  message class. The supriya adapters open the port by name, enable sysex,
-  size the queue for a 2,100-frame bulk read, and encode sysex, program
-  and control change; proven on a fake port pair with the simulator's
-  core answering behind it, including a status dump, a bulk read and the
-  never-brick guard refusing a frame before any port sees it.
-- pyproject: python-rtmidi for Python below 3.13, supriya-midi 26.9b0 for
-  3.13 and newer, by environment marker. `requires-python` keeps its
-  `<3.13` ceiling until the supriya path has its hardware pass on the unit
-  (#172 REQ-004); a 3.11 or 3.12 install gets the same packages and the
-  same default backend as before. `server.rescan_midi` reloads mido's
-  backend only when mido is the backend, and the once-a-second presence
-  check (`_fm9_port_present`) enumerates through `midi_transport.port_names`
-  so a supriya install reports the unit the same way (review F1.1).
+## Unreleased
 
 ### Verified against a Core (#167 fix, 2026-09-20)
 - THE SYMPTOM IS GONE ON THE UNIT. `Amp.TremSpeed` at wire 0.25 reported
@@ -234,6 +213,29 @@ Notable changes to ToneCommand. Dates are UTC.
   every wire value tested reports failure. The conversion is correct and the
   displayed text is right; the flag is wrong. Fixing it belongs in
   `_write_verified`.
+
+## 1.5.0 (2026-09-20)
+
+### Added (a MIDI transport seam with a second binding, 2026-09-20: #172)
+- `fm9/midi_transport.py` is the one place MIDI ports are opened.
+  `TONECOMMAND_MIDI_BACKEND` picks the binding: `auto` (default: mido over
+  python-rtmidi when it imports, else supriya-midi), `mido`, or `supriya`;
+  an unavailable backend is refused in one line naming what to install.
+  Both hand the device layer the port shape the simulator already uses
+  (`iter_pending()`, `send(mido.Message)`, `close()`); mido stays as the
+  message class. The supriya adapters open the port by name, enable sysex,
+  size the queue for a 2,100-frame bulk read, and encode sysex, program
+  and control change; proven on a fake port pair with the simulator's
+  core answering behind it, including a status dump, a bulk read and the
+  never-brick guard refusing a frame before any port sees it.
+- pyproject: python-rtmidi for Python below 3.13, supriya-midi 26.9b0 for
+  3.13 and newer, by environment marker. `requires-python` keeps its
+  `<3.13` ceiling until the supriya path has its hardware pass on the unit
+  (#172 REQ-004); a 3.11 or 3.12 install gets the same packages and the
+  same default backend as before. `server.rescan_midi` reloads mido's
+  backend only when mido is the backend, and the once-a-second presence
+  check (`_fm9_port_present`) enumerates through `midi_transport.port_names`
+  so a supriya install reports the unit the same way (review F1.1).
 
 ### Added (the measurement ears, 2026-09-20: #101 G2, #102 G3, #103 G4)
 - `fm9/measure.py`, numpy only: a capture is measured only after
