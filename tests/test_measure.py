@@ -48,7 +48,7 @@ def _stereo(left, right):
 
 # --- REQ-001: validity, spectrum, bands ------------------------------------------------------------
 
-def test_policy_is_versioned_and_only_intent_or_acquisition_rules_are_enforced():
+def test_policy_is_versioned_and_only_intent_or_acquisition_rules_are_enforced(tmp_path):
     pol = M.policy()
     assert pol["version"] == 1 and set(pol["bands"]) == {"rumble", "low_control", "body", "presence", "bite", "air"}
     for r in pol["rules"]:
@@ -59,13 +59,10 @@ def test_policy_is_versioned_and_only_intent_or_acquisition_rules_are_enforced()
     assert pol["acquisition"]["active_below_peak_db"] == 40.0 and pol["acquisition"]["dropout_ms"] == 50
     assert set(pol["checker"]["statuses"]) == set(M.STATUSES)
     bad = {**pol, "rules": [{"id": "fizz", "cls": "style", "enforced": True}]}
-    p = FIX / "_bad_policy.json"
+    p = tmp_path / "bad_policy.json"
     p.write_text(json.dumps(bad))
-    try:
-        with pytest.raises(M.MeasureError, match="only intent_target and acquisition"):
-            M.policy(p)
-    finally:
-        p.unlink()
+    with pytest.raises(M.MeasureError, match="only intent_target and acquisition"):
+        M.policy(p)
 
 
 def test_validity_names_each_acquisition_fault(tmp_path):
