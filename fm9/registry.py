@@ -13,10 +13,11 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
+from fm9.paths import resource_path
 
-CONFIG = Path(__file__).resolve().parent.parent / "config" / "fm9_catalog.json"
-AMP_MODELS = Path(__file__).resolve().parent.parent / "config" / "amp_models.json"
-CAB_MODELS = Path(__file__).resolve().parent.parent / "config" / "cab_models.json"
+CONFIG = resource_path("config", "fm9_catalog.json")
+AMP_MODELS = resource_path("config", "amp_models.json")
+CAB_MODELS = resource_path("config", "cab_models.json")
 LEGACY_CAB_BANK = "3"      # FM9_CAB_BANK_NAMES: 3 = LEGACY
 
 # v1.4 PDF Appendix 1: family -> effect ID of instance 1 (instances contiguous)
@@ -130,8 +131,8 @@ class Registry:
         self.cab_rosters: dict = data.get("FM9_CAB_ROSTERS_BY_BANK", {})
         self.amp_models: dict = self._load_amp_models(amp_models_path)
         self.drive_models: dict = self._load_drive_models(
-            Path(__file__).resolve().parent.parent / "config" / "drive_models.json")
-        et_path = Path(__file__).resolve().parent.parent / "config" / "effect_type_models.json"
+            resource_path("config", "drive_models.json"))
+        et_path = resource_path("config", "effect_type_models.json")
         self.effect_type_models: dict = (
             json.loads(et_path.read_text()) if et_path.exists() else {})
         cab_sidecar = self._load_cab_models(cab_models_path)

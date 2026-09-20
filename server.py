@@ -39,8 +39,9 @@ from tools import path_audit
 from fm9 import protocol as proto
 from fm9 import advisory
 from fm9.signal_path import resolve_aliases
+from fm9.paths import project_root, resource_path
 
-ROOT = Path(__file__).resolve().parent
+ROOT = project_root()
 app = FastAPI(title="FM9 Tone Control")
 
 #: WARNING and above reach stderr even with no handler configured (Python's
@@ -2032,13 +2033,13 @@ def check_revision(body: ApplyBody):
 
 @app.get("/")
 def index():
-    return FileResponse(ROOT / "ui" / "index.html")
+    return FileResponse(resource_path("ui", "index.html"))
 
 
 @app.get("/logo.png")
 def logo():
     """The mark, for the page header and the browser tab."""
-    return FileResponse(ROOT / "ui" / "logo.png", media_type="image/png")
+    return FileResponse(resource_path("ui", "logo.png"), media_type="image/png")
 
 
 def _fm9_port_present() -> bool:
@@ -7663,7 +7664,14 @@ def main():
     # very first CoreMIDI snapshot is already backed by notifications.
     _pump_coremidi()
     import uvicorn
-    uvicorn.run(app, host="127.0.0.1", port=8909)
+    raw_port = _os.environ.get("TONECOMMAND_PORT", "8909")
+    try:
+        port = int(raw_port)
+    except ValueError as exc:
+        raise ValueError("TONECOMMAND_PORT must be an integer from 1 to 65535") from exc
+    if not 1 <= port <= 65535:
+        raise ValueError("TONECOMMAND_PORT must be an integer from 1 to 65535")
+    uvicorn.run(app, host="127.0.0.1", port=port)
 
 
 if __name__ == "__main__":

@@ -2,6 +2,13 @@
 
 Notable changes to ToneCommand. Dates are UTC.
 
+## Unreleased
+
+### Added
+- A self-contained unsigned macOS `ToneCommand.app` bundle with Python inside,
+  a simulator smoke test, and a tag/manual GitHub Actions packaging workflow.
+  Windows builds, signing, and notarisation remain later chunks.
+
 ## 1.5.1 (2026-09-20)
 
 ### Added (reference tone-match by measurement, 2026-09-20: #105 G6)

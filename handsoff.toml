@@ -117,6 +117,9 @@ commands = [
   ".venv/bin/python -m pytest tests/test_capture_intent.py -q",
   ".venv/bin/python -m pytest tests/test_gift_of_tone_catalog.py -q",
   "scripts/no-test-kb-note.sh",
+  "TONECOMMAND_SIM=1 .venv/bin/python -m pytest tests/test_packaging.py -q -k 'root or spec'",
+  "TONECOMMAND_SIM=1 .venv/bin/python -m pytest tests/test_packaging.py -q -k 'smoke or port'",
+  ".venv/bin/python -m pytest tests/test_packaging.py -q -k 'workflow or docs'",
 ]
 # Commands that verify the deployed system. Phase 8 is blocked until these
 # run successfully after deployment approval. This app has no hosted server;

@@ -1,5 +1,14 @@
 # Install and setup
 
+## macOS app (no Python)
+
+The bundled macOS download contains `ToneCommand.app` and its own Python, so
+Python and a terminal are not needed. The first chunk is not signed by an identified developer. After downloading and unzipping it, open the app; if
+macOS says it cannot verify the developer, Control-click `ToneCommand.app`,
+choose **Open**, then choose **Open** again. The app opens its local page at
+`http://127.0.0.1:8909`. This bundle is macOS-only; Windows builds and signing
+are planned for later chunks.
+
 ToneCommand runs on **macOS, Windows and Linux**. macOS is the tested path;
 Windows and Linux are documented and expected to work. Pick your OS below.
 

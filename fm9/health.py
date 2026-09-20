@@ -54,8 +54,9 @@ from __future__ import annotations
 import sys
 import time
 from pathlib import Path
+from fm9.paths import project_root
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = project_root()
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
