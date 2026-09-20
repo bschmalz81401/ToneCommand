@@ -84,6 +84,10 @@ def test_plan_takes_the_lowest_whitelisted_store_slot_when_none_is_empty():
                  store_name=_names({133: "VH Balance FM9AI"}),
                  cab_whitelist={512}, store_whitelist={133, 139})
     assert pl.store_slot == 139 and pl.replaced is None
+    # a slot that does not answer its name is never overwritten
+    with pytest.raises(gi.GalleryInstallError, match="did not answer its name"):
+        gi.plan(ENTRY, [_member("preset", "P")], cab_name=_names({}),
+                store_name=lambda s: None, cab_whitelist={512}, store_whitelist={133})
 
 
 def test_plan_refuses_in_one_line_before_any_write():

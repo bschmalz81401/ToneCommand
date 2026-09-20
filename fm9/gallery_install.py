@@ -148,7 +148,13 @@ def plan(entry: dict, members: list[dict], *, cab_name: Callable[[int], str | No
                  None)
     if store is None:
         store = sorted(store_whitelist)[0]
-        replaced = store_name(store) or None
+        held = store_name(store)
+        if not held:
+            raise GalleryInstallError(
+                f"store slot {p.slot_label(store)} did not answer its name; "
+                "not overwriting a slot the unit will not describe. Nothing "
+                "installed")
+        replaced = held
     notes = []
     if len(presets) > 1:
         notes.append(f"{len(presets)} presets in the pack; installing "
