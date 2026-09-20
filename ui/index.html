@@ -6128,6 +6128,9 @@ let fixPending = false;
 
 $('hout').addEventListener('click', e => {
   if (e.target.closest('#fixall')) fixAll();
+  const sc = e.target.closest('#soundcheck');
+  if (sc) runSoundCheck(JSON.parse(sc.dataset.scenes || '[]'));
+  if (e.target.closest('#scpropose')) proposeSoundCheck();
 });
 function renderHealth(d) {
   lastFindings = d.findings || [];
@@ -6172,11 +6175,65 @@ function renderHealth(d) {
     '<span>Every named scene has a live signal path, no two scenes are the ' +
     'same, and levels sit inside your conventions.</span></div>';
   $('hout').innerHTML = rows + finds + fixbar + clean +
-    `<div class="hears">Ears: pending. Every check above is a machine reading a
-     wire. None of them can tell you the tone is good.</div>`;
+    `<div class="hears">Ears: every check above is a machine reading a wire.
+     SOUND CHECK records each scene through the USB path and measures it.
+     <button class="small" id="soundcheck" data-scenes="${
+       esc(JSON.stringify((d.scenes || []).filter(s => s.alive).map(s => ({scene: s.number,
+         role: sceneRole(s.name)}))))}">SOUND CHECK</button>
+     <span id="scout"></span></div>`;
 }
 
 $('scan').onclick = scanPreset;
+
+// G5 (#104): the measurement ears propose a fix. The round comes back with
+// balance lines and one OUTPUT_SCENEn move per measurable finding, in the
+// same shape the health scan's fixes use, so the actions go to showPlan and
+// Confirm is the only way on to the unit. After a send, the next click
+// re-measures and either finds it balanced or proposes the next round; the
+// server stops at three and says what remains.
+let lastSoundCheck = null;
+// the same words fm9/tone_review.infer_role uses; 'other' when a name says nothing,
+// so the balance rules judge it only against the cap, never as a role it may not be
+function sceneRole(name) {
+  const n = (name || '').toLowerCase();
+  if (/lead|solo/.test(n)) return 'lead';
+  if (n.includes('clean')) return 'clean';
+  if (/rhythm|crunch|chug|rhy/.test(n)) return 'rhythm';
+  return 'other';
+}
+async function runSoundCheck(scenes) {
+  const out = $('scout');
+  if (!out) return;
+  out.textContent = ' measuring...';
+  try {
+    const d = await (await fetch('/api/sound-check/remeasure', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({scenes})})).json();
+    if (d.error) throw new Error(d.error);
+    lastSoundCheck = d;
+    const lines = (d.balance.findings || []).map(f => f.line);
+    const fixes = (d.proposal.fixes || []).map(f => f.label +
+      (f.note ? ' (' + f.note + ')' : ''));
+    out.innerHTML = ' ' + esc(d.proposal.summary) +
+      (lines.length ? '<br>' + lines.map(esc).join('<br>') : '') +
+      (fixes.length ? '<br>' + fixes.map(esc).join('<br>') +
+        ' <button class="small" id="scpropose">PROPOSE</button>' : '') +
+      (d.state.done ? ` (round ${d.state.round}, ${d.state.ended_by})` : ` (round ${d.state.round})`);
+    for (const u of (d.proposal.unfixable || [])) log(`sound check: ${u.line}: ${u.why}`, 'warn');
+  } catch (e) {
+    out.textContent = ' ' + e.message;
+    log(`sound check: ${e.message}`, 'err');
+  }
+}
+function proposeSoundCheck() {
+  const d = lastSoundCheck;
+  if (!d || !(d.proposal.actions || []).length) return;
+  // Exactly the health scan's path: a plan, reviewed, confirmed, then sent.
+  showPlan({summary: d.proposal.summary, actions: d.proposal.actions,
+            device: lastState.preset ? {preset: lastState.preset} : null});
+  closeDrawer(); if (currentPlan) setStage('plan');
+  log(`"${d.proposal.summary}" proposed. Review, confirm, and send; then SOUND CHECK again to verify.`, 'ok');
+}
 
 // --- signal chain as a control surface ------------------------------------
 // Clicking a block bypasses it; clicking its channel letter cycles A-D. These

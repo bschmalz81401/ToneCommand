@@ -30,7 +30,7 @@ from fm9 import (acquire, ai_settings, artist_pack, axechange, bundlefile, cabfi
                  describe, designs, diagnostics, editbuffer, gallery, gallery_install,
                  gift_of_tone, health, installed_packs, measure, nam_intake, planner, presetfile,
                  recipe_capture, recipes as recipebook, rigprofile, scratch_build, share,
-                 starter_template)
+                 sound_check, starter_template)
 # `slots` is a local variable in more than one function here, so the module
 # gets a name that cannot be shadowed by one.
 from fm9 import slots as slotops
@@ -3867,6 +3867,140 @@ def api_measure_balance(body: dict):
     out = measure.scene_balance(rows)
     out["captures"] = rows
     return out
+
+
+#: G5 (#104): one sound-check run per loaded preset: the round number and
+#: history. Reset when the preset changes. Nothing here sends; the fixes go
+#: through showPlan, Confirm and /api/apply like the health scan's.
+_sound_check = {"preset": None, "state": sound_check.new_state()}
+
+
+def _sound_check_state(fm9) -> dict:
+    try:
+        cur = fm9.current_preset()
+        num = cur[0] if cur else None
+    except Exception:                       # noqa: BLE001  a unit that does not answer resets nothing
+        num = None
+    if num != _sound_check["preset"]:
+        _sound_check["preset"], _sound_check["state"] = num, sound_check.new_state()
+    return _sound_check["state"]
+
+
+def _output_trims(fm9) -> dict[int, float]:
+    """The eight OUTPUT_SCENEn trims from the buffer, in dB, by scene."""
+    cap = editbuffer.capture(fm9, reg)
+    out = {}
+    for n, pid in sound_check.OUTPUT_SCENE_PID.items():
+        v = advisory.value(reg, cap, sound_check.OUTPUT_FAMILY, pid)
+        if v is not None:
+            out[n] = float(v)
+    return out
+
+
+def _sound_check_answer(fm9, rows: list[dict]) -> dict:
+    balance = measure.scene_balance(rows)
+    proposal = sound_check.propose(balance, _output_trims(fm9))
+    state = sound_check.rounds(_sound_check_state(fm9), balance, proposal)
+    balance["captures"] = rows
+    return {"balance": balance, "proposal": proposal, "state": state}
+
+
+@app.post("/api/sound-check")
+def api_sound_check(body: dict):
+    """G5 (#104): measure the captures, apply the balance rules, propose
+    one OUTPUT_SCENEn move per measurable finding in the health scan's fix
+    shape. Nothing is sent: the page hands the actions to showPlan and
+    Confirm is the only way on to the unit."""
+    if _gig_mode["on"]:
+        return JSONResponse({"error": "GIG LOCK is on: not while you are playing"}, status_code=423)
+    items = body.get("captures") or []
+    if not isinstance(items, list) or not items:
+        return JSONResponse({"error": "say which captures: [{scene, role, path}]"}, status_code=400)
+    rows = []
+    for it in items:
+        p = _capture_path(str((it or {}).get("path") or ""))
+        if p is None:
+            return JSONResponse({"error": f"scene {(it or {}).get('scene')}: the path must be a .wav "
+                                          "under the captures folder"}, status_code=400)
+        role = str((it or {}).get("role") or "other")
+        if role not in measure.ROLES:
+            return JSONResponse({"error": f"scene {(it or {}).get('scene')}: role {role!r} is not one of "
+                                          f"{', '.join(measure.ROLES)}"}, status_code=400)
+        m = measure.measure(p)
+        rows.append({"scene": int((it or {}).get("scene") or 0), "role": role,
+                     "lufs": (m.loudness or {}).get("integrated_lufs") if m.valid else None,
+                     "valid": m.valid, "invalid_reason": m.invalid_reason})
+    if not any(r["lufs"] is not None for r in rows):
+        return JSONResponse({"error": "nothing measurable: no capture was valid"}, status_code=409)
+    with _lock:
+        try:
+            return _sound_check_answer(get_fm9(), rows)
+        except FM9NotFound:
+            drop_fm9()
+            return JSONResponse({"error": "FM9 not connected"}, status_code=503)
+
+
+@app.post("/api/sound-check/remeasure")
+def api_sound_check_remeasure(body: dict):
+    """G5: record the test capture on each scene through the USB path
+    (routing put in the re-amp state under the journal and restored),
+    then the same measure-and-propose as /api/sound-check for the next
+    round. Simulator-proven; the live run is the next rig session's."""
+    if _gig_mode["on"]:
+        return JSONResponse({"error": "GIG LOCK is on: not while you are playing"}, status_code=423)
+    scenes = body.get("scenes") or []
+    if not isinstance(scenes, list) or not scenes:
+        return JSONResponse({"error": "say which scenes: [{scene, role}]"}, status_code=400)
+    roles = {}
+    for it in scenes:
+        try:
+            n = int((it or {}).get("scene"))
+        except (TypeError, ValueError):
+            return JSONResponse({"error": "scenes are 1 to 8"}, status_code=400)
+        role = str((it or {}).get("role") or "other")
+        if not 1 <= n <= 8 or role not in measure.ROLES:
+            return JSONResponse({"error": f"scene {n}: role {role!r} is not one of {', '.join(measure.ROLES)}"},
+                                status_code=400)
+        roles[n] = role
+    from fm9 import reamp, routing
+    from fm9 import capture as capmod
+    folder = Path(_os.environ.get("TONECOMMAND_CAPTURES", "").strip() or
+                  Path.home() / ".tonecommand" / "captures")
+    recorder = _sound_check_recorder()
+
+    with _lock:
+        try:
+            fm9 = get_fm9()
+            with routing.temporary(fm9, {routing.IN1_SOURCE: 1, routing.DIGITAL_SOURCE: 2}) as rt:
+                taken = sound_check.capture_scenes(fm9, list(roles), recorder, folder,
+                                                   routing={str(k): v["after"] for k, v in rt.items()})
+            rows = []
+            for c in taken["captures"]:
+                m = measure.measure(c["path"])
+                rows.append({"scene": c["scene"], "role": roles[c["scene"]],
+                             "lufs": (m.loudness or {}).get("integrated_lufs") if m.valid else None,
+                             "valid": m.valid, "invalid_reason": m.invalid_reason})
+            out = _sound_check_answer(fm9, rows)
+            out["captured"] = taken
+            return out
+        except FM9NotFound:
+            drop_fm9()
+            return JSONResponse({"error": "FM9 not connected"}, status_code=503)
+        except (routing.RoutingError, sound_check.SoundCheckError, reamp.ReampError) as e:
+            return JSONResponse({"error": str(e)}, status_code=409)
+
+
+def _sound_check_recorder():
+    """reamp.replay_and_record in the recorder shape capture.record takes;
+    tests replace this with a fake through the module attribute."""
+    from fm9 import reamp
+
+    def recorder(signal, seconds, out_channel):
+        import numpy as np
+        if signal is None:
+            signal = np.zeros(int(seconds * reamp.RATE), dtype=np.float32)
+        return reamp.replay_and_record(signal, out_channel, (1, 2), seconds=seconds)
+    return recorder
 
 
 @app.post("/api/gift-of-tone/fetch")
