@@ -71,6 +71,11 @@ def _protocol_members(proto) -> set[str]:
 # Methods that stay FM9-only, each with the reason it is not device-general.
 # Widening this is a visible diff in this file, which is the point.
 FM9_ONLY = {
+    "read_user_cab_name": (
+        "fn 0x01 sub 0x4B: the user-cab name in one flat 1024-slot Fractal list, "
+        "read so the gallery installer can tell an empty slot from a taken one "
+        "(#155). A device without a user-cab list has nothing to answer; the "
+        "installer is Fractal-only until another device grows one."),
     "get_param_wire": (
         "returns a raw wire16 value and is not the inverse of "
         "set_param_ordinal, which writes a discrete roster index. Per #33 the "

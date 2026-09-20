@@ -26,9 +26,9 @@ from fm9.adapter import (CAPABILITY_PROTOCOLS, UNDECLARED, Capabilities,
                          DeviceAdapter)
 from fm9.device import FM9, FM9NotFound, get_cab_slots, get_store_slots
 from fm9.registry import Registry
-from fm9 import (acquire, ai_settings, artist_pack, bundlefile, cabfile, describe, designs,
-                 diagnostics, editbuffer, gallery, gallery_install, gift_of_tone, health,
-                 nam_intake, planner, presetfile,
+from fm9 import (acquire, ai_settings, artist_pack, axechange, bundlefile, cabfile,
+                 describe, designs, diagnostics, editbuffer, gallery, gallery_install,
+                 gift_of_tone, health, nam_intake, planner, presetfile,
                  recipes as recipebook, rigprofile, scratch_build, share,
                  starter_template)
 # `slots` is a local variable in more than one function here, so the module
@@ -3949,6 +3949,47 @@ def api_gift_of_tone_install(body: dict):
     out.update({"id": entry_id, "source": source, "skipped": skipped,
                 "unexpected": unexpected})
     return out
+
+
+@app.post("/api/axechange")
+def api_axechange(body: dict):
+    """One Axe-Change link, one preset (#160): read that page, show its
+    line, check product and firmware against the connected unit, fetch the
+    preset from axechange.fractalaudio.com only, validate it, and put it in
+    the install cache for /api/install (whitelist, read-back). Nothing
+    reaches the unit here."""
+    import hashlib
+    url = str(body.get("url") or "").strip()
+    try:
+        pid = axechange.parse_url(url)
+    except axechange.AxeChangeError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+    try:
+        detail = axechange.parse_page(axechange.fetch_page(pid))
+    except axechange.AxeChangeError as e:
+        return JSONResponse({"error": str(e)}, status_code=502)
+    kind, fw = _connected_for_gallery()
+    gate = axechange.gate(detail, kind, fw)
+    if gate:
+        return JSONResponse({"error": gate, "detail": detail.as_dict()},
+                            status_code=409)
+    try:
+        raw = axechange.fetch_preset(pid)
+    except axechange.AxeChangeError as e:
+        return JSONResponse({"error": str(e), "detail": detail.as_dict()},
+                            status_code=502)
+    pf = presetfile.parse(raw)
+    _install_cache.clear()               # one pending file at a time
+    digest = hashlib.sha1(raw).hexdigest()
+    _install_cache[digest] = raw
+    log.info("axe-change %d: %s", pid, detail.line)
+    return {"line": detail.line, "detail": detail.as_dict(),
+            "preset": {"hash": digest, "name": pf.name, "chunks": pf.chunks,
+                       "bytes": len(raw), "file": f"axechange-{pid}.syx"},
+            "presets": [{"hash": digest, "name": pf.name, "chunks": pf.chunks,
+                         "bytes": len(raw), "file": f"axechange-{pid}.syx"}],
+            "cabs": [], "skipped": [], "artist": detail.author,
+            "target_editor": None, "cab_slots_configured": bool(get_cab_slots())}
 
 
 @app.post("/api/acquire")

@@ -8419,6 +8419,22 @@ async function runArtistInstall(id, button) {
     chatNote(`Could not install that pack: ${e.message}`);
   } finally {
     if (button) { button.disabled = false; button.textContent = 'INSTALL'; }
+
+async function runAxeChange(url) {
+  chatNote('Reading that Axe-Change page...');
+  renderChat();
+  try {
+    const r = await fetch('/api/axechange', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({url})});
+    const d = await r.json();
+    if (d.error) throw new Error(d.error);
+    chatNote(`${d.line}. Review the plan below, pick the slot, then WRITE.`);
+    renderChat();
+    renderAcquirePlan(d);
+    openDrawer('storage');
+  } catch (e) {
+    chatNote(`Could not use that link: ${e.message}`);
   }
   renderChat();
 }

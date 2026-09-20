@@ -39,6 +39,15 @@ Notable changes to ToneCommand. Dates are UTC.
   one INSTALL button (effect-blocks-only entries say so; no device says
   installs need the unit); the click shows the line.
 
+### Fixed (test audits caught up with this evening's routes, 2026-09-19)
+- `tests/test_device_handle.py`: `read_user_cab_name` (fn 0x01 sub 0x4B,
+  #155) is listed under FM9_ONLY with its reason; the live verify of #155
+  on main failed on that one orphan.
+- `tests/test_capability_gates.py`: `/api/gift-of-tone/install`,
+  `/api/captures/intake` and `/api/axechange` are in the request table;
+  `api_captures_intake`'s base64 except is in the audit (84 blocks, 35
+  re-raising, 49 unreachable).
+
 ### Added (paste an Axe-Change link, 2026-09-19: #160 J7)
 - `fm9/axechange.py`: one detail link (detail.php?preset=<id> on
   axechange.fractalaudio.com, nothing else accepted), that page's details

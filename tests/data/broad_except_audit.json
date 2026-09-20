@@ -415,6 +415,11 @@
    "function": "_connected_for_gallery",
    "ordinal": 1,
    "disposition": "re-raises CapabilityDeclined first; a unit that does not answer its firmware is 'no device' for the gallery, never an error page (#156)"
+  },
+  {
+   "function": "api_captures_intake",
+   "ordinal": 1,
+   "disposition": "unreachable: wraps only base64.b64decode of the request body and a dict lookup; no device handle is touched inside the try, so a decline cannot be raised there (#149)"
   }
  ]
 }

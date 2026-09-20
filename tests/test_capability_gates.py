@@ -297,6 +297,11 @@ def _table(sim) -> list[dict]:
         ("GET", "/api/gift-of-tone", {}, None, None),
         ("POST", "/api/gift-of-tone/fetch", {}, {"id": "no-such-entry"}, None),
         ("POST", "/api/artist-pack", {}, {"query": "sound like Nobody Here"}, None),
+        ("POST", "/api/gift-of-tone/install", {}, {"id": "no-such-entry"}, None),
+        # #149: a bad base64 body is refused before the parser; nothing reaches the unit.
+        ("POST", "/api/captures/intake", {}, {"files": [{"name": "x.nam", "data": "!!"}]}, None),
+        # #160: a link that is not an Axe-Change link is refused before any fetch.
+        ("POST", "/api/axechange", {}, {"url": "not a link"}, None),
         ("POST", "/api/install-cab", {}, {"hash": JUNK_HASH, "bank": 1, "number": 1},
          "installs_files"),
         ("POST", "/api/install", {}, {"hash": JUNK_HASH, "slot": 138}, "installs_files"),
@@ -613,7 +618,7 @@ def _handles_decline_first(before) -> bool:
 
 
 def test_broad_except_audit_every_block_reraises_the_decline_or_says_why_it_cannot_see_one():
-    """83 `except Exception` blocks, each accounted for by identity. A block
+    """84 `except Exception` blocks, each accounted for by identity. A block
     that a decline can reach re-raises CapabilityDeclined before its handler
     runs; the rest state why a decline cannot reach them. An unlisted block,
     or a listed identity that no longer exists, fails."""
@@ -662,9 +667,9 @@ def test_audit_counts_are_reported_honestly():
     blocks = _except_exception_blocks(ast.parse(SERVER.read_text()))
     reraised = sum(1 for _h, before, _b in blocks.values()
                    if _handles_decline_first(before))
-    assert len(blocks) == 83
+    assert len(blocks) == 84
     assert reraised == 35
-    assert len(blocks) - reraised == 48
+    assert len(blocks) - reraised == 49
 
 
 def test_capability_declined_is_its_own_type_and_the_handler_shapes_the_409(world):
