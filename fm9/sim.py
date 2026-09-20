@@ -156,6 +156,9 @@ def _default_preset(number: int, reg: Registry) -> dict:
     }
 
 
+GLOBAL_EID = 1        # system settings, effect id 1 (#66)
+
+
 class SimState:
     def __init__(self, reg: Registry | None = None):
         self.reg = reg or Registry()
@@ -164,6 +167,12 @@ class SimState:
         self.empty_slots: dict[int, str] = dict(SIM_EMPTY_SLOTS)
         self.buffer = self._load(0)
         self.scene = 1
+        # System settings (effect id 1, #66): one row, not part of any
+        # preset, so a preset select leaves it alone. Zeroed, as the
+        # hardware's are not: the spike (#56) reads real values on the unit.
+        n_global = 1 + max((pid for (f, pid) in self.reg.params if f == "GLOBAL"),
+                           default=0)
+        self.globals: list[int] = [0] * n_global
         self.cursor = 0          # internal grid cursor (cell index)
         self.selected = False    # was a cell-select received since last insert
 
@@ -180,6 +189,8 @@ class SimState:
 
     # -- helpers --
     def block_param(self, eid, pid, ch=None):
+        if eid == GLOBAL_EID:
+            return self.globals[pid] if pid < len(self.globals) else None
         ch = self.buffer["scenes"][self.scene].get(eid, {}).get("channel", 0) if ch is None else ch
         rows = self.buffer["params"].get(eid)
         if rows is None or pid >= len(rows[0]):
@@ -187,6 +198,10 @@ class SimState:
         return rows[min(ch, len(rows) - 1)][pid]
 
     def set_block_param(self, eid, pid, wire, ch=None):
+        if eid == GLOBAL_EID:
+            if pid < len(self.globals):
+                self.globals[pid] = max(0, min(65534, int(wire)))
+            return
         ch = self.buffer["scenes"][self.scene].get(eid, {}).get("channel", 0) if ch is None else ch
         rows = self.buffer["params"].get(eid)
         if rows is not None and pid < len(rows[0]):
@@ -389,7 +404,9 @@ class SimFM9Core:
     # ---- bulk read ----
     def _fn_1f(self, b):
         eid = p.decode14(b[0], b[1])
-        if 3 <= eid <= 34:                       # modifier slots are readable
+        if eid == GLOBAL_EID:                    # system settings, one row
+            flat = list(self.st.globals)
+        elif 3 <= eid <= 34:                     # modifier slots are readable
             flat = list(self.st.buffer["modifiers"][eid - 2])
         else:
             rows = self.st.buffer["params"].get(eid)

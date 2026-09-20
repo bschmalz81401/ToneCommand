@@ -4,6 +4,38 @@ Notable changes to ToneCommand. Dates are UTC.
 
 ## Unreleased
 
+### Added (Gate 0 proven on the unit, and the capture method, 2026-09-20: #56, #100 G1)
+- `fm9/reamp.py`: the FM9 as a USB audio device through sounddevice (found
+  by name, 48 kHz and 8 in / 8 out asserted), `replay_and_record` (mono DI
+  on one computer output, the return on named inputs, peak capped at
+  -12 dBFS, ten seconds at most, one run at a time, the device lock held so
+  audio never overlaps a MIDI write) and `distinguish` (silence below
+  -60 dBFS RMS, loopback above 0.98 normalised cross-correlation at any
+  lag, else processed).
+- `fm9/routing.py`: Input 1 Source and Digital Input Source (GLOBAL 72 and
+  73, effect id 1) read through bulk_read; `temporary` applies a change
+  under a journal and restores it in `finally` with a settled, retried
+  read-back (#169's rule), keeping the journal if a restore fails;
+  `restore_outstanding` at start puts a dead process's change back. No
+  global is ever written to an ordinal the unit was not observed holding;
+  the observed table is `config/reamp_observed.json` (Input 1 Source
+  0 = ANALOG, 1 = DIGITAL; Digital Input Source 1 = AES, 2 = USB).
+- `fm9/capture.py`: the three capture methods (`test`: 1 kHz at -18 dBFS
+  then a 20 Hz to 20 kHz log sweep, 4 s; `playing`: 6 s, prompted;
+  `silence`: 4 s), `record` writing a 48 kHz stereo WAV plus a sidecar
+  naming the method, channels, rate, preset, scene and routing.
+- `tools/reamp_spike.py`: the Gate 0 steps one at a time (device, routing,
+  observe, replay, restore-test, journal).
+- Proven on the FM9 (firmware 11, macOS, one process holding MIDI and USB
+  audio): device at 48 kHz 8/8; output 5 in, inputs 1/2 out; the return is
+  PROCESSED under DIGITAL/USB and SILENT under ANALOG/AES; routing restored
+  after success, a forced exception and a process restart via the journal;
+  no flash touched. The 0x1F name query is stale for GLOBAL params (labels
+  come from the panel). Not proven: Windows channel map, disconnect
+  mid-change. Written up in docs/SOUND-CHECK-DESIGN.md under Gate 0.
+- The simulator has a GLOBAL block (effect id 1, one row, outside any
+  preset) so routing tests run on it.
+
 ### Fixed (the repoint read-back raced the settle window, 2026-09-20: #169)
 - `gallery_install.repoint` wrote a Cab block value and read it back at
   once, inside the unit's settle window (#12). It passed here and on CI

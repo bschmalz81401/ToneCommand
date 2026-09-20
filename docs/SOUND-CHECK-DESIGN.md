@@ -1091,6 +1091,47 @@ Targets remain hypotheses until hardware baseline data exists.
   verified protocol.
 - Design and test recovery journaling before temporary routing automation.
 
+**Gate 0 result (2026-09-20, FM9 firmware 11, macOS, issue #56).** Passed,
+with two items not proven, both stated. One process held the MIDI port and
+the USB audio device throughout (`fm9/reamp.py`, `fm9/routing.py`,
+`tools/reamp_spike.py`).
+
+- Device: "FM9" enumerates through sounddevice at 48 kHz, 8 in / 8 out.
+  Channel map on macOS: the DI on computer output 5 (1-based) reaches the
+  unit's USB input; the processed return records on computer inputs 1/2.
+  Windows: NOT proven, no machine.
+- Routing read: Input 1 Source (GLOBAL 72) and Digital Input Source (GLOBAL
+  73) through bulk_read of effect id 1. As found: 0 and 1. The 0x1F name
+  query answered 'ANALOG' and 'AES' and kept answering them after the panel
+  showed DIGITAL and USB: the name query is stale for GLOBAL params, so
+  labels come from the panel, never from the unit's name.
+- Observed ordinals, set on the front panel by the Pilot and read back:
+  Input 1 Source 0 = ANALOG, 1 = DIGITAL; Digital Input Source 1 = AES,
+  2 = USB. Pinned in `config/reamp_observed.json`; the code refuses to write
+  any other value.
+- Replay: the 4 s test signal (1 kHz at -18 dBFS plus a log sweep), output
+  capped at -12 dBFS, came back PROCESSED on inputs 1/2 under DIGITAL/USB
+  (RMS -27.8 dBFS, peak -14.9 dBFS) and SILENT under ANALOG/AES
+  (-85.5 dBFS): the return depends on the routing, and a dry loopback is
+  told apart by normalised cross-correlation (0.98 line).
+- Restore: the context manager applied 1/2 -> 0/1 and put 1/2 back after a
+  normal exit and after a forced exception (read back both times, journal
+  cleared). Process restart: a process applied the change, wrote the
+  journal and died; a fresh process restored from the journal and cleared
+  it. Disconnect mid-change: NOT exercised; the journal covers it on the
+  next start. Nothing touched flash: no store was sent at any point.
+- Monitors: output never above -12 dBFS at the unit's USB input; the USB
+  return is recorded, not fed back to an output, so no loop exists in the
+  path. Monitors were down for the replay regardless.
+- G1 captures (#100): `test` and `silence` recorded to 48 kHz stereo WAVs
+  with sidecars naming the preset (138, BT Steve Lukather 01), scene 1 and
+  the routing; the noise floor under that preset read -56 dBFS RMS. The
+  `playing` method is defined and tested on the fake device.
+
+Decision: global routing is controlled through the verified protocol,
+under the context manager and journal, with observed values only. The
+unit was returned to ANALOG/AES at the end of the session.
+
 ### Phase 1: read-only Sound Check
 
 - Optional audio dependency group.

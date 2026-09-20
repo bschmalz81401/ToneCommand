@@ -131,7 +131,11 @@ def test_distinguish_processed_loopback_and_silence():
     sd = FakeSD()
     rec = reamp.replay_and_record(di, 5, (1, 2), seconds=1.0, sd=sd)
     assert reamp.distinguish(rec, di) == "loopback"
-    sd2 = FakeSD(process=lambda x: np.tanh(x * 12).astype(np.float32))
+    # a fake 'unit' that clips AND filters: tanh alone keeps a sine's shape
+    # (correlation stays above the loopback line), which is right, a clipped
+    # copy of the DI is still the DI; an amp also filters
+    sd2 = FakeSD(process=lambda x: np.convolve(np.tanh(x * 12), np.ones(64) / 64,
+                                                mode="same").astype(np.float32))
     rec2 = reamp.replay_and_record(di, 5, (1, 2), seconds=1.0, sd=sd2)
     assert reamp.distinguish(rec2, di) == "processed"
 

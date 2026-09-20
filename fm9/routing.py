@@ -74,14 +74,24 @@ def load_observed(table: dict) -> None:
             observe(int(pid), int(o), d)
 
 
+#: The unit applies a write asynchronously (KNOWN_QUIRKS, settle window):
+#: settle and retry before trusting the read-back, as the verified setters
+#: and gallery_install._read_back do (#169).
+READ_BACK_SETTLE = 0.15
+READ_BACK_TRIES = 4
+
+
 def _write(fm9, pid: int, ordinal: int) -> int:
     spec = _spec(fm9, pid)
     fm9.set_param_ordinal(spec, int(ordinal))
-    values = fm9.bulk_read(GLOBAL_EFFECT_ID)
-    got = int(values[pid]) if values and len(values) > pid else -1
-    if got != int(ordinal):
-        raise RoutingError(f"{PARAM_NAMES[pid]} read back {got}, not {ordinal}")
-    return got
+    got = -1
+    for _ in range(READ_BACK_TRIES):
+        time.sleep(READ_BACK_SETTLE)
+        values = fm9.bulk_read(GLOBAL_EFFECT_ID)
+        got = int(values[pid]) if values and len(values) > pid else -1
+        if got == int(ordinal):
+            return got
+    raise RoutingError(f"{PARAM_NAMES[pid]} read back {got}, not {ordinal}")
 
 
 def _write_journal(entries: list[dict]) -> None:
