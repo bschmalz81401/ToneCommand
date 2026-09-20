@@ -163,6 +163,10 @@ below is a real request you can type.
   it, three rounds at most, and says what is left. MATCH REFERENCE compares
   the capture to a clip of your own (a song, a record) and proposes the amp
   knob and direction for each band that differs, one step at a time.
+  it, three rounds at most, and says what is left.
+- Sign in to your own TONE3000 account from Settings (their documented
+  OAuth flow) and a recipe's capture is fetched under your entitlement;
+  anything your account cannot reach is a link, never a fetch through us.
 
 **Never sends behind your back**
 - Read-back verification on every write, and a signal-path check so a preset is

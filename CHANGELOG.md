@@ -25,6 +25,28 @@ Notable changes to ToneCommand. Dates are UTC.
   MATCH REFERENCE sits beside SOUND CHECK; `tools/measure.py <build>
   --reference <wav>` prints the same. Both routes read only.
 
+### Added (TONE3000 sign-in, the documented OAuth flow, 2026-09-20: #88 D2)
+- `fm9/tone3000_auth.py`: TONE3000's OAuth 2.0 with PKCE as their API
+  documents it (`api/v1/oauth/authorize` with S256 and state, then
+  `api/v1/oauth/token` for the code exchange and the refresh), the
+  publishable key from `TONE3000_PUBLISHABLE_KEY`, tokens in
+  `~/.tonecommand/tone3000_tokens.json` at mode 0600, refreshed a minute
+  before they expire. The module never logs; HTTP is injected and the
+  default reaches www.tone3000.com only.
+- Routes: `/api/tone3000/login` (the authorize url; one pending state and
+  verifier), `/api/tone3000/callback` (state verified, an error stores
+  nothing, the code exchanged, then back to the app), `/api/tone3000/status`
+  (signed in and expiry, never a token), `/api/tone3000/logout`, and
+  `/api/tone3000/load?tone_id` for TONE3000's `load_tone` flow, which
+  verifies the account's access to a tone and lets the player browse a
+  replacement when it is unavailable. Settings has the SIGN IN / SIGN OUT
+  row; the redirect URI is `http://127.0.0.1:8909/api/tone3000/callback`.
+- Every player-facing TONE3000 fetch runs under the signed-in token:
+  `recipe_capture.key_from_env` prefers it over the secret key; a capture
+  the account cannot reach stays `not_yours` (link, nothing fetched) and
+  now carries `replacement_url`, which the recipes browser logs. Paid or
+  private is what TONE3000 answers to the player's own token.
+
 ### Added (catch and propose a fix, human-confirmed, 2026-09-20: #104 G5)
 - `fm9/sound_check.py` `propose(balance, levels)`: each measurable balance
   finding (G3's intent_target rules, with a baseline) becomes ONE move in

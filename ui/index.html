@@ -3845,6 +3845,19 @@
         <div class="hint" id="tonedirout"></div>
       </div>
 
+      <div class="console" data-nofold data-label="TONE3000">
+        <div class="hint">Sign in to your own TONE3000 account so a recipe's
+          capture is fetched under your entitlement. Nothing paid or private
+          is fetched through ToneCommand; it shows the link instead. Needs
+          TONE3000_PUBLISHABLE_KEY in .env (generate it in your TONE3000
+          settings).</div>
+        <div class="saverow">
+          <button id="t3ksignin">SIGN IN</button>
+          <button id="t3ksignout" style="display:none">SIGN OUT</button>
+          <span class="hint" id="t3kout"></span>
+        </div>
+      </div>
+
       <div class="console" data-nofold data-label="IR SERVICE (IRCommand)">
         <div class="hint">Optional. Point ToneCommand at your local IRCommand
           service so it can recommend a cab IR from your own library when it
@@ -5434,6 +5447,12 @@ async function useRecipe(i) {
     if (d.capture) {
       log(`"${d.summary}": ${d.capture.line}`,
           d.capture.status === 'available' ? 'ok' : 'warn');
+      // #88: not yours to fetch through us; TONE3000's own flow verifies the
+      // account's access and offers a replacement when the tone is unavailable
+      if (d.capture.status === 'not_yours' && d.capture.replacement_url) {
+        log(`sign in to TONE3000 (Settings) and open ${d.capture.replacement_url} to check `
+            + `your access or pick a replacement`, 'warn');
+      }
     }
     // Shown before TRANSMIT, because that is the moment it matters and the
     // only thing validation cannot check for you.
@@ -5448,6 +5467,39 @@ async function useRecipe(i) {
   } catch (e) {
     log(`could not use that recipe: ${e.message}`, 'err');
   }
+}
+
+// #88: the TONE3000 sign-in row in Settings. The browser opens TONE3000's
+// authorize url; TONE3000 sends it back to this app's callback, which keeps
+// the tokens. status never carries a token, only signed in and the expiry.
+async function tone3000Status() {
+  try {
+    const d = await (await fetch('/api/tone3000/status')).json();
+    const out = $('t3kout'); if (!out) return;
+    $('t3ksignin').style.display = d.signed_in ? 'none' : '';
+    $('t3ksignout').style.display = d.signed_in ? '' : 'none';
+    out.textContent = d.signed_in
+      ? `signed in, token good until ${new Date(d.expires_at * 1000).toLocaleTimeString()} (refreshes itself)`
+      : (d.client_id_set ? 'not signed in' : 'add TONE3000_PUBLISHABLE_KEY to .env first');
+  } catch (e) { /* settings only */ }
+}
+$('t3ksignin').onclick = async () => {
+  try {
+    const d = await (await fetch('/api/tone3000/login')).json();
+    if (d.error) throw new Error(d.error);
+    window.open(d.url, '_blank');
+    log('TONE3000 sign-in opened in a new tab; come back here when it is done', 'ok');
+  } catch (e) { log(`TONE3000: ${e.message}`, 'err'); }
+};
+$('t3ksignout').onclick = async () => {
+  await fetch('/api/tone3000/logout', {method: 'POST'});
+  tone3000Status();
+};
+tone3000Status();
+if (new URLSearchParams(location.search).get('tone3000')) {
+  const v = new URLSearchParams(location.search).get('tone3000');
+  log(v === 'signed-in' ? 'TONE3000: signed in' : `TONE3000: ${v}`, v === 'signed-in' ? 'ok' : 'warn');
+  history.replaceState(null, '', location.pathname);
 }
 
 $('rlist').addEventListener('click', e => {

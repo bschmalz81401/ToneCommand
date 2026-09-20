@@ -18,6 +18,7 @@ import time
 from pathlib import Path
 
 from fastapi import FastAPI, Request
+from fastapi.responses import RedirectResponse
 from fastapi.responses import (FileResponse, JSONResponse, Response,
                                StreamingResponse)
 from pydantic import BaseModel
@@ -6091,6 +6092,100 @@ def api_recipe_plan(body: RecipeBody):
     if cap is not None:
         out["capture"] = cap
     return out
+
+
+# --- TONE3000 sign-in (#88) ----------------------------------------------------
+# One pending login at a time: the state and the PKCE verifier live here until
+# the callback lands or a new login replaces them. The redirect URI is the
+# app itself; nothing about a token ever leaves this process except to
+# www.tone3000.com as a bearer header.
+
+from fm9 import tone3000_auth  # noqa: E402
+
+TONE3000_REDIRECT = "http://127.0.0.1:8909/api/tone3000/callback"
+_t3k_pending: dict = {}
+_t3k_last_tone: dict = {"tone_id": None, "at": None}
+
+
+@app.get("/api/tone3000/login")
+def api_tone3000_login(prompt: str | None = None, tone_id: int | None = None):
+    """The url the browser opens to sign in (or, with prompt=load_tone and
+    a tone_id, to have TONE3000 verify access to that tone and offer a
+    replacement when it is unavailable)."""
+    client = tone3000_auth.client_id()
+    if not client:
+        return JSONResponse({"error": "no TONE3000 publishable key: add "
+                                      "TONE3000_PUBLISHABLE_KEY=t3k_pub_... to .env (generate it "
+                                      "in your TONE3000 settings)"}, status_code=409)
+    prompt = prompt or None
+    if prompt not in tone3000_auth.PROMPTS:
+        return JSONResponse({"error": "prompt must be load_tone or select_tone"}, status_code=400)
+    verifier, challenge = tone3000_auth.pkce()
+    state = tone3000_auth.new_state()
+    try:
+        url = tone3000_auth.authorize_url(client, TONE3000_REDIRECT, state, challenge,
+                                          prompt=prompt, tone_id=tone_id)
+    except tone3000_auth.AuthError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+    _t3k_pending.clear()
+    _t3k_pending.update({"state": state, "verifier": verifier, "prompt": prompt,
+                         "tone_id": tone_id, "started_at": time.time()})
+    return {"url": url, "redirect_uri": TONE3000_REDIRECT}
+
+
+@app.get("/api/tone3000/callback")
+def api_tone3000_callback(code: str | None = None, state: str | None = None,
+                          tone_id: int | None = None, error: str | None = None):
+    """TONE3000 sends the browser back here. The state must be the one we
+    sent; an error parameter stores nothing; the code is exchanged and
+    the tokens kept at 0600. Then back to the app with a one-line note."""
+    pending = dict(_t3k_pending)
+    if error:
+        _t3k_pending.clear()
+        return RedirectResponse(f"/?tone3000=refused:{error}", status_code=302)
+    if not pending or not state or state != pending.get("state"):
+        return JSONResponse({"error": "sign-in state does not match; start the sign-in again"},
+                            status_code=400)
+    if not code:
+        return JSONResponse({"error": "no code came back from TONE3000"}, status_code=400)
+    client = tone3000_auth.client_id()
+    if not client:
+        return JSONResponse({"error": "no TONE3000 publishable key"}, status_code=409)
+    try:
+        tokens = tone3000_auth.exchange(code, pending["verifier"], TONE3000_REDIRECT, client,
+                                        tone3000_auth.default_http)
+    except tone3000_auth.AuthError as e:
+        _t3k_pending.clear()
+        return JSONResponse({"error": str(e)}, status_code=502)
+    tone3000_auth.TokenStore().save(tokens)
+    _t3k_pending.clear()
+    if tone_id:
+        _t3k_last_tone.update({"tone_id": int(tone_id), "at": time.time()})
+    log.info("TONE3000: signed in")
+    where = "/?tone3000=signed-in" + (f"&tone_id={int(tone_id)}" if tone_id else "")
+    return RedirectResponse(where, status_code=302)
+
+
+@app.get("/api/tone3000/status")
+def api_tone3000_status():
+    out = tone3000_auth.TokenStore().status()
+    out["last_tone_id"] = _t3k_last_tone["tone_id"]
+    return out
+
+
+@app.post("/api/tone3000/logout")
+def api_tone3000_logout():
+    tone3000_auth.TokenStore().clear()
+    _t3k_pending.clear()
+    return {"signed_in": False}
+
+
+@app.get("/api/tone3000/load")
+def api_tone3000_load(tone_id: int):
+    """The load_tone flow for one tone: TONE3000 verifies this account's
+    access and, if the tone is unavailable to it, lets the player browse
+    a replacement; the callback carries the tone kept or chosen."""
+    return api_tone3000_login(prompt="load_tone", tone_id=tone_id)
 
 
 @app.get("/api/share/status")
