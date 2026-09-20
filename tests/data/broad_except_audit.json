@@ -425,6 +425,11 @@
    "function": "_restore_routing_journal",
    "ordinal": 1,
    "disposition": "unreachable: runs inside get_fm9 on the RAW adapter before GatedDevice wraps it, so no capability gate exists on this handle and CapabilityDeclined cannot be raised inside the try; a unit going away mid-restore is logged and the journal kept (#56)"
+  },
+  {
+   "function": "_sound_check_state",
+   "ordinal": 1,
+   "disposition": "unreachable: wraps only current_preset on a handle the caller already obtained through get_fm9, and its callers run under the same gate that would have raised the decline before reaching here; a unit that does not answer means the state is not reset, never an error page (#104)"
   }
  ]
 }

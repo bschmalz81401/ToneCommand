@@ -1142,6 +1142,15 @@ rules are listed, never enforced; band numbers always name a baseline. The
 per-scene capture loop (`fm9/sound_check.py`) is simulator-proven; its live
 proof is the next rig session's.
 
+**G5 result (2026-09-20, #104).** `fm9/sound_check.propose` turns a
+measurable balance finding into one `OUTPUT_SCENEn` move in the action
+vocabulary, in the health scan's fix shape, so the existing plan, Confirm and
+`/api/apply` path is the only way it reaches the unit. Rounds of measure,
+propose, confirm, re-measure are capped at three and end by saying what
+remains; a scene the trim cannot move (the amp is the bottleneck, rulebook
+caveat) is reported after one round, not chased. Simulator-proven with a fake
+recorder that follows the trims; the live loop is the next rig session's.
+
 ### Phase 1: read-only Sound Check
 
 - Optional audio dependency group.

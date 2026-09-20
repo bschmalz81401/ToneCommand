@@ -4,6 +4,35 @@ Notable changes to ToneCommand. Dates are UTC.
 
 ## Unreleased
 
+### Added (catch and propose a fix, human-confirmed, 2026-09-20: #104 G5)
+- `fm9/sound_check.py` `propose(balance, levels)`: each measurable balance
+  finding (G3's intent_target rules, with a baseline) becomes ONE move in
+  the action vocabulary, `set_param` on that scene's `OUTPUT_SCENEn`: the
+  current trim plus the LU needed to reach its target (clean and rhythm on
+  the rhythm median, a lead 2.5 LU above, anything over the cap down to 3),
+  rounded to 0.5 dB, clamped to the trim's -20..20 with the shortfall said
+  and the rulebook's amp-level caveat named. One rhythm median for every
+  target, so moves cannot fight; a scene appears once (the cap rule wins);
+  no baseline or a style finding gets no move. The fixes use the health
+  scan's shape (`how: actions`), so the page hands them to `showPlan` and
+  Confirm and `/api/apply` are the only way anything reaches the unit:
+  nothing here sends.
+- `rounds(state, balance, proposal)`: measure, propose, confirm, re-measure,
+  capped at three rounds; ends clean when nothing measurable remains, or
+  by the cap with "after 3 rounds these remain: ...". One state per loaded
+  preset, reset on a preset change. Proven on the simulator with a fake
+  recorder whose loudness follows the sim's own trims: a confirmed move
+  lands to the dB and round two is clean; a masked scene (the trim does
+  nothing, the amp is the bottleneck) ends by the cap, reported, not
+  chased.
+- `POST /api/sound-check {captures}` measures captures under the captures
+  folder and answers balance, proposal and state; `POST
+  /api/sound-check/remeasure {scenes}` records each scene through the USB
+  path under `routing.temporary` (restored, journaled) and answers the
+  next round; both refuse under GIG LOCK. SOUND CHECK sits under the
+  health scan's findings, with PROPOSE going through the plan path. The
+  live run is the next rig session's.
+
 ### Verified against a Core (#167 fix, 2026-09-20)
 - THE SYMPTOM IS GONE ON THE UNIT. `Amp.TremSpeed` at wire 0.25 reported
   `ok=False` on a Core three hours earlier and reports `ok=True` now, with
