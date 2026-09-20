@@ -170,6 +170,17 @@ def test_route_callback_verifies_state_exchanges_and_redirects(client, monkeypat
     assert r.json() == {"signed_in": False} and not tokens_path.exists()
     # a callback with no pending login
     assert client.get("/api/tone3000/callback?code=c&state=x").status_code == 400
+    # single use: a mismatch consumes the pending login, so a replay with the right state is refused
+    client.get("/api/tone3000/login"); state = server._t3k_pending["state"]
+    assert client.get("/api/tone3000/callback?code=c&state=nope").status_code == 400
+    assert server._t3k_pending == {}
+    assert client.get(f"/api/tone3000/callback?code=c&state={state}").status_code == 400
+    assert not tokens_path.exists()
+    # expiry: a login older than the TTL is refused even with the right state
+    client.get("/api/tone3000/login"); state = server._t3k_pending["state"]
+    server._t3k_pending["started_at"] -= server.TONE3000_LOGIN_TTL_S + 1
+    r = client.get(f"/api/tone3000/callback?code=c&state={state}")
+    assert r.status_code == 400 and "ten minutes" in r.json()["error"] and not tokens_path.exists()
 
 
 # --- REQ-003: the fetch runs under the token; the replacement; the page; the docs ------------------------
@@ -181,6 +192,11 @@ def test_fetch_prefers_the_token_over_the_secret_key(monkeypatch, tokens_path):
     A.TokenStore().save({"version": 1, "access_token": "at-9", "refresh_token": "rt-9",
                          "expires_at": 4e9, "scope": None, "obtained_at": 0})
     assert rc.key_from_env() == "at-9"
+    # signed in but expired and the refresh refused: None, NEVER the secret key
+    A.TokenStore().save({"version": 1, "access_token": "at-old", "refresh_token": "rt-old",
+                         "expires_at": 1.0, "scope": None, "obtained_at": 0})
+    monkeypatch.setattr(A, "default_http", FakeHttp(status=401))
+    assert rc.key_from_env() is None
 
 
 def test_entitlement_not_yours_carries_the_replacement_url():

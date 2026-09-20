@@ -160,9 +160,13 @@ def key_from_env() -> str | None:
     the app's sign-in (#88, refreshed when it is about to expire) first,
     else the secret key from env or .env, else None."""
     from fm9 import tone3000_auth
-    token = tone3000_auth.access_token()
-    if token:
-        return token
+    store = tone3000_auth.TokenStore()
+    if store.load():
+        # Signed in: the token is the credential, full stop. An expired
+        # token whose refresh failed means "sign in again", never a fall
+        # back to the secret key, which would fetch under a different
+        # entitlement than the one the player agreed to (review F1.1).
+        return tone3000_auth.access_token(store)
     key = os.environ.get(_ENV_KEY, "").strip()
     if not key and _ENV_FILE.exists():
         for line in _ENV_FILE.read_text().splitlines():

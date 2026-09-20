@@ -6103,8 +6103,21 @@ def api_recipe_plan(body: RecipeBody):
 from fm9 import tone3000_auth  # noqa: E402
 
 TONE3000_REDIRECT = "http://127.0.0.1:8909/api/tone3000/callback"
+#: A pending login lives this long; a callback after it is refused.
+TONE3000_LOGIN_TTL_S = 600.0
 _t3k_pending: dict = {}
 _t3k_last_tone: dict = {"tone_id": None, "at": None}
+
+
+def _t3k_consume_pending() -> dict:
+    """The pending login, taken exactly once: whatever the callback brings
+    (a code, an error, a wrong state), the state and verifier are gone
+    afterwards, so nothing can be replayed. Expired means gone too."""
+    pending = dict(_t3k_pending)
+    _t3k_pending.clear()
+    if pending and time.time() - float(pending.get("started_at") or 0) > TONE3000_LOGIN_TTL_S:
+        return {}
+    return pending
 
 
 @app.get("/api/tone3000/login")
@@ -6139,13 +6152,12 @@ def api_tone3000_callback(code: str | None = None, state: str | None = None,
     """TONE3000 sends the browser back here. The state must be the one we
     sent; an error parameter stores nothing; the code is exchanged and
     the tokens kept at 0600. Then back to the app with a one-line note."""
-    pending = dict(_t3k_pending)
+    pending = _t3k_consume_pending()
     if error:
-        _t3k_pending.clear()
         return RedirectResponse(f"/?tone3000=refused:{error}", status_code=302)
     if not pending or not state or state != pending.get("state"):
-        return JSONResponse({"error": "sign-in state does not match; start the sign-in again"},
-                            status_code=400)
+        return JSONResponse({"error": "sign-in state does not match or the sign-in is older than "
+                                      "ten minutes; start the sign-in again"}, status_code=400)
     if not code:
         return JSONResponse({"error": "no code came back from TONE3000"}, status_code=400)
     client = tone3000_auth.client_id()
@@ -6155,10 +6167,8 @@ def api_tone3000_callback(code: str | None = None, state: str | None = None,
         tokens = tone3000_auth.exchange(code, pending["verifier"], TONE3000_REDIRECT, client,
                                         tone3000_auth.default_http)
     except tone3000_auth.AuthError as e:
-        _t3k_pending.clear()
         return JSONResponse({"error": str(e)}, status_code=502)
     tone3000_auth.TokenStore().save(tokens)
-    _t3k_pending.clear()
     if tone_id:
         _t3k_last_tone.update({"tone_id": int(tone_id), "at": time.time()})
     log.info("TONE3000: signed in")
