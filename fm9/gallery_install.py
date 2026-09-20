@@ -217,6 +217,10 @@ def repoint(fm9: Any, moves: dict[int, int]) -> list[dict]:
     if not moves:
         return []
     reg = fm9.reg
+    # The preset was just loaded into the buffer: settle before the read
+    # that decides which channels to touch, or a read inside the window
+    # sees the block as it was before the last write landed (#169, CI).
+    time.sleep(READ_BACK_SETTLE)
     values = fm9.bulk_read(CAB_EFFECT_ID)
     if not values:
         raise GalleryInstallError("could not read the preset's Cab block to "

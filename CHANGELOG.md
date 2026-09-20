@@ -62,7 +62,10 @@ Notable changes to ToneCommand. Dates are UTC.
   setters (`_read_back`, 4 x 0.15 s), the simulator's classifier no longer
   counts a bank or channel QUERY as a write, and a new test widens the
   settle window to 0.4 s so an unsettled read-back fails on any host.
-  `tests/test_sim.py::test_bypass_is_per_scene` had the same shape (a
+  The opening read of `repoint` (the one that decides which channels to
+  touch) settles too: on a slow CI worker it read the block before
+  channel D's last write had landed and skipped that channel's Legacy
+  switch. `tests/test_sim.py::test_bypass_is_per_scene` had the same shape (a
   bypass query read at once after the write) and now settles, as
   KNOWN_QUIRKS rule 1 has said since August; rule 3 there records this one.
 
