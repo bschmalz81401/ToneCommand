@@ -6195,10 +6195,12 @@ def api_tone3000_logout():
 
 
 @app.get("/api/tone3000/load")
-def api_tone3000_load(tone_id: int):
+def api_tone3000_load(tone_id: int | None = None):
     """The load_tone flow for one tone: TONE3000 verifies this account's
     access and, if the tone is unavailable to it, lets the player browse
     a replacement; the callback carries the tone kept or chosen."""
+    if not tone_id:
+        return JSONResponse({"error": "say which tone: ?tone_id=<TONE3000 tone id>"}, status_code=400)
     return api_tone3000_login(prompt="load_tone", tone_id=tone_id)
 
 

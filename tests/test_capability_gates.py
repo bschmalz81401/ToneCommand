@@ -312,6 +312,13 @@ def _table(sim) -> list[dict]:
         # #105: the references folder is listed, never written; a path outside the two folders is refused.
         ("GET", "/api/references", {}, None, None),
         ("POST", "/api/tone-match", {}, {"build": "/nowhere/x.wav", "reference": "/nowhere/y.wav"}, None),
+        # #88: TONE3000 sign-in; login without a key is 409, the callback without a pending login 400,
+        # status and logout touch the token file only; no route touches the device.
+        ("GET", "/api/tone3000/login", {}, None, None),
+        ("GET", "/api/tone3000/callback", {}, None, None),
+        ("GET", "/api/tone3000/status", {}, None, None),
+        ("POST", "/api/tone3000/logout", {}, None, None),
+        ("GET", "/api/tone3000/load", {}, None, None),
         ("POST", "/api/install-cab", {}, {"hash": JUNK_HASH, "bank": 1, "number": 1},
          "installs_files"),
         ("POST", "/api/install", {}, {"hash": JUNK_HASH, "slot": 138}, "installs_files"),

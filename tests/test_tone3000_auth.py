@@ -139,6 +139,7 @@ def test_route_login_refuses_without_a_key_and_builds_the_url_with_one(client, m
     assert q["client_id"] == ["t3k_pub_test"] and q["redirect_uri"] == [server.TONE3000_REDIRECT]
     assert server._t3k_pending["state"] == q["state"][0] and "verifier" in server._t3k_pending
     assert client.get("/api/tone3000/login?prompt=browse").status_code == 400
+    assert client.get("/api/tone3000/load").status_code == 400
     r = client.get("/api/tone3000/load?tone_id=57410")
     q = parse_qs(urlparse(r.json()["url"]).query)
     assert q["prompt"] == ["load_tone"] and q["tone_id"] == ["57410"]
