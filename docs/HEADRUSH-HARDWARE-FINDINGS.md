@@ -452,7 +452,7 @@ curve, and stores the result as float32.**
 
 So a read-back differs from the write whenever the display value it produced
 was not already on the grid. Read-back verification by exact equality against
-what was sent therefore reports failure for writes the device honoured — on
+what was sent therefore reports failure for writes the device honoured: on
 `Amp.TremSpeed`, every wire value tested.
 
     stored = to_wire( snap_to_grid( to_display(wire) ) )     # float32 out
@@ -474,7 +474,7 @@ The formula reproduces all eight bit-exactly. `test_the_prediction_reproduces_
 every_pair_measured_on_the_unit` asserts it.
 
 **This is not special to those three.** Every continuous parameter the unit
-publishes carries an `x-options.grid` — 3,911 of them, against exactly one
+publishes carries an `x-options.grid`, 3,911 of them, against exactly one
 that does not (`StorageInfo.UsedSpace`, which is a readout rather than a
 control). The three above were chosen because they span two curves and three
 grid sizes, not because they are the affected ones. Selectors are unaffected:
@@ -503,7 +503,7 @@ should still be verified exactly.
 ### 5c. Every value the device holds is a fixed point
 
 Writing back a value the unit is already holding reads back identical: it is by
-construction the image of a grid point. The corollary was measured — restoring
+construction the image of a grid point. The corollary was measured: restoring
 `Amp.TremSpeed` to the `0.5` it held wrote `0.5001265406608582`, and **no wire
 value returns the stored float to `0.5`**.
 
@@ -523,13 +523,13 @@ success rather than bit equality.
 reported failure for honoured writes: the double was modelling a device that
 does not quantize. It now performs the same convert-snap-convert and reproduces
 all eight values above. **Agreement between the simulator and the adapter is
-therefore self-consistency, not evidence** — both use the same vendor table.
+therefore self-consistency, not evidence**, since both use the same vendor table.
 The evidence is the hardware pairs.
 
 ### Provenance
 
 The `ok` flags, read-back floats and restore behaviour above are the device's
 own HTTP responses. Displayed values quoted in the run transcripts were read
-from the vendor web editor, which the owner attests matches the device — and
+from the vendor web editor, which the owner attests matches the device, and
 which is not independent evidence about the curves, because
 `devices/headrush/tapers.py` was extracted from that editor's own bundle.
