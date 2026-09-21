@@ -42,6 +42,7 @@ import time
 import urllib.error
 import urllib.request
 from pathlib import Path
+from fm9.paths import resource_path
 
 #: Where the shared ones live. Public, so reading needs no credentials.
 REPO = os.environ.get("TONECOMMAND_RECIPE_REPO", "monzta1/ToneCommand")
@@ -57,7 +58,7 @@ def local_dir() -> Path:
     override = os.environ.get("TONECOMMAND_RECIPES_DIR", "").strip()
     if override:
         return Path(override)
-    return Path(__file__).resolve().parent.parent / "recipes"
+    return resource_path("recipes")
 
 
 def _safe_name(name: str) -> str:

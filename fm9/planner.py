@@ -37,6 +37,7 @@ import urllib.parse
 import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
+from fm9.paths import resource_path
 
 log = logging.getLogger(__name__)
 
@@ -253,7 +254,7 @@ def _load_tone_rules() -> str:
     fatal; the SYSTEM prompt above still stands on its own."""
     try:
         from pathlib import Path
-        p = Path(__file__).resolve().parent.parent / "config" / "tone_rules.md"
+        p = resource_path("config", "tone_rules.md")
         return p.read_text(encoding="utf-8")
     except Exception:
         return ""

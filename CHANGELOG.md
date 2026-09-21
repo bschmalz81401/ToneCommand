@@ -4,6 +4,105 @@ Notable changes to ToneCommand. Dates are UTC.
 
 ## Unreleased
 
+### Fixed (the bundled app's CI build died on import, 2026-09-20: #175 follow-up)
+- `numpy` was an optional extra (`audition`) while `fm9/reamp.py`,
+  `capture.py`, `measure.py`, `sound_check.py` and `tone_match.py` import
+  it at module level and `server.py` imports them unconditionally. The
+  bundle workflow installs with `pip install .` and no extra, so the app it
+  froze had no numpy and died on the runner's smoke test; every developer
+  venv here had the extra, which is why nothing noticed locally. numpy is
+  a core dependency now; the `audition` extra stays, empty.
+- `server.py` and `fm9/health.py` import from `tools/`, which was not a
+  packaged package; it is now (with an `__init__.py`), so a wheel carries
+  the two modules the app needs. `tests/test_packaging.py` checks that every
+  repo package the server imports is packaged and that every module-level
+  third-party import is a core dependency; both fail without the fixes.
+- Known, not fixed here: a non-editable `pip install .` still cannot run
+  the server from outside the repo, because `config/`, `ui/` and
+  `recipes/` are repo-root data the wheel does not carry. The supported
+  paths remain the editable install the docs describe and the bundled app
+  (which collects them). Packaging the data directories is filed
+  separately.
+
+### Added
+- A self-contained unsigned macOS `ToneCommand.app` bundle with Python inside,
+  a simulator smoke test, and a tag/manual GitHub Actions packaging workflow.
+  Windows builds, signing, and notarisation remain later chunks.
+
+## 1.5.1 (2026-09-20)
+
+### Added (reference tone-match by measurement, 2026-09-20: #105 G6)
+- `fm9/tone_match.py`: both spectra measured the G2 way (the reference at
+  any rate; its loudness is not a target), the build's band deltas named
+  against the reference ("4.6 dB less body than the reference"), and for
+  each band with a gap of at least 1.5 dB one amp knob and a DIRECTION
+  from the `reference_match` table in `config/sound_policy.json` (the FM9
+  amp block's own controls: body to bass, presence to presence, bite to
+  treble, air to high cut, rumble to low cut, low control to depth), as a
+  first step of 1.0 on a knob or 20 Hz on a cut, clamped to the range. The
+  magnitude is never computed: no dB-to-knob calibration has been
+  measured and none is invented; the re-measure loop (G5) verifies the
+  move. Proven with a reference made by EQ-ing the unit's own capture: the
+  proposed directions reverse the EQ.
+- `GET /api/references` lists the references folder
+  (`TONECOMMAND_REFERENCES`, default `~/.tonecommand/references`);
+  `POST /api/tone-match {build, reference}` answers the match and a
+  proposal in the health scan's fix shape (the knob's current value plus
+  the step) for showPlan, so Confirm is the only way on to the unit;
+  MATCH REFERENCE sits beside SOUND CHECK; `tools/measure.py <build>
+  --reference <wav>` prints the same. Both routes read only.
+
+### Added (TONE3000 sign-in, the documented OAuth flow, 2026-09-20: #88 D2)
+- `fm9/tone3000_auth.py`: TONE3000's OAuth 2.0 with PKCE as their API
+  documents it (`api/v1/oauth/authorize` with S256 and state, then
+  `api/v1/oauth/token` for the code exchange and the refresh), the
+  publishable key from `TONE3000_PUBLISHABLE_KEY`, tokens in
+  `~/.tonecommand/tone3000_tokens.json` at mode 0600, refreshed a minute
+  before they expire. The module never logs; HTTP is injected and the
+  default reaches www.tone3000.com only.
+- Routes: `/api/tone3000/login` (the authorize url; one pending state and
+  verifier), `/api/tone3000/callback` (state verified, an error stores
+  nothing, the code exchanged, then back to the app), `/api/tone3000/status`
+  (signed in and expiry, never a token), `/api/tone3000/logout`, and
+  `/api/tone3000/load?tone_id` for TONE3000's `load_tone` flow, which
+  verifies the account's access to a tone and lets the player browse a
+  replacement when it is unavailable. Settings has the SIGN IN / SIGN OUT
+  row; the redirect URI is `http://127.0.0.1:8909/api/tone3000/callback`.
+- Every player-facing TONE3000 fetch runs under the signed-in token:
+  `recipe_capture.key_from_env` prefers it over the secret key; a capture
+  the account cannot reach stays `not_yours` (link, nothing fetched) and
+  now carries `replacement_url`, which the recipes browser logs. Paid or
+  private is what TONE3000 answers to the player's own token.
+
+### Added (catch and propose a fix, human-confirmed, 2026-09-20: #104 G5)
+- `fm9/sound_check.py` `propose(balance, levels)`: each measurable balance
+  finding (G3's intent_target rules, with a baseline) becomes ONE move in
+  the action vocabulary, `set_param` on that scene's `OUTPUT_SCENEn`: the
+  current trim plus the LU needed to reach its target (clean and rhythm on
+  the rhythm median, a lead 2.5 LU above, anything over the cap down to 3),
+  rounded to 0.5 dB, clamped to the trim's -20..20 with the shortfall said
+  and the rulebook's amp-level caveat named. One rhythm median for every
+  target, so moves cannot fight; a scene appears once (the cap rule wins);
+  no baseline or a style finding gets no move. The fixes use the health
+  scan's shape (`how: actions`), so the page hands them to `showPlan` and
+  Confirm and `/api/apply` are the only way anything reaches the unit:
+  nothing here sends.
+- `rounds(state, balance, proposal)`: measure, propose, confirm, re-measure,
+  capped at three rounds; ends clean when nothing measurable remains, or
+  by the cap with "after 3 rounds these remain: ...". One state per loaded
+  preset, reset on a preset change. Proven on the simulator with a fake
+  recorder whose loudness follows the sim's own trims: a confirmed move
+  lands to the dB and round two is clean; a masked scene (the trim does
+  nothing, the amp is the bottleneck) ends by the cap, reported, not
+  chased.
+- `POST /api/sound-check {captures}` measures captures under the captures
+  folder and answers balance, proposal and state; `POST
+  /api/sound-check/remeasure {scenes}` records each scene through the USB
+  path under `routing.temporary` (restored, journaled) and answers the
+  next round; both refuse under GIG LOCK. SOUND CHECK sits under the
+  health scan's findings, with PROPOSE going through the plan path. The
+  live run is the next rig session's.
+
 ### Verified against a Core (#167 fix, 2026-09-20)
 - THE SYMPTOM IS GONE ON THE UNIT. `Amp.TremSpeed` at wire 0.25 reported
   `ok=False` on a Core three hours earlier and reports `ok=True` now, with

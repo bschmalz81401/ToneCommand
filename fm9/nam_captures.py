@@ -23,8 +23,9 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from fm9.paths import resource_path
 
-CONFIG_PATH = Path(__file__).resolve().parent.parent / "config" / "nam_capture_models.json"
+CONFIG_PATH = resource_path("config", "nam_capture_models.json")
 
 #: The only source this pass understands. Naming any other invents an
 #: integration nothing has built (no-speculative-adapters, ARCHITECTURE.md).

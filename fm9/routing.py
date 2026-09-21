@@ -18,6 +18,7 @@ import time
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
+from fm9.paths import resource_path
 
 GLOBAL_EFFECT_ID = 1
 IN1_SOURCE = 72
@@ -33,7 +34,7 @@ OBSERVED: dict[int, dict[int, str]] = {}
 #: Source 0 = ANALOG, 1 = DIGITAL; Digital Input Source 1 = AES, 2 = USB.
 #: Loaded at import so a fresh process (a restart restoring a journal) knows
 #: what the unit has been seen to hold; TONECOMMAND_REAMP_OBSERVED moves it.
-PINNED_FILE = Path(__file__).resolve().parent.parent / "config" / "reamp_observed.json"
+PINNED_FILE = resource_path("config", "reamp_observed.json")
 
 
 class RoutingError(RuntimeError):

@@ -156,7 +156,17 @@ below is a real request you can type.
   evidence next to the baseline it was measured against ("2.4 dB more bite
   than your saved rhythm reference"), never a verdict on its own; the only
   pass/fail rules are the relative scene-balance ones the rulebook states,
-  in `config/sound_policy.json`.
+  in `config/sound_policy.json`. SOUND CHECK, under the health scan, records
+  each scene through the USB path, measures it, and proposes the exact
+  `OUTPUT_SCENEn` move for anything the rules catch; the proposal goes
+  through the same Confirm as every plan, then the next SOUND CHECK verifies
+  it, three rounds at most, and says what is left. MATCH REFERENCE compares
+  the capture to a clip of your own (a song, a record) and proposes the amp
+  knob and direction for each band that differs, one step at a time.
+  it, three rounds at most, and says what is left.
+- Sign in to your own TONE3000 account from Settings (their documented
+  OAuth flow) and a recipe's capture is fetched under your entitlement;
+  anything your account cannot reach is a link, never a fetch through us.
 
 **Never sends behind your back**
 - Read-back verification on every write, and a signal-path check so a preset is

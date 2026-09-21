@@ -1,5 +1,14 @@
 # Install and setup
 
+## macOS app (no Python)
+
+The bundled macOS download contains `ToneCommand.app` and its own Python, so
+Python and a terminal are not needed. The first chunk is not signed by an identified developer. After downloading and unzipping it, open the app; if
+macOS says it cannot verify the developer, Control-click `ToneCommand.app`,
+choose **Open**, then choose **Open** again. The app opens its local page at
+`http://127.0.0.1:8909`. This bundle is macOS-only; Windows builds and signing
+are planned for later chunks.
+
 ToneCommand runs on **macOS, Windows and Linux**. macOS is the tested path;
 Windows and Linux are documented and expected to work. Pick your OS below.
 
@@ -270,6 +279,24 @@ Testing is two-tier:
 .venv/bin/python hardware_regression.py    # 13-check on-hardware regression; run after any firmware update
 .venv/bin/python build_133.py              # example: scripted full preset build (stores to wire slot 133 = FM9-Edit 134)
 ```
+
+## TONE3000 sign-in (optional)
+
+A recipe can use a capture from TONE3000 by reference. To fetch one under
+your own account, sign in once from ToneCommand:
+
+1. In your TONE3000 settings, generate an API key pair and copy the
+   **publishable** key (`t3k_pub_...`). If your account has any redirect URIs
+   registered there, add `http://127.0.0.1:8909/api/tone3000/callback`.
+2. Put `TONE3000_PUBLISHABLE_KEY=t3k_pub_...` in `.env` next to
+   `TONECOMMAND_STORE_SLOTS` and start ToneCommand again.
+3. Settings, TONE3000, SIGN IN. A tab opens on tone3000.com; sign in there
+   and it sends you back. The tokens stay in `~/.tonecommand/tone3000_tokens.json`
+   (readable by you only) and refresh themselves.
+
+Nothing paid or private is fetched through ToneCommand: a capture your
+account cannot reach shows its link and TONE3000's own flow to check your
+access or pick a replacement. SIGN OUT deletes the tokens.
 
 ## Running beside FM9-Edit
 

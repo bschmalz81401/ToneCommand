@@ -305,6 +305,20 @@ def _table(sim) -> list[dict]:
         # #101 #102 #103: a path outside the captures folder is refused before any read.
         ("POST", "/api/measure", {}, {"path": "/nowhere/x.wav"}, None),
         ("POST", "/api/measure/balance", {}, {"captures": [{"scene": 1, "role": "rhythm", "path": "/nowhere/x.wav"}]}, None),
+        # #104: a path outside the captures folder is refused before any measurement or device read.
+        ("POST", "/api/sound-check", {}, {"captures": [{"scene": 1, "role": "rhythm", "path": "/nowhere/x.wav"}]}, None),
+        # #104: an invalid scene role is refused before the routing change or any capture.
+        ("POST", "/api/sound-check/remeasure", {}, {"scenes": [{"scene": 1, "role": "verse"}]}, None),
+        # #105: the references folder is listed, never written; a path outside the two folders is refused.
+        ("GET", "/api/references", {}, None, None),
+        ("POST", "/api/tone-match", {}, {"build": "/nowhere/x.wav", "reference": "/nowhere/y.wav"}, None),
+        # #88: TONE3000 sign-in; login without a key is 409, the callback without a pending login 400,
+        # status and logout touch the token file only; no route touches the device.
+        ("GET", "/api/tone3000/login", {}, None, None),
+        ("GET", "/api/tone3000/callback", {}, None, None),
+        ("GET", "/api/tone3000/status", {}, None, None),
+        ("POST", "/api/tone3000/logout", {}, None, None),
+        ("GET", "/api/tone3000/load", {}, None, None),
         ("POST", "/api/install-cab", {}, {"hash": JUNK_HASH, "bank": 1, "number": 1},
          "installs_files"),
         ("POST", "/api/install", {}, {"hash": JUNK_HASH, "slot": 138}, "installs_files"),
@@ -621,7 +635,7 @@ def _handles_decline_first(before) -> bool:
 
 
 def test_broad_except_audit_every_block_reraises_the_decline_or_says_why_it_cannot_see_one():
-    """85 `except Exception` blocks, each accounted for by identity. A block
+    """86 `except Exception` blocks, each accounted for by identity. A block
     that a decline can reach re-raises CapabilityDeclined before its handler
     runs; the rest state why a decline cannot reach them. An unlisted block,
     or a listed identity that no longer exists, fails."""
@@ -670,9 +684,9 @@ def test_audit_counts_are_reported_honestly():
     blocks = _except_exception_blocks(ast.parse(SERVER.read_text()))
     reraised = sum(1 for _h, before, _b in blocks.values()
                    if _handles_decline_first(before))
-    assert len(blocks) == 85
+    assert len(blocks) == 86
     assert reraised == 35
-    assert len(blocks) - reraised == 50
+    assert len(blocks) - reraised == 51
 
 
 def test_capability_declined_is_its_own_type_and_the_handler_shapes_the_409(world):

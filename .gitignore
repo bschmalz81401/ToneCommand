@@ -45,6 +45,12 @@ user_cabs.json
 # generated site (site/build.py); deployed to Cloudflare Pages, never committed
 site/dist/
 
+# local PyInstaller output; CI uploads only the zipped app
+.pyinstaller/
+build/
+dist/
+ToneCommand.spec
+
 # Project Handsoff run state; lives per-repo, never committed
 handsoff-status.json
 handsoff-acceptance.json

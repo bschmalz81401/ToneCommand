@@ -31,11 +31,12 @@ import wave
 from dataclasses import dataclass, field, asdict
 from pathlib import Path
 from typing import Any
+from fm9.paths import resource_path
 
 import numpy as np
 
 RATE = 48000
-POLICY_PATH = Path(__file__).resolve().parent.parent / "config" / "sound_policy.json"
+POLICY_PATH = resource_path("config", "sound_policy.json")
 CLASSES = ("hardware_safety", "acquisition", "signal", "device", "intent_target", "style")
 
 #: The acquisition numbers come from the policy file's `acquisition` block

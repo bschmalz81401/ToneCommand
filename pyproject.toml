@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tonecommand"
-version = "1.5.0"
+version = "1.5.1"
 description = "Natural-language tone control for the Fractal FM9 over USB MIDI"
 readme = "README.md"
 license = {file = "LICENSE"}
@@ -27,6 +27,13 @@ dependencies = [
     "uvicorn[standard]>=0.30,<1",
     "pydantic>=2.7,<3",
     "anthropic>=0.40",
+    # numpy became a core need on 2026-09-20: fm9/reamp.py, capture.py (#56,
+    # #100), measure.py, sound_check.py and tone_match.py (#101 to #105)
+    # import it at module level and server.py imports them unconditionally, so
+    # a server without numpy cannot start. Found by the bundled app's CI smoke
+    # (#175): the runner's plain `pip install .` had no extra and the frozen
+    # app died on import. The audition extra below is kept for the name.
+    "numpy>=1.24",
 ]
 
 [project.optional-dependencies]
@@ -45,14 +52,10 @@ video = [
     "faster-whisper>=1.2",
 ]
 
-# Hearing a cab IR before choosing it. Optional on purpose, same as video:
-# without numpy the app runs exactly as before, the review still lists and
-# ranks cabs, and only the PREVIEW button is unavailable, saying so plainly
-# rather than failing. numpy is needed because the preview convolves a DI with
-# the impulse response.
-audition = [
-    "numpy>=1.24",
-]
+# Hearing a cab IR before choosing it. This extra used to carry numpy alone;
+# numpy is a core dependency since 2026-09-20 (see above), so the extra is
+# empty and kept only so `pip install .[audition]` keeps working.
+audition = []
 
 dev = [
     "pytest>=8",
@@ -81,4 +84,7 @@ py-modules = ["server"]
 # `devices/` holds transports for device families other than the FM9, one
 # package each. `fm9` stays where it is: moving it is the maintainer's
 # migration to sequence, not a side effect of adding a second device (#33).
-packages = ["fm9", "devices", "devices.headrush"]
+# `tools` too: server.py (path_audit) and fm9/health.py (conventions) import
+# from it, so a non-editable install without it cannot import the server
+# (found 2026-09-20 with the numpy defect; editable installs hid both).
+packages = ["fm9", "devices", "devices.headrush", "tools"]

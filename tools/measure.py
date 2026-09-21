@@ -38,6 +38,7 @@ def main() -> int:
     ap.add_argument("target", nargs="?", help="a wav or a folder of wavs")
     ap.add_argument("--request", default="", help="the player's words, for the width finding")
     ap.add_argument("--baseline", default="", help="a wav to compare bands against")
+    ap.add_argument("--reference", default="", help="a reference clip: the band deltas and the amp moves (G6)")
     ap.add_argument("--balance", nargs="*", metavar="SCENE:ROLE:WAV", help="scene balance across captures")
     ap.add_argument("--json", action="store_true")
     a = ap.parse_args()
@@ -53,6 +54,21 @@ def main() -> int:
               f"{out['status']}; baseline {out.get('baseline')}; " +
               (" | ".join(f["line"] for f in out["findings"]) or "no balance finding") +
               (f"; missing: {', '.join(out['missing_facts'])}" if out.get("missing_facts") else ""))
+        return 0
+    if a.reference:
+        if not a.target:
+            ap.error("--reference needs the build capture as the target")
+        from fm9 import tone_match
+        mt = tone_match.match(a.target, a.reference, Path(a.reference).stem)
+        if a.json:
+            print(json.dumps(mt, indent=1))
+        else:
+            for ln in mt["lines"]:
+                print(ln)
+            for m in mt["moves"]:
+                print(f"   move: {m['why']} (one step of {m['step']:g}; re-measure to verify)")
+            if not mt["moves"]:
+                print("   within 1.5 dB in every band: nothing to move")
         return 0
     if not a.target:
         ap.error("give a wav, a folder, or --balance")

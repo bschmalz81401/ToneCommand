@@ -156,7 +156,17 @@ def validate(recipe: Any, amp_types: set[str] | None = None) -> str | None:
 # --- the recipient's side -------------------------------------------------------------
 
 def key_from_env() -> str | None:
-    """The recipient's own TONE3000 secret key, env or .env, or None."""
+    """The recipient's own TONE3000 credential: the OAuth access token from
+    the app's sign-in (#88, refreshed when it is about to expire) first,
+    else the secret key from env or .env, else None."""
+    from fm9 import tone3000_auth
+    store = tone3000_auth.TokenStore()
+    if store.load():
+        # Signed in: the token is the credential, full stop. An expired
+        # token whose refresh failed means "sign in again", never a fall
+        # back to the secret key, which would fetch under a different
+        # entitlement than the one the player agreed to (review F1.1).
+        return tone3000_auth.access_token(store)
     key = os.environ.get(_ENV_KEY, "").strip()
     if not key and _ENV_FILE.exists():
         for line in _ENV_FILE.read_text().splitlines():
@@ -164,6 +174,14 @@ def key_from_env() -> str | None:
                 key = line.split("=", 1)[1].strip()
                 break
     return key or None
+
+
+def replacement_url(cap: dict) -> str:
+    """The app's route that starts TONE3000's load_tone flow for this
+    capture: TONE3000 verifies the account's access and, when the tone is
+    unavailable to it, lets the player browse a replacement under their
+    own entitlement (#88)."""
+    return f"/api/tone3000/load?tone_id={int(cap['tone_id'])}"
 
 
 def default_fetch(url: str, key: str | None, timeout: float = 20.0) -> tuple[int, bytes]:
@@ -214,7 +232,8 @@ def resolve(cap: dict, library: set[str] | None = None,
         raise RecipeCaptureError(why)
     stood = cap["stands_for"]["type_name"]
     link = cap["url"]
-    base = {"sha256": cap["sha256"], "stood_for": stood, "link": link, "bytes": None}
+    base = {"sha256": cap["sha256"], "stood_for": stood, "link": link, "bytes": None,
+            "replacement_url": replacement_url(cap)}
 
     def out(status: str, line: str, data: bytes | None = None) -> dict:
         assert status in STATUSES
@@ -226,8 +245,8 @@ def resolve(cap: dict, library: set[str] | None = None,
         return out("not_yours", f"the capture this recipe uses is not public on {SOURCE}; "
                                 f"built with {stood} instead: {link}")
     if not key:
-        return out("not_yours", f"the capture this recipe uses is on {SOURCE}; add your own "
-                                f"{SOURCE} key to fetch it, built with {stood} for now: {link}")
+        return out("not_yours", f"the capture this recipe uses is on {SOURCE}; sign in to "
+                                f"{SOURCE} in Settings to fetch it, built with {stood} for now: {link}")
     fetch = fetch or default_fetch
     # Two calls, both under the recipient's key: the model record (its
     # model_url carries the file name the download route needs; confirmed

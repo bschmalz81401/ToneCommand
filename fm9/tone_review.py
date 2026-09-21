@@ -19,11 +19,12 @@ import json
 from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
+from fm9.paths import resource_path
 
 #: Numeric floors per role, so "generous mix" is arithmetic rather than taste.
 #: See config/tone_targets.json for why each number is what it is.
-TARGETS_PATH = Path(__file__).resolve().parent.parent / "config" / "tone_targets.json"
-CATALOG_PATH = Path(__file__).resolve().parent.parent / "config" / "fm9_catalog.json"
+TARGETS_PATH = resource_path("config", "tone_targets.json")
+CATALOG_PATH = resource_path("config", "fm9_catalog.json")
 
 
 def targets() -> dict:

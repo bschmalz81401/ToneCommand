@@ -37,8 +37,9 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from fm9.paths import resource_path
 
-CONFIG = Path(__file__).resolve().parent.parent / "config"
+CONFIG = resource_path("config")
 
 #: Every sidecar carries these. Each exists because a reviewer needs it to
 #: judge whether an entry is trustworthy without opening the generator.

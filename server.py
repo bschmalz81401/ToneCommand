@@ -18,6 +18,7 @@ import time
 from pathlib import Path
 
 from fastapi import FastAPI, Request
+from fastapi.responses import RedirectResponse
 from fastapi.responses import (FileResponse, JSONResponse, Response,
                                StreamingResponse)
 from pydantic import BaseModel
@@ -30,7 +31,7 @@ from fm9 import (acquire, ai_settings, artist_pack, axechange, bundlefile, cabfi
                  describe, designs, diagnostics, editbuffer, gallery, gallery_install,
                  gift_of_tone, health, installed_packs, measure, nam_intake, planner, presetfile,
                  recipe_capture, recipes as recipebook, rigprofile, scratch_build, share,
-                 starter_template)
+                 sound_check, starter_template, tone_match)
 # `slots` is a local variable in more than one function here, so the module
 # gets a name that cannot be shadowed by one.
 from fm9 import slots as slotops
@@ -38,8 +39,9 @@ from tools import path_audit
 from fm9 import protocol as proto
 from fm9 import advisory
 from fm9.signal_path import resolve_aliases
+from fm9.paths import project_root, resource_path
 
-ROOT = Path(__file__).resolve().parent
+ROOT = project_root()
 app = FastAPI(title="FM9 Tone Control")
 
 #: WARNING and above reach stderr even with no handler configured (Python's
@@ -2031,13 +2033,13 @@ def check_revision(body: ApplyBody):
 
 @app.get("/")
 def index():
-    return FileResponse(ROOT / "ui" / "index.html")
+    return FileResponse(resource_path("ui", "index.html"))
 
 
 @app.get("/logo.png")
 def logo():
     """The mark, for the page header and the browser tab."""
-    return FileResponse(ROOT / "ui" / "logo.png", media_type="image/png")
+    return FileResponse(resource_path("ui", "logo.png"), media_type="image/png")
 
 
 def _fm9_port_present() -> bool:
@@ -3867,6 +3869,209 @@ def api_measure_balance(body: dict):
     out = measure.scene_balance(rows)
     out["captures"] = rows
     return out
+
+
+#: G5 (#104): one sound-check run per loaded preset: the round number and
+#: history. Reset when the preset changes. Nothing here sends; the fixes go
+#: through showPlan, Confirm and /api/apply like the health scan's.
+_sound_check = {"preset": None, "state": sound_check.new_state()}
+
+
+def _sound_check_state(fm9) -> dict:
+    try:
+        cur = fm9.current_preset()
+        num = cur[0] if cur else None
+    except Exception:                       # noqa: BLE001  a unit that does not answer resets nothing
+        num = None
+    if num != _sound_check["preset"]:
+        _sound_check["preset"], _sound_check["state"] = num, sound_check.new_state()
+    return _sound_check["state"]
+
+
+def _output_trims(fm9) -> dict[int, float]:
+    """The eight OUTPUT_SCENEn trims from the buffer, in dB, by scene."""
+    cap = editbuffer.capture(fm9, reg)
+    out = {}
+    for n, pid in sound_check.OUTPUT_SCENE_PID.items():
+        v = advisory.value(reg, cap, sound_check.OUTPUT_FAMILY, pid)
+        if v is not None:
+            out[n] = float(v)
+    return out
+
+
+def _sound_check_answer(fm9, rows: list[dict]) -> dict:
+    balance = measure.scene_balance(rows)
+    proposal = sound_check.propose(balance, _output_trims(fm9))
+    state = sound_check.rounds(_sound_check_state(fm9), balance, proposal)
+    balance["captures"] = rows
+    return {"balance": balance, "proposal": proposal, "state": state}
+
+
+@app.post("/api/sound-check")
+def api_sound_check(body: dict):
+    """G5 (#104): measure the captures, apply the balance rules, propose
+    one OUTPUT_SCENEn move per measurable finding in the health scan's fix
+    shape. Nothing is sent: the page hands the actions to showPlan and
+    Confirm is the only way on to the unit."""
+    if _gig_mode["on"]:
+        return JSONResponse({"error": "GIG LOCK is on: not while you are playing"}, status_code=423)
+    items = body.get("captures") or []
+    if not isinstance(items, list) or not items:
+        return JSONResponse({"error": "say which captures: [{scene, role, path}]"}, status_code=400)
+    rows = []
+    for it in items:
+        p = _capture_path(str((it or {}).get("path") or ""))
+        if p is None:
+            return JSONResponse({"error": f"scene {(it or {}).get('scene')}: the path must be a .wav "
+                                          "under the captures folder"}, status_code=400)
+        role = str((it or {}).get("role") or "other")
+        if role not in measure.ROLES:
+            return JSONResponse({"error": f"scene {(it or {}).get('scene')}: role {role!r} is not one of "
+                                          f"{', '.join(measure.ROLES)}"}, status_code=400)
+        m = measure.measure(p)
+        rows.append({"scene": int((it or {}).get("scene") or 0), "role": role,
+                     "lufs": (m.loudness or {}).get("integrated_lufs") if m.valid else None,
+                     "valid": m.valid, "invalid_reason": m.invalid_reason})
+    if not any(r["lufs"] is not None for r in rows):
+        return JSONResponse({"error": "nothing measurable: no capture was valid"}, status_code=409)
+    with _lock:
+        try:
+            return _sound_check_answer(get_fm9(), rows)
+        except FM9NotFound:
+            drop_fm9()
+            return JSONResponse({"error": "FM9 not connected"}, status_code=503)
+
+
+@app.post("/api/sound-check/remeasure")
+def api_sound_check_remeasure(body: dict):
+    """G5: record the test capture on each scene through the USB path
+    (routing put in the re-amp state under the journal and restored),
+    then the same measure-and-propose as /api/sound-check for the next
+    round. Simulator-proven; the live run is the next rig session's."""
+    if _gig_mode["on"]:
+        return JSONResponse({"error": "GIG LOCK is on: not while you are playing"}, status_code=423)
+    scenes = body.get("scenes") or []
+    if not isinstance(scenes, list) or not scenes:
+        return JSONResponse({"error": "say which scenes: [{scene, role}]"}, status_code=400)
+    roles = {}
+    for it in scenes:
+        try:
+            n = int((it or {}).get("scene"))
+        except (TypeError, ValueError):
+            return JSONResponse({"error": "scenes are 1 to 8"}, status_code=400)
+        role = str((it or {}).get("role") or "other")
+        if not 1 <= n <= 8 or role not in measure.ROLES:
+            return JSONResponse({"error": f"scene {n}: role {role!r} is not one of {', '.join(measure.ROLES)}"},
+                                status_code=400)
+        roles[n] = role
+    from fm9 import reamp, routing
+    from fm9 import capture as capmod
+    folder = Path(_os.environ.get("TONECOMMAND_CAPTURES", "").strip() or
+                  Path.home() / ".tonecommand" / "captures")
+    recorder = _sound_check_recorder()
+
+    with _lock:
+        try:
+            fm9 = get_fm9()
+            with routing.temporary(fm9, {routing.IN1_SOURCE: 1, routing.DIGITAL_SOURCE: 2}) as rt:
+                taken = sound_check.capture_scenes(fm9, list(roles), recorder, folder,
+                                                   routing={str(k): v["after"] for k, v in rt.items()})
+            rows = []
+            for c in taken["captures"]:
+                m = measure.measure(c["path"])
+                rows.append({"scene": c["scene"], "role": roles[c["scene"]],
+                             "lufs": (m.loudness or {}).get("integrated_lufs") if m.valid else None,
+                             "valid": m.valid, "invalid_reason": m.invalid_reason})
+            out = _sound_check_answer(fm9, rows)
+            out["captured"] = taken
+            return out
+        except FM9NotFound:
+            drop_fm9()
+            return JSONResponse({"error": "FM9 not connected"}, status_code=503)
+        except (routing.RoutingError, sound_check.SoundCheckError, reamp.ReampError) as e:
+            return JSONResponse({"error": str(e)}, status_code=409)
+
+
+def _sound_check_recorder():
+    """reamp.replay_and_record in the recorder shape capture.record takes;
+    tests replace this with a fake through the module attribute."""
+    from fm9 import reamp
+
+    def recorder(signal, seconds, out_channel):
+        import numpy as np
+        if signal is None:
+            signal = np.zeros(int(seconds * reamp.RATE), dtype=np.float32)
+        return reamp.replay_and_record(signal, out_channel, (1, 2), seconds=seconds)
+    return recorder
+
+
+def _references_dir() -> Path:
+    return (Path(_os.environ.get("TONECOMMAND_REFERENCES", "").strip() or
+             Path.home() / ".tonecommand" / "references")).resolve()
+
+
+def _reference_path(raw: str) -> Path | None:
+    """A wav under the references folder, read only."""
+    root = _references_dir()
+    try:
+        p = Path(str(raw)).expanduser().resolve()
+    except (OSError, RuntimeError):
+        return None
+    if p.suffix.lower() != ".wav" or root not in p.parents or not p.is_file():
+        return None
+    return p
+
+
+@app.get("/api/references")
+def api_references():
+    """The reference clips on hand: wavs under the references folder."""
+    root = _references_dir()
+    out = []
+    if root.is_dir():
+        for p in sorted(root.glob("*.wav")):
+            out.append({"name": p.name, "path": str(p), "bytes": p.stat().st_size})
+    return {"dir": str(root), "references": out}
+
+
+def _amp_knobs(fm9) -> dict[str, float]:
+    """The amp block's EQ knobs from the buffer, by parameter name."""
+    cap = editbuffer.capture(fm9, reg)
+    out = {}
+    for knob in tone_match.table()["knobs"].values():
+        v = advisory.value(reg, cap, tone_match.BLOCK, int(knob["pid"]))
+        if v is not None:
+            out[knob["param"]] = float(v)
+    return out
+
+
+@app.post("/api/tone-match")
+def api_tone_match(body: dict):
+    """G6 (#105): the build's capture against a reference clip: band deltas
+    naming the reference, and one amp knob plus a direction per band with
+    a real gap, as a first step in the health scan's fix shape. The page
+    hands the actions to showPlan; nothing is sent here."""
+    if _gig_mode["on"]:
+        return JSONResponse({"error": "GIG LOCK is on: not while you are playing"}, status_code=423)
+    build = _capture_path(str(body.get("build") or ""))
+    if build is None:
+        return JSONResponse({"error": "say which build capture: a .wav under the captures folder"},
+                            status_code=400)
+    ref = _reference_path(str(body.get("reference") or ""))
+    if ref is None:
+        return JSONResponse({"error": f"say which reference: a .wav under {_references_dir()}"},
+                            status_code=400)
+    label = str(body.get("reference_label") or ref.stem)
+    try:
+        mt = tone_match.match(build, ref, label)
+    except (tone_match.ToneMatchError, measure.MeasureError) as e:
+        return JSONResponse({"error": str(e)}, status_code=409)
+    with _lock:
+        try:
+            knobs = _amp_knobs(get_fm9())
+        except FM9NotFound:
+            drop_fm9()
+            return JSONResponse({"error": "FM9 not connected"}, status_code=503)
+    return {"match": mt, "proposal": tone_match.proposal(mt, knobs, reg)}
 
 
 @app.post("/api/gift-of-tone/fetch")
@@ -5890,6 +6095,116 @@ def api_recipe_plan(body: RecipeBody):
     return out
 
 
+# --- TONE3000 sign-in (#88) ----------------------------------------------------
+# One pending login at a time: the state and the PKCE verifier live here until
+# the callback lands or a new login replaces them. The redirect URI is the
+# app itself; nothing about a token ever leaves this process except to
+# www.tone3000.com as a bearer header.
+
+from fm9 import tone3000_auth  # noqa: E402
+
+TONE3000_REDIRECT = "http://127.0.0.1:8909/api/tone3000/callback"
+#: A pending login lives this long; a callback after it is refused.
+TONE3000_LOGIN_TTL_S = 600.0
+_t3k_pending: dict = {}
+_t3k_last_tone: dict = {"tone_id": None, "at": None}
+_t3k_lock = threading.Lock()
+
+
+def _t3k_consume_pending() -> dict:
+    """The pending login, taken exactly once under a lock: whatever the
+    callback brings (a code, an error, a wrong state), the state and
+    verifier are gone afterwards, so two callbacks cannot both hold the
+    verifier and nothing can be replayed. Expired means gone too."""
+    with _t3k_lock:
+        pending = dict(_t3k_pending)
+        _t3k_pending.clear()
+    if pending and time.time() - float(pending.get("started_at") or 0) > TONE3000_LOGIN_TTL_S:
+        return {}
+    return pending
+
+
+@app.get("/api/tone3000/login")
+def api_tone3000_login(prompt: str | None = None, tone_id: int | None = None):
+    """The url the browser opens to sign in (or, with prompt=load_tone and
+    a tone_id, to have TONE3000 verify access to that tone and offer a
+    replacement when it is unavailable)."""
+    client = tone3000_auth.client_id()
+    if not client:
+        return JSONResponse({"error": "no TONE3000 publishable key: add "
+                                      "TONE3000_PUBLISHABLE_KEY=t3k_pub_... to .env (generate it "
+                                      "in your TONE3000 settings)"}, status_code=409)
+    prompt = prompt or None
+    if prompt not in tone3000_auth.PROMPTS:
+        return JSONResponse({"error": "prompt must be load_tone or select_tone"}, status_code=400)
+    verifier, challenge = tone3000_auth.pkce()
+    state = tone3000_auth.new_state()
+    try:
+        url = tone3000_auth.authorize_url(client, TONE3000_REDIRECT, state, challenge,
+                                          prompt=prompt, tone_id=tone_id)
+    except tone3000_auth.AuthError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+    with _t3k_lock:
+        _t3k_pending.clear()
+        _t3k_pending.update({"state": state, "verifier": verifier, "prompt": prompt,
+                             "tone_id": tone_id, "started_at": time.time()})
+    return {"url": url, "redirect_uri": TONE3000_REDIRECT}
+
+
+@app.get("/api/tone3000/callback")
+def api_tone3000_callback(code: str | None = None, state: str | None = None,
+                          tone_id: int | None = None, error: str | None = None):
+    """TONE3000 sends the browser back here. The state must be the one we
+    sent; an error parameter stores nothing; the code is exchanged and
+    the tokens kept at 0600. Then back to the app with a one-line note."""
+    pending = _t3k_consume_pending()
+    if error:
+        return RedirectResponse(f"/?tone3000=refused:{error}", status_code=302)
+    if not pending or not state or state != pending.get("state"):
+        return JSONResponse({"error": "sign-in state does not match or the sign-in is older than "
+                                      "ten minutes; start the sign-in again"}, status_code=400)
+    if not code:
+        return JSONResponse({"error": "no code came back from TONE3000"}, status_code=400)
+    client = tone3000_auth.client_id()
+    if not client:
+        return JSONResponse({"error": "no TONE3000 publishable key"}, status_code=409)
+    try:
+        tokens = tone3000_auth.exchange(code, pending["verifier"], TONE3000_REDIRECT, client,
+                                        tone3000_auth.default_http)
+    except tone3000_auth.AuthError as e:
+        return JSONResponse({"error": str(e)}, status_code=502)
+    tone3000_auth.TokenStore().save(tokens)
+    if tone_id:
+        _t3k_last_tone.update({"tone_id": int(tone_id), "at": time.time()})
+    log.info("TONE3000: signed in")
+    where = "/?tone3000=signed-in" + (f"&tone_id={int(tone_id)}" if tone_id else "")
+    return RedirectResponse(where, status_code=302)
+
+
+@app.get("/api/tone3000/status")
+def api_tone3000_status():
+    out = tone3000_auth.TokenStore().status()
+    out["last_tone_id"] = _t3k_last_tone["tone_id"]
+    return out
+
+
+@app.post("/api/tone3000/logout")
+def api_tone3000_logout():
+    tone3000_auth.TokenStore().clear()
+    _t3k_pending.clear()
+    return {"signed_in": False}
+
+
+@app.get("/api/tone3000/load")
+def api_tone3000_load(tone_id: int | None = None):
+    """The load_tone flow for one tone: TONE3000 verifies this account's
+    access and, if the tone is unavailable to it, lets the player browse
+    a replacement; the callback carries the tone kept or chosen."""
+    if not tone_id:
+        return JSONResponse({"error": "say which tone: ?tone_id=<TONE3000 tone id>"}, status_code=400)
+    return api_tone3000_login(prompt="load_tone", tone_id=tone_id)
+
+
 @app.get("/api/share/status")
 def api_share_status():
     """What is waiting to be handed over, and whether there is anywhere to
@@ -7349,7 +7664,14 @@ def main():
     # very first CoreMIDI snapshot is already backed by notifications.
     _pump_coremidi()
     import uvicorn
-    uvicorn.run(app, host="127.0.0.1", port=8909)
+    raw_port = _os.environ.get("TONECOMMAND_PORT", "8909")
+    try:
+        port = int(raw_port)
+    except ValueError as exc:
+        raise ValueError("TONECOMMAND_PORT must be an integer from 1 to 65535") from exc
+    if not 1 <= port <= 65535:
+        raise ValueError("TONECOMMAND_PORT must be an integer from 1 to 65535")
+    uvicorn.run(app, host="127.0.0.1", port=port)
 
 
 if __name__ == "__main__":

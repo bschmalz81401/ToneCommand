@@ -3845,6 +3845,19 @@
         <div class="hint" id="tonedirout"></div>
       </div>
 
+      <div class="console" data-nofold data-label="TONE3000">
+        <div class="hint">Sign in to your own TONE3000 account so a recipe's
+          capture is fetched under your entitlement. Nothing paid or private
+          is fetched through ToneCommand; it shows the link instead. Needs
+          TONE3000_PUBLISHABLE_KEY in .env (generate it in your TONE3000
+          settings).</div>
+        <div class="saverow">
+          <button id="t3ksignin">SIGN IN</button>
+          <button id="t3ksignout" style="display:none">SIGN OUT</button>
+          <span class="hint" id="t3kout"></span>
+        </div>
+      </div>
+
       <div class="console" data-nofold data-label="IR SERVICE (IRCommand)">
         <div class="hint">Optional. Point ToneCommand at your local IRCommand
           service so it can recommend a cab IR from your own library when it
@@ -5434,6 +5447,12 @@ async function useRecipe(i) {
     if (d.capture) {
       log(`"${d.summary}": ${d.capture.line}`,
           d.capture.status === 'available' ? 'ok' : 'warn');
+      // #88: not yours to fetch through us; TONE3000's own flow verifies the
+      // account's access and offers a replacement when the tone is unavailable
+      if (d.capture.status === 'not_yours' && d.capture.replacement_url) {
+        log(`sign in to TONE3000 (Settings) and open ${d.capture.replacement_url} to check `
+            + `your access or pick a replacement`, 'warn');
+      }
     }
     // Shown before TRANSMIT, because that is the moment it matters and the
     // only thing validation cannot check for you.
@@ -5448,6 +5467,39 @@ async function useRecipe(i) {
   } catch (e) {
     log(`could not use that recipe: ${e.message}`, 'err');
   }
+}
+
+// #88: the TONE3000 sign-in row in Settings. The browser opens TONE3000's
+// authorize url; TONE3000 sends it back to this app's callback, which keeps
+// the tokens. status never carries a token, only signed in and the expiry.
+async function tone3000Status() {
+  try {
+    const d = await (await fetch('/api/tone3000/status')).json();
+    const out = $('t3kout'); if (!out) return;
+    $('t3ksignin').style.display = d.signed_in ? 'none' : '';
+    $('t3ksignout').style.display = d.signed_in ? '' : 'none';
+    out.textContent = d.signed_in
+      ? `signed in, token good until ${new Date(d.expires_at * 1000).toLocaleTimeString()} (refreshes itself)`
+      : (d.client_id_set ? 'not signed in' : 'add TONE3000_PUBLISHABLE_KEY to .env first');
+  } catch (e) { /* settings only */ }
+}
+$('t3ksignin').onclick = async () => {
+  try {
+    const d = await (await fetch('/api/tone3000/login')).json();
+    if (d.error) throw new Error(d.error);
+    window.open(d.url, '_blank');
+    log('TONE3000 sign-in opened in a new tab; come back here when it is done', 'ok');
+  } catch (e) { log(`TONE3000: ${e.message}`, 'err'); }
+};
+$('t3ksignout').onclick = async () => {
+  await fetch('/api/tone3000/logout', {method: 'POST'});
+  tone3000Status();
+};
+tone3000Status();
+if (new URLSearchParams(location.search).get('tone3000')) {
+  const v = new URLSearchParams(location.search).get('tone3000');
+  log(v === 'signed-in' ? 'TONE3000: signed in' : `TONE3000: ${v}`, v === 'signed-in' ? 'ok' : 'warn');
+  history.replaceState(null, '', location.pathname);
 }
 
 $('rlist').addEventListener('click', e => {
@@ -6128,6 +6180,11 @@ let fixPending = false;
 
 $('hout').addEventListener('click', e => {
   if (e.target.closest('#fixall')) fixAll();
+  const sc = e.target.closest('#soundcheck');
+  if (sc) runSoundCheck(JSON.parse(sc.dataset.scenes || '[]'));
+  if (e.target.closest('#scpropose')) proposeSoundCheck();
+  if (e.target.closest('#matchref')) runMatchReference();
+  if (e.target.closest('#mrpropose')) proposeMatch();
 });
 function renderHealth(d) {
   lastFindings = d.findings || [];
@@ -6172,11 +6229,103 @@ function renderHealth(d) {
     '<span>Every named scene has a live signal path, no two scenes are the ' +
     'same, and levels sit inside your conventions.</span></div>';
   $('hout').innerHTML = rows + finds + fixbar + clean +
-    `<div class="hears">Ears: pending. Every check above is a machine reading a
-     wire. None of them can tell you the tone is good.</div>`;
+    `<div class="hears">Ears: every check above is a machine reading a wire.
+     SOUND CHECK records each scene through the USB path and measures it.
+     <button class="small" id="soundcheck" data-scenes="${
+       esc(JSON.stringify((d.scenes || []).filter(s => s.alive).map(s => ({scene: s.number,
+         role: sceneRole(s.name)}))))}">SOUND CHECK</button>
+     <button class="small" id="matchref">MATCH REFERENCE</button>
+     <span id="scout"></span></div>`;
 }
 
 $('scan').onclick = scanPreset;
+
+// G5 (#104): the measurement ears propose a fix. The round comes back with
+// balance lines and one OUTPUT_SCENEn move per measurable finding, in the
+// same shape the health scan's fixes use, so the actions go to showPlan and
+// Confirm is the only way on to the unit. After a send, the next click
+// re-measures and either finds it balanced or proposes the next round; the
+// server stops at three and says what remains.
+let lastSoundCheck = null;
+// the same words fm9/tone_review.infer_role uses; 'other' when a name says nothing,
+// so the balance rules judge it only against the cap, never as a role it may not be
+function sceneRole(name) {
+  const n = (name || '').toLowerCase();
+  if (/lead|solo/.test(n)) return 'lead';
+  if (n.includes('clean')) return 'clean';
+  if (/rhythm|crunch|chug|rhy/.test(n)) return 'rhythm';
+  return 'other';
+}
+async function runSoundCheck(scenes) {
+  const out = $('scout');
+  if (!out) return;
+  out.textContent = ' measuring...';
+  try {
+    const d = await (await fetch('/api/sound-check/remeasure', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({scenes})})).json();
+    if (d.error) throw new Error(d.error);
+    lastSoundCheck = d;
+    const lines = (d.balance.findings || []).map(f => f.line);
+    const fixes = (d.proposal.fixes || []).map(f => f.label +
+      (f.note ? ' (' + f.note + ')' : ''));
+    out.innerHTML = ' ' + esc(d.proposal.summary) +
+      (lines.length ? '<br>' + lines.map(esc).join('<br>') : '') +
+      (fixes.length ? '<br>' + fixes.map(esc).join('<br>') +
+        ' <button class="small" id="scpropose">PROPOSE</button>' : '') +
+      (d.state.done ? ` (round ${d.state.round}, ${d.state.ended_by})` : ` (round ${d.state.round})`);
+    for (const u of (d.proposal.unfixable || [])) log(`sound check: ${u.line}: ${u.why}`, 'warn');
+  } catch (e) {
+    out.textContent = ' ' + e.message;
+    log(`sound check: ${e.message}`, 'err');
+  }
+}
+// G6 (#105): pick a reference clip from the references folder, match the
+// latest sound-check capture of the current scene against it, and propose
+// the amp moves through the same plan path.
+let lastMatch = null;
+async function runMatchReference() {
+  const out = $('scout');
+  if (!out) return;
+  try {
+    const refs = await (await fetch('/api/references')).json();
+    if (!refs.references.length) throw new Error(`no reference clips: drop a .wav into ${refs.dir}`);
+    const names = refs.references.map((r, i) => `${i + 1}. ${r.name}`).join('\n');
+    const pick = prompt(`Which reference?\n${names}`, '1');
+    const ref = refs.references[Number(pick) - 1];
+    if (!ref) return;
+    const cap = (lastSoundCheck && lastSoundCheck.captured && lastSoundCheck.captured.captures[0]) || null;
+    if (!cap) throw new Error('run SOUND CHECK first so there is a capture to match');
+    out.textContent = ' matching...';
+    const d = await (await fetch('/api/tone-match', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({build: cap.path, reference: ref.path, reference_label: ref.name})})).json();
+    if (d.error) throw new Error(d.error);
+    lastMatch = d;
+    out.innerHTML = ' ' + esc(d.proposal.summary) + '<br>' + d.match.lines.map(esc).join('<br>') +
+      (d.proposal.actions.length ? ' <button class="small" id="mrpropose">PROPOSE</button>' : '');
+  } catch (e) {
+    out.textContent = ' ' + e.message;
+    log(`match reference: ${e.message}`, 'err');
+  }
+}
+function proposeMatch() {
+  const d = lastMatch;
+  if (!d || !(d.proposal.actions || []).length) return;
+  showPlan({summary: d.proposal.summary, actions: d.proposal.actions,
+            device: lastState.preset ? {preset: lastState.preset} : null});
+  closeDrawer(); if (currentPlan) setStage('plan');
+  log(`"${d.proposal.summary}" proposed. Review, confirm, send; then SOUND CHECK and MATCH REFERENCE again to verify.`, 'ok');
+}
+function proposeSoundCheck() {
+  const d = lastSoundCheck;
+  if (!d || !(d.proposal.actions || []).length) return;
+  // Exactly the health scan's path: a plan, reviewed, confirmed, then sent.
+  showPlan({summary: d.proposal.summary, actions: d.proposal.actions,
+            device: lastState.preset ? {preset: lastState.preset} : null});
+  closeDrawer(); if (currentPlan) setStage('plan');
+  log(`"${d.proposal.summary}" proposed. Review, confirm, and send; then SOUND CHECK again to verify.`, 'ok');
+}
 
 // --- signal chain as a control surface ------------------------------------
 // Clicking a block bypasses it; clicking its channel letter cycles A-D. These
