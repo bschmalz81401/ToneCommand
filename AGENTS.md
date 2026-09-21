@@ -30,3 +30,5 @@ Rules that hold even without the KB:
   that place's own run, recorded as evidence, or it is not done.
 - Only one process holds the FM9's MIDI port; the server is stopped with
   SIGTERM, never SIGKILL.
+- `main` is protected: nothing lands by direct push. Push a branch, open a
+  PR, `gh pr merge --auto --merge`; the `tests` check merges it.
