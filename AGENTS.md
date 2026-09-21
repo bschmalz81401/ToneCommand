@@ -5,9 +5,10 @@ gitignored (`kb/`); if it is not here, stop and say so rather than guessing.
 
 1. `kb/INDEX.md`, then `kb/index.json`: load `always_load` plus the files whose
    topics match your task. Do not load all of it.
-2. Any Handsoff work (a lane, a review, a hardware pass): the section
-   `kb/HANDSOFF.md`, start to end (topic `handsoff` in the index; nothing else
-   in the KB is needed for process questions).
+2. Any Handsoff work (a lane, a review, a hardware pass): first the engine's
+   own playbook, `handsoff playbook` (`lanes` before init, `landing` before
+   advance 6, `lessons` once per session), then `kb/HANDSOFF.md` for what is
+   ToneCommand's alone (topic `handsoff` in the index).
 3. Anything that reaches the unit: `kb/HARDWARE_RULES.md` and the
    definition-of-done ladder in it.
 
