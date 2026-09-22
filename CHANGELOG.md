@@ -13,6 +13,15 @@ Notable changes to ToneCommand. Dates are UTC.
   again, or `$env:PYTHONUTF8 = "1"` for that window), and it no longer calls
   Windows untested: the suite runs there on every change.
 
+### Fixed
+- The site's `ROUTES` did not know about the new page, so the README's and
+  SETUP.md's links to `docs/WINDOWS.md` rendered as
+  `.../blob/main/WINDOWS.md`: a path that does not exist, on the two pages
+  most likely to be read by someone looking for it. Two tests in
+  `tests/test_site_build.py` now fail on it: one pairs every short-URL doc
+  with its route, the other checks every repository link a build produced
+  against the tree.
+
 ## 1.5.3 (2026-09-22)
 
 ### Fixed (a Windows install could not start at all: #184, #186)

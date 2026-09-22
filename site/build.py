@@ -116,6 +116,7 @@ DOC_PAGES = [
 ROUTES = {
     "README.md": "/",
     "SETUP.md": "/install/",
+    "WINDOWS.md": "/windows/",
     "AI-BACKENDS.md": "/docs/ai-backends/",
     "INTERFACE.md": "/docs/interface/",
     "RECIPES.md": "/docs/recipes/",
