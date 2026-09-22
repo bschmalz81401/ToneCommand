@@ -23,7 +23,15 @@ Notable changes to ToneCommand. Dates are UTC.
   checks every repository link it produced against the tree. That second one
   runs the build itself because `site/dist` is gitignored and CI never builds
   the site, so a test that read an existing `site/dist` would skip in the one
-  place that gates a merge.
+  place that gates a merge. `markdown` and `Pygments` moved into the `dev`
+  extra for the same reason: CI installs `.[dev]` only, so a test whose
+  import lived in the `site` extra failed the required check while passing on
+  a developer machine that happened to have it.
+- `docs/SETUP.md` states the Python 3.11/3.12 ceiling, the
+  `TONECOMMAND_MIDI_BACKEND=supriya` way out and the #172 hardware pass again.
+  Moving the Windows walk-through to its own page took those sentences with
+  it, which `tests/test_midi_transport.py` requires that file to carry; they
+  belong under Compatibility rather than inside one platform's guide.
 
 ## 1.5.3 (2026-09-22)
 

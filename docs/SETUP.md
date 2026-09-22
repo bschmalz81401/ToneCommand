@@ -162,6 +162,14 @@ fully viewable and editable in FM9-Edit.
 
 ## Compatibility
 
+**Python 3.11 or 3.12 on every platform.** The MIDI library (python-rtmidi)
+ships prebuilt wheels for CPython 3.8 to 3.12 only; on 3.13 or newer pip
+builds it from source, which needs a C++ toolchain, so the package refuses
+with one line rather than a compiler trace. The way out is already in place:
+`fm9/midi_transport.py` picks the binding, and `TONECOMMAND_MIDI_BACKEND=supriya`
+selects supriya-midi, which has wheels to 3.14. The ceiling lifts after that
+binding's hardware pass on the unit, issue #172.
+
 Verified means proven by write-plus-readback on real hardware in this
 project's regression runs; nothing below is assumed.
 
