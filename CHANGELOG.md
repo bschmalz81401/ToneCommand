@@ -4,6 +4,10 @@ Notable changes to ToneCommand. Dates are UTC.
 
 ## Unreleased
 
+(nothing yet)
+
+## 1.5.3 (2026-09-22)
+
 ### Fixed (a Windows install could not start at all: #184, #186)
 - `Path.read_text()` and `open()` without `encoding=` follow the machine's
   locale, which is cp1252 on Windows and UTF-8 here. `config/amp_models.json`
