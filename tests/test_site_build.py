@@ -99,19 +99,28 @@ def test_every_doc_page_with_a_short_url_is_routed_there():
         )
 
 
-def test_no_rendered_link_points_at_a_repo_path_that_does_not_exist():
+def test_no_rendered_link_points_at_a_repo_path_that_does_not_exist(tmp_path, monkeypatch):
     """The fallback in rewrite_link sends anything unrouted to a blob URL on
     main. If the path is wrong the link 404s on a page nobody rebuilds by
     hand, so check every blob link a build produced against the tree.
+
+    The build runs here, into a temporary directory: site/dist is gitignored
+    and CI never builds the site, so a test that read an existing site/dist
+    would skip in the one place that gates a merge.
     """
     import re
+    import sys
 
-    dist = SITE_DIR / "dist"
-    pages = list(dist.rglob("index.html"))
-    if not pages:
-        import pytest
+    sys.path.insert(0, str(SITE_DIR))
+    import build
 
-        pytest.skip("site/dist is not built; run site/build.py first")
+    dist = tmp_path / "dist"
+    monkeypatch.setattr(build, "DIST", dist)
+    monkeypatch.setattr(sys, "argv", ["build.py", "--offline"])
+    assert build.main() == 0
+
+    pages = list(dist.rglob("*.html"))
+    assert pages, "the build wrote no pages"
     root = SITE_DIR.parent
     blob = re.compile(r"https://github\.com/monzta1/ToneCommand/blob/main/([^\"#?]+)")
     missing = set()

@@ -19,8 +19,11 @@ Notable changes to ToneCommand. Dates are UTC.
   `.../blob/main/WINDOWS.md`: a path that does not exist, on the two pages
   most likely to be read by someone looking for it. Two tests in
   `tests/test_site_build.py` now fail on it: one pairs every short-URL doc
-  with its route, the other checks every repository link a build produced
-  against the tree.
+  with its route, the other builds the site into a temporary directory and
+  checks every repository link it produced against the tree. That second one
+  runs the build itself because `site/dist` is gitignored and CI never builds
+  the site, so a test that read an existing `site/dist` would skip in the one
+  place that gates a merge.
 
 ## 1.5.3 (2026-09-22)
 
