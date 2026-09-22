@@ -74,6 +74,10 @@ def test_authorize_url_carries_the_documented_parameters():
         A.authorize_url("k", "r", "s", "c", prompt="browse")
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="the 0o600 token file is POSIX only; Windows needs an ACL, tracked in #186",
+)
 def test_exchange_posts_the_form_and_stores_tokens_at_0600(tokens_path):
     http = FakeHttp()
     t = A.exchange("code-1", "verif", "http://127.0.0.1:8909/api/tone3000/callback", "t3k_pub_x", http, now=1000.0)
@@ -95,6 +99,10 @@ def test_exchange_posts_the_form_and_stores_tokens_at_0600(tokens_path):
         A.exchange("c", "v", "r", "c", lambda *a: (200, b"<html>"))
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="the 0o600 token file is POSIX only; Windows needs an ACL, tracked in #186",
+)
 def test_refresh_and_access_token_refreshes_a_minute_ahead(tokens_path):
     http = FakeHttp()
     store = A.TokenStore()
@@ -145,6 +153,10 @@ def test_route_login_refuses_without_a_key_and_builds_the_url_with_one(client, m
     assert q["prompt"] == ["load_tone"] and q["tone_id"] == ["57410"]
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="the 0o600 token file is POSIX only; Windows needs an ACL, tracked in #186",
+)
 def test_route_callback_verifies_state_exchanges_and_redirects(client, monkeypatch, tokens_path):
     http = FakeHttp()
     monkeypatch.setattr(A, "default_http", http)
@@ -196,6 +208,10 @@ def test_route_callback_verifies_state_exchanges_and_redirects(client, monkeypat
 
 # --- REQ-003: the fetch runs under the token; the replacement; the page; the docs ------------------------
 
+@pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="the 0o600 token file is POSIX only; Windows needs an ACL, tracked in #186",
+)
 def test_fetch_prefers_the_token_over_the_secret_key(monkeypatch, tokens_path):
     assert rc.key_from_env() is None
     monkeypatch.setenv("TONE3000_SECRET_KEY", "t3k_cs_old")

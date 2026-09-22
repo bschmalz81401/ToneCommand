@@ -1064,9 +1064,16 @@ def cliproxy_key() -> str:
     Local only. It authenticates a browser on this laptop to a proxy on this
     laptop; it is not a credential for any upstream service.
     """
+    import getpass
     import hashlib
     import os
-    seed = f"tonecommand-cliproxy{cliproxy_config_path()}{os.getuid()}"
+    # os.getuid() is POSIX only and raises on Windows (#186). The uid stays
+    # the seed wherever it exists, so a key already baked into a config file
+    # on macOS or Linux keeps its value; Windows derives from the account
+    # name, which is just as stable for one laptop's browser talking to one
+    # laptop's proxy.
+    identity = os.getuid() if hasattr(os, "getuid") else os.environ.get("USERNAME") or getpass.getuser()
+    seed = f"tonecommand-cliproxy{cliproxy_config_path()}{identity}"
     return hashlib.sha256(seed.encode()).hexdigest()[:32]
 
 

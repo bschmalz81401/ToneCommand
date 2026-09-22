@@ -6,6 +6,7 @@ under `modelUsage` rather than a top-level field.
 """
 import json
 import os
+import sys
 import stat
 
 import pytest
@@ -27,6 +28,13 @@ REAL_ENVELOPE = {
     "total_cost_usd": 0.00565148,
     "modelUsage": {"grok-4.6-build": {"modelCalls": 1}},
 }
+
+
+pytestmark = pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="the fake backend is a shebang script, which Windows does not run; "
+           "a .cmd shim or sys.executable invocation is tracked in #186",
+)
 
 
 def fake_grok(tmp_path, monkeypatch, stdout="", stderr="", code=0):
