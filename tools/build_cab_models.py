@@ -262,7 +262,7 @@ def main() -> int:
     page = WikiPage()
     page.feed(args.html.read_text(encoding="utf-8", errors="replace"))
     creators = creator_abbrevs(page.events)
-    roster = json.loads(CATALOG.read_text())["data"]["FM9_CAB_ROSTERS_BY_BANK"]
+    roster = json.loads(CATALOG.read_text(encoding="utf-8"))["data"]["FM9_CAB_ROSTERS_BY_BANK"]
 
     # Pair every cab table with the paragraphs that introduce it.
     tables, pending = [], []
@@ -356,7 +356,7 @@ def main() -> int:
         "schema_version": SCHEMA_VERSION,
         "device": "FM9",
         "keyed_by": "FM9_CAB_ROSTERS_BY_BANK bank id, then slot ordinal",
-        "banks": {b: json.loads(CATALOG.read_text())["data"]["FM9_CAB_BANK_NAMES"][b]
+        "banks": {b: json.loads(CATALOG.read_text(encoding="utf-8"))["data"]["FM9_CAB_BANK_NAMES"][b]
                   for b in out_banks},
         "content": ("facts+prose" if args.with_prose else
                     "facts-only: cabinet identity, no prose reproduced"),
@@ -368,7 +368,7 @@ def main() -> int:
         "cabs": out_banks,
         "dynacabs": dynacabs,
     }
-    out_path.write_text(json.dumps(out, indent=1, ensure_ascii=False) + "\n")
+    out_path.write_text(json.dumps(out, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
 
     total = sum(len(v) for v in out_banks.values())
     print(f"{'bank':>5} {'mapped':>12} {'names agree':>12} {'no model':>12}")

@@ -178,7 +178,7 @@ class HeadrushSim:
 
     def __init__(self, schema_path: Path | None = None,
                  rigs: list[str] | None = None):
-        blob = json.loads((schema_path or SCHEMA).read_text())
+        blob = json.loads((schema_path or SCHEMA).read_text(encoding="utf-8"))
         self.firmware: str = blob["firmware"]
         self._paths: dict[str, str] = blob["paths"]
         self._metas: dict[str, dict] = blob["metas"]

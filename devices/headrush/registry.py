@@ -303,11 +303,11 @@ def _fingerprint(schema: dict) -> str:
 @lru_cache(maxsize=1)
 def load(registry: Path | None = None, schema: Path | None = None,
          check_drift: bool = True) -> Registry:
-    blob = json.loads((registry or REGISTRY).read_text())
+    blob = json.loads((registry or REGISTRY).read_text(encoding="utf-8"))
 
     if check_drift:
         schema_path = schema or SCHEMA
-        current = json.loads(schema_path.read_text())
+        current = json.loads(schema_path.read_text(encoding="utf-8"))
         _guard(blob, current, schema_path)
 
     roster = {}

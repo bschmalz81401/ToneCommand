@@ -18,7 +18,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
-UI = (ROOT / "ui" / "index.html").read_text()
+UI = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
 
 # The panel's own code, lifted verbatim: cabRow, renderBlend, cabAnchorNote
 # and renderCabPanel. Everything else it touches is stubbed, so what runs
@@ -115,10 +115,10 @@ console.log(JSON.stringify({
 
 def _render(tmp_path, plan, last_cab=None, use=None) -> dict:
     h = tmp_path / "harness.mjs"
-    h.write_text(HARNESS)
+    h.write_text(HARNESS, encoding="utf-8")
     payload = tmp_path / "input.json"
     payload.write_text(json.dumps({"plan": plan, "lastCab": last_cab,
-                                   "use": use}))
+                                   "use": use}), encoding="utf-8")
     for node_id in PANEL_IDS:
         assert f'id="{node_id}"' in UI, \
             f"the page declares no #{node_id}; the harness would invent it"

@@ -12,7 +12,7 @@ import server
 from fm9.sim import SimFM9
 
 ROOT = Path(__file__).resolve().parent.parent
-SIDECAR = json.loads((ROOT / "config" / "amp_models.json").read_text())["amps"]
+SIDECAR = json.loads((ROOT / "config" / "amp_models.json").read_text(encoding="utf-8"))["amps"]
 #: The reference's line count at 126b7b8 (ToneCommand 1.3.0), measured.
 BASELINE_LINES = 741
 MAX_GROWTH = 400

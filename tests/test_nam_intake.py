@@ -134,7 +134,7 @@ def test_malformed_input_is_refused_with_one_line_and_nothing_else_raised(data, 
 
 def test_read_from_a_path_and_a_missing_file(tmp_path):
     p = tmp_path / "amp.nam"
-    p.write_text(json.dumps(wavenet_doc(dict(FULL, date="2026-09-19"))))
+    p.write_text(json.dumps(wavenet_doc(dict(FULL, date="2026-09-19"))), encoding="utf-8")
     assert read_nam_file(p).gear == "Peavey 5150"
     with pytest.raises(NamError) as exc:
         read_nam_file(tmp_path / "missing.nam")
@@ -142,7 +142,7 @@ def test_read_from_a_path_and_a_missing_file(tmp_path):
 
 
 def test_the_reader_imports_nothing_beyond_the_standard_library():
-    src = (ROOT / "fm9" / "nam.py").read_text()
+    src = (ROOT / "fm9" / "nam.py").read_text(encoding="utf-8")
     imports = [l.strip() for l in src.splitlines() if l.startswith(("import ", "from "))]
     assert imports == ["from __future__ import annotations", "import json",
                        "from dataclasses import dataclass, field", "from pathlib import Path"]

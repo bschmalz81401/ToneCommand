@@ -42,7 +42,7 @@ def test_no_nam_support_is_the_model_in_one_line_no_error():
 
 def test_gig_gate_is_the_existing_refusal_word_for_word():
     assert cf.gig_gate() == "GIG LOCK is on: refusing to touch the rig."
-    assert cf.gig_gate() in (server.__file__ and open(server.__file__).read())
+    assert cf.gig_gate() in (server.__file__ and open(server.__file__, encoding="utf-8").read())
 
 
 def test_readback_mismatch_stops_reports_and_never_retries(monkeypatch):

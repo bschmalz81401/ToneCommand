@@ -229,7 +229,7 @@ def get_tone_dir() -> str:
     f = tone_dir_path()
     if f.exists():
         try:
-            got = _json.loads(f.read_text())
+            got = _json.loads(f.read_text(encoding="utf-8"))
             if isinstance(got, dict) and isinstance(got.get("dir"), str):
                 return got["dir"]
         except (ValueError, OSError):
@@ -242,7 +242,7 @@ def set_tone_dir(path: str) -> str:
     path = str(path or "").strip()
     if path and not _Path(path).expanduser().is_dir():
         raise AcquireError(f"no folder at {path}")
-    tone_dir_path().write_text(_json.dumps({"dir": path}) + "\n")
+    tone_dir_path().write_text(_json.dumps({"dir": path}) + "\n", encoding="utf-8")
     return path
 
 

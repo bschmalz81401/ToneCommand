@@ -282,7 +282,7 @@ def main() -> int:
         raise SystemExit(f"guide XML not found: {xml_path}")
 
     raw = xml_path.read_text(encoding="utf-8", errors="replace")
-    roster = json.loads(CATALOG.read_text())["data"]["FM9_AMP_ROSTER"]
+    roster = json.loads(CATALOG.read_text(encoding="utf-8"))["data"]["FM9_AMP_ROSTER"]
 
     toc = parse_toc(raw)
     bullets = parse_bodies(raw, toc)
@@ -324,7 +324,7 @@ def main() -> int:
                    "fm9/registry.py enforces that at load time.",
         "amps": data,
     }
-    out_path.write_text(json.dumps(out, indent=1, ensure_ascii=False) + "\n")
+    out_path.write_text(json.dumps(out, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
 
     print(f"matched       : {len(data)}/{len(roster)}")
     print(f"with a model  : {len(data) - len(no_model)}")

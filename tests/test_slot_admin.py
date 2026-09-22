@@ -20,7 +20,7 @@ import server
 from fm9 import protocol as p, slots as clear_slot
 from fm9.sim import SimFM9
 
-UI = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text()
+UI = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text(encoding="utf-8")
 SCRIPT = UI.split("<script>")[1]
 BODY = UI.split("</style>")[1]
 
@@ -157,7 +157,7 @@ def test_the_reply_names_what_was_destroyed(client):
 
 def test_the_preset_browser_cache_is_dropped(client):
     """One of the names it is holding just stopped being true."""
-    src = Path("server.py").read_text()
+    src = Path("server.py").read_text(encoding="utf-8")
     fn = src.split("def api_clear_slot(")[1].split("\ndef ")[0]
     assert '_preset_cache["slots"] = None' in fn
 
@@ -295,7 +295,7 @@ def test_erase_forgives_spacing_and_case_but_never_the_name(client):
 
 
 def test_an_erase_refusal_is_announced_not_buried():
-    ui = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text()
+    ui = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text(encoding="utf-8")
     fn = ui.split("$('clearslot').onclick")[1].split("\n};\n")[0]
     assert "ERASE REFUSED" in fn, "a refusal must be announced, not buried"
     assert "ERASED" in fn, "and so must the success"
@@ -307,7 +307,7 @@ def test_the_save_panel_tells_flash_and_buffer_apart():
     buffer's name as though it were the slot's, directly above a dropdown
     saying otherwise, and the two read as the app contradicting itself
     (reported 2026-09-01). When they differ, both are named with roles."""
-    ui = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text()
+    ui = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text(encoding="utf-8")
     fn = ui.split("function aimAtLoadedPreset()")[1].split("\n}\n")[0]
     assert "flash !== buffer" in fn
     assert "The slot holds" in fn

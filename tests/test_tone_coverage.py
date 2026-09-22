@@ -61,7 +61,7 @@ def test_the_ui_cannot_render_zero_coverage_as_a_pass():
     """Guard on the copy itself: the branch that used to say 'nothing flagged'
     for any empty list must now be gated on coverage."""
     from pathlib import Path
-    ui = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text()
+    ui = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text(encoding="utf-8")
     block = ui.split("const bad = d.findings.length;")[1][:900]
     assert "tone_coverage" in block, "the pass message must consult coverage"
     assert "nothing could be checked" in block

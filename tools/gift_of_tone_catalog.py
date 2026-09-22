@@ -153,7 +153,7 @@ def contents(data: bytes) -> dict:
 
 
 def build(check_only: bool = False) -> int:
-    existing = json.loads(CATALOG.read_text()) if CATALOG.exists() else {"entries": []}
+    existing = json.loads(CATALOG.read_text(encoding="utf-8")) if CATALOG.exists() else {"entries": []}
     by_url = {e["url"]: e for e in existing.get("entries", [])}
     entries = []
     mismatches = 0
@@ -187,7 +187,7 @@ def build(check_only: bool = False) -> int:
         "entries": entries,
     }
     CATALOG.parent.mkdir(exist_ok=True)
-    CATALOG.write_text(json.dumps(doc, indent=1, ensure_ascii=False) + "\n")
+    CATALOG.write_text(json.dumps(doc, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
     print(f"wrote {CATALOG} with {len(entries)} entries")
     return 0
 

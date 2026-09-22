@@ -271,7 +271,7 @@ def test_capture_record_writes_a_48k_stereo_wav_and_a_sidecar(tmp_path):
     with wave.open(str(wav)) as w:
         assert (w.getnchannels(), w.getframerate(), w.getsampwidth()) == (2, 48000, 2)
         assert w.getnframes() == 48000 * 4
-    js = json.loads((tmp_path / side["wav"].replace(".wav", ".json")).read_text())
+    js = json.loads((tmp_path / side["wav"].replace(".wav", ".json")).read_text(encoding="utf-8"))
     assert js["kind"] == "test" and js["rate"] == 48000 and js["channels"] == [1, 2]
     assert js["preset"] == "P 139" and js["scene"] == 1 and js["routing"] == {"in1": 2}
     assert js["out_channel"] == 5 and js["frames"] == 48000 * 4

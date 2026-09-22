@@ -17,7 +17,7 @@ import server
 from fm9.sim import SimFM9
 
 ROOT = Path(__file__).resolve().parent.parent
-UI = (ROOT / "ui" / "index.html").read_text()
+UI = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
 SCRIPT = UI.split("<script>")[1]
 STYLE = UI.split("<style>")[1].split("</style>")[0]
 BODY = UI.split("</style>")[1]

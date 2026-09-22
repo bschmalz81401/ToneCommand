@@ -78,14 +78,14 @@ def get_store_slots_spec() -> tuple[str, str]:
     path = store_slots_path()
     if path.exists():
         try:
-            got = json.loads(path.read_text())
+            got = json.loads(path.read_text(encoding="utf-8"))
             if isinstance(got, dict) and isinstance(got.get("slots"), str):
                 return got["slots"], "app"
         except (json.JSONDecodeError, ValueError, OSError):
             pass          # a corrupt file must not silently widen anything
     env_file = Path(__file__).resolve().parent.parent / ".env"
     if env_file.exists():
-        for line in env_file.read_text().splitlines():
+        for line in env_file.read_text(encoding="utf-8").splitlines():
             if line.strip().startswith("TONECOMMAND_STORE_SLOTS="):
                 return line.split("=", 1)[1].strip(), ".env"
     return "", "unset"
@@ -99,7 +99,7 @@ def set_store_slots_spec(raw: str) -> tuple[str, str]:
         raise PermissionError(
             "TONECOMMAND_STORE_SLOTS is pinned in the environment; change it "
             "there rather than in the app")
-    store_slots_path().write_text(json.dumps({"slots": raw.strip()}, indent=1))
+    store_slots_path().write_text(json.dumps({"slots": raw.strip()}, indent=1), encoding="utf-8")
     return get_store_slots_spec()
 
 
@@ -121,7 +121,7 @@ def get_cab_slots() -> set[int]:
     if not raw:
         env_file = Path(__file__).resolve().parent.parent / ".env"
         if env_file.exists():
-            for line in env_file.read_text().splitlines():
+            for line in env_file.read_text(encoding="utf-8").splitlines():
                 if line.strip().startswith("TONECOMMAND_CAB_SLOTS="):
                     raw = line.split("=", 1)[1].strip()
                     break

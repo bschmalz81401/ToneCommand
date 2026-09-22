@@ -117,7 +117,7 @@ class Registry:
     def __init__(self, config_path: Path = CONFIG,
                  amp_models_path: Path = AMP_MODELS,
                  cab_models_path: Path = CAB_MODELS):
-        raw = json.loads(config_path.read_text())
+        raw = json.loads(config_path.read_text(encoding="utf-8"))
         data = raw["data"]
         self.model_byte = int(raw["model_byte"], 16)
         self.params: dict[tuple[str, int], dict] = {
@@ -134,7 +134,7 @@ class Registry:
             resource_path("config", "drive_models.json"))
         et_path = resource_path("config", "effect_type_models.json")
         self.effect_type_models: dict = (
-            json.loads(et_path.read_text()) if et_path.exists() else {})
+            json.loads(et_path.read_text(encoding="utf-8")) if et_path.exists() else {})
         cab_sidecar = self._load_cab_models(cab_models_path)
         self.cab_models: dict = cab_sidecar.get("cabs", {})
         self.dynacabs: dict = cab_sidecar.get("dynacabs", {})
@@ -148,7 +148,7 @@ class Registry:
         """
         if not path.exists():
             return {}                      # optional sidecar; core still works
-        amps = json.loads(path.read_text()).get("amps", {})
+        amps = json.loads(path.read_text(encoding="utf-8")).get("amps", {})
         drift = [f"{k}: sidecar {v.get('fractal')!r} != roster "
                  f"{self.amp_roster.get(k)!r}"
                  for k, v in amps.items() if self.amp_roster.get(k) != v.get("fractal")]
@@ -163,7 +163,7 @@ class Registry:
         """Drive sidecar, same contract as the amp one: refuse on drift."""
         if not path.exists():
             return {}
-        drives = json.loads(path.read_text()).get("drives", {})
+        drives = json.loads(path.read_text(encoding="utf-8")).get("drives", {})
         drift = [k for k, v in drives.items()
                  if self.drive_roster.get(k) != v.get("fractal")]
         if drift:
@@ -182,7 +182,7 @@ class Registry:
         """
         if not path.exists():
             return {}
-        blob = json.loads(path.read_text())
+        blob = json.loads(path.read_text(encoding="utf-8"))
         drift = [f"bank {bank} slot {slot}"
                  for bank, records in blob.get("cabs", {}).items()
                  for slot, rec in records.items()

@@ -41,7 +41,7 @@ MAX_CAPTURE_ID = 10_000_000
 
 def load() -> dict[str, dict]:
     """The sidecar's capture records, keyed by TONE3000 tone id as a string."""
-    blob = json.loads(CONFIG_PATH.read_text())
+    blob = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
     return blob.get("captures", {})
 
 

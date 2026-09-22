@@ -62,7 +62,7 @@ def test_the_endpoint_refuses_with_a_reason():
 def test_a_saved_unsafe_url_is_re_checked_at_use(monkeypatch):
     """The config file and the env var can both be edited outside the UI, so
     validating only at save time is not enough."""
-    ir_service._config_path().write_text('{"url": "http://10.0.0.5:8770"}')
+    ir_service._config_path().write_text('{"url": "http://10.0.0.5:8770"}', encoding="utf-8")
     assert ir_service.base_url() == ""
     assert ir_service.enabled() is False
 

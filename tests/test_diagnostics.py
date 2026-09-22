@@ -40,7 +40,7 @@ def test_local_log_is_structured_scrubbed_and_expires(tmp_path):
     path = tmp_path / "diag.jsonl"
     diag.log_error("planner", "backend failed with sk-ant-api03-realsecret999",
                     path=path, backend="cli")
-    lines = path.read_text().splitlines()
+    lines = path.read_text(encoding="utf-8").splitlines()
     assert len(lines) == 1
     entry = json.loads(lines[0])
     assert entry["scope"] == "planner"
@@ -51,10 +51,10 @@ def test_local_log_is_structured_scrubbed_and_expires(tmp_path):
     # an old entry is pruned on the next write
     old = {"ts": time.time() - (diag.RETENTION_DAYS + 1) * 86400,
            "scope": "old", "message": "stale", "context": {}}
-    with path.open("a") as fh:
+    with path.open("a", encoding="utf-8") as fh:
         fh.write(json.dumps(old) + "\n")
     diag.log_error("planner", "a second, fresher error", path=path)
-    remaining = [json.loads(l) for l in path.read_text().splitlines()]
+    remaining = [json.loads(l) for l in path.read_text(encoding="utf-8").splitlines()]
     assert all(e["scope"] != "old" for e in remaining), "expired entry must be pruned"
     assert any(e["message"] == "a second, fresher error" for e in remaining)
 
@@ -170,7 +170,7 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-UI = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text()
+UI = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text(encoding="utf-8")
 
 
 @pytest.fixture

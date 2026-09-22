@@ -61,7 +61,7 @@ def _handle_names(tree) -> dict[str, list[int]]:
 
 
 def _server_tree():
-    return ast.parse(SERVER.read_text())
+    return ast.parse(SERVER.read_text(encoding="utf-8"))
 
 
 def _protocol_members(proto) -> set[str]:
@@ -382,16 +382,16 @@ def test_set_tempo_action_still_reports_what_it_reported_before():
 def test_changelog_entry_exists_and_touched_files_have_no_em_dash():
     """Docs drift silently: ARCHITECTURE.md described a server.py less than
     half the size of the real one."""
-    changelog = (ROOT / "CHANGELOG.md").read_text()
+    changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
     # The section this work shipped in (it sat under Unreleased until 1.3.0).
     section = changelog.split("## 1.3.0", 1)[1].split("\n## 1.2", 1)[0]
     assert "device handle" in section.lower() or "contract" in section.lower(), (
         "no 1.3.0 changelog entry for this work")
 
-    architecture = (ROOT / "ARCHITECTURE.md").read_text()
+    architecture = (ROOT / "ARCHITECTURE.md").read_text(encoding="utf-8")
     assert "2,470 lines and 46 routes" not in architecture, (
         "ARCHITECTURE.md still states the stale server.py size")
-    real_lines = len(SERVER.read_text().splitlines())
+    real_lines = len(SERVER.read_text(encoding="utf-8").splitlines())
     assert f"{real_lines:,} lines" in architecture, (
         f"ARCHITECTURE.md should state the measured {real_lines:,} lines")
 
@@ -400,5 +400,5 @@ def test_changelog_entry_exists_and_touched_files_have_no_em_dash():
     for rel in ("fm9/adapter.py", "fm9/device.py", "server.py",
                 "tests/test_device_handle.py", "tests/stub_device.py",
                 "CHANGELOG.md", "ARCHITECTURE.md"):
-        text = (ROOT / rel).read_text()
+        text = (ROOT / rel).read_text(encoding="utf-8")
         assert em_dash not in text, f"em dash in {rel}"

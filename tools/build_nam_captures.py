@@ -60,7 +60,7 @@ DEFAULT_PER_TERM = 3
 def _key() -> str:
     key = os.environ.get("TONE3000_SECRET_KEY", "").strip()
     if not key and ENV_FILE.exists():
-        for line in ENV_FILE.read_text().splitlines():
+        for line in ENV_FILE.read_text(encoding="utf-8").splitlines():
             if line.strip().startswith("TONE3000_SECRET_KEY="):
                 key = line.split("=", 1)[1].strip()
                 break
@@ -157,7 +157,7 @@ def main(argv: list[str]) -> int:
     args = p.parse_args(argv)
     terms = [t.strip() for t in args.terms.split(",") if t.strip()]
     blob = build(terms, args.per_term)
-    OUT_PATH.write_text(json.dumps(blob, indent=1, sort_keys=True) + "\n")
+    OUT_PATH.write_text(json.dumps(blob, indent=1, sort_keys=True) + "\n", encoding="utf-8")
     print(f"wrote {len(blob['captures'])} real A2 captures to {OUT_PATH}")
     return 0
 

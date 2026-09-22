@@ -19,10 +19,10 @@ from fm9.sim import SimFM9
 
 ROOT = Path(__file__).resolve().parent.parent
 FX = ROOT / "tests" / "fixtures"
-PAGE_FM9 = (FX / "axechange_11380.html").read_text()
-PAGE_AXE = (FX / "axechange_11000.html").read_text()
+PAGE_FM9 = (FX / "axechange_11380.html").read_text(encoding="utf-8")
+PAGE_AXE = (FX / "axechange_11000.html").read_text(encoding="utf-8")
 SYX_FM9 = (FX / "axechange_11380.bin").read_bytes()
-UI = (ROOT / "ui" / "index.html").read_text()
+UI = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
 LINK = "https://axechange.fractalaudio.com/detail.php?preset=11380"
 
 

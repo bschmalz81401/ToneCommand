@@ -45,11 +45,11 @@ def main(start: int, end: int) -> None:
     OUT.parent.mkdir(parents=True, exist_ok=True)
     done = set()
     if OUT.exists():
-        with OUT.open() as f:
+        with OUT.open(encoding="utf-8") as f:
             done = {json.loads(line)["number"] for line in f if line.strip()}
     todo = [n for n in range(start, end + 1) if n not in done]
     print(f"harvesting {len(todo)} presets ({len(done)} already done)")
-    with OUT.open("a") as f:
+    with OUT.open("a", encoding="utf-8") as f:
         for i, n in enumerate(todo):
             got = dev.select_preset(n)
             if got is None:

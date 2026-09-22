@@ -355,7 +355,7 @@ def _from_file() -> AiSettings:
     if not path.exists():
         return settings
     try:
-        stored = json.loads(path.read_text())
+        stored = json.loads(path.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, ValueError, OSError):
         return settings                   # a corrupt file must not brick startup
     if not isinstance(stored, dict):
@@ -1168,7 +1168,7 @@ def _write_api_key(path: str, key: str) -> str:
     """Replace the template api-keys with `key`, in place. "" on success."""
     import pathlib as _pl
     try:
-        text = _pl.Path(path).read_text()
+        text = _pl.Path(path).read_text(encoding="utf-8")
     except OSError as exc:
         return f"could not read {path}: {exc}"
     if key in text:
@@ -1188,7 +1188,7 @@ def _write_api_key(path: str, key: str) -> str:
         return ("the config no longer has the placeholder passwords in it, so "
                 "it was left alone. Set api-keys by hand, then check again.")
     try:
-        _pl.Path(path).write_text("".join(out))
+        _pl.Path(path).write_text("".join(out), encoding="utf-8")
     except OSError as exc:
         return f"could not write {path}: {exc}"
     return ""

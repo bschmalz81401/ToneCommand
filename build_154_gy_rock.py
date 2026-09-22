@@ -37,7 +37,7 @@ def main() -> int:
         print("amp chB Brit 800, gain 4.0:", "ok" if r.ok else r.detail)
         # cab chB: the harvested 4x12 (hardware runs only)
         if os.path.exists(DONORS) and os.environ.get("TONECOMMAND_SIM") != "1":
-            donors = json.load(open(DONORS))
+            donors = json.load(open(DONORS, encoding="utf-8"))
             from fm9 import protocol as p
             dev.set_channel(eid("CABINET"), 1); time.sleep(0.3)
             for pid, wire in enumerate(donors["cab510"]):

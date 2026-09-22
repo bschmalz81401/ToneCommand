@@ -89,7 +89,7 @@ def test_the_server_attaches_amp_source_from_the_plans_own_amp_type():
         "intent": "capture", "kind": "model", "line": "amp is the Fractal USA Lead+, no NAM support on this unit yet"}
     assert server.plan_amp_source({"actions": []}, "a base tone") == {
         "intent": "model", "kind": "model", "line": "amp is the Fractal model already loaded"}
-    src = (ROOT / "server.py").read_text()
+    src = (ROOT / "server.py").read_text(encoding="utf-8")
     assert src.count('result["amp_source"] = plan_amp_source(result, body.prompt)') == 2  # live and shared-profile paths
 
 

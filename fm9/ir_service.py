@@ -167,7 +167,7 @@ def get_url() -> str:
     f = _config_path()
     if f.exists():
         try:
-            got = json.loads(f.read_text())
+            got = json.loads(f.read_text(encoding="utf-8"))
             if isinstance(got, dict) and isinstance(got.get("url"), str):
                 return got["url"].strip().rstrip("/")   # "" means OFF on purpose
         except (ValueError, OSError):
@@ -179,7 +179,7 @@ def set_url(url: str) -> str:
     """Save the service URL from Settings. Empty turns the feature off.
     Refuses an address this server should not be fetching."""
     url = check_url((url or "").strip().rstrip("/"))
-    _config_path().write_text(json.dumps({"url": url}) + "\n")
+    _config_path().write_text(json.dumps({"url": url}) + "\n", encoding="utf-8")
     return url
 
 

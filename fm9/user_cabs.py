@@ -50,7 +50,7 @@ def all_names() -> dict:
         return {}
     if stamp != _stamp:
         try:
-            got = json.loads(p.read_text())
+            got = json.loads(p.read_text(encoding="utf-8"))
             _cache = got if isinstance(got, dict) else {}
         except (ValueError, OSError):
             _cache = {}
@@ -85,7 +85,7 @@ def name(bank: int | str, ordinal: int | str) -> str | None:
 
 def _write(data: dict) -> dict:
     global _stamp
-    path().write_text(json.dumps(data, indent=2, sort_keys=True) + "\n")
+    path().write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     _stamp = None                      # force a re-read on the next lookup
     return data
 

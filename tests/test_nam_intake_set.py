@@ -20,7 +20,7 @@ from fm9.sim import SimFM9
 from tests.test_nam_intake import wavenet_doc
 
 ROOT = Path(__file__).resolve().parent.parent
-UI = (ROOT / "ui" / "index.html").read_text()
+UI = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
 
 
 def _nam(name, make="Friedman", model="BE-100", tone="hi_gain", gear_type="amp",
@@ -58,7 +58,7 @@ def test_intake_multiple_files_and_a_folder(tmp_path):
     (d / "sub").mkdir(parents=True)
     (d / "clean.nam").write_bytes(_nam("BE clean", tone="clean"))
     (d / "sub" / "crunch.nam").write_bytes(_nam("BE crunch", tone="crunch"))
-    (d / "readme.txt").write_text("not a capture")
+    (d / "readme.txt").write_text("not a capture", encoding="utf-8")
     (d / "lead.nam").write_bytes(_nam("BE lead", tone="hi_gain"))
     r = nam_intake.intake([d, ("extra.nam", _nam("Other", make="Mesa", model="Mark IV"))])
     assert [i.name for i in r.items] == ["clean.nam", "lead.nam", "crunch.nam", "extra.nam"]

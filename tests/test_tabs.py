@@ -9,7 +9,7 @@ and the drawers are visible or reachable from every stage.
 import re
 from pathlib import Path
 
-UI = (Path(__file__).resolve().parents[1] / "ui" / "index.html").read_text()
+UI = (Path(__file__).resolve().parents[1] / "ui" / "index.html").read_text(encoding="utf-8")
 SCRIPT = UI.split("<script>")[1]
 
 

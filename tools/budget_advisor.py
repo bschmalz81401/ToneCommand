@@ -40,7 +40,7 @@ def main(fams):
     reg = Registry()
     want = Counter(f.upper() for f in fams)
     fits, nearest = [], []
-    for line in LIB.open():
+    for line in LIB.open(encoding="utf-8"):
         rec = json.loads(line)
         have = block_multiset(rec, reg)
         if covers(have, want):

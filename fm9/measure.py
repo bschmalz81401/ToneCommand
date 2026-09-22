@@ -59,7 +59,7 @@ class MeasureError(ValueError):
 # --- policy -----------------------------------------------------------------------
 
 def policy(path: Path | None = None) -> dict:
-    doc = json.loads((path or POLICY_PATH).read_text())
+    doc = json.loads((path or POLICY_PATH).read_text(encoding="utf-8"))
     if doc.get("version") != 1 or not isinstance(doc.get("rules"), list):
         raise MeasureError("sound policy file is not version 1")
     for r in doc["rules"]:

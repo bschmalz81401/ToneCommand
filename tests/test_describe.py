@@ -23,7 +23,7 @@ from fm9 import describe, planner
 from fm9.sim import SimFM9
 
 ROOT = Path(__file__).resolve().parent.parent
-UI = (ROOT / "ui" / "index.html").read_text()
+UI = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
 SCRIPT = UI.split("<script>")[1]
 
 
@@ -365,7 +365,7 @@ def test_the_base_install_can_still_use_the_field():
 def test_the_video_dependencies_are_an_optional_extra():
     """Declared, not required. CI installs only [dev] and the whole suite
     passes, which is the proof."""
-    toml = (ROOT / "pyproject.toml").read_text()
+    toml = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
     assert "video = [" in toml
     assert "yt-dlp" in toml and "faster-whisper" in toml
     deps = toml.split("dependencies = [")[1].split("]")[0]
@@ -397,7 +397,7 @@ def test_the_machine_says_what_it_can_read_before_anything_is_pasted():
 def test_the_readme_documents_the_system_dependency():
     """ffmpeg cannot be declared in pyproject, so the README is the only place
     a cloner can learn about it."""
-    readme = (ROOT / "README.md").read_text()
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
     assert 'pip install -e ".[video]"' in readme
     assert "brew install ffmpeg" in readme
     assert "pip cannot install it" in readme
@@ -484,7 +484,7 @@ def test_the_plan_names_what_it_leaves_alone(client, monkeypatch):
 
 
 def test_the_browser_shows_that_before_the_transmit_button():
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     assert "function inheritsHtml(plan)" in ui
     fn = ui.split("function inheritsHtml(plan)")[1].split("\n}\n")[0]
     assert "keeps whatever" in fn and "If you save this" in fn
@@ -492,7 +492,7 @@ def test_the_browser_shows_that_before_the_transmit_button():
 
 
 def test_the_questions_come_between_reading_and_building():
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     script = ui.split("<script>")[1]
     fn = script.split("async function analyzeSource(sourceText)")[1].split("\n}\n")[0]
     assert "askAboutBuild(spec, note)" in fn
@@ -505,7 +505,7 @@ def test_the_questions_come_between_reading_and_building():
 def test_the_suggested_name_does_not_trail_off():
     """"A Matchless clean into" is worse than no suggestion: it reads as a
     mistake and invites being accepted unread."""
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     fn = ui.split("function suggestName(spec)")[1].split("\n}\n")[0]
     assert "stop.test(words[0])" in fn, "no leading article"
     assert "stop.test(out[out.length - 1])" in fn, "no trailing preposition"
@@ -559,7 +559,7 @@ def test_saving_says_the_name_it_saves_under():
     """It said which slot it would overwrite but never what the preset would
     be called afterwards, which is how a Petrucci build went into flash under
     the previous preset's name."""
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     fn = ui.split("async function saveToSlot")[1].split("\n}\n")[0]
     assert "It will be saved under the name" in fn
     assert "lastState.preset" in fn

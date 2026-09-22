@@ -34,7 +34,7 @@ def targets() -> dict:
     they existed. A missing policy file must never take a build down.
     """
     try:
-        return json.loads(TARGETS_PATH.read_text())
+        return json.loads(TARGETS_PATH.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return {}
 
@@ -489,7 +489,7 @@ def _catalog_mix_or_depth_families() -> frozenset[str]:
     cached): this is a completeness CHECK, run once at test time, not a
     hot path."""
     try:
-        data = json.loads(CATALOG_PATH.read_text())
+        data = json.loads(CATALOG_PATH.read_text(encoding="utf-8"))
         return frozenset(
             p["family"] for p in data["data"]["FM9_PARAMS"]
             if str(p.get("name", "")).upper().endswith(("_MIX", "_DEPTH")))

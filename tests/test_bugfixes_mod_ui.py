@@ -14,7 +14,7 @@ from fastapi.testclient import TestClient
 import server
 from fm9.sim import SimFM9
 
-UI = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text()
+UI = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text(encoding="utf-8")
 SCRIPT = UI.split("<script>")[1]
 
 
@@ -69,7 +69,7 @@ def test_the_planner_can_propose_both_directions():
     from fm9.planner import ACTION_KINDS, PLAN_SCHEMA
     assert "unbind_pedal" in ACTION_KINDS
     assert "bind_pedal" in ACTION_KINDS
-    assert Path("fm9/planner.py").read_text().count('"unbind_pedal"') == 1, \
+    assert Path("fm9/planner.py").read_text(encoding="utf-8").count('"unbind_pedal"') == 1, \
         "one source of truth; do not reintroduce the second list"
 
 
@@ -135,7 +135,7 @@ def test_the_warning_survives_never_having_read_the_rig(client):
 def test_the_warning_says_how_fresh_it_is():
     """It comes from the last poll, not from a read taken now, and a claim
     about someone's rig has to carry its own age."""
-    src = Path("server.py").read_text()
+    src = Path("server.py").read_text(encoding="utf-8")
     fn = src.split("def validate_action(")[1].split("\ndef ")[0]
     assert "as of the last reading" in fn
 

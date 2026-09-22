@@ -84,7 +84,7 @@ def _load(path: Path) -> list[dict]:
     if not path.exists():
         return []
     out = []
-    for line in path.read_text().splitlines():
+    for line in path.read_text(encoding="utf-8").splitlines():
         line = line.strip()
         if not line:
             continue
@@ -106,7 +106,7 @@ def prune_expired(path: Path = DEFAULT_LOG_PATH, now: float | None = None,
     removed = len(entries) - len(kept)
     if removed:
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text("".join(json.dumps(e) + "\n" for e in kept))
+        path.write_text("".join(json.dumps(e) + "\n" for e in kept), encoding="utf-8")
     return removed
 
 
@@ -129,7 +129,7 @@ def log_error(scope: str, message: str, path: Path = DEFAULT_LOG_PATH,
     try:
         prune_expired(path)
         path.parent.mkdir(parents=True, exist_ok=True)
-        with path.open("a") as fh:
+        with path.open("a", encoding="utf-8") as fh:
             fh.write(json.dumps(entry) + "\n")
     except OSError:
         pass

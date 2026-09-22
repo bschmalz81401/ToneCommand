@@ -30,11 +30,11 @@ def test_unmapped_drive_falls_back_to_fractal_name():
 
 
 def test_drift_guard(tmp_path):
-    data = json.loads((ROOT / "config" / "drive_models.json").read_text())
+    data = json.loads((ROOT / "config" / "drive_models.json").read_text(encoding="utf-8"))
     first = next(iter(data["drives"]))
     data["drives"][first]["fractal"] = "WRONG"
     bad = tmp_path / "drive_models.json"
-    bad.write_text(json.dumps(data))
+    bad.write_text(json.dumps(data), encoding="utf-8")
     reg = Registry()
     with pytest.raises(DriveModelsStale):
         reg._load_drive_models(bad)

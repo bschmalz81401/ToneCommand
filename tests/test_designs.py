@@ -121,7 +121,7 @@ def test_a_recipe_carries_the_steps_and_not_the_author_s_rig():
 
 def test_the_page_says_a_design_is_not_verified():
     from pathlib import Path
-    ui = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text()
+    ui = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text(encoding="utf-8")
     assert "designed, not verified" in ui
     # and SEND checks before it proposes
     script = ui.split("<script>")[1]
@@ -131,7 +131,7 @@ def test_the_page_says_a_design_is_not_verified():
 
 def test_sending_goes_through_the_same_confirm_gate():
     from pathlib import Path
-    ui = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text()
+    ui = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text(encoding="utf-8")
     script = ui.split("<script>")[1]
     fn = script.split("async function sendDesign")[1].split("\n}\n")[0]
     assert "showPlan(" in fn
@@ -225,7 +225,7 @@ def test_sending_a_design_built_for_another_rig_asks_first():
     """It names blocks from their preset and was never anchored to any value
     on yours, so there is nothing to check for drift."""
     from pathlib import Path
-    ui = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text()
+    ui = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text(encoding="utf-8")
     fn = ui.split("<script>")[1].split("async function sendDesign")[1].split("\n}\n")[0]
     assert "d.profile && !window.confirm" in fn
     assert "not yours" in fn

@@ -17,7 +17,7 @@ ET_PATH = Path(__file__).resolve().parent.parent / "config" / "effect_type_model
 
 
 def test_unmapped_families_carry_explicit_no_source_notice():
-    data = json.loads(ET_PATH.read_text())
+    data = json.loads(ET_PATH.read_text(encoding="utf-8"))
     no_source = data.get("unmapped_no_source")
     assert no_source, "effect_type_models.json must record which families have no source"
     for fam in ("flanger", "phaser", "wah"):
@@ -26,7 +26,7 @@ def test_unmapped_families_carry_explicit_no_source_notice():
 
 
 def test_a_mapped_family_is_not_also_listed_as_no_source():
-    data = json.loads(ET_PATH.read_text())
+    data = json.loads(ET_PATH.read_text(encoding="utf-8"))
     no_source = set(data.get("unmapped_no_source") or {})
     mapped_names = set()
     for section in ("delay_types", "chorus_types", "multitap_types"):

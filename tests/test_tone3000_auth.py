@@ -21,7 +21,7 @@ import server
 from fm9 import recipe_capture as rc, tone3000_auth as A
 
 ROOT = Path(__file__).resolve().parent.parent
-UI = (ROOT / "ui" / "index.html").read_text()
+UI = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
 
 
 class FakeHttp:
@@ -114,9 +114,9 @@ def test_refresh_and_access_token_refreshes_a_minute_ahead(tokens_path):
 
 def test_default_http_never_leaves_tone3000_and_no_token_is_logged():
     assert A.default_http("GET", "https://example.com/x") == (0, b"")
-    asrc = (ROOT / "fm9" / "tone3000_auth.py").read_text()
+    asrc = (ROOT / "fm9" / "tone3000_auth.py").read_text(encoding="utf-8")
     assert "log." not in asrc and "print(" not in asrc                      # the module never logs
-    ssrc = (ROOT / "server.py").read_text()
+    ssrc = (ROOT / "server.py").read_text(encoding="utf-8")
     t3k = ssrc.split("TONE3000 sign-in (#88)", 1)[1].split('@app.get("/api/share/status")', 1)[0]
     assert "log.info(\"TONE3000: signed in\")" in t3k and "access_token" not in t3k
 
@@ -223,6 +223,6 @@ def test_entitlement_not_yours_carries_the_replacement_url():
 def test_ui_and_docs_say_sign_in_and_the_redirect_uri():
     assert 'id="t3ksignin"' in UI and 'id="t3ksignout"' in UI and "fetch('/api/tone3000/status')" in UI
     assert "d.capture.replacement_url" in UI
-    setup = (ROOT / "docs" / "SETUP.md").read_text()
+    setup = (ROOT / "docs" / "SETUP.md").read_text(encoding="utf-8")
     assert "TONE3000_PUBLISHABLE_KEY" in setup and "http://127.0.0.1:8909/api/tone3000/callback" in setup
-    assert "#88" in (ROOT / "CHANGELOG.md").read_text().split("## 1.5.0", 1)[0]
+    assert "#88" in (ROOT / "CHANGELOG.md").read_text(encoding="utf-8").split("## 1.5.0", 1)[0]

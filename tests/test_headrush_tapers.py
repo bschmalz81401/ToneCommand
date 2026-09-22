@@ -23,7 +23,7 @@ def table():
 
 @pytest.fixture(scope="module")
 def blob():
-    return json.loads(T.TAPERS.read_text())
+    return json.loads(T.TAPERS.read_text(encoding="utf-8"))
 
 
 # --- the one that earns the module ---------------------------------------
@@ -142,7 +142,7 @@ def test_a_table_naming_a_curve_the_module_lacks_refuses_to_load(tmp_path, blob)
     broken = json.loads(json.dumps(blob))
     broken["tapers"]["11"] = {"name": "SomethingNew", "implemented": True}
     path = tmp_path / "tapers.json"
-    path.write_text(json.dumps(broken))
+    path.write_text(json.dumps(broken), encoding="utf-8")
     T.load.cache_clear()
     with pytest.raises(T.UnknownTaper, match="does not implement"):
         T.load(path)

@@ -21,7 +21,7 @@ from fm9.sim import SimFM9
 from tests.test_nam_intake_set import _nam
 
 ROOT = Path(__file__).resolve().parent.parent
-UI = (ROOT / "ui" / "index.html").read_text()
+UI = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
 
 NAM = _nam("Mesa Boogie Mark V", 1)
 SHA = hashlib.sha256(NAM).hexdigest()
@@ -197,7 +197,7 @@ def test_save_route_refuses_a_smuggled_file_before_saving_or_queueing(client, tm
     assert share.pending() == []
     r = client.post("/api/recipes/save", json={"recipe": _recipe()})
     assert r.status_code == 200, r.text
-    saved = json.loads(next((tmp_path / "recipes").glob("*.json")).read_text())
+    saved = json.loads(next((tmp_path / "recipes").glob("*.json")).read_text(encoding="utf-8"))
     assert saved["capture"]["sha256"] == SHA and "bytes" not in json.dumps(saved)
 
 
@@ -205,5 +205,5 @@ def test_the_page_says_a_recipe_uses_a_capture_and_logs_the_line():
     assert "Uses a capture from ${esc(r.capture.source)}" in UI
     assert "d.capture.line" in UI
     assert "known: namLibraryKnown()" in UI
-    src = (ROOT / "server.py").read_text()
+    src = (ROOT / "server.py").read_text(encoding="utf-8")
     assert "known: list[str] = []" in src

@@ -21,16 +21,16 @@ SITE_DIR = Path(__file__).resolve().parent.parent / "site"
 
 
 def test_header_logo_is_64px():
-    source = (SITE_DIR / "build.py").read_text()
+    source = (SITE_DIR / "build.py").read_text(encoding="utf-8")
     assert 'class="brand" href="/"><img src="{img_url(\'logo.png\')}" alt="" width="64" height="64">' in source
     assert 'class="brand" href="/"><img src="{img_url(\'logo.png\')}" alt="" width="40" height="40">' not in source
 
 
 def test_splash_logo_is_520px():
-    build_source = (SITE_DIR / "build.py").read_text()
+    build_source = (SITE_DIR / "build.py").read_text(encoding="utf-8")
     assert 'id="splash" aria-hidden="true"><img src="{img_url(\'logo.png\')}" alt="" width="520" height="520"' in build_source
 
-    css_source = (SITE_DIR / "theme.css").read_text()
+    css_source = (SITE_DIR / "theme.css").read_text(encoding="utf-8")
     assert "#splash img {" in css_source
     assert "clamp(280px, 42vw, 520px)" in css_source
 
@@ -38,7 +38,7 @@ def test_splash_logo_is_520px():
 
 
 def test_splash_reduced_motion_and_no_js_fallback():
-    css_source = (SITE_DIR / "theme.css").read_text()
+    css_source = (SITE_DIR / "theme.css").read_text(encoding="utf-8")
 
     # The base #splash rule fires the fade-out purely from CSS, unconditioned
     # on any class -- a visitor with JS disabled still gets the splash hidden
@@ -56,11 +56,11 @@ def test_splash_reduced_motion_and_no_js_fallback():
 
 
 def test_splash_skip_on_interaction_is_wired():
-    css_source = (SITE_DIR / "theme.css").read_text()
+    css_source = (SITE_DIR / "theme.css").read_text(encoding="utf-8")
     assert "#splash.skip, #splash.skip img { animation: none !important; }" in css_source
     assert "#splash.skip { opacity: 0 !important; visibility: hidden !important; pointer-events: none !important; }" in css_source
 
-    fx_source = (SITE_DIR / "fx.js").read_text()
+    fx_source = (SITE_DIR / "fx.js").read_text(encoding="utf-8")
     assert "function splashSkip()" in fx_source
     assert "splash.className = 'skip';" in fx_source
     assert "document.addEventListener('pointerdown', go" in fx_source
@@ -70,5 +70,5 @@ def test_splash_skip_on_interaction_is_wired():
 
 def test_no_em_dash_in_touched_site_files():
     for rel in ("build.py", "theme.css", "fx.js"):
-        text = (SITE_DIR / rel).read_text()
+        text = (SITE_DIR / rel).read_text(encoding="utf-8")
         assert "—" not in text, f"em dash in site/{rel}"

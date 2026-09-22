@@ -320,7 +320,7 @@ def first_title(md: str) -> str | None:
 # --------------------------------------------------------------------------
 
 def load_theme() -> str:
-    return (SITE / "theme.css").read_text()
+    return (SITE / "theme.css").read_text(encoding="utf-8")
 
 
 #: Traffic: the tonecommand.com web stream (G-LQMWGNMFT3, stream 15807627613)
@@ -401,7 +401,7 @@ def _active(path: str, href: str) -> bool:
 def write(path: str, content: str) -> None:
     out = DIST / path.strip("/") / "index.html" if path != "/" else DIST / "index.html"
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(content)
+    out.write_text(content, encoding="utf-8")
 
 
 # --------------------------------------------------------------------------
@@ -445,7 +445,7 @@ def latest_release(offline: bool) -> dict:
 
 
 def pyproject_version() -> str:
-    text = (ROOT / "pyproject.toml").read_text()
+    text = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
     m = re.search(r'^version\s*=\s*"([^"]+)"', text, re.M)
     return m.group(1) if m else "unknown"
 
@@ -454,7 +454,7 @@ def load_recipes() -> list[dict]:
     out = []
     for f in sorted((ROOT / "recipes").glob("*.json")):
         try:
-            data = json.loads(f.read_text())
+            data = json.loads(f.read_text(encoding="utf-8"))
         except json.JSONDecodeError as e:
             print(f"skipping {f.name}: {e}", file=sys.stderr)
             continue
@@ -467,7 +467,7 @@ def screenshot_captions() -> dict[str, str]:
     """Captions are the alt texts the docs already give each image."""
     caps: dict[str, str] = {}
     for src in (DOCS / "INTERFACE.md", ROOT / "README.md"):
-        for m in re.finditer(r"!\[([^\]]*)\]\((?:docs/)?img/([^)]+)\)", src.read_text()):
+        for m in re.finditer(r"!\[([^\]]*)\]\((?:docs/)?img/([^)]+)\)", src.read_text(encoding="utf-8")):
             caps.setdefault(m.group(2), m.group(1))
     return caps
 
@@ -672,7 +672,7 @@ def build_docs(release: dict) -> None:
                          description="ToneCommand documentation: install, AI backends, the interface, recipes, architecture, protocol, credits and changelog.",
                          body=body))
     for slug, src, title, desc in DOC_PAGES:
-        md = src.read_text()
+        md = src.read_text(encoding="utf-8")
         doc_title = first_title(md) or title
         body_html, mermaid = render_md(demote_headings(md))
         rel = src.relative_to(ROOT)
@@ -786,7 +786,7 @@ python tools/replay_recipe.py recipes/{html.escape(name)}.json --apply    # edit
         index.append({"name": name, "title": r.get("title", name), "device": r.get("device"),
                       "author": r.get("author"), "summary": r.get("summary", ""),
                       "steps": len(steps), "url": f"{SITE_URL}/recipes/{name}.json"})
-    (DIST / "recipes" / "index.json").write_text(json.dumps(index, indent=1))
+    (DIST / "recipes" / "index.json").write_text(json.dumps(index, indent=1), encoding="utf-8")
 
 
 def build_download(release: dict) -> None:
@@ -860,7 +860,7 @@ def build_static(recipes: list[dict]) -> None:
         "/img/*\n  Cache-Control: public, max-age=86400\n"
         "/recipes/*.json\n  Access-Control-Allow-Origin: *\n  Cache-Control: public, max-age=300\n"
         "/recipes/index.json\n  Access-Control-Allow-Origin: *\n  Cache-Control: public, max-age=300\n"
-        "/gift-of-tone.json\n  Access-Control-Allow-Origin: *\n  Cache-Control: public, max-age=300\n")
+        "/gift-of-tone.json\n  Access-Control-Allow-Origin: *\n  Cache-Control: public, max-age=300\n", encoding="utf-8")
     # #154: the Gift of Tone catalog, read site-first by the app (fm9/gift_of_tone.py)
     catalog = ROOT / "catalog" / "gift_of_tone.json"
     if catalog.exists():
@@ -872,8 +872,8 @@ def build_static(recipes: list[dict]) -> None:
         "/shop https://shop.shieldbearerusa.com 302\n"
         "/releases https://github.com/monzta1/ToneCommand/releases 302\n"
         "/issues https://github.com/monzta1/ToneCommand/issues 302\n"
-        "/nam /#next-nam-captures 302\n")
-    (DIST / "robots.txt").write_text(f"User-agent: *\nAllow: /\nSitemap: {SITE_URL}/sitemap.xml\nDisallow: /admin/\n")
+        "/nam /#next-nam-captures 302\n", encoding="utf-8")
+    (DIST / "robots.txt").write_text(f"User-agent: *\nAllow: /\nSitemap: {SITE_URL}/sitemap.xml\nDisallow: /admin/\n", encoding="utf-8")
     # /admin/metrics/: the operator view of the site's traffic, ported from
     # shieldbearerusa.com/admin/metrics (same passphrase gate, same JSON shape,
     # cities included). site/metrics.json is written daily by the
@@ -882,23 +882,23 @@ def build_static(recipes: list[dict]) -> None:
     admin_dir = DIST / "admin"
     admin_dir.mkdir(exist_ok=True)
     metrics_json = SITE / "metrics.json"
-    (admin_dir / "metrics.json").write_text(metrics_json.read_text() if metrics_json.exists()
-                                            else '{"generatedAt": null, "note": "no refresh has landed yet"}\n')
+    (admin_dir / "metrics.json").write_text(metrics_json.read_text(encoding="utf-8") if metrics_json.exists()
+                                            else '{"generatedAt": null, "note": "no refresh has landed yet"}\n', encoding="utf-8")
     (admin_dir / "metrics" / "index.html").parent.mkdir(exist_ok=True)
     (admin_dir / "metrics" / "index.html").write_text(
         "<!doctype html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n"
         "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n"
         "<meta name=\"robots\" content=\"noindex, nofollow\">\n"
         "<title>ToneCommand metrics</title>\n<link rel=\"icon\" type=\"image/png\" href=\"/img/logo.png\">\n"
-        + (SITE / "metrics_admin.html").read_text() + "\n</body>\n</html>\n")
+        + (SITE / "metrics_admin.html").read_text(encoding="utf-8") + "\n</body>\n</html>\n", encoding="utf-8")
     urls = [href for href, _ in NAV] + [f"/docs/{s}/" for s, *_ in DOC_PAGES if s != "setup"]
     urls += [f"/recipes/{r.get('name', r['_file'].stem)}/" for r in recipes]
     (DIST / "sitemap.xml").write_text(
         '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
-        + "".join(f"  <url><loc>{SITE_URL}{u}</loc></url>\n" for u in urls) + "</urlset>\n")
+        + "".join(f"  <url><loc>{SITE_URL}{u}</loc></url>\n" for u in urls) + "</urlset>\n", encoding="utf-8")
     (DIST / "404.html").write_text(page(
         title="Not found", path="/404", version="", description="Page not found.",
-        body='<article class="prose"><h1>Not found</h1><p>That page is not here. Try the <a href="/">home page</a> or the <a href="/docs/">docs</a>.</p></article>'))
+        body='<article class="prose"><h1>Not found</h1><p>That page is not here. Try the <a href="/">home page</a> or the <a href="/docs/">docs</a>.</p></article>'), encoding="utf-8")
 
 
 def main() -> int:
@@ -909,7 +909,7 @@ def main() -> int:
     if DIST.exists():
         shutil.rmtree(DIST)
     DIST.mkdir(parents=True)
-    readme = (ROOT / "README.md").read_text()
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
     release = latest_release(args.offline)
     load_merch(args.offline)
     recipes = load_recipes()

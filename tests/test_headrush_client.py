@@ -609,7 +609,7 @@ def test_the_transport_knows_nothing_about_tonecommand():
     being a thing that can be read on its own, and the adapter's concepts start
     leaking into a layer that should only know HTTP.
     """
-    tree = ast.parse(CLIENT.read_text())
+    tree = ast.parse(CLIENT.read_text(encoding="utf-8"))
     imported: list[str] = []
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
@@ -629,7 +629,7 @@ def test_the_transport_declares_no_capabilities_and_implements_no_adapter():
     grep also matches the module docstring saying these concepts are absent,
     which is the opposite of a violation and is worth keeping.
     """
-    tree = ast.parse(CLIENT.read_text())
+    tree = ast.parse(CLIENT.read_text(encoding="utf-8"))
     used = set()
     for node in ast.walk(tree):
         if isinstance(node, ast.Name):
@@ -651,14 +651,14 @@ def test_no_em_dash_in_the_files_this_phase_touched():
                 # The file this phase is most likely to grow one in, and the
                 # guard used to omit it.
                 "CHANGELOG.md", "pyproject.toml"):
-        assert em_dash not in (ROOT / rel).read_text(), f"em dash in {rel}"
+        assert em_dash not in (ROOT / rel).read_text(encoding="utf-8"), f"em dash in {rel}"
 
 
 def test_the_changelog_records_this_phase():
     """A transport nobody calls yet is exactly the kind of change that vanishes
     from the record unless it is written down when it lands.
     """
-    text = (ROOT / "CHANGELOG.md").read_text()
+    text = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
     assert "devices/headrush/client.py" in text
 
 

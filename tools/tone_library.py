@@ -18,7 +18,7 @@ def load():
     if not LIB.exists():
         sys.exit("no tone library yet: run tools/harvest_tone_library.py "
                  "with the FM9 on")
-    return [json.loads(l) for l in LIB.open() if l.strip()]
+    return [json.loads(l) for l in LIB.open(encoding="utf-8") if l.strip()]
 
 def amp_ordinal(rec, reg):
     for b in rec["blocks"]:

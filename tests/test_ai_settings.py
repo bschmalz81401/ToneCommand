@@ -144,11 +144,11 @@ def test_a_pre_per_service_file_still_answers_and_migrates(store):
     keep working there, and the next save persists the new shape."""
     ai_settings.settings_path().write_text(json.dumps({
         "backend": "openai", "baseUrl": "http://h/v1",
-        "models": {"openai": "old-model"}, "keys": {"openai": "sk-old"}}))
+        "models": {"openai": "old-model"}, "keys": {"openai": "sk-old"}}), encoding="utf-8")
     s = ai_settings.load()
     assert s.key_for() == "sk-old" and s.model_for() == "old-model"
     ai_settings.save({"backend": "openai", "baseUrl": "http://h/v1"})
-    stored = json.loads(ai_settings.settings_path().read_text())
+    stored = json.loads(ai_settings.settings_path().read_text(encoding="utf-8"))
     assert stored["keys"] == {"openai@http://h/v1": "sk-old"}
 
 
@@ -176,7 +176,7 @@ def test_an_unrunnable_choice_is_a_problem_line_not_a_late_surprise(store,
 
 
 def test_the_page_carries_the_planning_line():
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     assert 'id="aiwho"' in ui
     assert "renderAiWho(d.planning)" in ui
 
@@ -204,7 +204,7 @@ def test_clearing_takes_an_explicit_flag(store):
 
 def test_the_stored_file_is_gitignored():
     from pathlib import Path
-    ignore = (Path(__file__).resolve().parent.parent / ".gitignore").read_text()
+    ignore = (Path(__file__).resolve().parent.parent / ".gitignore").read_text(encoding="utf-8")
     assert "ai_settings.json" in ignore, "the settings file holds an API key"
 
 
@@ -230,7 +230,7 @@ def test_a_choice_survives_a_restart(store):
 
 
 def test_a_corrupt_file_does_not_break_startup(store, monkeypatch):
-    store.write_text("{ this is not json")
+    store.write_text("{ this is not json", encoding="utf-8")
     monkeypatch.setenv("PLANNER_BACKEND", "cli")
     assert ai_settings.load().backend == "cli"
 
@@ -295,7 +295,7 @@ def test_a_backend_the_panel_can_configure_stays_selectable(store):
 
 def _ui() -> str:
     from pathlib import Path
-    return (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text()
+    return (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text(encoding="utf-8")
 
 
 def test_the_ui_does_not_show_backend_or_model_ids_on_a_plan():
@@ -309,7 +309,7 @@ def test_no_em_dashes_in_the_ui_or_the_settings_module():
     from pathlib import Path
     root = Path(__file__).resolve().parent.parent
     for rel in ("ui/index.html", "fm9/ai_settings.py"):
-        assert "—" not in (root / rel).read_text(), f"em dash in {rel}"
+        assert "—" not in (root / rel).read_text(encoding="utf-8"), f"em dash in {rel}"
 
 
 # --- every control must map to a variable the chosen backend actually reads ---
@@ -414,7 +414,7 @@ def test_the_key_field_states_the_whole_rule(store):
     a key the Claude API cannot run without must not read as optional. One
     label covers both rather than trusting a per-backend word."""
     from pathlib import Path
-    ui = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text()
+    ui = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text(encoding="utf-8")
     assert "model (optional)" in ui
     assert "Access key, when this service requires one" in ui
     assert "keyOptional" not in ui, "that flag drove the old per-backend label"
@@ -424,7 +424,7 @@ def test_the_model_source_line_is_set_not_appended(store):
     """It used to append to the note, so switching backends a few times
     stacked "Models from ..." several deep in one line."""
     from pathlib import Path
-    ui = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text()
+    ui = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text(encoding="utf-8")
     assert "$('ainote').textContent +=" not in ui
     assert "aisrc" in ui, "the source line needs its own element"
     assert "$('aibackend').value !== backend) return;" in ui, \
@@ -524,9 +524,9 @@ def test_a_shell_key_is_never_copied_into_the_settings_file(store, monkeypatch):
     rotating it there afterwards silently does nothing."""
     monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-from-shell")
     ai_settings.save({"backend": "cli"})
-    stored = json.loads(store.read_text())
+    stored = json.loads(store.read_text(encoding="utf-8"))
     assert stored["keys"] == {}, stored
-    assert "sk-ant-from-shell" not in store.read_text()
+    assert "sk-ant-from-shell" not in store.read_text(encoding="utf-8")
 
 
 def test_rotating_a_key_in_the_environment_still_takes_effect(store, monkeypatch):
@@ -540,7 +540,7 @@ def test_rotating_a_key_in_the_environment_still_takes_effect(store, monkeypatch
 def test_an_env_model_is_not_pinned_into_the_file_either(store, monkeypatch):
     monkeypatch.setenv("GROK_CLI_MODEL", "grok-from-shell")
     ai_settings.save({"backend": "cli", "model": "opus"})
-    stored = json.loads(store.read_text())
+    stored = json.loads(store.read_text(encoding="utf-8"))
     assert stored["models"] == {"cli": "opus"}, stored
 
 
@@ -618,14 +618,14 @@ def test_selecting_auto_clears_a_pin_from_the_environment(store, monkeypatch):
     assert planner.candidates() == ["grok"]
     saved = ai_settings.save({"backend": ""})
     assert saved.backend == ""
-    assert json.loads(store.read_text())["backend"] == ""
+    assert json.loads(store.read_text(encoding="utf-8"))["backend"] == ""
     assert planner.candidates() != ["grok"]
 
 
 def test_selecting_auto_clears_a_pin_from_dot_env(store, isolated_env):
     """The harder half: .env is read on every lookup, so an unset variable is
     not enough. A present blank is what says "no pin" on that channel."""
-    isolated_env.write_text("PLANNER_BACKEND=grok\n")
+    isolated_env.write_text("PLANNER_BACKEND=grok\n", encoding="utf-8")
     assert planner.candidates() == ["grok"]
     ai_settings.save({"backend": ""})
     assert planner.candidates() != ["grok"]
@@ -644,7 +644,7 @@ def test_auto_survives_a_reload_rather_than_snapping_back(store, monkeypatch):
 def test_never_having_chosen_still_defers_to_the_environment(store, monkeypatch):
     """Auto must win, but only when it was actually picked. A file with no
     backend key at all is not a vote for anything."""
-    store.write_text(json.dumps({"baseUrl": "http://h/v1"}))
+    store.write_text(json.dumps({"baseUrl": "http://h/v1"}), encoding="utf-8")
     monkeypatch.setenv("PLANNER_BACKEND", "grok")
     assert ai_settings.load().backend == "grok"
     ai_settings.apply_to_env()
@@ -664,7 +664,7 @@ def test_a_save_does_not_pin_a_base_url_that_came_from_the_environment(
     assert state["baseUrlFallback"] == "http://from-env/v1"
 
     ai_settings.save({"backend": "", "baseUrl": state["baseUrl"]})
-    assert json.loads(store.read_text())["baseUrl"] == ""
+    assert json.loads(store.read_text(encoding="utf-8"))["baseUrl"] == ""
     monkeypatch.setenv("PLANNER_BASE_URL", "http://rotated/v1")
     assert ai_settings.load().base_url == "http://rotated/v1"
 
@@ -678,7 +678,7 @@ def test_a_save_does_not_pin_a_model_that_came_from_the_environment(
     assert entry["modelFallback"] == "grok-from-env"
 
     ai_settings.save({"backend": "grok", "model": entry["model"]})
-    assert "grok" not in json.loads(store.read_text())["models"]
+    assert "grok" not in json.loads(store.read_text(encoding="utf-8"))["models"]
     monkeypatch.setenv("GROK_CLI_MODEL", "grok-rotated")
     assert ai_settings.load().models["grok"] == "grok-rotated"
 
@@ -949,7 +949,7 @@ def test_the_endpoint_passes_the_typed_address_through(client, monkeypatch):
 
 
 def test_the_browser_fills_the_box_but_never_overwrites_a_choice():
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     fn = ui.split("async function loadAiModels(backend)")[1].split("\n}\n")[0]
     # keep the saved choice; only default to the first when there is none
     assert "sel.value = prev" in fn, "the saved model is kept"
@@ -964,7 +964,7 @@ def test_a_stale_listing_cannot_land_on_a_fresh_one():
     reply landed after a fast second and overwrote a correct list with "no
     model list yet". Both carried the same backend, so guarding on that
     alone did not catch it."""
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     fn = ui.split("async function loadAiModels(backend)")[1].split("\n}\n")[0]
     assert "const seq = ++aiModelsSeq;" in fn
     assert "seq !== aiModelsSeq" in fn
@@ -974,7 +974,7 @@ def test_the_key_box_stops_contradicting_the_service_above_it():
     """"optional for others" sat directly under "A key is required.", and
     "model (optional)" is plainly false on a hosted service where blank
     sends "local" and earns a 404 for a model nobody typed."""
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     fn = ui.split("function renderAiPresets()")[1].split("\n}\n")[0]
     assert "Access key required for this service" in fn
     assert "no key needed for this service" in fn
@@ -990,7 +990,7 @@ def test_clear_key_tracks_the_service_in_the_form_not_the_backend():
     """A stored Grok key made CLEAR KEY appear beside ChatGPT's truthful
     NOT STORED badge because the button read backend-level state while the
     badge read endpoint-level state. One renderer must own both states."""
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     status = ui.split("function renderKeyStatus(hasKey)")[1].split("\n}\n")[0]
     fields = ui.split("function aiFields()")[1].split("\n}\n")[0]
     presets = ui.split("function renderAiPresets()")[1].split("\n}\n")[0]
@@ -1034,7 +1034,7 @@ def test_an_http_error_is_a_running_service(monkeypatch):
 
 
 def test_the_warning_reaches_the_log_not_just_the_response():
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     fn = ui.split("async function saveAiSettings(extra, keepOpen)")[1] \
         .split("\n}\n")[0]
     assert "if (d.warning) log(d.warning, 'warn');" in fn
@@ -1194,7 +1194,7 @@ def test_the_setup_command_edits_the_real_config_and_restarts():
 def test_the_browser_fills_the_password_in(monkeypatch):
     """Making somebody carry a 32 character string between two boxes is a
     step that exists only because we put it there."""
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     fn = ui.split("function renderSetup()")[1].split("\n}\n\n")[0]
     assert "$('aikey').value = g.key;" in fn
     assert "g.keyFor" in fn, "only for the service it belongs to"
@@ -1231,7 +1231,7 @@ def test_the_app_never_runs_the_setup_commands_itself():
 
 
 def test_the_browser_advances_only_on_proof():
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     fn = ui.split("function renderSetup()")[1].split("\n}\n\n")[0]
     assert "if (now.done)" in fn, "advancing must depend on the check"
     assert "setupAt = Math.min(i + 1" in fn
@@ -1239,7 +1239,7 @@ def test_the_browser_advances_only_on_proof():
 
 
 def test_only_the_service_that_needs_setup_is_offered_it():
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     fn = ui.split("function renderAiPresets()")[1].split("\n}\n")[0]
     assert "current.preset.url === setupGuide.url" in fn
 
@@ -1290,9 +1290,9 @@ def test_the_config_edit_is_python_not_sed(tmp_path):
     on a machine you have never seen."""
     cfg = tmp_path / "c.conf"
     cfg.write_text('port: 8317\napi-keys:\n  - "your-api-key-1"\n'
-                   '  - "your-api-key-2"\n  - "your-api-key-3"\n\ndebug: false\n')
+                   '  - "your-api-key-2"\n  - "your-api-key-3"\n\ndebug: false\n', encoding="utf-8")
     assert ai_settings._write_api_key(str(cfg), "abc123") == ""
-    got = cfg.read_text()
+    got = cfg.read_text(encoding="utf-8")
     assert '- "abc123"' in got
     assert "your-api-key" not in got
     assert "port: 8317" in got and "debug: false" in got   # nothing else moved
@@ -1300,20 +1300,20 @@ def test_the_config_edit_is_python_not_sed(tmp_path):
 
 def test_editing_twice_is_not_an_error(tmp_path):
     cfg = tmp_path / "c.conf"
-    cfg.write_text('api-keys:\n  - "your-api-key-1"\n')
+    cfg.write_text('api-keys:\n  - "your-api-key-1"\n', encoding="utf-8")
     assert ai_settings._write_api_key(str(cfg), "abc123") == ""
     assert ai_settings._write_api_key(str(cfg), "abc123") == ""
-    assert cfg.read_text().count("abc123") == 1
+    assert cfg.read_text(encoding="utf-8").count("abc123") == 1
 
 
 def test_a_config_without_placeholders_is_left_alone(tmp_path):
     """Somebody who set their own api-keys has made a decision. Overwriting
     it because our marker was missing would be us guessing at their config."""
     cfg = tmp_path / "c.conf"
-    cfg.write_text('api-keys:\n  - "the-one-i-chose"\n')
+    cfg.write_text('api-keys:\n  - "the-one-i-chose"\n', encoding="utf-8")
     problem = ai_settings._write_api_key(str(cfg), "abc123")
     assert "left alone" in problem
-    assert cfg.read_text() == 'api-keys:\n  - "the-one-i-chose"\n'
+    assert cfg.read_text(encoding="utf-8") == 'api-keys:\n  - "the-one-i-chose"\n'
 
 
 def test_a_missing_homebrew_offers_no_button_it_cannot_honour(monkeypatch):
@@ -1329,7 +1329,7 @@ def test_the_manual_command_survives_alongside_the_button():
     on Homebrew at all, must not be left without a path."""
     for step in ai_settings.setup_guide_state()["steps"]:
         assert step["run"].strip(), step["id"]
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     assert "or run it yourself" in ui
 
 
@@ -1337,7 +1337,7 @@ def test_the_browser_still_advances_only_on_proof():
     """A command exiting zero is not the same as the step being done, which
     is exactly how the placeholder-password failure got past the first
     version of this."""
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     fn = ui.split("if ($('srun')) $('srun').onclick")[1].split("\n  };\n")[0]
     assert "await loadSetup(false);" in fn, "re-check the machine, do not assume"
     assert "if (now.done)" in fn
@@ -1367,7 +1367,7 @@ def test_the_model_is_one_dropdown_of_every_model_no_chips_no_datalist():
     """One control: a dropdown listing every model the service offers, so
     choosing terra vs sol is one click. Not a text box with a datalist arrow AND
     chips saying different things at once."""
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     assert '<select id="aimodel"></select>' in ui
     assert 'id="aimodelpicks"' not in ui, "no chiclets"
     assert 'list="aimodels"' not in ui and 'id="aimodels"' not in ui, "no datalist"
@@ -1377,7 +1377,7 @@ def test_the_model_is_one_dropdown_of_every_model_no_chips_no_datalist():
 
 
 def test_picking_a_model_takes_effect_on_change():
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     assert "$('aimodel').onchange = () => saveAiSettings({}, true);" in ui
 
 
@@ -1385,7 +1385,7 @@ def test_the_saved_model_survives_even_if_the_fetched_list_lacks_it():
     """A pinned or custom model id must not be dropped when the fetched list does
     not contain it, and it must reach the <select> through data-want because a
     <select> cannot hold a value whose option is not built yet."""
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     fn = ui.split("async function loadAiModels(backend)")[1].split("\n}\n")[0]
     assert "opts.unshift(prev)" in fn
     assert "sel.dataset.want" in fn
@@ -1398,7 +1398,7 @@ def test_the_saved_model_survives_even_if_the_fetched_list_lacks_it():
 
 
 def test_a_backend_with_no_model_list_hides_the_model_row():
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     assert ("if (!(b && b.needsModel) && $('aimodelrow')) "
             "$('aimodelrow').hidden = true;") in ui
 
@@ -1406,7 +1406,7 @@ def test_a_backend_with_no_model_list_hides_the_model_row():
 def test_the_model_row_is_in_the_open_panel_not_under_advanced():
     """The model (terra vs sol) is a real choice, so its dropdown must be visible
     in the settings panel, not buried in the ADVANCED fold."""
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     before_adv = ui.split('<details id="aiadvanced"')[0]
     assert 'id="aimodelrow"' in before_adv, "the model row must precede ADVANCED"
     assert '<select id="aimodel">' in before_adv, "the model dropdown must be visible"
@@ -1424,7 +1424,7 @@ def test_the_local_card_finds_the_server_that_is_actually_running(store,
     assert local["url"] == "http://127.0.0.1:11434/v1"
     # and its stored model is read from the slot of the DETECTED address
     ai_settings.settings_path().write_text(json.dumps({
-        "models": {"openai@http://127.0.0.1:11434/v1": "qwen3-coder:30b"}}))
+        "models": {"openai@http://127.0.0.1:11434/v1": "qwen3-coder:30b"}}), encoding="utf-8")
     rows = ai_settings.endpoint_presets_state()
     local = next(r for r in rows if r["name"] == "Local model")
     assert local["model"] == "qwen3-coder:30b"
