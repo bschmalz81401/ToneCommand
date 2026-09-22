@@ -4,7 +4,14 @@ Notable changes to ToneCommand. Dates are UTC.
 
 ## Unreleased
 
-(nothing yet)
+### Added
+- `docs/WINDOWS.md`, the step-by-step Windows guide, is its own page with its
+  own short link to share: **tonecommand.com/windows**. It was the Windows
+  section of `docs/SETUP.md`, which now points at it, so there is one place to
+  send someone who has never opened a terminal. It carries the
+  `UnicodeDecodeError` a user hit before 1.5.3, with both ways out (download
+  again, or `$env:PYTHONUTF8 = "1"` for that window), and it no longer calls
+  Windows untested: the suite runs there on every change.
 
 ## 1.5.3 (2026-09-22)
 

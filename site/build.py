@@ -74,11 +74,18 @@ def merch_card(key: str) -> str:
     return f'<span class="merchimg"><img src="{html.escape(m["image"])}" alt="{alt}" loading="lazy"></span>{price}'
 
 
+#: Doc pages that live at a short URL of their own rather than under /docs/.
+DOC_PAGE_PATHS = {"setup": "/install/", "windows": "/windows/"}
+
 # Documentation pages, in the order the docs index lists them. The one-line
 # descriptions are the README's own documentation table, verbatim.
 DOC_PAGES = [
     ("setup", DOCS / "SETUP.md", "Install and setup",
      "Install, video extras, testing, compatibility matrix"),
+    # Its own short URL (/windows/, not /docs/windows/): this is the one link
+    # to hand to a Windows user who has never opened a terminal.
+    ("windows", DOCS / "WINDOWS.md", "Windows, step by step",
+     "Five steps, ten minutes, no terminal experience needed"),
     ("ai-backends", DOCS / "AI-BACKENDS.md", "Bring your own AI",
      "ChatGPT, Gemini, Grok, DeepSeek, Kimi, subscriptions, local models"),
     ("interface", DOCS / "INTERFACE.md", "The interface",
@@ -657,8 +664,8 @@ def build_home(readme: str, release: dict) -> None:
 def build_docs(release: dict) -> None:
     items = "".join(
         f'<li><a href="/docs/{slug}/"><strong>{html.escape(title)}</strong></a><span>{html.escape(desc)}</span></li>'
-        if slug != "setup" else
-        f'<li><a href="/install/"><strong>{html.escape(title)}</strong></a><span>{html.escape(desc)}</span></li>'
+        if slug not in DOC_PAGE_PATHS else
+        f'<li><a href="{DOC_PAGE_PATHS[slug]}"><strong>{html.escape(title)}</strong></a><span>{html.escape(desc)}</span></li>'
         for slug, _, title, desc in DOC_PAGES
     )
     body = f"""
@@ -676,7 +683,7 @@ def build_docs(release: dict) -> None:
         doc_title = first_title(md) or title
         body_html, mermaid = render_md(demote_headings(md))
         rel = src.relative_to(ROOT)
-        path = "/install/" if slug == "setup" else f"/docs/{slug}/"
+        path = DOC_PAGE_PATHS.get(slug, f"/docs/{slug}/")
         head = ""
         body = f"""
 <article class="prose">
@@ -891,7 +898,8 @@ def build_static(recipes: list[dict]) -> None:
         "<meta name=\"robots\" content=\"noindex, nofollow\">\n"
         "<title>ToneCommand metrics</title>\n<link rel=\"icon\" type=\"image/png\" href=\"/img/logo.png\">\n"
         + (SITE / "metrics_admin.html").read_text(encoding="utf-8") + "\n</body>\n</html>\n", encoding="utf-8")
-    urls = [href for href, _ in NAV] + [f"/docs/{s}/" for s, *_ in DOC_PAGES if s != "setup"]
+    urls = [href for href, _ in NAV] + [DOC_PAGE_PATHS.get(s, f"/docs/{s}/")
+                                        for s, *_ in DOC_PAGES if s != "setup"]
     urls += [f"/recipes/{r.get('name', r['_file'].stem)}/" for r in recipes]
     (DIST / "sitemap.xml").write_text(
         '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
