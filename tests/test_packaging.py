@@ -26,7 +26,7 @@ def test_root_helper_uses_meipass(monkeypatch, tmp_path):
 
 
 def test_spec_declares_required_data_and_native_collections():
-    script = (ROOT / "packaging" / "build_macos.sh").read_text()
+    script = (ROOT / "packaging" / "build_macos.sh").read_text(encoding="utf-8")
     assert "TONECOMMAND_ENTRYPOINT" in script
     assert '"$ENTRYPOINT"' in script
     for resource in ("ui", "config", "recipes"):
@@ -37,7 +37,7 @@ def test_spec_declares_required_data_and_native_collections():
 
 
 def test_smoke_script_has_api_and_ui_probes():
-    script = (ROOT / "packaging" / "smoke.py").read_text()
+    script = (ROOT / "packaging" / "smoke.py").read_text(encoding="utf-8")
     assert "/api/state" in script
     assert "http://127.0.0.1:{port}/" in script
     assert "TONECOMMAND_SIM" in script
@@ -58,7 +58,7 @@ def test_port_env_is_honoured(monkeypatch):
 
 
 def test_workflow_is_tag_or_manual_only():
-    workflow = (ROOT / ".github" / "workflows" / "bundle.yml").read_text()
+    workflow = (ROOT / ".github" / "workflows" / "bundle.yml").read_text(encoding="utf-8")
     assert "workflow_dispatch:" in workflow
     assert "tags: [\"v*\"]" in workflow or "tags:\n" in workflow
     assert "macos-14" in workflow
@@ -66,8 +66,8 @@ def test_workflow_is_tag_or_manual_only():
 
 
 def test_docs_and_changelog_describe_unsigned_app():
-    setup = (ROOT / "docs" / "SETUP.md").read_text()
-    changelog = (ROOT / "CHANGELOG.md").read_text()
+    setup = (ROOT / "docs" / "SETUP.md").read_text(encoding="utf-8")
+    changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
     assert "macOS app (no Python)" in setup
     assert "not signed by an identified developer" in setup
     assert "## Unreleased" in changelog
@@ -80,7 +80,7 @@ def _top_level_imports(paths):
     import ast
     names = set()
     for p in paths:
-        tree = ast.parse(p.read_text())
+        tree = ast.parse(p.read_text(encoding="utf-8"))
         for node in ast.walk(tree):
             if isinstance(node, ast.Import):
                 for a in node.names:
@@ -118,7 +118,7 @@ def test_every_module_level_third_party_import_is_a_core_dependency():
     sources = [root / "server.py", *sorted((root / "fm9").glob("*.py"))]
     offenders = []
     for p in sources:
-        tree = ast.parse(p.read_text())
+        tree = ast.parse(p.read_text(encoding="utf-8"))
         for node in tree.body:
             names = []
             if isinstance(node, ast.Import):

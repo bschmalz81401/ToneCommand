@@ -12,7 +12,7 @@ touching.
 import re
 from pathlib import Path
 
-UI = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text()
+UI = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text(encoding="utf-8")
 STYLE = UI.split("<style>")[1].split("</style>")[0]
 
 

@@ -88,7 +88,7 @@ def validate(path: Path) -> list[str]:
     """Problems with one sidecar's envelope. Empty means it conforms."""
     problems: list[str] = []
     try:
-        blob = json.loads(Path(path).read_text())
+        blob = json.loads(Path(path).read_text(encoding="utf-8"))
     except (OSError, ValueError) as exc:
         return [f"unreadable: {exc}"]
     if not isinstance(blob, dict):

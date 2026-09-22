@@ -41,7 +41,7 @@ def _frame(hex_text: str) -> list[int]:
 
 @pytest.fixture(scope="module")
 def fx():
-    return json.loads(FIXTURE.read_text())
+    return json.loads(FIXTURE.read_text(encoding="utf-8"))
 
 
 def test_the_capture_is_one_complete_dump_family(fx):

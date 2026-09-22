@@ -19,7 +19,7 @@ from fm9.sim import SimFM9
 
 ROOT = Path(__file__).resolve().parent.parent
 REAL = ROOT / "tests" / "fixtures" / "capture_test_138.wav"
-UI = (ROOT / "ui" / "index.html").read_text()
+UI = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
 RATE = 48000
 
 
@@ -97,7 +97,7 @@ def test_direction_is_a_first_step_from_the_current_knob_and_respects_the_range(
     mv2 = TM.moves({"body": -3.0})
     acts2 = TM.actions(mv2, {}, server.reg)
     assert acts2 == [] and mv2[0]["skipped"].startswith("the knob's current value")
-    src = (ROOT / "fm9" / "tone_match.py").read_text()
+    src = (ROOT / "fm9" / "tone_match.py").read_text(encoding="utf-8")
     assert "set_param(" not in src and "store_preset" not in src and "urllib" not in src
 
 

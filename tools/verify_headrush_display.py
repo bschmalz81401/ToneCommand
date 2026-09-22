@@ -237,7 +237,7 @@ def main(argv: list[str] | None = None) -> int:
     print(redact(f"display conversion against {args.host}, on a "
                  f"{TEST_PREFIX} preset\n"))
 
-    recorded = json.loads(TAPER_TABLE.read_text())["hardware_check"]
+    recorded = json.loads(TAPER_TABLE.read_text(encoding="utf-8"))["hardware_check"]
     specs, originals = {}, {}
     try:
         # Read everything this run will touch BEFORE writing any of it, so the

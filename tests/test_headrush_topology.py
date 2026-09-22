@@ -173,7 +173,7 @@ def test_names_are_returned_in_index_order(table):
 def test_schema_names_match_the_device_enumeration(table):
     """The committed schema is the authority on what the ten are called; the
     table must not drift from it."""
-    schema = json.loads((T.CONFIG / "headrush_schema.json").read_text())
+    schema = json.loads((T.CONFIG / "headrush_schema.json").read_text(encoding="utf-8"))
     meta = schema["metas"][schema["paths"]["/Evil/Engine/Patch/Chain"]]
     published = meta["properties"]["Routing"]["x-options"]["strings"]
     assert table.names() == published

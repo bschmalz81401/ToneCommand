@@ -427,7 +427,7 @@ def main(argv: list[str] | None = None) -> int:
                          "run produces, without writing")
     args = ap.parse_args(argv)
 
-    schema = json.loads(args.schema.read_text())
+    schema = json.loads(args.schema.read_text(encoding="utf-8"))
     registry = build(schema)
     text = json.dumps(registry, indent=2, sort_keys=True) + "\n"
 
@@ -435,14 +435,14 @@ def main(argv: list[str] | None = None) -> int:
         if not args.out.exists():
             print(f"{args.out} does not exist")
             return 1
-        if args.out.read_text() != text:
+        if args.out.read_text(encoding="utf-8") != text:
             print(f"{args.out} is not what {args.schema} produces; re-run "
                   f"without --check")
             return 1
         print(f"{args.out} is current")
         return 0
 
-    args.out.write_text(text)
+    args.out.write_text(text, encoding="utf-8")
     blocks, paramsets = registry["blocks"], registry["paramsets"]
     params = sum(len(s) for s in paramsets.values())
     print(f"wrote {args.out}")

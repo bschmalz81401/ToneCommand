@@ -402,7 +402,7 @@ def _env(name: str, default: str = "") -> str:
     val = ""
     env_file = _env_path()
     if env_file.exists():
-        for line in env_file.read_text().splitlines():
+        for line in env_file.read_text(encoding="utf-8").splitlines():
             if line.strip().startswith(f"{name}="):
                 val = _unquote(line.split("=", 1)[1])
                 break

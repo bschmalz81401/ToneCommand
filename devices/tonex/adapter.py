@@ -102,7 +102,7 @@ class FixtureFrames:
         return out
 
     def programs(self) -> list[dict]:
-        return json.loads(self.path.read_text())["programs"]
+        return json.loads(self.path.read_text(encoding="utf-8"))["programs"]
 
 
 class ToneXAdapter:

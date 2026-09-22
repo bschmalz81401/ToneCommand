@@ -10,7 +10,7 @@ RULES = ROOT / "config" / "tone_rules.md"
 
 def test_the_rulebook_ships():
     assert RULES.exists(), "config/tone_rules.md must ship with the tool"
-    text = RULES.read_text()
+    text = RULES.read_text(encoding="utf-8")
     # the rules that came from real failures must be stated
     for rule in ("Delay goes BEFORE reverb",
                  "Scenes are roles",

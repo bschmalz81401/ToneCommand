@@ -16,7 +16,7 @@ from fastapi.testclient import TestClient
 import server
 from fm9.sim import SimFM9
 
-UI = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text()
+UI = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text(encoding="utf-8")
 
 A_MAP = {"106": {"0": [1, 2], "1": [3]}}
 

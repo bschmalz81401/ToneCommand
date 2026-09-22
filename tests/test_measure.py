@@ -60,7 +60,7 @@ def test_policy_is_versioned_and_only_intent_or_acquisition_rules_are_enforced(t
     assert set(pol["checker"]["statuses"]) == set(M.STATUSES)
     bad = {**pol, "rules": [{"id": "fizz", "cls": "style", "enforced": True}]}
     p = tmp_path / "bad_policy.json"
-    p.write_text(json.dumps(bad))
+    p.write_text(json.dumps(bad), encoding="utf-8")
     with pytest.raises(M.MeasureError, match="only intent_target and acquisition"):
         M.policy(p)
 
@@ -255,7 +255,7 @@ def test_route_measures_a_capture_under_the_captures_folder_only(client, tmp_pat
     assert c.post("/api/measure", json={"path": str(caps / "../elsewhere.wav")}).status_code == 400
     assert c.post("/api/measure", json={"path": ""}).status_code == 400
     # a sidecar path is accepted for its wav
-    (caps / "real.json").write_text("{}")
+    (caps / "real.json").write_text("{}", encoding="utf-8")
     assert c.post("/api/measure", json={"path": str(caps / "real.json")}).status_code == 200
     assert sorted(p.name for p in caps.iterdir()) == ["floor.wav", "mono.wav", "real.json", "real.wav"]
 
@@ -287,7 +287,7 @@ def test_capture_scenes_returns_to_the_origin_scene_on_success_and_on_failure(tm
     assert [c["scene"] for c in out["captures"]] == [1, 2, 4] and sim.scene_name()[0] == 3
     wavs = sorted(tmp_path.glob("test-*.wav"))
     assert len(wavs) == 3 and [w.stem.split("-s")[1][0] for w in wavs] == ["1", "2", "4"]
-    side = json.loads(wavs[0].with_suffix(".json").read_text())
+    side = json.loads(wavs[0].with_suffix(".json").read_text(encoding="utf-8"))
     assert side["scene"] == 1 and side["routing"] == {"in1": 1} and side["wav"] == wavs[0].name
 
     def boom(signal, seconds, out_channel):
@@ -316,6 +316,6 @@ def test_cli_prints_one_line_per_capture_and_the_balance():
 
 
 def test_no_new_dependency():
-    src = (ROOT / "pyproject.toml").read_text()
+    src = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
     assert "librosa" not in src and "pyloudnorm" not in src and "scipy" not in src
-    assert "import scipy" not in (ROOT / "fm9" / "measure.py").read_text()
+    assert "import scipy" not in (ROOT / "fm9" / "measure.py").read_text(encoding="utf-8")

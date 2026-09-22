@@ -162,7 +162,7 @@ def test_there_is_one_action_in_the_prompt_row():
     """Two buttons meant choosing, before typing a word, whether your own
     request was clear enough to skip the conversation. Nobody knows that
     about their own request."""
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     row = ui.split('<div class="promptrow">')[1].split("</div>")[0]
     assert row.count("<button") == 1
     # The reserved word SEND belongs to the hardware crossing alone; the
@@ -172,7 +172,7 @@ def test_there_is_one_action_in_the_prompt_row():
 
 
 def test_button_and_enter_both_use_the_single_request_router():
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     assert "$('engage').onclick = submitRequest;" in ui
     fn = ui.split("$('prompt').addEventListener('keydown'")[1].split("});")[0]
     assert "submitRequest();" in fn
@@ -181,7 +181,7 @@ def test_button_and_enter_both_use_the_single_request_router():
 def test_building_takes_the_sentence_rather_than_the_input_box():
     """Pasting a long agreed sentence into a one-line box showed the reader
     the middle of their own request, scrolled sideways, and nothing else."""
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     assert "engage(chatRequest, chatName, chatScenes)" in ui
     fn = ui.split("async function engage(")[1].split("\n}\n")[0]
     assert "$('prompt').value" not in fn, "building must not touch the input"
@@ -196,7 +196,7 @@ def test_a_planner_question_lands_in_the_conversation_not_in_red():
     """The planner has always been able to ask (PLAN_SCHEMA.clarification).
     The UI printed the question as an error and hid the panel, leaving it
     nowhere to be answered. The conversation is where a question belongs."""
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     fn = ui.split("async function engage(")[1].split("\n}\n")[0]
     assert "chatLog.push({role: 'assistant', content: plan.clarification})" in fn
     assert "needs clarification" not in fn, "no longer logged as an error"
@@ -207,7 +207,7 @@ def test_the_examples_step_aside_once_a_conversation_starts():
     there is an exchange to read they are clutter under it. They now live
     INSIDE the empty state, so they leave with it rather than needing their
     own rule to remember."""
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     empty = ui.split('id="cempty"')[1].split("</div>\n      <div")[0]
     assert 'id="egs"' in empty
     assert "$('cempty').hidden = !!chatLog.length;" in ui
@@ -216,13 +216,13 @@ def test_the_examples_step_aside_once_a_conversation_starts():
 def test_a_working_button_keeps_its_word():
     """A spinner INSTEAD of the label leaves an unexplained circle where a
     button used to be, and the screenshot had two of them side by side."""
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     for label in ("SENDING", "BUILDING"):
         assert f"◍</span> {label}" in ui
 
 
 def test_a_failed_turn_does_not_leave_a_dangling_question():
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     fn = ui.split("async function talk()")[1].split("\n}\n")[0]
     assert "chatLog.pop();" in fn
 
@@ -232,7 +232,7 @@ def test_a_failed_turn_does_not_leave_a_dangling_question():
 def test_the_conversation_outlives_a_reload():
     """Losing four turns to a refresh is the kind of small betrayal that
     stops people using a thing they otherwise liked."""
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     assert "const CHAT_KEY = 'tonecommand.chat.v1';" in ui
     assert "function saveChat()" in ui and "function loadChat()" in ui
     # restored on load, not merely written
@@ -244,7 +244,7 @@ def test_storage_is_never_trusted():
     """The conversation is cleared on every load rather than restored, so a
     stale or half-written stored entry can never take the panel down: loadChat
     removes the key and starts empty, inside a try/catch."""
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     fn = ui.split("function loadChat()")[1].split("\n}\n")[0]
     assert "removeItem(CHAT_KEY)" in fn
     assert "chatLog = []" in fn
@@ -253,20 +253,20 @@ def test_storage_is_never_trusted():
 
 def test_every_storage_call_can_fail_without_a_message():
     """A private window throws on localStorage. That is not worth an error."""
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     for fn_name in ("function saveChat()", "function loadChat()"):
         fn = ui.split(fn_name)[1].split("\n}\n")[0]
         assert "try {" in fn and "catch" in fn, fn_name
 
 
 def test_clearing_leaves_nothing_behind():
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     save = ui.split("function saveChat()")[1].split("\n}\n")[0]
     assert "if (!chatLog.length) { localStorage.removeItem(CHAT_KEY); return; }" in save
 
 
 def test_clear_asks_before_deleting_real_work():
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     fn = ui.split("$('cclear').onclick")[1].split("\n  };")[0]
     assert "window.confirm" in fn
     assert "chatLog.length > 1" in fn, "do not nag over a single line"
@@ -277,7 +277,7 @@ def test_clear_asks_before_deleting_real_work():
 def test_the_prompt_is_a_textarea_that_grows():
     """People describe tones in sentences. A one-line box shows them the
     middle of their own thought."""
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     assert '<textarea id="prompt"' in ui
     assert "function growPrompt()" in ui
 
@@ -286,13 +286,13 @@ def test_an_emptied_box_returns_to_one_line():
     """Collapsed to zero, an EMPTY textarea reported 62px against a 31.2px
     line, so emptying a grown box left it permanently double height. Every
     other size measures correctly."""
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     fn = ui.split("function growPrompt()")[1].split("\n}\n")[0]
     assert "if (!t.value) { t.style.height = ''; return; }" in fn
 
 
 def test_enter_sends_and_shift_enter_writes_a_line():
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     fn = ui.split("$('prompt').addEventListener('keydown'")[1].split("});")[0]
     assert "e.shiftKey" in fn and "e.preventDefault();" in fn
     assert "Press Enter" in ui
@@ -303,14 +303,14 @@ def test_enter_sends_and_shift_enter_writes_a_line():
 def test_it_says_it_is_thinking_where_you_are_looking():
     """A spinner on a button at the far side of the panel is not an answer to
     "did that send?" when your eyes are on the last thing said."""
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     assert "chatBusy && !chatBuilding" in ui, \
         "a build has its own banner; the grey line is for a conversation turn"
     assert "waitLine()" in ui
 
 
 def test_only_one_turn_at_a_time():
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     fn = ui.split("async function talk()")[1].split("\n}\n")[0]
     assert "if (chatBusy) return;" in fn
 
@@ -318,7 +318,7 @@ def test_only_one_turn_at_a_time():
 def test_a_failed_turn_gives_the_words_back():
     """Dropping the turn silently made somebody retype a sentence they had
     already written. That is the wrong party paying for a failed request."""
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     fn = ui.split("async function talk()")[1].split("\n}\n")[0]
     assert "$('prompt').value = said;" in fn
 
@@ -326,7 +326,7 @@ def test_a_failed_turn_gives_the_words_back():
 def test_reading_back_is_not_interrupted_by_a_new_message():
     """Yanking somebody to the bottom while they are reading something
     further up is worse than making them scroll."""
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     fn = ui.split("function renderChat()")[1].split("\n}\n")[0]
     assert "wasAtBottom" in fn
     assert fn.index("const wasAtBottom") < fn.index("feed.innerHTML ="), \
@@ -340,7 +340,7 @@ def test_reading_back_is_not_interrupted_by_a_new_message():
 # the first thing on screen was chrome, and it read as a form.
 
 def test_the_transcript_comes_before_the_box_you_type_into():
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     panel = ui.split('id="pane-request"')[1].split("</section>")[0]
     assert panel.index('id="chat"') < panel.index('class="composer"')
     assert panel.index('class="composer"') < panel.index('id="prompt"')
@@ -349,7 +349,7 @@ def test_the_transcript_comes_before_the_box_you_type_into():
 def test_the_transcript_area_does_not_come_and_go():
     """It is the shape of the panel, not something that appears once you have
     used it. Only its contents swap."""
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     assert '<div id="chat">' in ui, "no longer hidden when empty"
     fn = ui.split("function renderChat()")[1].split("\n}\n")[0]
     assert "$('cempty').hidden = !!chatLog.length;" in fn
@@ -358,7 +358,7 @@ def test_the_transcript_area_does_not_come_and_go():
 def test_the_empty_state_asks_and_suggests_in_the_middle():
     """Most people's first sight of this panel. A question and six real
     requests beat any amount of describing what the box accepts."""
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     empty = ui.split('id="cempty"')[1].split('id="cscroll"')[0]
     assert "WHAT SHOULD THIS RIG SOUND LIKE?" in empty
     assert 'id="egs"' in empty, "the suggestions belong in the empty state"
@@ -370,7 +370,7 @@ def test_links_and_pasted_sources_use_the_same_request_box():
     """A player should never choose SOURCE before pasting a link. The old
     source controls remain hidden implementation details and the router sends
     links, multiline text and long pasted text to the reader itself."""
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     assert 'id="srcpanel" hidden' in ui
     script = ui.split("<script>")[1]
     route = script.split("function requestRoute(text)")[1].split("\n}\n")[0]
@@ -381,7 +381,7 @@ def test_links_and_pasted_sources_use_the_same_request_box():
 
 
 def test_whole_builds_and_small_edits_are_routed_internally():
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     route = ui.split("function requestRoute(text)")[1].split("\n}\n")[0]
     assert "return 'build'" in route
     assert "return 'modify'" in route
@@ -393,7 +393,7 @@ def test_whole_builds_and_small_edits_are_routed_internally():
 
 
 def test_the_explaining_shrank_to_one_line():
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     hint = ui.split('class="hint composerhint">')[1].split("</div>")[0]
     assert len(hint) < 100, "the composer hint is a line, not a paragraph"
     assert "Press Enter" in hint
@@ -411,7 +411,7 @@ def test_building_says_so_where_the_reader_is_looking():
     """It used to be a static string, which is how a 283-second build read as
     a dead button. It is a counting line now, via the same waitLine the
     conversation uses."""
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     fn = ui.split("async function streamPlan(payload)")[1].split("\n}\n")[0]
     assert "chatBuilding = true;" in fn
     assert "setInterval(renderChat, 1000)" in fn
@@ -424,7 +424,7 @@ def test_a_finished_plan_announces_itself_and_takes_the_stage():
     """The plan used to render below the fold; now the stage machine brings
     the PLAN stage forward the moment showPlan runs, so "done" and "nothing
     happened" can never look identical."""
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     fn = ui.split("async function engage(")[1].split("\n}\n")[0]
     assert "Proposed ${n} change" in fn
     assert "Nothing has been " in fn and "review, confirm, and send" in fn
@@ -433,13 +433,13 @@ def test_a_finished_plan_announces_itself_and_takes_the_stage():
 
 
 def test_a_plan_with_no_actions_still_says_something():
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     fn = ui.split("async function engage(")[1].split("\n}\n")[0]
     assert "That produced no changes to make." in fn
 
 
 def test_a_failed_build_is_not_silence():
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     fn = ui.split("async function engage(")[1].split("\n}\n")[0]
     # The failure lands in the CONVERSATION, not just the log, and in plain
     # language: the player is handed a next step, not a diagnosis.
@@ -451,7 +451,7 @@ def test_a_failed_build_is_not_silence():
 
 
 def test_waiting_never_mentions_servers_or_timeouts_to_the_player():
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     for name in ("buildNote()", "waitLine()"):
         fn = ui.split(f"function {name}")[1].split("\n}\n")[0]
         assert "server" not in fn.lower()
@@ -460,7 +460,7 @@ def test_waiting_never_mentions_servers_or_timeouts_to_the_player():
 
 
 def test_send_failures_keep_internal_detail_in_the_log_only():
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     assert "function plainDeviceError" in ui
     fn = ui.split("async function apply()")[1].split("\n}\n")[0]
     catch = fn.rsplit("} catch (e) {", 1)[1]
@@ -470,7 +470,7 @@ def test_send_failures_keep_internal_detail_in_the_log_only():
 
 
 def test_plan_warnings_are_translated_before_rendering():
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     cards = ui.split("function renderPlanCards(plan, filter)")[1].split("\n}\n")[0]
     assert "plainActionIssue(m, !!errs.length)" in cards
     assert "function plainActionIssue(message, blocked)" in ui
@@ -479,7 +479,7 @@ def test_plan_warnings_are_translated_before_rendering():
 def test_transmitting_reports_into_the_conversation_too():
     """It reported itself only into the LOG, which is two panels further down
     the page from where somebody five turns into a conversation is looking."""
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     fn = ui.split("async function apply()")[1].split("\n}\n")[0]
     assert "chatWorking = 'sending to the FM9...'" in fn
     assert "Sent ${good} change" in fn
@@ -488,7 +488,7 @@ def test_transmitting_reports_into_the_conversation_too():
 
 def test_the_count_is_what_landed_not_what_was_asked_for():
     """A partial failure that reports "sent" is worse than no report."""
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     fn = ui.split("async function apply()")[1].split("\n}\n")[0]
     assert "acted.filter(r => r.ok).length" in fn
     assert "Did not apply:" in fn
@@ -497,14 +497,14 @@ def test_the_count_is_what_landed_not_what_was_asked_for():
 def test_a_note_is_never_fed_back_to_the_model():
     """"I proposed 3 changes" is our bookkeeping. Sending it back as though
     the model had said it would have it answering its own status notes."""
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     fn = ui.split("async function talk()")[1].split("\n}\n")[0]
     assert "m.role === 'user' || m.role === 'assistant'" in fn
     assert "chatLog.push({role: 'note'" in ui
 
 
 def test_notes_look_different_from_what_either_party_said():
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     fn = ui.split("function renderChat()")[1].split("\n}\n")[0]
     assert "m.role === 'note'" in fn
     assert 'class="cnote"' in fn
@@ -513,7 +513,7 @@ def test_notes_look_different_from_what_either_party_said():
 
 def test_the_working_line_is_always_cleared():
     """A spinner that outlives its request is a hang that never resolves."""
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     for name in ("async function engage(", "async function apply()"):
         fn = ui.split(name)[1].split("\n}\n")[0]
         tail = fn.split("finally {")[-1]
@@ -664,7 +664,7 @@ def test_the_stream_pings_while_it_is_quiet():
 
 
 def test_the_browser_tells_slow_apart_from_stuck():
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     fn = ui.split("function waitLine()")[1].split("\n}\n")[0]
     assert "taking longer than usual" in fn
     assert "Longer than usual" in fn, "slow is not the same as broken"
@@ -675,7 +675,7 @@ def test_the_browser_tells_slow_apart_from_stuck():
 def test_the_wait_counts_seconds_out_loud():
     """A spinner says "working" for as long as it is on screen and never
     distinguishes four seconds from four minutes."""
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     assert "setInterval(renderChat, 1000)" in ui
     fn = ui.split("function waitLine()")[1].split("\n}\n")[0]
     assert "secs" in fn
@@ -684,7 +684,7 @@ def test_the_wait_counts_seconds_out_loud():
 def test_a_wait_can_be_left():
     """A wedged backend used to mean reloading the page, which until recently
     also lost the conversation."""
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     assert "chatAbort = new AbortController()" in ui
     assert "signal: chatAbort.signal" in ui
     assert "chatAbort.abort()" in ui
@@ -693,13 +693,13 @@ def test_a_wait_can_be_left():
 
 
 def test_a_stream_that_ends_early_is_a_failure_not_a_reply():
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     fn = ui.split("async function talk()")[1].split("\n}\n")[0]
     assert "if (!landed) throw" in fn
 
 
 def test_internal_model_names_do_not_enter_the_conversation():
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     # Kept in saved metadata for diagnostics, never shown to the player.
     assert "model: d.model || ''" in ui
     fn = ui.split("function renderChat()")[1].split("\n}\n")[0]
@@ -781,7 +781,7 @@ def test_a_long_name_still_fits_after_the_prefix(client, monkeypatch):
 
 
 def test_the_browser_says_what_it_will_be_called_before_you_build():
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     fn = ui.split("function renderChat()")[1].split("\n}\n")[0]
     assert "FM9AI-${esc(chatName)}" in fn
     assert "engage(chatRequest, chatName, chatScenes)" in ui
@@ -791,7 +791,7 @@ def test_a_reload_starts_a_fresh_conversation():
     """On refresh the conversation clears rather than restoring the last one,
     so every load is a clean slate (owner request 2026-09-04). The build state
     that rode along with it (name, scenes, ready) is reset too."""
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     load = ui.split("function loadChat()")[1].split("\n}\n")[0]
     assert "removeItem(CHAT_KEY)" in load
     assert "chatName = ''" in load and "chatReady = false" in load
@@ -868,7 +868,7 @@ def test_a_planner_failure_still_reaches_the_old_route_as_502(client, monkeypatc
 
 
 def test_a_long_build_can_be_left():
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     fn = ui.split("async function streamPlan(payload)")[1].split("\n}\n")[0]
     assert "chatAbort = new AbortController()" in fn
     assert "signal: chatAbort.signal" in fn
@@ -881,7 +881,7 @@ def test_a_long_build_can_be_left():
 
 
 def test_stopping_a_build_leaves_nothing_running():
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     fn = ui.split("async function streamPlan(payload)")[1].split("\n}\n")[0]
     tail = fn.split("finally {")[-1]
     for cleared in ("clearInterval(tick)", "chatBusy = false",
@@ -892,7 +892,7 @@ def test_stopping_a_build_leaves_nothing_running():
 def test_the_button_is_not_touched_after_it_is_gone():
     """renderChat rewrites the transcript, so the BUILD THIS element the
     handler started with is detached by the time it finishes."""
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     fn = ui.split("async function engage(")[1].split("\n}\n")[0]
     assert "document.body.contains(b)" in fn
 
@@ -997,7 +997,7 @@ def test_nobody_watching_means_the_ordinary_call(monkeypatch):
 def test_the_build_gets_a_banner_not_a_line_of_grey_text():
     """A build runs for minutes. A line in the same weight as everything else
     is exactly what got read as "nothing is happening"."""
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     fn = ui.split("function renderChat()")[1].split("\n}\n")[0]
     assert 'class="cbuilding"' in fn
     assert 'class="cblink">BUILDING' in fn
@@ -1008,14 +1008,14 @@ def test_the_build_gets_a_banner_not_a_line_of_grey_text():
 def test_the_bar_does_not_pretend_to_know_how_far_along_it_is():
     """There is no total, so there is no percentage. A bar filling against a
     guessed total is a lie with a progress bar drawn on it."""
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     bar = ui.split("#chat .cbbar i {")[1].split("}")[0]
     assert "animation: cbslide" in bar
     assert "%" not in ui.split("function buildNote()")[1].split("\n}\n")[0]
 
 
 def test_the_banner_says_when_it_has_stopped_hearing_anything():
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     fn = ui.split("function buildNote()")[1].split("\n}\n")[0]
     assert "taking longer than usual" in fn
     assert "chatAlive" in fn
@@ -1023,7 +1023,7 @@ def test_the_banner_says_when_it_has_stopped_hearing_anything():
 
 
 def test_the_count_resets_between_builds():
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     fn = ui.split("async function streamPlan(payload)")[1].split("\n}\n")[0]
     assert "chatCount = 0;" in fn
 
@@ -1065,7 +1065,7 @@ def test_the_stream_route_exists_beside_the_plain_one():
 def test_the_button_counts_where_the_finger_was():
     """The transcript is two panels up and the log two panels down. Somebody
     who has just pressed TRANSMIT is looking at TRANSMIT."""
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     fn = ui.split("async function apply()")[1].split("\n}\n")[0]
     assert "SENDING · ${n} / ${total}" in fn, \
         "the SEND stage header counts each change"
@@ -1077,7 +1077,7 @@ def test_the_button_counts_where_the_finger_was():
 def test_the_outcome_stays_until_it_is_dismissed():
     """It used to hide the panel 1.5s after finishing, throwing away the
     ticks and crosses on the cards, the only place the outcome was visible."""
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     fn = ui.split("async function apply()")[1].split("\n}\n")[0]
     assert "setTimeout(() => { $('planbox').style.display = 'none'" not in fn
     assert "planResult(" in fn
@@ -1086,7 +1086,7 @@ def test_the_outcome_stays_until_it_is_dismissed():
 
 
 def test_the_outcome_says_what_landed_and_what_did_not():
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     fn = ui.split("async function apply()")[1].split("\n}\n")[0]
     # Strengthened 2026-09-01: failures are NAMED, not merely counted.
     assert "Did not apply:" in fn
@@ -1095,7 +1095,7 @@ def test_the_outcome_says_what_landed_and_what_did_not():
 
 
 def test_the_button_gets_its_own_label_back():
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     assert 'id="apply" hidden>SEND TO FM9<' in ui
     fn = ui.split("async function apply()")[1].split("\n}\n")[0]
     assert "'SEND TO FM9'" in fn, "restoring a shorter label renames the button"
@@ -1179,7 +1179,7 @@ def test_an_adjustment_renames_no_scenes(client, monkeypatch):
 
 
 def test_the_panel_says_exactly_what_each_scene_will_be_called():
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     fn = ui.split("function renderChat()")[1].split("\n}\n")[0]
     assert "Scenes renamed to" in fn
     assert "Preset renamed to" in fn
@@ -1190,7 +1190,7 @@ def test_the_panel_says_exactly_what_each_scene_will_be_called():
 def test_a_reload_clears_the_scene_state_too():
     """The per-scene state that rode with the conversation is reset on reload,
     part of the same fresh-slate behaviour."""
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     load = ui.split("function loadChat()")[1].split("\n}\n")[0]
     assert "chatScenes = []" in load
 
@@ -1205,7 +1205,7 @@ def test_the_actions_stay_visible_while_the_changes_scroll():
     """The old fix put TRANSMIT above 140 cards; the stage layout goes
     further: the Review footer is pinned outside the internally scrolling
     change table, so Continue, Back and Discard never leave the screen."""
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     review = ui.split('id="pane-review"')[1].split("</section>")[0]
     assert review.index('id="plancards"') < review.index('class="stagefoot"')
     css = ui.split("#plancards.changetable {")[1].split("}")[0]
@@ -1214,7 +1214,7 @@ def test_the_actions_stay_visible_while_the_changes_scroll():
 
 def test_short_desktop_reserves_visible_space_for_review_changes():
     """Live context must not squeeze a populated Review list to zero."""
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     short = ui.split("@media (max-height: 840px)")[1].split("</style>")[0]
     assert "#context .pathzone { display: none; }" in short
     review = short.split("#pane-review #plancards.changetable {")[1].split("}")[0]
@@ -1222,7 +1222,7 @@ def test_short_desktop_reserves_visible_space_for_review_changes():
 
 
 def test_the_changes_are_collapsed_and_say_how_many():
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     assert '<details id="plandetail">' in ui
     fn = ui.split("function planHeadline(plan)")[1].split("\n}\n")[0]
     assert "d.open = false" in fn
@@ -1231,7 +1231,7 @@ def test_the_changes_are_collapsed_and_say_how_many():
 
 def test_the_headline_says_what_the_plan_does():
     """The things that matter were findable only by reading 114 cards."""
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     fn = ui.split("function planHeadline(plan)")[1].split("\n}\n")[0]
     assert "change${n === 1 ? '' : 's'}" in fn
     assert "preset renamed to" in fn
@@ -1240,7 +1240,7 @@ def test_the_headline_says_what_the_plan_does():
 
 def test_an_overwrite_is_shouted_not_filed_at_the_bottom():
     """The one irreversible thing in the product was a card among 114, last."""
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     fn = ui.split("function planHeadline(plan)")[1].split("\n}\n")[0]
     assert "OVERWRITES preset slot" in fn
     assert "UNDO covers it; this part it does not" in fn
@@ -1254,21 +1254,21 @@ def test_there_is_a_working_indicator_fixed_to_the_window():
     are looking at it and useless the moment you scroll down to watch for the
     plan. A five-minute operation reported itself only somewhere you can
     scroll away from."""
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     assert '<div id="working" hidden></div>' in ui
     css = ui.split("#working {")[1].split("}")[0]
     assert "position: fixed" in css
 
 
 def test_it_mirrors_whatever_is_actually_running():
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     fn = ui.split("function renderWorking()")[1].split("\n}\n")[0]
     assert "chatBusy || planSending" in fn, "one source of truth, not two"
     assert "BUILDING" in fn and "SENDING" in fn and "THINKING" in fn
 
 
 def test_it_offers_a_way_out():
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     fn = ui.split("function renderWorking()")[1].split("\n}\n")[0]
     assert "chatAbort.abort()" in fn
 
@@ -1276,14 +1276,14 @@ def test_it_offers_a_way_out():
 def test_the_second_button_does_something_worth_a_button():
     """It said SHOW ME and only scrolled, so the first question it got was
     what it was supposed to do. It opens the running account now."""
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     fn = ui.split("function renderWorking()")[1].split("\n}\n")[0]
     assert "SHOW LOG" in fn
     assert "scrollIntoView" not in fn, "scrolling somewhere is not an answer"
 
 
 def test_transmitting_feeds_the_same_indicator():
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     fn = ui.split("async function apply()")[1].split("\n}\n")[0]
     assert "planSending = true" in fn
     assert "renderWorking()" in fn
@@ -1318,7 +1318,7 @@ def test_it_counts_completed_actions_so_the_log_is_never_blank():
 
 
 def test_the_strip_opens_into_a_log():
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     fn = ui.split("function renderWorking()")[1].split("\n}\n")[0]
     assert "SHOW LOG" in fn and "HIDE LOG" in fn
     assert "workLog.slice(-200)" in fn
@@ -1327,27 +1327,27 @@ def test_the_strip_opens_into_a_log():
 
 
 def test_both_halves_feed_the_same_log():
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     build = ui.split("async function streamPlan(payload)")[1].split("\n}\n")[0]
     send = ui.split("async function apply()")[1].split("\n}\n")[0]
     assert "workSay(" in build and "workSay(" in send
 
 
 def test_a_failed_step_is_marked_in_the_log():
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     fn = ui.split("async function apply()")[1].split("\n}\n")[0]
     assert "d.ok ? '' : 'FAILED '" in fn
 
 
 def test_the_log_does_not_grow_without_bound():
     """A 114-action build would otherwise grow a list nobody scrolls."""
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     fn = ui.split("function workSay(line)")[1].split("\n}\n")[0]
     assert "workLog.length > 400" in fn
 
 
 def test_each_run_starts_a_fresh_log():
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     for name in ("async function streamPlan(payload)",
                  "async function apply()"):
         fn = ui.split(name)[1].split("\n}\n")[0]
@@ -1355,7 +1355,7 @@ def test_each_run_starts_a_fresh_log():
 
 
 def test_the_log_follows_the_newest_line():
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     fn = ui.split("function renderWorking()")[1].split("\n}\n")[0]
     assert "lines.scrollTop = lines.scrollHeight" in fn
 
@@ -1363,7 +1363,7 @@ def test_the_log_follows_the_newest_line():
 def test_the_strip_stops_being_a_pill_once_it_is_a_panel():
     """Keeping the pill radius with the log open turned it into an oval with
     the text tucked inside the curve."""
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     assert "#working.open { border-radius: 12px" in ui
     fn = ui.split("function renderWorking()")[1].split("\n}\n")[0]
     assert "classList.toggle('open', on && workOpen)" in fn
@@ -1374,7 +1374,7 @@ def test_the_outcome_copy_knows_whether_a_store_landed():
     slot 159 was answered with "Your presets are untouched; UNDO covers what
     landed", false on both counts. What is true after a transmit depends on
     whether a store landed, so the copy has to check before it claims."""
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     fn = ui.split("async function apply()")[1].split("\n}\n")[0]
     assert "r.action.kind === 'store'" in fn
     assert "UNDO does not cover a store" in fn
@@ -1388,7 +1388,7 @@ def test_a_finished_build_says_so_where_you_land():
     happening (Moncy, 2026-09-01: "it doesnt give any indication that build
     was completed successfully"). The verdict now renders inside the plan
     panel itself, from showPlan, so every proposing path gets it."""
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     fn = ui.split("function showPlan(plan)")[1].split("\n}\n")[0]
     assert "'ready'" in fn
     assert "Plan ready" in fn
@@ -1407,7 +1407,7 @@ def test_the_strip_is_built_once_so_its_buttons_survive_the_tick():
     innerHTML every second, so the button being pressed was destroyed
     between mousedown and mouseup and the click fell into the gap (Moncy,
     2026-09-01). The skeleton is built once and only text updates."""
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     fn = ui.split("function renderWorking()")[1].split("\n}\n")[0]
     assert "el.dataset.built" in fn
     assert "textContent" in fn, "updates must be text, not innerHTML"
@@ -1421,7 +1421,7 @@ def test_completion_is_announced_where_it_cannot_be_scrolled_away_from():
     preset is ready. didnt see that." The strip used to vanish the instant
     work ended; it holds a green verdict now, and a transmit or a finished
     build says so there, wherever the reader has scrolled."""
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     fn = ui.split("function renderWorking()")[1].split("\n}\n")[0]
     assert "workDone" in fn
     send = ui.split("async function apply()")[1].split("\n}\n")[0]
@@ -1437,7 +1437,7 @@ def test_a_failed_action_is_named_not_pointed_at():
     hundred folded cards, twice in one evening, for a sentence the app was
     already holding. The banner names the failure, the fold opens itself,
     and the first failed card is scrolled into view."""
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     fn = ui.split("async function apply()")[1].split("\n}\n")[0]
     assert "Did not apply:" in fn
     assert "describe(r.action)" in fn

@@ -22,7 +22,7 @@ from pathlib import Path
 from fm9 import planner
 
 ROOT = Path(__file__).resolve().parent.parent
-UI = (ROOT / "ui" / "index.html").read_text()
+UI = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
 
 
 # --- #72: clarification forces actions empty, regardless of the model -----

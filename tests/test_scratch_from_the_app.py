@@ -17,7 +17,7 @@ import server
 from fm9 import scratch_build
 from fm9.sim import SimFM9
 
-UI = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text()
+UI = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text(encoding="utf-8")
 SCRIPT = UI.split("<script>")[1]
 BODY = UI.split("</style>")[1]
 
@@ -33,16 +33,16 @@ def client(monkeypatch):
 def test_the_cli_and_the_app_run_the_same_code():
     """Not a copy. A second implementation of a hardware sequence is a second
     thing to keep proven."""
-    cli = Path("tools/build_from_scratch.py").read_text()
+    cli = Path("tools/build_from_scratch.py").read_text(encoding="utf-8")
     assert "from fm9.scratch_build import" in cli
     assert "dev.place_block" not in cli, "the CLI must not build anything itself"
-    assert "scratch_build.build(" in Path("server.py").read_text()
+    assert "scratch_build.build(" in Path("server.py").read_text(encoding="utf-8")
 
 
 def test_it_is_importable_from_shipped_code():
     """The whole cause of #36: tools/ is not packaged, so the app could not
     reach the one function that solves this."""
-    packaged = Path("pyproject.toml").read_text()
+    packaged = Path("pyproject.toml").read_text(encoding="utf-8")
     assert "fm9" in packaged
     assert scratch_build.build.__module__ == "fm9.scratch_build"
 

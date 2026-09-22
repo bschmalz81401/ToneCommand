@@ -169,7 +169,7 @@ def key_from_env() -> str | None:
         return tone3000_auth.access_token(store)
     key = os.environ.get(_ENV_KEY, "").strip()
     if not key and _ENV_FILE.exists():
-        for line in _ENV_FILE.read_text().splitlines():
+        for line in _ENV_FILE.read_text(encoding="utf-8").splitlines():
             if line.strip().startswith(_ENV_KEY + "="):
                 key = line.split("=", 1)[1].strip()
                 break

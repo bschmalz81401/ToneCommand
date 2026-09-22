@@ -46,7 +46,7 @@ def test_select_auto_prefers_mido_then_supriya_then_refuses_with_the_install_lin
 
 
 def test_seam_the_device_layer_opens_ports_through_the_transport_only(monkeypatch):
-    src = (ROOT / "fm9" / "device.py").read_text()
+    src = (ROOT / "fm9" / "device.py").read_text(encoding="utf-8")
     assert "mido.get_input_names" not in src and "mido.open_input" not in src
     assert "midi_transport.open_ports(port_hint)" in src
     # a missing device is still FM9NotFound with the one line
@@ -54,7 +54,7 @@ def test_seam_the_device_layer_opens_ports_through_the_transport_only(monkeypatc
     with pytest.raises(FM9NotFound, match="not found"):
         FM9(server.reg)
     # rescan reloads mido's backend only when mido is the backend
-    ssrc = (ROOT / "server.py").read_text()
+    ssrc = (ROOT / "server.py").read_text(encoding="utf-8")
     assert 'if midi_transport.backend() == "mido"' in ssrc
 
 
@@ -65,7 +65,7 @@ def test_port_names_go_through_the_backend_and_presence_uses_them(monkeypatch):
     assert sm.inp.opened is None                        # enumeration opens nothing
     _imports(monkeypatch, set())
     assert T.port_names({}) == []                       # no backend: absent, not an error
-    src = (ROOT / "server.py").read_text()
+    src = (ROOT / "server.py").read_text(encoding="utf-8")
     assert "midi_transport.port_names()" in src and "mido.get_input_names" not in src.split("def _fm9_port_present", 1)[1].split("\ndef ", 1)[0]
     monkeypatch.setattr(T, "port_names", lambda env=None, supriya_module=None: ["FM9 MIDI In"])
     monkeypatch.setattr(server, "_pump_coremidi", lambda: None)
@@ -199,7 +199,7 @@ def test_the_never_brick_guard_sits_above_the_transport():
 # --- REQ-003: packaging and docs ---------------------------------------------------------------------
 
 def test_pyproject_markers_keep_the_cap_until_the_hardware_pass():
-    src = (ROOT / "pyproject.toml").read_text()
+    src = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
     assert '"python-rtmidi>=1.5,<2; python_version < \'3.13\'"' in src
     assert '"supriya-midi>=26.9b0; python_version >= \'3.13\'"' in src
     assert 'requires-python = ">=3.11,<3.13"' in src
@@ -207,10 +207,10 @@ def test_pyproject_markers_keep_the_cap_until_the_hardware_pass():
 
 
 def test_docs_say_the_ceiling_lifts_after_the_pass_and_name_the_backend_variable():
-    setup = (ROOT / "docs" / "SETUP.md").read_text()
-    readme = (ROOT / "README.md").read_text()
+    setup = (ROOT / "docs" / "SETUP.md").read_text(encoding="utf-8")
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
     for text in (setup, readme):
         assert "TONECOMMAND_MIDI_BACKEND" in text
         assert re.search(r"hardware pass", text)
-    changelog = (ROOT / "CHANGELOG.md").read_text()
+    changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
     assert "#172" in changelog.split("## 1.4.1", 1)[0]

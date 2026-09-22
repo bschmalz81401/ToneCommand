@@ -372,20 +372,20 @@ def main(argv: list[str] | None = None) -> int:
                          "run produces, without writing")
     args = ap.parse_args(argv)
 
-    bundle = args.from_file.read_text(errors="replace")
+    bundle = args.from_file.read_text(errors="replace", encoding="utf-8")
     source = f"vendor editor bundle, {args.from_file.name}"
 
     table = build(bundle, source)
     text = json.dumps(table, indent=2, sort_keys=True) + "\n"
 
     if args.check:
-        if not args.out.exists() or args.out.read_text() != text:
+        if not args.out.exists() or args.out.read_text(encoding="utf-8") != text:
             print(f"{args.out} is not what this bundle produces")
             return 1
         print(f"{args.out} is current")
         return 0
 
-    args.out.write_text(text)
+    args.out.write_text(text, encoding="utf-8")
     named = table["tapers"]
     print(f"wrote {args.out}")
     print(f"  {len(named)} tapers, {len(table['vectors'])} reference vectors")

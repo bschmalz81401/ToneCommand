@@ -22,7 +22,7 @@ from fm9.adapter import (Capabilities, ReadPath, SceneSlotState, Topology,
                          conformance)
 
 ROOT = Path(__file__).resolve().parent.parent
-SCHEMA = json.loads((ROOT / "config" / "headrush_schema.json").read_text())
+SCHEMA = json.loads((ROOT / "config" / "headrush_schema.json").read_text(encoding="utf-8"))
 
 
 class RecordingOpener:
@@ -320,7 +320,7 @@ def test_evidence_names_the_measured_unit_and_the_unverified_models(reg):
     assert e["measured_on"] == "2026-09-15"
     assert set(e["unverified_models"]) == {"Prime", "Flex Prime"}
     assert (ROOT / e["source"]).exists()
-    text = (ROOT / e["source"]).read_text()
+    text = (ROOT / e["source"]).read_text(encoding="utf-8")
     assert e["firmware"] in text and "Prime and Flex Prime are UNVERIFIED" in text
 
 
@@ -348,7 +348,7 @@ def test_evidence_capabilities_docstring_cites_the_findings():
 # to opt into and which can never be mistaken for something the unit said.
 
 HARDWARE_CHECK = json.loads(
-    (ROOT / "config" / "headrush_tapers.json").read_text())["hardware_check"]
+    (ROOT / "config" / "headrush_tapers.json").read_text(encoding="utf-8"))["hardware_check"]
 
 
 def _converting(reg, **kw):

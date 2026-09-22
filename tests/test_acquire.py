@@ -16,7 +16,7 @@ import server
 from fm9 import acquire
 from tests.test_install import make_file
 
-UI = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text()
+UI = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text(encoding="utf-8")
 
 HTML = """
 <a href="https://www.fractalaudio.com/downloads/misc/_gift24/FAS-gift24-01-Periphery.zip">x</a>
@@ -145,7 +145,7 @@ def test_luke_finds_lukather_in_the_local_folder(client, monkeypatch, tmp_path):
 
 
 def test_the_tone_folder_is_a_setting():
-    ui = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text()
+    ui = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text(encoding="utf-8")
     assert 'id="tonedir"' in ui and "/api/tone-dir" in ui
     assert "TONE LIBRARY FOLDER" in ui
 

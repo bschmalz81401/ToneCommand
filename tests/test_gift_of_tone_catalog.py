@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 from fm9 import gift_of_tone  # noqa: E402
 
-CATALOG = json.loads((ROOT / "catalog" / "gift_of_tone.json").read_text())
+CATALOG = json.loads((ROOT / "catalog" / "gift_of_tone.json").read_text(encoding="utf-8"))
 KINDS = {"preset", "preset plus cab bundle", "cab only", "effect blocks"}
 SHA = re.compile(r"^[0-9a-f]{64}$")
 
@@ -77,7 +77,7 @@ def test_the_catalog_holds_no_file_bytes_only_names_hashes_and_maps():
 
 
 def test_the_site_publishes_the_catalog_with_cors():
-    src = (ROOT / "site" / "build.py").read_text()
+    src = (ROOT / "site" / "build.py").read_text(encoding="utf-8")
     assert 'shutil.copy(catalog, DIST / "gift-of-tone.json")' in src
     assert '"/gift-of-tone.json\\n  Access-Control-Allow-Origin: *' in src
 

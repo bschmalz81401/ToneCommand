@@ -137,7 +137,7 @@ def main(a: int, b: int) -> int:
             rows.extend(preset_rows)
     out = ROOT / "kb" / "tone_library" / "level_report.json"
     out.parent.mkdir(parents=True, exist_ok=True)
-    json.dump({"rows": rows, "flags": flags}, out.open("w"), indent=1)
+    json.dump({"rows": rows, "flags": flags}, out.open("w", encoding="utf-8"), indent=1)
     print(f"\n{len(flags)} flags -> {out}")
     return 0 if not flags else 1
 

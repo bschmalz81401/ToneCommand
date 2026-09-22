@@ -19,7 +19,7 @@ from fastapi.testclient import TestClient
 import server
 from fm9 import recipes
 
-UI = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text()
+UI = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text(encoding="utf-8")
 SCRIPT = UI.split("<script>")[1]
 
 
@@ -139,6 +139,6 @@ def test_the_shipped_recipes_all_still_parse():
     files = [f for f in d.glob("*.json") if f.name != "index.json"]
     assert files, "no recipes shipped"
     for f in files:
-        rec = json.loads(f.read_text())
+        rec = json.loads(f.read_text(encoding="utf-8"))
         assert rec.get("recipe_version") == 1, f.name
         assert recipes.steps_of(rec), f"{f.name} has no steps"

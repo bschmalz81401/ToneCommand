@@ -27,7 +27,7 @@ _spec.loader.exec_module(build_nam_captures)
 
 REAL_CAPTURE_ID = 57410  # "Mesa Boogie - Mark V [18dBu]", on file in the sidecar
 FIXTURE = json.loads(
-    (ROOT / "tests" / "fixtures" / "tone3000_search_response.json").read_text())
+    (ROOT / "tests" / "fixtures" / "tone3000_search_response.json").read_text(encoding="utf-8"))
 
 
 # --- c1: an ungrounded citation is refused before any device connects -----
@@ -41,10 +41,10 @@ def _run_replay(recipe_path: Path) -> subprocess.CompletedProcess:
 
 def test_replay_rejects_ungrounded_tone_target_before_device_connect(tmp_path):
     rec = json.loads(
-        (ROOT / "recipes" / "mesa-mark-v-a2-reference.json").read_text())
+        (ROOT / "recipes" / "mesa-mark-v-a2-reference.json").read_text(encoding="utf-8"))
     rec["tone_target"]["capture_id"] = 123456  # well-formed id, not on file
     path = tmp_path / "bad.json"
-    path.write_text(json.dumps(rec))
+    path.write_text(json.dumps(rec), encoding="utf-8")
 
     r = _run_replay(path)
 
@@ -170,7 +170,7 @@ def test_secret_key_never_hardcoded():
         if not path.is_file():
             continue
         try:
-            text = path.read_text(errors="ignore")
+            text = path.read_text(errors="ignore", encoding="utf-8")
         except OSError:
             continue
         if SECRET_KEY_SHAPE.search(text):

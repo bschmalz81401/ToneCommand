@@ -31,7 +31,7 @@ def test_no_map_means_no_names(isolated_map):
 def test_set_then_get(isolated_map):
     user_cabs.set_name(2, 26, "Soldano SLO30")
     assert user_cabs.name(2, 26) == "Soldano SLO30"
-    assert json.loads(isolated_map.read_text())["2"]["26"] == "Soldano SLO30"
+    assert json.loads(isolated_map.read_text(encoding="utf-8"))["2"]["26"] == "Soldano SLO30"
 
 
 def test_empty_name_clears_the_slot(isolated_map):
@@ -41,7 +41,7 @@ def test_empty_name_clears_the_slot(isolated_map):
 
 
 def test_a_corrupt_file_is_survivable(isolated_map):
-    isolated_map.write_text("{not json")
+    isolated_map.write_text("{not json", encoding="utf-8")
     assert user_cabs.all_names() == {}, "a bad file must mean no names, not a crash"
 
 

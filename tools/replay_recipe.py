@@ -18,7 +18,7 @@ from fm9 import recipes as recipebook  # noqa: E402
 FORBIDDEN = {"store"}
 
 def main(path: str, apply: bool) -> int:
-    rec = json.loads(Path(path).read_text())
+    rec = json.loads(Path(path).read_text(encoding="utf-8"))
     assert rec.get("recipe_version") == 1, "unknown recipe version"
     steps = recipebook.steps_of(rec)
     bad = [a for a in steps if a.get("kind") in FORBIDDEN]

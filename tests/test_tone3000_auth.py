@@ -21,7 +21,7 @@ import server
 from fm9 import recipe_capture as rc, tone3000_auth as A
 
 ROOT = Path(__file__).resolve().parent.parent
-UI = (ROOT / "ui" / "index.html").read_text()
+UI = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
 
 
 class FakeHttp:
@@ -74,6 +74,10 @@ def test_authorize_url_carries_the_documented_parameters():
         A.authorize_url("k", "r", "s", "c", prompt="browse")
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="the 0o600 token file is POSIX only; Windows needs an ACL, tracked in #186",
+)
 def test_exchange_posts_the_form_and_stores_tokens_at_0600(tokens_path):
     http = FakeHttp()
     t = A.exchange("code-1", "verif", "http://127.0.0.1:8909/api/tone3000/callback", "t3k_pub_x", http, now=1000.0)
@@ -95,6 +99,10 @@ def test_exchange_posts_the_form_and_stores_tokens_at_0600(tokens_path):
         A.exchange("c", "v", "r", "c", lambda *a: (200, b"<html>"))
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="the 0o600 token file is POSIX only; Windows needs an ACL, tracked in #186",
+)
 def test_refresh_and_access_token_refreshes_a_minute_ahead(tokens_path):
     http = FakeHttp()
     store = A.TokenStore()
@@ -114,9 +122,9 @@ def test_refresh_and_access_token_refreshes_a_minute_ahead(tokens_path):
 
 def test_default_http_never_leaves_tone3000_and_no_token_is_logged():
     assert A.default_http("GET", "https://example.com/x") == (0, b"")
-    asrc = (ROOT / "fm9" / "tone3000_auth.py").read_text()
+    asrc = (ROOT / "fm9" / "tone3000_auth.py").read_text(encoding="utf-8")
     assert "log." not in asrc and "print(" not in asrc                      # the module never logs
-    ssrc = (ROOT / "server.py").read_text()
+    ssrc = (ROOT / "server.py").read_text(encoding="utf-8")
     t3k = ssrc.split("TONE3000 sign-in (#88)", 1)[1].split('@app.get("/api/share/status")', 1)[0]
     assert "log.info(\"TONE3000: signed in\")" in t3k and "access_token" not in t3k
 
@@ -145,6 +153,10 @@ def test_route_login_refuses_without_a_key_and_builds_the_url_with_one(client, m
     assert q["prompt"] == ["load_tone"] and q["tone_id"] == ["57410"]
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="the 0o600 token file is POSIX only; Windows needs an ACL, tracked in #186",
+)
 def test_route_callback_verifies_state_exchanges_and_redirects(client, monkeypatch, tokens_path):
     http = FakeHttp()
     monkeypatch.setattr(A, "default_http", http)
@@ -196,6 +208,10 @@ def test_route_callback_verifies_state_exchanges_and_redirects(client, monkeypat
 
 # --- REQ-003: the fetch runs under the token; the replacement; the page; the docs ------------------------
 
+@pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="the 0o600 token file is POSIX only; Windows needs an ACL, tracked in #186",
+)
 def test_fetch_prefers_the_token_over_the_secret_key(monkeypatch, tokens_path):
     assert rc.key_from_env() is None
     monkeypatch.setenv("TONE3000_SECRET_KEY", "t3k_cs_old")
@@ -223,6 +239,6 @@ def test_entitlement_not_yours_carries_the_replacement_url():
 def test_ui_and_docs_say_sign_in_and_the_redirect_uri():
     assert 'id="t3ksignin"' in UI and 'id="t3ksignout"' in UI and "fetch('/api/tone3000/status')" in UI
     assert "d.capture.replacement_url" in UI
-    setup = (ROOT / "docs" / "SETUP.md").read_text()
+    setup = (ROOT / "docs" / "SETUP.md").read_text(encoding="utf-8")
     assert "TONE3000_PUBLISHABLE_KEY" in setup and "http://127.0.0.1:8909/api/tone3000/callback" in setup
-    assert "#88" in (ROOT / "CHANGELOG.md").read_text().split("## 1.5.0", 1)[0]
+    assert "#88" in (ROOT / "CHANGELOG.md").read_text(encoding="utf-8").split("## 1.5.0", 1)[0]

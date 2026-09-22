@@ -156,7 +156,7 @@ def _stub_world(monkeypatch, tmp_path) -> list[str]:
                         lambda: tmp_path / "ir_service.json")
     # A saved empty URL is the documented OFF state; without it the IR
     # service is DISCOVERED by probing local ports, which is a network call.
-    (tmp_path / "ir_service.json").write_text('{"url": ""}\n')
+    (tmp_path / "ir_service.json").write_text('{"url": ""}\n', encoding="utf-8")
     monkeypatch.setattr(acquire, "tone_dir_path",
                         lambda: tmp_path / "tone_dir.json")
     log = tmp_path / "diag.jsonl"
@@ -639,9 +639,9 @@ def test_broad_except_audit_every_block_reraises_the_decline_or_says_why_it_cann
     that a decline can reach re-raises CapabilityDeclined before its handler
     runs; the rest state why a decline cannot reach them. An unlisted block,
     or a listed identity that no longer exists, fails."""
-    blocks = _except_exception_blocks(ast.parse(SERVER.read_text()))
+    blocks = _except_exception_blocks(ast.parse(SERVER.read_text(encoding="utf-8")))
     listed = {(b["function"], b["ordinal"]): b["disposition"]
-              for b in json.loads(AUDIT.read_text())["blocks"]}
+              for b in json.loads(AUDIT.read_text(encoding="utf-8"))["blocks"]}
     assert set(blocks) == set(listed), {
         "unlisted": sorted(set(blocks) - set(listed)),
         "stale": sorted(set(listed) - set(blocks))}
@@ -681,7 +681,7 @@ def test_broad_except_audit_every_block_reraises_the_decline_or_says_why_it_cann
 
 def test_audit_counts_are_reported_honestly():
     """The numbers the changelog states, measured rather than remembered."""
-    blocks = _except_exception_blocks(ast.parse(SERVER.read_text()))
+    blocks = _except_exception_blocks(ast.parse(SERVER.read_text(encoding="utf-8")))
     reraised = sum(1 for _h, before, _b in blocks.values()
                    if _handles_decline_first(before))
     assert len(blocks) == 86
@@ -936,7 +936,7 @@ def test_invariant_6_pedal_1_is_never_touched_by_any_route():
 
 
 def test_changelog_names_the_gates_and_touched_files_have_no_em_dash():
-    changelog = (ROOT / "CHANGELOG.md").read_text()
+    changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
     # The section this work shipped in (it sat under Unreleased until 1.3.0).
     section = changelog.split("## 1.3.0", 1)[1].split("\n## 1.2", 1)[0]
     assert "CapabilityDeclined" in section and "#111" in section
@@ -944,4 +944,4 @@ def test_changelog_names_the_gates_and_touched_files_have_no_em_dash():
     for rel in ("server.py", "tests/test_capability_gates.py",
                 "tests/sentinel_device.py", "tests/data/broad_except_audit.json",
                 "CHANGELOG.md", "ARCHITECTURE.md"):
-        assert em_dash not in (ROOT / rel).read_text(), f"em dash in {rel}"
+        assert em_dash not in (ROOT / rel).read_text(encoding="utf-8"), f"em dash in {rel}"

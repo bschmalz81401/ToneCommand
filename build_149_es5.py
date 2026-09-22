@@ -112,7 +112,7 @@ def main():
     import json, time
     donor_path = "/private/tmp/claude-501/-Users-moncyabraham-Projects/e0f6f1c0-b505-45a7-8307-2928968fb816/scratchpad/donors.json"
     if not SIM and os.path.exists(donor_path):
-        donors = json.load(open(donor_path))
+        donors = json.load(open(donor_path, encoding="utf-8"))
 
         def write_block(fam, wires, inst=1):
             e = eid(fam, inst)

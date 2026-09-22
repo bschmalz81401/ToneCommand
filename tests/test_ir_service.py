@@ -117,7 +117,7 @@ def test_discovery_only_probes_loopback():
     # Read the module file, not the attribute: the autouse fixture replaces
     # `discover` with a stub, so getsource would inspect the lambda.
     from pathlib import Path as _P
-    src = _P(ir_service.__file__).read_text()
+    src = _P(ir_service.__file__).read_text(encoding="utf-8")
     body = src.split("def discover(")[1].split("\ndef ")[0]
     assert "127.0.0.1" in body
     assert "://" not in body.replace("http://127.0.0.1", ""), \

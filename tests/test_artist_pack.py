@@ -17,8 +17,8 @@ from fm9 import artist_pack, gallery, gift_of_tone
 from fm9.sim import SimFM9
 
 ROOT = Path(__file__).resolve().parent.parent
-UI = (ROOT / "ui" / "index.html").read_text()
-RULES = (ROOT / "config" / "tone_rules.md").read_text()
+UI = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
+RULES = (ROOT / "config" / "tone_rules.md").read_text(encoding="utf-8")
 
 
 def _e(eid, artists, year, devices=None, kind="preset", description=None):
@@ -91,7 +91,7 @@ def test_resolve_absent_is_honest():
 
 
 def test_resolve_on_the_shipped_catalog():
-    doc = json.loads((ROOT / "catalog" / "gift_of_tone.json").read_text())
+    doc = json.loads((ROOT / "catalog" / "gift_of_tone.json").read_text(encoding="utf-8"))
     entries = doc["entries"]
     assert artist_pack.resolve("devin townsend", entries).entry["id"] == "got-2022-14"
     assert artist_pack.resolve("devin", entries).entry["id"] == "got-2022-14"

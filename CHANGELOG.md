@@ -4,7 +4,39 @@ Notable changes to ToneCommand. Dates are UTC.
 
 ## Unreleased
 
-(nothing yet)
+### Fixed (a Windows install could not start at all: #184, #186)
+- `Path.read_text()` and `open()` without `encoding=` follow the machine's
+  locale, which is cp1252 on Windows and UTF-8 here. `config/amp_models.json`
+  carries curly quotes (the AC-30 note's "Cool"), whose UTF-8 bytes are
+  undefined in cp1252, so `Registry()` raised `UnicodeDecodeError` at import
+  and the app never started for a user on Python 3.12.10. Every text read and
+  write now names `encoding="utf-8"`: 362 `read_text()`, 88 `write_text(...)`
+  and the five `pathlib` `.open()` sites. Opens that are not text files
+  (`os.open`, `wave.open`, `Image.open`, the urllib opener, MIDI ports) are
+  untouched.
+- `fm9/ai_settings.cliproxy_key()` called `os.getuid()`, which does not exist
+  on Windows, so AI settings raised `AttributeError` there. The uid stays the
+  seed wherever it exists, so a key already baked into a config file on macOS
+  or Linux keeps its value; Windows derives from the account name.
+
+### Added
+- `tests/test_text_encoding.py` fails on any new encoding-less text read or
+  write, proves the shipped config JSON is UTF-8 with at least one file
+  cp1252 cannot decode, and loads the registry with the locale encoding
+  forced to cp1252, which is the reported failure reproduced.
+- CI runs the suite on `windows-latest` as well as `ubuntu-latest`. The
+  matrix runs as the `suite` job and a small `tests` job gates on it, so the
+  one required check on `main` keeps its name. A Linux-only matrix could
+  never have seen this class of bug.
+
+### Known, not fixed here (#186)
+- The settings file and the TONE3000 token file are written `0o600` and
+  re-tightened on save. Windows ignores POSIX modes, so on Windows both are
+  readable by other local accounts until an ACL replaces the mode; the two
+  assertions are skipped there with that reason.
+- `tests/test_planner_grok.py` runs a shebang script as a fake backend, which
+  Windows does not honour, and one HeadRush client test fails on Windows only
+  for reasons not yet established; both are skipped there.
 
 ## 1.5.2 (2026-09-21)
 
