@@ -36,168 +36,15 @@ Run:
 
 ## Windows
 
-**No experience needed. Five steps, about ten minutes, most of it waiting for
-downloads.** You will type three lines at the end. You can copy and paste them.
+The Windows walk-through has its own page, so it can be shared as one link
+with someone who has never used a terminal:
 
-Untested by the maintainer and expected to work: it is all cross-platform
-Python, and the one macOS-only piece (instant cable detection) falls back to
-checking every five seconds. If you try it, please say how it went in an
-issue, either way.
+**[tonecommand.com/windows](https://tonecommand.com/windows/)**, which is
+[docs/WINDOWS.md](WINDOWS.md) in this repository.
 
-### Step 1: install Python
-
-Install **Python 3.12**, not the newest one. The big download button on
-python.org gives you the newest, which is too new: the MIDI library
-ToneCommand uses ships prebuilt parts for Python 3.12 and older only, and on
-a newer Python the install tries to compile it and stops with a wall of red
-text about compilers. Go to
-**https://www.python.org/downloads/windows/**, scroll to the list of
-releases, pick the latest **3.12.x** "Windows installer (64-bit)", and run
-it.
-
-> **On the first screen, tick the box that says "Add python.exe to PATH"**,
-> down at the bottom, before you click Install. This is the single most common
-> thing to get wrong, and skipping it is why "python is not recognised"
-> appears later. If you miss it, run the installer again and choose Modify.
-
-3.11 works too. 3.13 and newer do not yet, and the install will say so in
-one line ("requires a different Python"). The reason is the MIDI library
-(python-rtmidi, no prebuilt parts past 3.12); a second library that has
-them (supriya-midi) is wired in behind `TONECOMMAND_MIDI_BACKEND=supriya`
-and the ceiling lifts once it has had its hardware pass on the unit
-(issue #172). Until then, 3.12.
-
-### Step 2: install the FM9 USB driver
-
-Download Fractal's Windows USB driver from
-**https://www.fractalaudio.com/fm9-downloads/** and install it.
-
-This is the same driver FM9-Edit uses, so **if FM9-Edit already works on this
-computer, you can skip this step.** Without it, Windows cannot see the FM9 at
-all and ToneCommand will say it cannot find your unit.
-
-### Step 3: download ToneCommand
-
-Go to **https://github.com/monzta1/ToneCommand**, click the green **Code**
-button, then **Download ZIP**.
-
-Then find the downloaded file (usually in your Downloads folder), right-click
-it, and choose **Extract All**. You now have a folder called
-`ToneCommand-main`.
-
-### Step 4: open a terminal in that folder
-
-Open the `ToneCommand-main` folder so you can see the files inside it
-(`README.md`, `server.py` and so on).
-
-Now **hold Shift, right-click on any empty white space in that folder**, and
-choose **"Open PowerShell window here"** or **"Open in Terminal"**.
-
-A window with a black or blue background opens. That is the terminal. It is
-just a place to type commands. Nothing you do in the next step can damage your
-computer or your FM9.
-
-### Step 5: type these three lines
-
-Type or paste **one line at a time**, pressing Enter after each, and wait for
-it to finish before starting the next.
-
-```powershell
-py -3.12 -m venv .venv
-```
-
-*Makes a private space for ToneCommand's parts, so it cannot disturb anything
-else on your computer. Takes a few seconds and prints nothing. That is normal.*
-
-```powershell
-.venv\Scripts\pip install -e .
-```
-
-*Downloads the pieces it needs. This is the slow one, usually one to three
-minutes, and it prints a lot of text. Scrolling text is good.*
-
-```powershell
-.venv\Scripts\tonecommand
-```
-
-*Starts ToneCommand. Leave this window open: closing it stops the program.*
-
-### What you should see
-
-The last command prints a line ending in something like:
-
-```
-Uvicorn running on http://127.0.0.1:8909
-```
-
-Now open your web browser and go to **http://127.0.0.1:8909**
-
-With the FM9 switched on and plugged in by USB, the link indicator at the top
-of the page turns green and names your preset. That is it: you are running.
-
-### Using it again tomorrow
-
-You only do steps 1 to 4 once. After that:
-
-1. Open the `ToneCommand-main` folder.
-2. Shift + right-click, **Open PowerShell window here**.
-3. Type the last line only:
-
-```powershell
-.venv\Scripts\tonecommand
-```
-
-4. Go to **http://127.0.0.1:8909** in your browser.
-
-### If something goes wrong
-
-**"py is not recognised"** or **"python is not recognised"**
-Python is not installed, or the PATH box in Step 1 was not ticked. Run the
-Python installer again, choose **Modify**, and make sure **"Add python.exe to
-PATH"** is ticked. Then close the terminal window, open a new one, and try
-again. A terminal only notices the change if it was opened afterwards.
-
-**"cannot be loaded because running scripts is disabled"**
-Windows is blocking the command. Paste this once, press Enter, answer `Y`,
-then run the failing line again:
-
-```powershell
-Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
-```
-
-**The page loads but the link indicator is red, or it says it cannot find the
-FM9**
-Check, in this order: the FM9 is switched on; the USB cable goes from the FM9
-to the computer and is a data cable rather than a charge-only one; Fractal's
-driver from Step 2 is installed; and FM9-Edit is **closed**, because only one
-program can hold the FM9's USB connection at a time.
-
-**"Preparing metadata (pyproject.toml) did not run successfully"**, with
-**python-rtmidi** and **"Unknown compiler(s)"** in the red text, or
-**"requires a different Python"**
-Your Python is newer than 3.12. The MIDI library has prebuilt parts for
-Python 3.12 and older only; on a newer one Windows tries to compile it and
-cannot. Install Python 3.12 from the releases list (Step 1), delete the
-`.venv` folder, open a new terminal and run Step 5 again with
-`py -3.12 -m venv .venv` as the first line. Nothing else changes.
-
-**"port 8909 is already in use"**
-ToneCommand is already running in another window. Use that one, or close it
-and start again.
-
-**Anything else**
-Open an issue at **https://github.com/monzta1/ToneCommand/issues** and paste
-the red text. The exact wording matters, so copy it rather than describing it.
-
-### Notes for later
-
-- For video builds, install ffmpeg with `winget install ffmpeg` instead of
-  Homebrew.
-- The guided one-click setup for the ChatGPT subscription route is
-  Homebrew-based, so it is macOS only. On Windows, either install
-  [CLIProxyAPI](https://github.com/router-for-me/CLIProxyAPI) by hand as its
-  own documentation directs, or use any key-based service, the Claude CLI, or
-  a local model, which need no helper at all.
+Five steps, about ten minutes: Python 3.12, Fractal's USB driver, the ZIP,
+a terminal in that folder, three lines. Troubleshooting for every error
+reported so far is on the same page.
 
 ## Linux
 
@@ -314,6 +161,14 @@ fw 11.00 are untested here. Stored presets are safe either way and remain
 fully viewable and editable in FM9-Edit.
 
 ## Compatibility
+
+**Python 3.11 or 3.12 on every platform.** The MIDI library (python-rtmidi)
+ships prebuilt wheels for CPython 3.8 to 3.12 only; on 3.13 or newer pip
+builds it from source, which needs a C++ toolchain, so the package refuses
+with one line rather than a compiler trace. The way out is already in place:
+`fm9/midi_transport.py` picks the binding, and `TONECOMMAND_MIDI_BACKEND=supriya`
+selects supriya-midi, which has wheels to 3.14. The ceiling lifts after that
+binding's hardware pass on the unit, issue #172.
 
 Verified means proven by write-plus-readback on real hardware in this
 project's regression runs; nothing below is assumed.

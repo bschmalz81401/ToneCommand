@@ -72,3 +72,60 @@ def test_no_em_dash_in_touched_site_files():
     for rel in ("build.py", "theme.css", "fx.js"):
         text = (SITE_DIR / rel).read_text(encoding="utf-8")
         assert "—" not in text, f"em dash in site/{rel}"
+
+
+# --- every link the site writes has to land somewhere real (#184) ---
+
+def test_every_doc_page_with_a_short_url_is_routed_there():
+    """DOC_PAGE_PATHS gives a doc its own short URL; ROUTES turns a
+    `docs/NAME.md` cross-link into that URL. A page in the first and not the
+    second renders as a repo blob link with the `docs/` prefix already
+    stripped, which is a 404 and bypasses the page: exactly what shipped for
+    docs/WINDOWS.md before this test existed.
+    """
+    import sys
+
+    sys.path.insert(0, str(SITE_DIR))
+    import build
+
+    for slug, source, *_ in build.DOC_PAGES:
+        if slug not in build.DOC_PAGE_PATHS:
+            continue
+        name = Path(source).name
+        assert build.ROUTES.get(name) == build.DOC_PAGE_PATHS[slug], (
+            f"{name} is published at {build.DOC_PAGE_PATHS[slug]} but ROUTES sends "
+            f"links to {build.ROUTES.get(name)!r}; add "
+            f'"{name}": "{build.DOC_PAGE_PATHS[slug]}" to ROUTES'
+        )
+
+
+def test_no_rendered_link_points_at_a_repo_path_that_does_not_exist(tmp_path, monkeypatch):
+    """The fallback in rewrite_link sends anything unrouted to a blob URL on
+    main. If the path is wrong the link 404s on a page nobody rebuilds by
+    hand, so check every blob link a build produced against the tree.
+
+    The build runs here, into a temporary directory: site/dist is gitignored
+    and CI never builds the site, so a test that read an existing site/dist
+    would skip in the one place that gates a merge.
+    """
+    import re
+    import sys
+
+    sys.path.insert(0, str(SITE_DIR))
+    import build
+
+    dist = tmp_path / "dist"
+    monkeypatch.setattr(build, "DIST", dist)
+    monkeypatch.setattr(sys, "argv", ["build.py", "--offline"])
+    assert build.main() == 0
+
+    pages = list(dist.rglob("*.html"))
+    assert pages, "the build wrote no pages"
+    root = SITE_DIR.parent
+    blob = re.compile(r"https://github\.com/monzta1/ToneCommand/blob/main/([^\"#?]+)")
+    missing = set()
+    for page in pages:
+        for target in blob.findall(page.read_text(encoding="utf-8")):
+            if not (root / target).exists():
+                missing.add(f"{page.relative_to(dist)} -> {target}")
+    assert not missing, "links to repository paths that do not exist:\n" + "\n".join(sorted(missing))
