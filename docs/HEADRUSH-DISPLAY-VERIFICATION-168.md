@@ -21,8 +21,8 @@ table, so its AC5 exercises the refusal and never the conversion.
 editor the unit serves, not from the Core's front panel, and the owner
 attests the two agree. That matters, because `devices/headrush/tapers.py` was
 built by extracting the vendor's own curve functions **from that editor's
-bundle**. So the six rows below confirm a chain — we reproduce the editor, the
-editor matches the unit — rather than being an independent reading of the
+bundle**. So the six rows below confirm a chain (we reproduce the editor, the
+editor matches the unit) rather than being an independent reading of the
 hardware. #130's `hardware_check` rows say "taken off a Core's screen"; these
 are not those, and are recorded as what they are.
 
@@ -66,7 +66,7 @@ the edit buffer.
 correct `1.48 Hz`**. Every previous observation of #167 was through the raw
 wire API; this is the first through `set_param_wire` under the display
 methods. The conversion is right, the displayed text is right, the flag is
-wrong — exactly what the adapter's docstring and the PR claim.
+wrong, which is exactly what the adapter's docstring and the PR claim.
 
 ### 2. #167 is narrower than it was stated
 
@@ -94,7 +94,7 @@ compares what the unit *shows* and says so.
 
 - **It prompted with API property names.** `Amp.PostGain` is **"Output
   Level"** on screen, and nothing in `config/headrush_registry.json` maps the
-  two — the schema publishes no label. The operator was sent to the "High
+  two: the schema publishes no label. The operator was sent to the "High
   Volume" control, and a mis-read control would have been recorded as a failed
   conversion rather than as a mis-read. `SCREEN_LABELS` now carries the unit's
   own wording for the parameters this script prompts for; a parameter absent
@@ -164,4 +164,4 @@ restored 5 parameter(s) to the value they held before this run
 ```
 
 Screen values read from the web editor, which the owner attests matches the
-device — the same provenance as the run above, and the same caveat.
+device, the same provenance as the run above, and the same caveat.
