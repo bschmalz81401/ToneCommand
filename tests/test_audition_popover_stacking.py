@@ -10,7 +10,7 @@ typing. Found by a screenshot, 2026-09-08. This pins the order.
 import re
 from pathlib import Path
 
-UI = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text()
+UI = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text(encoding="utf-8")
 
 
 def _z(selector: str) -> int:

@@ -18,7 +18,7 @@ from fm9 import editbuffer, planner
 from fm9.sim import SimFM9
 
 ROOT = Path(__file__).resolve().parent.parent
-RULES = (ROOT / "config" / "tone_rules.md").read_text()
+RULES = (ROOT / "config" / "tone_rules.md").read_text(encoding="utf-8")
 
 
 @pytest.fixture

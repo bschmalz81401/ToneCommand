@@ -238,5 +238,5 @@ def test_cleanup_on_device_drop_restores_first(client, rig):
 
 
 def test_cleanup_scratch_slot_is_documented():
-    text = (Path(__file__).resolve().parent.parent / "config" / "README.md").read_text()
+    text = (Path(__file__).resolve().parent.parent / "config" / "README.md").read_text(encoding="utf-8")
     assert "scratch" in text.lower() and "TONECOMMAND_CAB_SLOTS" in text

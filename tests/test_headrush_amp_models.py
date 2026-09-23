@@ -20,7 +20,7 @@ SIDECAR = ROOT / "config" / "headrush_amp_models.json"
 
 @pytest.fixture(scope="module")
 def data():
-    return json.loads(SIDECAR.read_text())
+    return json.loads(SIDECAR.read_text(encoding="utf-8"))
 
 
 def test_it_declares_what_it_is(data):
@@ -213,8 +213,8 @@ def test_the_committed_file_matches_a_fresh_build():
     from tools import build_headrush_amp_models as gen
     if not (gen.DEFAULT_CATALOG.exists() and gen.DEFAULT_SCHEMA.exists()):
         pytest.skip("HeadrushRigBuilder is not checked out beside this repo")
-    fresh = gen.build(json.loads(gen.DEFAULT_CATALOG.read_text()),
-                      json.loads(gen.DEFAULT_SCHEMA.read_text()))
-    assert fresh == json.loads(SIDECAR.read_text()), \
+    fresh = gen.build(json.loads(gen.DEFAULT_CATALOG.read_text(encoding="utf-8")),
+                      json.loads(gen.DEFAULT_SCHEMA.read_text(encoding="utf-8")))
+    assert fresh == json.loads(SIDECAR.read_text(encoding="utf-8")), \
         "config/headrush_amp_models.json is not what the generator produces; " \
         "regenerate rather than hand editing"

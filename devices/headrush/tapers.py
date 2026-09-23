@@ -270,7 +270,7 @@ class TaperTable:
 
 @lru_cache(maxsize=1)
 def load(path: Path | None = None) -> TaperTable:
-    blob = json.loads((path or TAPERS).read_text())
+    blob = json.loads((path or TAPERS).read_text(encoding="utf-8"))
     names = {int(k): v["name"] for k, v in blob["tapers"].items()}
     missing = sorted(set(names) - set(CURVES) - set(blob["unimplemented"]))
     if missing:

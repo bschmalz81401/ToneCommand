@@ -171,13 +171,13 @@ def test_cli_env_skips_empty_values():
 def test_a_malformed_timeout_does_not_break_the_import(isolated_env):
     """It used to be int() at module scope: a dotenv comment crashed
     `import fm9.planner`, and server.py imports it at startup."""
-    isolated_env.write_text("PLANNER_TIMEOUT=300  # five minutes\n")
+    isolated_env.write_text("PLANNER_TIMEOUT=300  # five minutes\n", encoding="utf-8")
     assert planner.timeout_s() == 300
-    isolated_env.write_text("PLANNER_TIMEOUT=banana\n")
+    isolated_env.write_text("PLANNER_TIMEOUT=banana\n", encoding="utf-8")
     assert planner.timeout_s() == 180
-    isolated_env.write_text('PLANNER_TIMEOUT="240"\n')
+    isolated_env.write_text('PLANNER_TIMEOUT="240"\n', encoding="utf-8")
     assert planner.timeout_s() == 240
-    isolated_env.write_text("PLANNER_TIMEOUT=-5\n")
+    isolated_env.write_text("PLANNER_TIMEOUT=-5\n", encoding="utf-8")
     assert planner.timeout_s() == 180
 
 
@@ -191,7 +191,7 @@ def test_timeout_is_read_per_call_not_frozen_at_import(monkeypatch):
 def test_quoted_env_values_are_unquoted(isolated_env):
     isolated_env.write_text('PLANNER_API_KEY="sk-local"\n'
                             "PLANNER_BACKEND='cli'\n"
-                            'PLANNER_BASE_URL="http://127.0.0.1:8317/v1"\n')
+                            'PLANNER_BASE_URL="http://127.0.0.1:8317/v1"\n', encoding="utf-8")
     assert planner._env("PLANNER_API_KEY") == "sk-local"
     assert planner.candidates() == ["cli"]
     assert planner._openai_base_url() == "http://127.0.0.1:8317/v1"
@@ -200,13 +200,13 @@ def test_quoted_env_values_are_unquoted(isolated_env):
 def test_a_bare_env_file_is_not_an_anthropic_key(isolated_env):
     """A router-only install should not offer a doomed api candidate whose
     auth noise buries the actionable transport failure next to it."""
-    isolated_env.write_text("PLANNER_BASE_URL=http://127.0.0.1:8317/v1\n")
+    isolated_env.write_text("PLANNER_BASE_URL=http://127.0.0.1:8317/v1\n", encoding="utf-8")
     assert planner._api_available() is False
     # "cli" may legitimately be present: this host has the binary. What must
     # not appear is a doomed api candidate conjured by the file's existence.
     assert "api" not in planner.candidates()
     assert planner.candidates()[0] == "openai", "a configured router goes first"
-    isolated_env.write_text("ANTHROPIC_API_KEY=sk-ant-real\n")
+    isolated_env.write_text("ANTHROPIC_API_KEY=sk-ant-real\n", encoding="utf-8")
     assert planner._api_available() is True
     assert "api" in planner.candidates()
 
@@ -300,7 +300,7 @@ def test_quotes_and_a_trailing_comment_together(isolated_env):
     # a # inside the quotes is data, not a comment
     assert planner._unquote('"abc #def"') == "abc #def"
     isolated_env.write_text('PLANNER_TIMEOUT="240"  # five minutes\n'
-                            'PLANNER_BASE_URL="http://127.0.0.1:8317/v1"  # mine\n')
+                            'PLANNER_BASE_URL="http://127.0.0.1:8317/v1"  # mine\n', encoding="utf-8")
     assert planner.timeout_s() == 240
     assert planner._openai_base_url() == "http://127.0.0.1:8317/v1"
 
@@ -311,13 +311,13 @@ def test_the_claude_models_are_configurable(isolated_env):
     assert planner.cli_model() == planner.CLI_MODEL
     assert planner.api_model() == planner.MODEL
     isolated_env.write_text("CLAUDE_CLI_MODEL=opus\n"
-                            "CLAUDE_API_MODEL=claude-sonnet-5\n")
+                            "CLAUDE_API_MODEL=claude-sonnet-5\n", encoding="utf-8")
     assert planner.cli_model() == "opus"
     assert planner.api_model() == "claude-sonnet-5"
 
 
 def test_the_chosen_cli_model_reaches_the_subprocess(isolated_env, monkeypatch):
-    isolated_env.write_text("CLAUDE_CLI_MODEL=opus\n")
+    isolated_env.write_text("CLAUDE_CLI_MODEL=opus\n", encoding="utf-8")
     seen = {}
 
     def fake_run(args, **kwargs):
@@ -342,7 +342,7 @@ def test_an_explicit_blank_does_not_fall_through_to_dot_env(isolated_env,
     """The channel problem behind "Auto cannot unpin": with unset and blank
     treated the same, no value could mean "not set" and a .env pin always
     won."""
-    isolated_env.write_text("PLANNER_BACKEND=grok\n")
+    isolated_env.write_text("PLANNER_BACKEND=grok\n", encoding="utf-8")
     assert planner._env("PLANNER_BACKEND") == "grok"
     monkeypatch.setenv("PLANNER_BACKEND", "")
     assert planner._env("PLANNER_BACKEND") == ""
@@ -352,7 +352,7 @@ def test_an_explicit_blank_does_not_fall_through_to_dot_env(isolated_env,
 def test_an_absent_variable_still_reads_dot_env(isolated_env, monkeypatch):
     """The fallback is the whole point of .env support; only the blank case
     changed."""
-    isolated_env.write_text("PLANNER_MODEL=from-the-file\n")
+    isolated_env.write_text("PLANNER_MODEL=from-the-file\n", encoding="utf-8")
     monkeypatch.delenv("PLANNER_MODEL", raising=False)
     assert planner._env("PLANNER_MODEL") == "from-the-file"
 

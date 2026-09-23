@@ -112,7 +112,7 @@ def test_a_corrupt_settings_file_does_not_widen_anything(monkeypatch, tmp_path):
     """Failing open on a safety boundary would be the worst possible default."""
     from fm9 import device
     f = tmp_path / "s.json"
-    f.write_text("{ this is not json")
+    f.write_text("{ this is not json", encoding="utf-8")
     monkeypatch.delenv("TONECOMMAND_STORE_SLOTS", raising=False)
     monkeypatch.setenv("TONECOMMAND_STORE_SLOTS_FILE", str(f))
     spec, source = device.get_store_slots_spec()
@@ -147,7 +147,7 @@ def test_narrowing_reports_what_it_took_back(monkeypatch, tmp_path):
 
 def test_the_settings_panel_shows_the_boundary_and_its_source():
     from pathlib import Path
-    ui = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text()
+    ui = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text(encoding="utf-8")
     assert 'data-label="SAFETY &middot; ALLOWED STORE SLOTS"' in ui, \
         "the store whitelist lives under Settings > Safety" 
     assert 'id="slotspec"' in ui and 'id="slotsrc"' in ui
@@ -179,7 +179,7 @@ def test_a_widening_can_be_previewed_without_happening(monkeypatch, tmp_path):
 
 def test_the_ui_asks_before_it_widens():
     from pathlib import Path
-    ui = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text()
+    ui = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text(encoding="utf-8")
     fn = ui.split("<script>")[1].split("async function saveSlotSpec")[1].split("\n}\n")[0]
     assert "preview: true" in fn
     assert "window.confirm" in fn
@@ -192,7 +192,7 @@ def test_the_examples_only_fill_the_box():
     """An example that silently moved the boundary would be the worst kind of
     shortcut on this particular control."""
     from pathlib import Path
-    ui = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text()
+    ui = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text(encoding="utf-8")
     script = ui.split("<script>")[1]
     handler = script.split("document.querySelectorAll('.eg')")[1].split("});")[0]
     assert "$('slotspec').value = b.dataset.eg" in handler
@@ -223,7 +223,7 @@ def test_a_landed_store_corrects_the_preset_name_cache(monkeypatch):
 
 
 def test_the_page_refreshes_its_slot_lists_after_a_stored_transmit():
-    ui = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text()
+    ui = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text(encoding="utf-8")
     fn = ui.split("async function apply()")[1].split("\n}\n")[0]
     at = fn.index("if (stored.length) {")
     block = fn[at:at + 220]

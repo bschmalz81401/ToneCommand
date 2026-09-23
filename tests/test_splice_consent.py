@@ -19,7 +19,7 @@ from pathlib import Path
 from fm9.registry import Registry
 from fm9.sim import SimFM9
 
-UI = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text()
+UI = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text(encoding="utf-8")
 
 
 def test_the_plan_reports_the_slide_and_the_spend_separately():

@@ -306,7 +306,7 @@ def main(argv=None) -> int:
     args = ap.parse_args(argv)
 
     if args.from_file:
-        tree = json.loads(args.from_file.read_text())
+        tree = json.loads(args.from_file.read_text(encoding="utf-8"))
         where = str(args.from_file)
     else:
         client = HeadrushClient.connect(args.host, timeout_s=120.0)
@@ -328,14 +328,14 @@ def main(argv=None) -> int:
     # preset data and then printed "nothing written", which was false about the
     # one file that most needed saying.
     if args.save_raw:
-        args.save_raw.write_text(json.dumps(tree, indent=2, sort_keys=True) + "\n")
+        args.save_raw.write_text(json.dumps(tree, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         print(
             f"WARNING: wrote the untouched response to {args.save_raw}. It contains the "
             "unit's LIVE VALUES, including rig and setlist names. Do not commit it.",
             file=sys.stderr,
         )
 
-    args.out.write_text(json.dumps(artifact, indent=2, sort_keys=True) + "\n")
+    args.out.write_text(json.dumps(artifact, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     # relative_to raises for an --out outside the repo, which the offline
     # regeneration check uses, so this reports rather than throwing on the way
     # out of a run that already succeeded.

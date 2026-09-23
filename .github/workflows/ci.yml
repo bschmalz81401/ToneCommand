@@ -6,8 +6,15 @@ on:
   pull_request:
 
 jobs:
-  tests:
-    runs-on: ubuntu-latest
+  suite:
+    # Windows too (#184): its locale encoding is cp1252, so a text read
+    # without an explicit encoding dies on any non-ASCII byte we ship. A
+    # Linux-only matrix cannot see that; a user's install did.
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -18,4 +25,24 @@ jobs:
       - name: Run test suite (simulator + validation, no hardware)
         run: pytest tests/ -q -n auto
       - name: Verification ladder on the simulator
+        if: runner.os != 'Windows'
         run: TONECOMMAND_SIM=1 python tools/preset_doctor.py 0 1
+      - name: Verification ladder on the simulator (Windows)
+        if: runner.os == 'Windows'
+        run: python tools/preset_doctor.py 0 1
+        env:
+          TONECOMMAND_SIM: "1"
+
+  tests:
+    # The one required check on main, kept under that exact name: a matrix
+    # job reports as "tests (ubuntu-latest)" and "tests (windows-latest)",
+    # which branch protection would wait for forever. This gate fails
+    # unless every leg of the matrix passed.
+    needs: suite
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Every platform passed
+        run: |
+          echo "suite result: ${{ needs.suite.result }}"
+          test "${{ needs.suite.result }}" = "success"

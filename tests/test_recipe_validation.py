@@ -18,7 +18,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
-WORKER = (ROOT / "service" / "worker.js").read_text()
+WORKER = (ROOT / "service" / "worker.js").read_text(encoding="utf-8")
 
 HARNESS = r"""
 import { readFileSync } from "fs";
@@ -39,10 +39,10 @@ def _check(tmp_path, body) -> str:
     """
     if not hasattr(_check, "harness"):
         h = tmp_path.parent / "harness.mjs"
-        h.write_text(HARNESS)
+        h.write_text(HARNESS, encoding="utf-8")
         _check.harness = h
     payload = tmp_path / "body.json"
-    payload.write_text(json.dumps(body))
+    payload.write_text(json.dumps(body), encoding="utf-8")
     out = subprocess.run(["node", str(_check.harness), str(ROOT / "service/worker.js"),
                           str(payload)], capture_output=True, text=True)
     assert out.returncode == 0, out.stderr
@@ -63,7 +63,7 @@ def test_the_repositorys_own_recipes_still_validate(tmp_path):
     files = list((ROOT / "recipes").glob("*.json"))
     assert files, "no recipes to check"
     for f in files:
-        assert _check(tmp_path, json.loads(f.read_text())) == "ACCEPTED", f.name
+        assert _check(tmp_path, json.loads(f.read_text(encoding="utf-8"))) == "ACCEPTED", f.name
 
 
 @pytest.mark.parametrize("label,body", [
@@ -123,7 +123,7 @@ def test_markup_in_text_is_data_not_a_hole(tmp_path):
     (`esc(r.title)`), so text stays text. Refusing it would be theatre that
     also rejects a legitimate tone called "<12dB cut>"."""
     assert _check(tmp_path, {**OK, "title": "<script>alert(1)</script>"}) == "ACCEPTED"
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     row = ui.split("$('rlist').innerHTML = list.map")[1].split("}).join")[0]
     for field in ("r.title || r.name", "r.author", "r.assumes"):
         assert f"esc({field})" in row, field
@@ -158,7 +158,7 @@ def test_auto_publish_is_a_setting_and_defaults_to_off():
     """Off is the safe default for anyone else who deploys this."""
     sub = WORKER.split('url.pathname === "/submit"')[1].split('url.pathname ===')[0]
     assert 'env.AUTO_PUBLISH !== "true"' in sub
-    toml = (ROOT / "service" / "wrangler.toml").read_text()
+    toml = (ROOT / "service" / "wrangler.toml").read_text(encoding="utf-8")
     assert "AUTO_PUBLISH" in toml
 
 
@@ -181,7 +181,7 @@ def test_a_recipe_names_models_it_does_not_number_them():
     finds nothing.
     """
     for f in (ROOT / "recipes").glob("*.json"):
-        body = json.loads(f.read_text())
+        body = json.loads(f.read_text(encoding="utf-8"))
         for step in (body.get("actions") or body.get("steps")):
             if step.get("kind") == "set_type":
                 assert isinstance(step.get("type_name"), str), f.name
@@ -216,12 +216,12 @@ def test_no_note_when_there_is_nothing_to_say():
 
 
 def test_the_note_reaches_the_plan_and_the_browser():
-    src = (ROOT / "server.py").read_text()
+    src = (ROOT / "server.py").read_text(encoding="utf-8")
     fn = src.split("def api_recipe_plan(")[1].split("\n@app")[0]
     assert "firmware_note" in fn
     # a rig that does not answer must not break planning a recipe
     assert "except Exception:" in fn
-    ui = (ROOT / "ui" / "index.html").read_text()
+    ui = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     assert "d.firmware_note" in ui
 
 

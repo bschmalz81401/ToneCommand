@@ -23,7 +23,7 @@ from fm9 import adapter as contract
 from fm9.adapter import CaptureCapabilities, CaptureSlot, CaptureSlots
 
 ROOT = Path(__file__).resolve().parent.parent
-FIXTURE = json.loads((ROOT / "tests" / "fixtures" / "tonex_presets.json").read_text())
+FIXTURE = json.loads((ROOT / "tests" / "fixtures" / "tonex_presets.json").read_text(encoding="utf-8"))
 PC000 = (ROOT / "tests" / "fixtures" / "tonex_pc000.bin").read_bytes()
 PC002 = (ROOT / "tests" / "fixtures" / "tonex_pc002.bin").read_bytes()
 

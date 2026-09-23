@@ -16,4 +16,4 @@ def load() -> dict:
     p = ROOT / "kb" / "conventions.json"
     if not p.exists():
         return {}
-    return json.load(p.open())
+    return json.load(p.open(encoding="utf-8"))

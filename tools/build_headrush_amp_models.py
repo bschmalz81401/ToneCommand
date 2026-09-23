@@ -217,9 +217,9 @@ def main(argv=None) -> int:
                      f"Both are generated artifacts of HeadrushRigBuilder; "
                      f"check it out beside this repo or pass --{what}.")
 
-    built = build(json.loads(args.catalog.read_text()),
-                  json.loads(args.schema.read_text()))
-    args.out.write_text(json.dumps(built, indent=1, ensure_ascii=False) + "\n")
+    built = build(json.loads(args.catalog.read_text(encoding="utf-8")),
+                  json.loads(args.schema.read_text(encoding="utf-8")))
+    args.out.write_text(json.dumps(built, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
     c = built["counts"]
     print(f"wrote {args.out.relative_to(ROOT)}: {c['ordinals']} ordinals, "
           f"{c['described']} described, {c['unattributed']} unattributed")

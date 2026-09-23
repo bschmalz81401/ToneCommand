@@ -74,7 +74,7 @@ def main(a: int, b: int) -> int:
                     dead.append(row)
     out = ROOT / "kb" / "tone_library" / "path_audit.json"
     out.parent.mkdir(parents=True, exist_ok=True)
-    json.dump({"rows": rows, "dead": dead}, out.open("w"), indent=1)
+    json.dump({"rows": rows, "dead": dead}, out.open("w", encoding="utf-8"), indent=1)
     print(f"\n{len(dead)} dead scenes -> {out}")
     return 0 if not dead else 1
 

@@ -299,7 +299,7 @@ def schema_routing_names() -> list[str]:
     """The device's own Routing enumeration, from the committed schema."""
     if not SCHEMA.exists():
         sys.exit(f"{SCHEMA} is missing; run tools/build_headrush_schema.py first")
-    blob = json.loads(SCHEMA.read_text())
+    blob = json.loads(SCHEMA.read_text(encoding="utf-8"))
     chain = blob["paths"].get("/Evil/Engine/Patch/Chain")
     if not chain:
         sys.exit("the committed schema has no /Evil/Engine/Patch/Chain")
@@ -323,13 +323,13 @@ def main(argv=None) -> int:
     args = ap.parse_args(argv)
 
     if args.from_file:
-        bundle = args.from_file.read_text(errors="replace")
+        bundle = args.from_file.read_text(errors="replace", encoding="utf-8")
         built = build(bundle, args.from_file.name, None)
     else:
         bundle, path = fetch(args.host, args.timeout)
         built = build(bundle, path, args.host)
 
-    args.out.write_text(json.dumps(built, indent=1, ensure_ascii=False) + "\n")
+    args.out.write_text(json.dumps(built, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
     n = len(built["routings"])
     par = sum(1 for r in built["routings"] if r["has_parallel_branches"])
     dual = sum(1 for r in built["routings"] if r["independent_paths"] > 1)

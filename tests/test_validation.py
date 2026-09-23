@@ -222,7 +222,7 @@ def test_recipe_replays_clean_in_sim():
                        capture_output=True, text=True, env=env, timeout=300)
     assert r.returncode == 0, r.stdout + r.stderr
     assert "EAR CHECKLIST" in r.stdout
-    rec = json.load(open("recipes/goodbye-yesterday-rock-intro.json"))
+    rec = json.load(open("recipes/goodbye-yesterday-rock-intro.json", encoding="utf-8"))
     assert all(a["kind"] != "store" for a in rec["actions"])
 
 

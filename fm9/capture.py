@@ -114,6 +114,6 @@ def record(kind: str, directory: Path, *, recorder, preset: Any = None,
             "out_channel": out_channel if kind == "test" else None,
             "preset": preset, "scene": scene, "routing": routing,
             "recorded_at": stamp, "wav": wav.name}
-    wav.with_suffix(".json").write_text(json.dumps(side, indent=1))
+    wav.with_suffix(".json").write_text(json.dumps(side, indent=1), encoding="utf-8")
     side["path"] = str(wav)
     return side

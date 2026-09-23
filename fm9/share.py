@@ -72,7 +72,7 @@ def _from_env_file(key: str) -> str:
     if not env_file.exists():
         return ""
     try:
-        lines = env_file.read_text().splitlines()
+        lines = env_file.read_text(encoding="utf-8").splitlines()
     except OSError:
         return ""
     for line in lines:
@@ -102,7 +102,7 @@ def _read() -> dict:
     if not p.exists():
         return {"entries": []}
     try:
-        got = json.loads(p.read_text())
+        got = json.loads(p.read_text(encoding="utf-8"))
         return got if isinstance(got, dict) and "entries" in got else {"entries": []}
     except (json.JSONDecodeError, ValueError, OSError):
         # A corrupt outbox must not take the recipes with it. The files in
@@ -113,7 +113,7 @@ def _read() -> dict:
 def _write(data: dict) -> None:
     p = outbox_path()
     tmp = p.with_suffix(".tmp")
-    tmp.write_text(json.dumps(data, indent=1))
+    tmp.write_text(json.dumps(data, indent=1), encoding="utf-8")
     tmp.replace(p)          # atomic: a crash mid-write cannot truncate it
 
 

@@ -131,7 +131,7 @@ def main() -> None:
         "unmapped_no_source": UNMAPPED_NO_SOURCE,
     }
     dest = ROOT / "config" / "effect_type_models.json"
-    dest.write_text(json.dumps(out, indent=1, ensure_ascii=False) + "\n")
+    dest.write_text(json.dumps(out, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
     print(f"delay: {len(DELAY)}, chorus: {len(CHORUS)}, "
           f"multitap: {len(MULTITAP)} mapped, "
           f"{len(UNMAPPED_NO_SOURCE)} families marked no-source -> {dest}")

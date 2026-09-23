@@ -47,7 +47,7 @@ def _ev(artist="Devin Townsend", year=2022, **over):
 def test_record_writes_one_file_and_listing_reads_it_newest_first(store):
     ip.record(LUKE_OLD, dict(RESULT, preset="BT Luke 03", store_slot=140))
     ip.record(DEVIN, RESULT, [_ev()])
-    doc = json.loads(store.read_text())
+    doc = json.loads(store.read_text(encoding="utf-8"))
     assert doc["version"] == 1 and [r["id"] for r in doc["packs"]] == ["got-luke-2023", "got-2022-14"]
     rec = doc["packs"][1]
     assert rec["artists"] == ["Devin Townsend"] and rec["year"] == 2022
@@ -232,5 +232,5 @@ def test_reference_text_gains_the_installed_packs_section(client, sim, store):
     assert "[source: pack file, Steve Lukather (2025)]" in lines[1]
     # the section is read at request time, not baked into the cached reference
     assert "INSTALLED ARTIST PACKS" not in server.PARAM_REFERENCE
-    src = (ROOT / "server.py").read_text()
+    src = (ROOT / "server.py").read_text(encoding="utf-8")
     assert 'ref += "\\n".join(installed_packs.reference_lines())' in src

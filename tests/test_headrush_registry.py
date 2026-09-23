@@ -15,7 +15,7 @@ from tools import build_headrush_registry as gen
 
 @pytest.fixture(scope="module")
 def schema():
-    return json.loads((R.SCHEMA).read_text())
+    return json.loads((R.SCHEMA).read_text(encoding="utf-8"))
 
 
 @pytest.fixture(scope="module")
@@ -30,7 +30,7 @@ def test_the_committed_file_is_what_the_generator_produces(schema):
     drifted from its generator would be hand edited data wearing a
     `generated_by` field."""
     fresh = json.dumps(gen.build(schema), indent=2, sort_keys=True) + "\n"
-    assert R.REGISTRY.read_text() == fresh
+    assert R.REGISTRY.read_text(encoding="utf-8") == fresh
 
 
 def test_no_hardware_is_reachable_from_the_generator():
@@ -178,7 +178,7 @@ def test_nothing_in_the_registry_mentions_the_other_device():
     """Both rosters have a block with a knob called Bass and the two are not
     interchangeable. The absence is the criterion, so it is checked over the
     whole file rather than argued in a docstring."""
-    blob = json.loads(R.REGISTRY.read_text())
+    blob = json.loads(R.REGISTRY.read_text(encoding="utf-8"))
     payload = json.dumps([blob["blocks"], blob["paramsets"]]).lower()
     for token in ("fm9", "fractal", "axe-fx", "effect_id", "cc#"):
         assert token not in payload
@@ -197,7 +197,7 @@ def test_no_block_claims_a_category_it_was_not_told(reg):
 def test_a_firmware_bump_is_named_as_one(tmp_path, schema):
     moved = dict(schema, firmware="9.9.9.deadbeef")
     path = tmp_path / "schema.json"
-    path.write_text(json.dumps(moved))
+    path.write_text(json.dumps(moved), encoding="utf-8")
     R.load.cache_clear()
     with pytest.raises(R.SchemaDrift) as err:
         R.load(schema=path)
@@ -212,7 +212,7 @@ def test_an_edited_schema_at_the_same_firmware_is_named_differently(tmp_path, sc
     edited = json.loads(json.dumps(schema))
     edited["metas"][schema["paths"]["/Evil/Engine/Patch/Amp"]]["properties"]["Bass"]["maximum"] = 11.0
     path = tmp_path / "schema.json"
-    path.write_text(json.dumps(edited))
+    path.write_text(json.dumps(edited), encoding="utf-8")
     R.load.cache_clear()
     with pytest.raises(R.SchemaDrift, match="edited rather than regenerated"):
         R.load(schema=path)
@@ -220,7 +220,7 @@ def test_an_edited_schema_at_the_same_firmware_is_named_differently(tmp_path, sc
 
 def test_the_wrong_device_is_refused(tmp_path, schema):
     path = tmp_path / "schema.json"
-    path.write_text(json.dumps(dict(schema, device="fm9")))
+    path.write_text(json.dumps(dict(schema, device="fm9")), encoding="utf-8")
     R.load.cache_clear()
     with pytest.raises(R.SchemaDrift, match="not headrush"):
         R.load(schema=path)
@@ -234,7 +234,7 @@ def test_the_generator_refuses_a_schema_version_it_does_not_know(schema):
 def test_the_committed_pair_does_not_drift():
     R.load.cache_clear()
     assert R.load().schema_fingerprint == gen.fingerprint(
-        json.loads(R.SCHEMA.read_text()))
+        json.loads(R.SCHEMA.read_text(encoding="utf-8")))
 
 
 # --- AC6: planner-facing lookup across representative blocks ------------
@@ -421,7 +421,7 @@ def test_owner_state_is_not_in_the_registry(reg):
     for path in ("/Evil/API/Rigs", "/Evil/API/Setlists",
                  "/Evil/Engine/Patch/Rig", "/Evil/Cloud/Master"):
         assert path not in reg.blocks
-    blob = json.loads(R.REGISTRY.read_text())
+    blob = json.loads(R.REGISTRY.read_text(encoding="utf-8"))
     assert set(blob["excluded_objects"]) >= {"/Evil/API/Rigs", "/Evil/API/Setlists"}
 
 
@@ -436,7 +436,7 @@ def test_a_parameter_cannot_be_edited(reg):
 def test_objects_sharing_a_parameter_set_share_one_record():
     """302 objects carry 153 distinct sets, the same reduction the schema does
     on metas. Without it the derived file was larger than its own input."""
-    blob = json.loads(R.REGISTRY.read_text())
+    blob = json.loads(R.REGISTRY.read_text(encoding="utf-8"))
     assert len(blob["blocks"]) == 302
     assert len(blob["paramsets"]) == 153
     twins = blob["blocks"]["/Evil/Engine/Patch/Amp"]["parameters"]
@@ -488,10 +488,10 @@ def test_every_field_the_device_published_survives_into_the_registry(reg, schema
 def test_a_dangling_parameter_set_reference_is_named(tmp_path):
     """The failure mode the indirection adds. It must not surface as a
     KeyError from inside the loader."""
-    blob = json.loads(R.REGISTRY.read_text())
+    blob = json.loads(R.REGISTRY.read_text(encoding="utf-8"))
     blob["blocks"]["/Evil/Engine/Patch/Amp"]["parameters"] = "deadbeefdeadbeef"
     path = tmp_path / "registry.json"
-    path.write_text(json.dumps(blob))
+    path.write_text(json.dumps(blob), encoding="utf-8")
     R.load.cache_clear()
     with pytest.raises(R.RegistryCorrupt, match="deadbeefdeadbeef"):
         R.load(registry=path, check_drift=False)

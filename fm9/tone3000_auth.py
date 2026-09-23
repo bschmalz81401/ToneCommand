@@ -52,7 +52,7 @@ class AuthError(RuntimeError):
 def client_id() -> str | None:
     key = os.environ.get(_ENV_KEY, "").strip()
     if not key and _ENV_FILE.exists():
-        for line in _ENV_FILE.read_text().splitlines():
+        for line in _ENV_FILE.read_text(encoding="utf-8").splitlines():
             if line.strip().startswith(_ENV_KEY + "="):
                 key = line.split("=", 1)[1].strip()
                 break
@@ -161,7 +161,7 @@ class TokenStore:
 
     def load(self) -> dict | None:
         try:
-            doc = json.loads(self.path.read_text())
+            doc = json.loads(self.path.read_text(encoding="utf-8"))
         except (OSError, ValueError):
             return None
         if not isinstance(doc, dict) or not doc.get("access_token"):

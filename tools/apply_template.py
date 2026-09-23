@@ -45,7 +45,7 @@ VOL_CH = {"A": 0, "B": 1, "C": 2, "D": 3}
 
 
 def main(preset: int, mapping_path: str) -> int:
-    m = json.load(open(mapping_path))
+    m = json.load(open(mapping_path, encoding="utf-8"))
     reg = Registry()
     d = FM9(reg)
     vol = reg.effect_id("VOLUME")

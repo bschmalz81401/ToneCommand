@@ -4,6 +4,73 @@ Notable changes to ToneCommand. Dates are UTC.
 
 ## Unreleased
 
+### Added
+- `docs/WINDOWS.md`, the step-by-step Windows guide, is its own page with its
+  own short link to share: **tonecommand.com/windows**. It was the Windows
+  section of `docs/SETUP.md`, which now points at it, so there is one place to
+  send someone who has never opened a terminal. It carries the
+  `UnicodeDecodeError` a user hit before 1.5.3, with both ways out (download
+  again, or `$env:PYTHONUTF8 = "1"` for that window), and it no longer calls
+  Windows untested: the suite runs there on every change.
+
+### Fixed
+- The site's `ROUTES` did not know about the new page, so the README's and
+  SETUP.md's links to `docs/WINDOWS.md` rendered as
+  `.../blob/main/WINDOWS.md`: a path that does not exist, on the two pages
+  most likely to be read by someone looking for it. Two tests in
+  `tests/test_site_build.py` now fail on it: one pairs every short-URL doc
+  with its route, the other builds the site into a temporary directory and
+  checks every repository link it produced against the tree. That second one
+  runs the build itself because `site/dist` is gitignored and CI never builds
+  the site, so a test that read an existing `site/dist` would skip in the one
+  place that gates a merge. `markdown` and `Pygments` moved into the `dev`
+  extra for the same reason: CI installs `.[dev]` only, so a test whose
+  import lived in the `site` extra failed the required check while passing on
+  a developer machine that happened to have it.
+- `docs/SETUP.md` states the Python 3.11/3.12 ceiling, the
+  `TONECOMMAND_MIDI_BACKEND=supriya` way out and the #172 hardware pass again.
+  Moving the Windows walk-through to its own page took those sentences with
+  it, which `tests/test_midi_transport.py` requires that file to carry; they
+  belong under Compatibility rather than inside one platform's guide.
+
+## 1.5.3 (2026-09-22)
+
+### Fixed (a Windows install could not start at all: #184, #186)
+- `Path.read_text()` and `open()` without `encoding=` follow the machine's
+  locale, which is cp1252 on Windows and UTF-8 here. `config/amp_models.json`
+  carries curly quotes (the AC-30 note's "Cool"), whose UTF-8 bytes are
+  undefined in cp1252, so `Registry()` raised `UnicodeDecodeError` at import
+  and the app never started for a user on Python 3.12.10. Every text read and
+  write now names `encoding="utf-8"`: 362 `read_text()`, 88 `write_text(...)`
+  and the five `pathlib` `.open()` sites. Opens that are not text files
+  (`os.open`, `wave.open`, `Image.open`, the urllib opener, MIDI ports) are
+  untouched.
+- `fm9/ai_settings.cliproxy_key()` called `os.getuid()`, which does not exist
+  on Windows, so AI settings raised `AttributeError` there. The uid stays the
+  seed wherever it exists, so a key already baked into a config file on macOS
+  or Linux keeps its value; Windows derives from the account name.
+
+### Added
+- `tests/test_text_encoding.py` fails on any new encoding-less text read or
+  write, proves the shipped config JSON is UTF-8 with at least one file
+  cp1252 cannot decode, and loads the registry with the locale encoding
+  forced to cp1252, which is the reported failure reproduced.
+- CI runs the suite on `windows-latest` as well as `ubuntu-latest`. The
+  matrix runs as the `suite` job and a small `tests` job gates on it, so the
+  one required check on `main` keeps its name. A Linux-only matrix could
+  never have seen this class of bug.
+
+### Known, not fixed here (#186)
+- The settings file and the TONE3000 token file are written `0o600` and
+  re-tightened on save. Windows ignores POSIX modes, so on Windows both are
+  readable by other local accounts until an ACL replaces the mode; the two
+  assertions are skipped there with that reason.
+- `tests/test_planner_grok.py` runs a shebang script as a fake backend, which
+  Windows does not honour, and one HeadRush client test fails on Windows only
+  for reasons not yet established; both are skipped there.
+
+## 1.5.2 (2026-09-21)
+
 ### Fixed (the bundled app's CI build died on import, 2026-09-20: #175 follow-up)
 - `numpy` was an optional extra (`audition`) while `fm9/reamp.py`,
   `capture.py`, `measure.py`, `sound_check.py` and `tone_match.py` import
@@ -28,6 +95,15 @@ Notable changes to ToneCommand. Dates are UTC.
 - A self-contained unsigned macOS `ToneCommand.app` bundle with Python inside,
   a simulator smoke test, and a tag/manual GitHub Actions packaging workflow.
   Windows builds, signing, and notarisation remain later chunks.
+
+### Docs
+- `docs/HEADRUSH-HARDWARE-FINDINGS.md` Finding 5: the unit snaps the display
+  value to the published grid and stores the result as float32, so a
+  read-back equals the write only when the display value was already on the
+  grid (#167, #173, #174).
+- AGENTS.md and CLAUDE.md: main is protected and lanes land through a PR
+  (#178); step 2 points at the engine's own `handsoff playbook` before the
+  local KB (#180).
 
 ## 1.5.1 (2026-09-20)
 

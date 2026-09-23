@@ -269,7 +269,7 @@ def _stages(roles: tuple[SlotRole, ...]) -> tuple[tuple[int, ...], bool]:
 def load(path: Path | None = None) -> TopologyTable:
     """The committed table. Cached: it is a constant of the firmware."""
     src = path or TOPOLOGIES
-    blob = json.loads(src.read_text())
+    blob = json.loads(src.read_text(encoding="utf-8"))
     table = {}
     for r in blob["routings"]:
         roles = tuple(SlotRole(s["role"]) for s in r["slots"])

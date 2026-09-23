@@ -23,7 +23,7 @@ from tests.test_cabs import make_cab
 from tests.test_install import make_file
 
 ROOT = Path(__file__).resolve().parent.parent
-UI = (ROOT / "ui" / "index.html").read_text()
+UI = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
 FRACTAL = "https://www.fractalaudio.com/downloads/misc/_gift22/"
 EMPTY = p.EMPTY_SLOT_NAME
 

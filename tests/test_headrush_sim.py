@@ -49,7 +49,7 @@ def test_it_runs_with_the_network_unplugged(monkeypatch):
 # --- AC2: built from the committed schema --------------------------------
 
 def test_every_object_comes_from_the_schema(sim):
-    schema = json.loads((T.CONFIG / "headrush_schema.json").read_text())
+    schema = json.loads((T.CONFIG / "headrush_schema.json").read_text(encoding="utf-8"))
     assert sim.firmware == schema["firmware"]
     assert set(sim._paths) == set(schema["paths"])
     assert len(sim._paths) == schema["object_count"]

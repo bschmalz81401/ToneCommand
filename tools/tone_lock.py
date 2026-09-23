@@ -97,13 +97,13 @@ def main(cmd, a, b):
             f = LOCKS / f"{n}.json"
             if cmd == "lock":
                 rec = capture(dev, reg, n)
-                f.write_text(json.dumps(rec))
+                f.write_text(json.dumps(rec), encoding="utf-8")
                 print(f"{n} {rec['name']!r}: LOCKED "
                       f"({len(rec['blocks'])} blocks, 8 scenes)")
             elif cmd == "check":
                 if not f.exists():
                     print(f"{n}: no lock on file"); continue
-                old = json.loads(f.read_text())
+                old = json.loads(f.read_text(encoding="utf-8"))
                 new = capture(dev, reg, n)
                 d = diff(reg, old, new)
                 if d:

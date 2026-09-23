@@ -76,7 +76,7 @@ def read_local() -> list[dict]:
         if f.name == "index.json":
             continue
         try:
-            r = json.loads(f.read_text())
+            r = json.loads(f.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, ValueError, OSError):
             continue
         r["_source"] = "local"
@@ -166,7 +166,7 @@ def save_local(recipe: dict) -> Path:
     d = local_dir()
     d.mkdir(parents=True, exist_ok=True)
     p = d / f"{_safe_name(recipe.get('name') or recipe.get('title'))}.json"
-    p.write_text(json.dumps(recipe, indent=1))
+    p.write_text(json.dumps(recipe, indent=1), encoding="utf-8")
     return p
 
 

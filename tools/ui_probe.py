@@ -174,7 +174,7 @@ async def _run(args) -> int:
             await asyncio.sleep(args.after_setup)
 
         if args.cmd == "eval":
-            probes = (json.loads(Path(args.file).read_text()) if args.file
+            probes = (json.loads(Path(args.file).read_text(encoding="utf-8")) if args.file
                       else [["result", args.expression]])
             bad = 0
             for label, expr in probes:

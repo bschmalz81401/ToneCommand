@@ -88,7 +88,7 @@ def load_pinned() -> int:
     override = os.environ.get("TONECOMMAND_REAMP_OBSERVED", "").strip()
     path = Path(override) if override else PINNED_FILE
     try:
-        load_observed(json.loads(path.read_text()))
+        load_observed(json.loads(path.read_text(encoding="utf-8")))
     except (OSError, ValueError, TypeError, AttributeError):
         pass
     return sum(len(v) for v in OBSERVED.values())
@@ -121,7 +121,7 @@ def _write_journal(entries: list[dict]) -> None:
     path = journal_path()
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(".part")
-    tmp.write_text(json.dumps({"at": time.time(), "entries": entries}, indent=1))
+    tmp.write_text(json.dumps({"at": time.time(), "entries": entries}, indent=1), encoding="utf-8")
     tmp.replace(path)
 
 
@@ -176,7 +176,7 @@ def restore_outstanding(fm9: Any) -> dict | None:
     if not path.exists():
         return None
     try:
-        doc = json.loads(path.read_text())
+        doc = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as e:
         raise RoutingError(f"routing journal unreadable at {path}: {e}")
     restored, problems = [], []

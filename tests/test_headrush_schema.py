@@ -35,7 +35,7 @@ ARTIFACT = ROOT / "config" / "headrush_schema.json"
 
 @pytest.fixture(scope="module")
 def artifact():
-    return json.loads(ARTIFACT.read_text())
+    return json.loads(ARTIFACT.read_text(encoding="utf-8"))
 
 
 def _tree(**overrides):
@@ -187,7 +187,7 @@ def test_a_refused_run_exits_non_zero_and_leaves_no_file(tmp_path, capsys):
     bad = tmp_path / "raw.json"
     tree = _tree()
     del tree["/Evil/API/Blocks"]["value"]["ModuleTypes"]
-    bad.write_text(json.dumps(tree))
+    bad.write_text(json.dumps(tree), encoding="utf-8")
     out = tmp_path / "schema.json"
 
     assert main(["--from-file", str(bad), "--out", str(out)]) == 1
@@ -197,11 +197,11 @@ def test_a_refused_run_exits_non_zero_and_leaves_no_file(tmp_path, capsys):
 
 def test_a_run_that_succeeds_writes_the_file_and_exits_zero(tmp_path):
     good = tmp_path / "raw.json"
-    good.write_text(json.dumps(_tree()))
+    good.write_text(json.dumps(_tree()), encoding="utf-8")
     out = tmp_path / "schema.json"
 
     assert main(["--from-file", str(good), "--out", str(out)]) == 0
-    assert json.loads(out.read_text())["device"] == "headrush"
+    assert json.loads(out.read_text(encoding="utf-8"))["device"] == "headrush"
 
 
 def test_save_raw_happens_only_after_the_build_succeeds_and_says_what_it_wrote(tmp_path, capsys):
@@ -214,7 +214,7 @@ def test_save_raw_happens_only_after_the_build_succeeds_and_says_what_it_wrote(t
     tree = _tree()
     del tree["/Evil/API/Blocks"]["value"]["ModuleTypes"]
     bad = tmp_path / "raw.json"
-    bad.write_text(json.dumps(tree))
+    bad.write_text(json.dumps(tree), encoding="utf-8")
     raw_out = tmp_path / "saved.json"
 
     assert main(["--from-file", str(bad), "--out", str(tmp_path / "s.json"),
@@ -222,7 +222,7 @@ def test_save_raw_happens_only_after_the_build_succeeds_and_says_what_it_wrote(t
     assert not raw_out.exists(), "a refused run wrote the owner's live values anyway"
 
     good = tmp_path / "ok.json"
-    good.write_text(json.dumps(_tree()))
+    good.write_text(json.dumps(_tree()), encoding="utf-8")
     assert main(["--from-file", str(good), "--out", str(tmp_path / "s2.json"),
                  "--save-raw", str(raw_out)]) == 0
     assert raw_out.exists()
@@ -289,7 +289,7 @@ def test_the_committed_snapshot_is_the_whole_tree_and_not_a_slice_of_it():
     changes these, this test is where that gets noticed and argued about
     deliberately, which is the point of committing the snapshot at all.
     """
-    art = json.loads(ARTIFACT.read_text())
+    art = json.loads(ARTIFACT.read_text(encoding="utf-8"))
     assert art["object_count"] == 309
     assert art["distinct_meta_count"] == 161
     assert len(art["paths"]) == 309
@@ -471,8 +471,8 @@ def test_identical_parameter_surfaces_are_not_only_twins(artifact):
 def test_no_em_dash_in_the_files_this_phase_touched():
     em_dash = chr(0x2014)
     for rel in ("tools/build_headrush_schema.py", "tests/test_headrush_schema.py"):
-        assert em_dash not in (ROOT / rel).read_text(), f"em dash in {rel}"
+        assert em_dash not in (ROOT / rel).read_text(encoding="utf-8"), f"em dash in {rel}"
 
 
 def test_the_changelog_records_this_phase():
-    assert "config/headrush_schema.json" in (ROOT / "CHANGELOG.md").read_text()
+    assert "config/headrush_schema.json" in (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")

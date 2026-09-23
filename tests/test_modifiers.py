@@ -22,7 +22,7 @@ import server
 from fm9 import protocol as fp
 from fm9.sim import SimFM9
 
-UI = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text()
+UI = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text(encoding="utf-8")
 SCRIPT = UI.split("<script>")[1]
 STYLE = UI.split("<style>")[1].split("</style>")[0]
 
@@ -78,7 +78,7 @@ def test_the_two_expression_pedals_are_the_grounded_sources():
     (docs/PROTOCOL.md finding 5)."""
     assert server.MOD_SOURCES == {10: "Pedal 1", 11: "Pedal 2"}
     assert server.PEDAL_1_SOURCE == 10 and server.PEDAL_2_SOURCE == 11
-    src = Path("server.py").read_text()
+    src = Path("server.py").read_text(encoding="utf-8")
     # the bind resolves the source from the requested pedal, so the name table
     # and the write cannot drift apart, and no pedal is hardcoded into the bind
     assert "source = _pedal_source(a.pedal)" in src
@@ -113,7 +113,7 @@ def test_they_are_read_every_poll_not_cached_against_the_preset():
     """A modifier can be added or removed from the front panel without the
     preset number changing, and a stale "nothing is bound here" is exactly the
     statement this exists to stop the page making."""
-    src = Path("server.py").read_text()
+    src = Path("server.py").read_text(encoding="utf-8")
     fn = src.split("def snapshot(")[1].split("\ndef ")[0]
     assert '"mods": _safe_modifiers(fm9)' in fn
     # _safe_modifiers is read_modifiers wrapped so a hiccup cannot drop the
@@ -371,7 +371,7 @@ def test_pedal_one_is_never_referenced():
     assert server.PEDAL_2_SOURCE == 11
     assert server.MOD_SOURCES[server.PEDAL_2_SOURCE] == "Pedal 2"
     for path in ("server.py", "ui/index.html", "fm9/device.py"):
-        text = Path(path).read_text().lower()
+        text = Path(path).read_text(encoding="utf-8").lower()
         assert "pedal 1" not in text or "never" in text or "global volume" in text
 
 

@@ -179,7 +179,7 @@ def test_the_ui_sends_its_routing_decision():
     """The server cannot recover intent from the actions, so the UI's own
     build-vs-modify routing has to travel with the request."""
     from pathlib import Path
-    ui = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text()
+    ui = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text(encoding="utf-8")
     assert "whole_rig: !!wholeRig" in ui
     assert "engage(instruction, null, null, route === 'build')" in ui
     assert "whole_rig: !!currentPlan.whole_rig" in ui, "the send must carry it"

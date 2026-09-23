@@ -76,6 +76,6 @@ def test_no_claim_label_judges_the_result():
 def test_the_device_layer_no_longer_says_verified_by_read_back():
     """It said 'verified by read-back', which players read as confirmation of
     sound rather than of a write."""
-    src = (ROOT / "fm9" / "device.py").read_text()
+    src = (ROOT / "fm9" / "device.py").read_text(encoding="utf-8")
     assert "verified by read-back" not in src
     assert "read back on the unit" in src

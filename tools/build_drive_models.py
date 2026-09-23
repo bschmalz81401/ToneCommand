@@ -114,7 +114,7 @@ def extract_text(path: Path) -> str:
     if path.suffix.lower() == ".pdf":
         from pypdf import PdfReader
         return "\n".join(pg.extract_text() or "" for pg in PdfReader(str(path)).pages)
-    return path.read_text()
+    return path.read_text(encoding="utf-8")
 
 
 def norm(s: str) -> str:
@@ -159,7 +159,7 @@ def main(source: Path) -> None:
         "drives": {k: mapped[k] for k in sorted(mapped, key=int)},
     }
     dest = Path(__file__).resolve().parent.parent / "config" / "drive_models.json"
-    dest.write_text(json.dumps(out, indent=1, ensure_ascii=False) + "\n")
+    dest.write_text(json.dumps(out, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
     unmapped = [n for o, n in sorted(roster.items()) if str(o) not in mapped]
     print(f"mapped {len(mapped)}/{len(roster)} drive roster entries -> {dest}")
     print(f"unmapped ({len(unmapped)}), left without a mapping by design:")

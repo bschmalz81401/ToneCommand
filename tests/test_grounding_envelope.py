@@ -30,7 +30,7 @@ def test_every_sidecar_cites_a_checkable_source(path):
     """Facts-only grounding with citations is a non-negotiable of the epic.
     A reviewer has to be able to go and check an entry, which means the source
     names a document rather than gesturing at one."""
-    src = json.loads(path.read_text())["source"]
+    src = json.loads(path.read_text(encoding="utf-8"))["source"]
     assert len(src) >= 12, f"{path.name}: {src!r} names nothing checkable"
 
 
@@ -39,7 +39,7 @@ def test_every_sidecar_says_what_its_keys_are(path):
     """Ordinal-keyed and name-keyed sidecars drift in different ways, and
     confusing the two is how a renumbered roster silently mislabels every
     entry. The file has to say which it is."""
-    assert json.loads(path.read_text())["keyed_by"].strip()
+    assert json.loads(path.read_text(encoding="utf-8"))["keyed_by"].strip()
 
 
 # --- the validator has to actually reject things ------------------------
@@ -50,7 +50,7 @@ def _good(tmp_path, **over):
     blob["amps"] = {"0": {"fractal": "Euro Blue"}}
     blob.update(over)
     p = tmp_path / "thing_models.json"
-    p.write_text(json.dumps(blob))
+    p.write_text(json.dumps(blob), encoding="utf-8")
     return p
 
 
@@ -61,9 +61,9 @@ def test_the_validator_accepts_a_good_sidecar(tmp_path):
 @pytest.mark.parametrize("field", sorted(grounding.ENVELOPE))
 def test_a_missing_envelope_field_is_rejected(tmp_path, field):
     p = _good(tmp_path)
-    blob = json.loads(p.read_text())
+    blob = json.loads(p.read_text(encoding="utf-8"))
     del blob[field]
-    p.write_text(json.dumps(blob))
+    p.write_text(json.dumps(blob), encoding="utf-8")
     assert any(field in m for m in grounding.validate(p))
 
 
@@ -78,13 +78,13 @@ def test_an_envelope_with_no_payload_is_rejected(tmp_path):
     blob = {k: "x" * 20 for k in grounding.ENVELOPE}
     blob["schema_version"] = 1
     p = tmp_path / "empty_models.json"
-    p.write_text(json.dumps(blob))
+    p.write_text(json.dumps(blob), encoding="utf-8")
     assert any("no payload" in m for m in grounding.validate(p))
 
 
 def test_an_unreadable_sidecar_is_reported_not_raised(tmp_path):
     p = tmp_path / "broken_models.json"
-    p.write_text("{ not json")
+    p.write_text("{ not json", encoding="utf-8")
     assert grounding.validate(p) and "unreadable" in grounding.validate(p)[0]
 
 
@@ -101,7 +101,7 @@ def test_the_families_with_a_roster_are_the_ones_guarded():
     import json as _json
     from pathlib import Path
     cat = _json.loads(
-        (Path(grounding.CONFIG) / "fm9_catalog.json").read_text())["data"]
+        (Path(grounding.CONFIG) / "fm9_catalog.json").read_text(encoding="utf-8"))["data"]
     rosters = {k for k in cat if "ROSTER" in k.upper()}
     assert {"FM9_AMP_ROSTER", "FM9_DRIVE_ROSTER",
             "FM9_CAB_ROSTERS_BY_BANK"} <= rosters
@@ -122,7 +122,7 @@ def test_a_guarded_family_really_refuses_a_drifted_sidecar(family, tmp_path,
               "drive_models": (reg._load_drive_models, "drives"),
               "cab_models": (reg._load_cab_models, "cabs")}[family]
     fn, key = loader
-    blob = json.loads((grounding.CONFIG / f"{family}.json").read_text())
+    blob = json.loads((grounding.CONFIG / f"{family}.json").read_text(encoding="utf-8"))
     # Corrupt one entry's recorded Fractal name: exactly what a renumbered
     # roster looks like from the sidecar's side.
     if family == "cab_models":
@@ -133,7 +133,7 @@ def test_a_guarded_family_really_refuses_a_drifted_sidecar(family, tmp_path,
         k = next(iter(blob[key]))
         blob[key][k]["fractal"] = "NOT A REAL MODEL"
     p = tmp_path / f"{family}.json"
-    p.write_text(json.dumps(blob))
+    p.write_text(json.dumps(blob), encoding="utf-8")
     with pytest.raises(Exception) as e:
         fn(p)
     assert "sync" in str(e.value).lower() or "stale" in type(e.value).__name__.lower()

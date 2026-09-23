@@ -89,7 +89,7 @@ def save(record: dict) -> dict:
     d["created"] = time.strftime("%Y-%m-%dT%H:%M:%S")
     d.setdefault("name", "untitled")
     designs_dir().mkdir(parents=True, exist_ok=True)
-    _path(d["id"]).write_text(json.dumps(d, indent=1))
+    _path(d["id"]).write_text(json.dumps(d, indent=1), encoding="utf-8")
     return d
 
 
@@ -98,7 +98,7 @@ def load(design_id: str) -> dict | None:
     if not p.exists():
         return None
     try:
-        return json.loads(p.read_text())
+        return json.loads(p.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, ValueError, OSError):
         return None
 
@@ -111,7 +111,7 @@ def listing() -> list[dict]:
         return out
     for f in d.glob("*.json"):
         try:
-            out.append(json.loads(f.read_text()))
+            out.append(json.loads(f.read_text(encoding="utf-8")))
         except (json.JSONDecodeError, ValueError, OSError):
             continue
     return sorted(out, key=lambda r: r.get("created", ""), reverse=True)

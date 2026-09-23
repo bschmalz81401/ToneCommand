@@ -59,7 +59,7 @@ def _read() -> dict:
     if not p.exists():
         return {"version": VERSION, "packs": []}
     try:
-        doc = json.loads(p.read_text())
+        doc = json.loads(p.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         return {"version": VERSION, "packs": []}
     if not isinstance(doc, dict) or not isinstance(doc.get("packs"), list):
@@ -71,7 +71,7 @@ def _write(doc: dict) -> None:
     p = path()
     p.parent.mkdir(parents=True, exist_ok=True)
     tmp = p.with_suffix(".part")
-    tmp.write_text(json.dumps(doc, indent=1))
+    tmp.write_text(json.dumps(doc, indent=1), encoding="utf-8")
     tmp.replace(p)
 
 

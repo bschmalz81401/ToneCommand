@@ -6,6 +6,7 @@ under `modelUsage` rather than a top-level field.
 """
 import json
 import os
+import sys
 import stat
 
 import pytest
@@ -29,6 +30,13 @@ REAL_ENVELOPE = {
 }
 
 
+pytestmark = pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="the fake backend is a shebang script, which Windows does not run; "
+           "a .cmd shim or sys.executable invocation is tracked in #186",
+)
+
+
 def fake_grok(tmp_path, monkeypatch, stdout="", stderr="", code=0):
     """A stand-in binary that echoes canned output and records its argv."""
     argv_log = tmp_path / "argv.json"
@@ -40,7 +48,7 @@ def fake_grok(tmp_path, monkeypatch, stdout="", stderr="", code=0):
         "{'argv': sys.argv[1:], 'env': dict(os.environ)}))\n"
         f"sys.stdout.write({stdout!r})\n"
         f"sys.stderr.write({stderr!r})\n"
-        f"sys.exit({code})\n")
+        f"sys.exit({code})\n", encoding="utf-8")
     script.chmod(script.stat().st_mode | stat.S_IEXEC)
     monkeypatch.setattr(planner, "find_grok_cli", lambda: str(script))
     return argv_log
@@ -61,7 +69,7 @@ def test_output_is_constrained_by_plan_schema(tmp_path, monkeypatch):
     """The Claude CLI path can only ask for JSON; this one binds it."""
     log = fake_grok(tmp_path, monkeypatch, stdout=json.dumps(REAL_ENVELOPE))
     call()
-    argv = json.loads(log.read_text())["argv"]
+    argv = json.loads(log.read_text(encoding="utf-8"))["argv"]
     assert "--json-schema" in argv
     schema = json.loads(argv[argv.index("--json-schema") + 1])
     assert schema == planner.PLAN_SCHEMA
@@ -75,7 +83,7 @@ def test_the_subprocess_gets_only_grok_credentials(tmp_path, monkeypatch):
     monkeypatch.setenv("XAI_API_KEY", "xai-expected")
     log = fake_grok(tmp_path, monkeypatch, stdout=json.dumps(REAL_ENVELOPE))
     call()
-    env = json.loads(log.read_text())["env"]
+    env = json.loads(log.read_text(encoding="utf-8"))["env"]
     assert env.get("XAI_API_KEY") == "xai-expected"
     assert "ANTHROPIC_API_KEY" not in env
 
@@ -84,11 +92,11 @@ def test_the_model_flag_is_passed_only_when_configured(tmp_path, monkeypatch):
     monkeypatch.delenv("GROK_CLI_MODEL", raising=False)
     log = fake_grok(tmp_path, monkeypatch, stdout=json.dumps(REAL_ENVELOPE))
     call()
-    assert "-m" not in json.loads(log.read_text())["argv"]
+    assert "-m" not in json.loads(log.read_text(encoding="utf-8"))["argv"]
     monkeypatch.setenv("GROK_CLI_MODEL", "grok-4.6-build")
     log = fake_grok(tmp_path, monkeypatch, stdout=json.dumps(REAL_ENVELOPE))
     call()
-    argv = json.loads(log.read_text())["argv"]
+    argv = json.loads(log.read_text(encoding="utf-8"))["argv"]
     assert argv[argv.index("-m") + 1] == "grok-4.6-build"
 
 

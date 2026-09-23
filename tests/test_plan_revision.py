@@ -119,7 +119,7 @@ def test_two_different_edits_produce_two_different_revisions():
 def _ui():
     from pathlib import Path
     return (__import__("pathlib").Path(server.__file__).parent
-            / "ui" / "index.html").read_text()
+            / "ui" / "index.html").read_text(encoding="utf-8")
 
 
 def test_transmit_names_the_revision_it_believes_it_is_sending():
@@ -233,7 +233,7 @@ def test_a_locally_assembled_plan_gets_a_revision_before_it_can_send():
     also keeps Confirm disabled until the server has validated it.
     """
     from pathlib import Path
-    ui = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text()
+    ui = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text(encoding="utf-8")
     body = ui.split("function showPlan(plan) {", 1)[1][:900]
     assert "revisePlan()" in body, "a plan with no revision could not be sent"
     assert "plan.plan_digest" in body

@@ -41,14 +41,14 @@ def _stamp() -> str:
 
 def _load_observed():
     if OBSERVED_FILE.exists():
-        routing.load_observed(json.loads(OBSERVED_FILE.read_text()))
+        routing.load_observed(json.loads(OBSERVED_FILE.read_text(encoding="utf-8")))
 
 
 def _save_observed():
     OBSERVED_FILE.parent.mkdir(parents=True, exist_ok=True)
     OBSERVED_FILE.write_text(json.dumps(
         {str(k): {str(o): d for o, d in v.items()} for k, v in routing.OBSERVED.items()},
-        indent=1))
+        indent=1), encoding="utf-8")
 
 
 def cmd_device(_args):
@@ -133,7 +133,7 @@ def cmd_journal(args):
     if not path.exists():
         print(f"{_stamp()} no outstanding routing journal at {path}")
         return
-    print(path.read_text())
+    print(path.read_text(encoding="utf-8"))
     if args.restore:
         fm9 = FM9()
         try:

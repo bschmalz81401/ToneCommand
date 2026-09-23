@@ -16,7 +16,7 @@ import server
 from fm9 import acquire, cabfile, protocol as p
 from fm9.sim import SimFM9
 
-UI = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text()
+UI = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text(encoding="utf-8")
 
 
 def make_cab(model=0x10, chunks=8, chunk_len=1282):

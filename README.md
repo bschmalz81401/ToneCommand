@@ -404,8 +404,9 @@ python3 -m venv .venv
 .venv/bin/tonecommand
 ```
 
-**Windows** (untested by the maintainer, expected to work; needs Fractal's USB
-driver, the same one FM9-Edit uses, before the FM9's MIDI ports appear):
+**Windows** (the test suite runs on Windows in CI; needs Fractal's USB
+driver, the same one FM9-Edit uses, before the FM9's MIDI ports appear, and
+version 1.5.3 or newer):
 
 ```bat
 git clone https://github.com/monzta1/ToneCommand.git
@@ -423,9 +424,11 @@ so in one line rather than a compiler trace. The way out is in place
 selects supriya-midi, which has wheels to 3.14) and the ceiling lifts after
 its hardware pass on the unit, issue #172.
 
-> **Never used a terminal before?** Follow
-> [the step-by-step Windows guide](docs/SETUP.md#windows) instead. It assumes
-> nothing, needs no git, and covers what to do when something goes wrong.
+> **On Windows, or never used a terminal before?** Follow the
+> [step-by-step Windows guide](https://tonecommand.com/windows/)
+> ([docs/WINDOWS.md](docs/WINDOWS.md)) instead. It assumes nothing, needs no
+> git, and covers what to do when something goes wrong. One link to share
+> with anyone: **tonecommand.com/windows**
 
 **Linux** (untested, expected to work; the MIDI library builds against ALSA, so
 install its headers first):

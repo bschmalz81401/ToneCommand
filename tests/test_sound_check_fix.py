@@ -20,7 +20,7 @@ from fm9 import advisory, editbuffer, measure as M, sound_check as sc
 from fm9.sim import SimFM9
 
 ROOT = Path(__file__).resolve().parent.parent
-UI = (ROOT / "ui" / "index.html").read_text()
+UI = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
 RATE = 48000
 
 
@@ -84,7 +84,7 @@ def test_propose_no_baseline_is_unfixable_and_style_is_never_a_move():
     # a scene whose trim was not read is said, not guessed
     p = sc.propose(bal, {2: 0.0})
     assert p["fixes"] == [] and p["unfixable"][0]["why"].startswith("the scene's OUTPUT_SCENEn trim")
-    src = (ROOT / "fm9" / "sound_check.py").read_text()
+    src = (ROOT / "fm9" / "sound_check.py").read_text(encoding="utf-8")
     assert "set_param(" not in src and "store_preset" not in src
 
 

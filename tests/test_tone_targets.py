@@ -42,7 +42,7 @@ def professional_presets():
     which is the safe direction for a fixture used to prove the review does
     NOT fire on professional work.
     """
-    rows = json.loads(FIXTURE.read_text())
+    rows = json.loads(FIXTURE.read_text(encoding="utf-8"))
     by = {}
     for r in rows:
         mix = {k.upper(): r[k] for k in ("reverb", "delay", "chorus")
@@ -68,7 +68,7 @@ def test_the_absolute_floors_are_gone():
 
 
 def test_the_policy_records_why_it_was_refuted():
-    raw = json.loads(tone_review.TARGETS_PATH.read_text())
+    raw = json.loads(tone_review.TARGETS_PATH.read_text(encoding="utf-8"))
     text = json.dumps(raw).lower()
     assert "refuted" in text
     assert "196" in text and "104" in text, "keep the measured counts"
@@ -152,7 +152,7 @@ def test_nothing_from_the_experiment_is_still_wired_up():
 
 
 def test_the_policy_file_says_nothing_reads_it():
-    raw = tone_review.TARGETS_PATH.read_text().lower()
+    raw = tone_review.TARGETS_PATH.read_text(encoding="utf-8").lower()
     assert "record, not a policy" in raw
 
 

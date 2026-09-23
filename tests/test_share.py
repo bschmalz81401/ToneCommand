@@ -63,7 +63,7 @@ def test_a_corrupt_outbox_does_not_take_the_recipes_with_it(tmp_path, monkeypatc
     """The files in recipes/ are the work. This is only the record of what has
     been sent, so a broken record must fail quietly and start again."""
     p = tmp_path / "outbox.json"
-    p.write_text("{ not json")
+    p.write_text("{ not json", encoding="utf-8")
     monkeypatch.setenv("TONECOMMAND_OUTBOX", str(p))
     assert share.pending() == []
     share.queue("recipe", {"name": "still works"})
@@ -105,7 +105,7 @@ def test_the_ui_counts_a_transmit_not_a_download():
     """The app knows when a recipe actually reached hardware, which is a much
     better signal than a fetch and far harder to inflate by refreshing."""
     from pathlib import Path
-    ui = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text()
+    ui = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text(encoding="utf-8")
     script = ui.split("<script>")[1]
     apply_fn = script.split("async function apply()")[1].split("\n}\n")[0]
     assert "/api/share/used" in apply_fn
@@ -155,7 +155,7 @@ def test_the_endpoint_is_read_from_the_env_file_too(tmp_path, monkeypatch):
     from fm9 import share
     monkeypatch.delenv("TONECOMMAND_SHARE_URL", raising=False)
     env = tmp_path / ".env"
-    env.write_text("OTHER=ignored\nTONECOMMAND_SHARE_URL=https://example.workers.dev\n")
+    env.write_text("OTHER=ignored\nTONECOMMAND_SHARE_URL=https://example.workers.dev\n", encoding="utf-8")
     monkeypatch.setattr(share, "_env_path", lambda: env)
     assert share.endpoint() == "https://example.workers.dev"
 
@@ -165,7 +165,7 @@ def test_the_environment_outranks_the_file(tmp_path, monkeypatch):
     whitelist follows."""
     from fm9 import share
     env = tmp_path / ".env"
-    env.write_text("TONECOMMAND_SHARE_URL=https://from-file.example\n")
+    env.write_text("TONECOMMAND_SHARE_URL=https://from-file.example\n", encoding="utf-8")
     monkeypatch.setattr(share, "_env_path", lambda: env)
     monkeypatch.setenv("TONECOMMAND_SHARE_URL", "https://from-env.example")
     assert share.endpoint() == "https://from-env.example"
@@ -185,7 +185,7 @@ def test_the_file_parser_handles_quotes_and_trailing_comments(tmp_path,
     monkeypatch.delenv("TONECOMMAND_SHARE_URL", raising=False)
     env = tmp_path / ".env"
     env.write_text(
-        'TONECOMMAND_SHARE_URL="https://quoted.example"  # deployed today\n')
+        'TONECOMMAND_SHARE_URL="https://quoted.example"  # deployed today\n', encoding="utf-8")
     monkeypatch.setattr(share, "_env_path", lambda: env)
     assert share.endpoint() == "https://quoted.example"
 

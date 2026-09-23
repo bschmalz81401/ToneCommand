@@ -40,7 +40,7 @@ def test_scanning_is_a_post():
 def test_nothing_scans_on_a_timer():
     """The mistake that nearly shipped in shared_scenes(), which would have
     cycled the rig audibly every five seconds on the state poll."""
-    ui = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text()
+    ui = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text(encoding="utf-8")
     script = ui.split("<script>")[1]
     refresh = script.split("async function refresh()")[1].split("\n}")[0]
     assert "/api/health" not in refresh and "scanPreset" not in refresh
@@ -223,7 +223,7 @@ def test_the_fix_proposes_and_never_transmits():
     stops, so the confirm gate, validation, the blast radius warning and the
     undo snapshot all still stand in front of it."""
     from pathlib import Path
-    ui = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text()
+    ui = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text(encoding="utf-8")
     script = ui.split("<script>")[1]
     fn = script.split("async function fixAll()")[1].split("\n}\n")[0]
     assert "showPlan(" in fn
@@ -235,7 +235,7 @@ def test_the_fix_proposes_and_never_transmits():
 def test_fixed_is_measured_not_claimed():
     """The scan runs again by itself once a fix has actually landed."""
     from pathlib import Path
-    ui = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text()
+    ui = (Path(__file__).resolve().parent.parent / "ui" / "index.html").read_text(encoding="utf-8")
     script = ui.split("<script>")[1]
     assert "fixPending = true" in script
     apply_fn = script.split("async function apply()")[1].split("\n}\n")[0]
