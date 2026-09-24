@@ -42,8 +42,28 @@ BINARY = {".png", ".jpg", ".jpeg", ".gif", ".ico", ".pdf", ".syx", ".woff",
 
 
 def tracked_text_files():
-    out = subprocess.run(["git", "ls-files", "-z"], cwd=ROOT,
-                         capture_output=True, text=True, check=True).stdout
+    """Every tracked file, from git, because "tracked" is git's word.
+
+    This FAILS rather than skips when git is unavailable. A guard that quietly
+    turns itself off when its input is missing is the worst shape a guard can
+    have: everything stays green and nothing is being checked. CI runs this
+    from an `actions/checkout` work tree, so the only way here is running the
+    suite somewhere it was never meant to run, and that should say so.
+    """
+    try:
+        out = subprocess.run(["git", "ls-files", "-z"], cwd=ROOT,
+                             capture_output=True, text=True, check=True).stdout
+    except FileNotFoundError:                  # no git on PATH
+        raise AssertionError(
+            "this guard needs a git work tree to know what is tracked, and "
+            "git is not on PATH. It fails rather than skipping on purpose: a "
+            "check that disables itself when its input is missing reports "
+            "green while testing nothing.") from None
+    except subprocess.CalledProcessError as err:
+        raise AssertionError(
+            f"`git ls-files` failed in {ROOT}, so the set of tracked files is "
+            f"unknown and this guard cannot run: "
+            f"{(err.stderr or '').strip()[:200]}") from None
     for rel in filter(None, out.split("\0")):
         if Path(rel).suffix.lower() in BINARY or rel in UNEDITABLE:
             continue
