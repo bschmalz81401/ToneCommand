@@ -4,6 +4,36 @@ Notable changes to ToneCommand. Dates are UTC.
 
 ## Unreleased
 
+### Fixed
+- NO EM DASH REPO-WIDE, WHICH THE RULE ALREADY SAID. CLAUDE.md and AGENTS.md
+  ban it everywhere, but enforcement was seven separate guards each carrying a
+  hardcoded list of "the files this phase touched". Between them they never
+  covered `docs/UI-REDESIGN-SPEC.md` (17) or
+  `docs/CLAUDE-CODE-UI-IMPLEMENTATION-PROMPT.md` (5), and nothing would have
+  covered the next new file either. Both docs are rewritten: label separators
+  become colons, two parentheticals become commas and parentheses, the stage
+  rail becomes an arrow, and the two table placeholders become `-` and `none`.
+  The spec describes a proposed surface, and the shipped `ui/index.html`
+  contains no em dash and renders an arrow between values, so nothing here was
+  documenting a rendered string.
+- THREE GUARDS WERE THEMSELVES THE VIOLATION. `test_ai_settings.py`,
+  `test_site_build.py` and `test_splice_consent.py` asserted against a literal
+  `"em dash"` character, so each one contained the thing it banned and a
+  repo-wide check would flag the checks. They now spell it `chr(0x2014)`, as
+  the other five guards already did.
+
+### Added
+- `tests/test_no_em_dash.py`: one guard over every tracked text file, so a new
+  file is covered by existing rather than by somebody remembering to extend a
+  list. Verified by planting an em dash in a file none of the seven per-phase
+  guards covered.
+- Two files are excluded BY NAME WITH THE REASON, because this project may not
+  rewrite either: `config/fm9_catalog.json` is vendored verbatim and AGENTS.md
+  says never hand-edit it, and `THIRD_PARTY_NOTICES.md` carries its em dashes
+  inside a block headed "Reproduction of that project's NOTICE (as required by
+  Apache-2.0)", where reproducing it means reproducing it. A second test fails
+  if either exclusion goes stale, so the list cannot outlive its reasons.
+
 ### Added
 - `docs/WINDOWS.md`, the step-by-step Windows guide, is its own page with its
   own short link to share: **tonecommand.com/windows**. It was the Windows
