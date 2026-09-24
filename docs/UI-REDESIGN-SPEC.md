@@ -225,7 +225,7 @@ Conversation bubbles use at most `680px` line width. Operator messages align rig
 
 Source mode replaces the text composer with one input and **ANALYZE SOURCE**. Accept YouTube URL, web page, or pasted transcript. While analyzing, show progress in the global operation strip above the command shelf, not inside scrolled content. The stop control is always visible there.
 
-After analysis, show three compact evidence counts: `STATED`, `INFERRED`, `QUOTED`. Detailed evidence stays in a drawer. Questions that materially alter the build, scene count and preset name, appear as required fields before **GENERATE PLAN** enables.
+After analysis, show three compact evidence counts: `STATED`, `INFERRED`, `QUOTED`. Detailed evidence stays in a drawer. Questions that materially alter the build (scene count and preset name) appear as required fields before **GENERATE PLAN** enables.
 
 #### Empty-slot mode
 
